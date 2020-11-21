@@ -14,10 +14,10 @@ from spectraclass.model.base import AstroConfigurable, AstroModeConfigurable
 class DataManager(tlc.SingletonConfigurable, AstroConfigurable):
     dataset = tl.Unicode("NONE").tag(config=True,sync=True)
     mode_index = tl.Int(0).tag(config=True,sync=True)
-    proc_type = tl.Enum( ["gpu","cpu"], "gpu" ).tag(config=True)
+    proc_type = tl.Unicode('cpu').tag(config=True)
     MODES = [ "swift", "tess" ]
     METAVARS = dict(swift=["target_names", "obsids"], tess=['tics', "camera", "chip", "dec", 'ra', 'tmag'])
-    name = tl.Unicode('astroclass').tag(config=True)
+    name = tl.Unicode('spectraclass').tag(config=True)
 
     def __init__(self):
         super(DataManager, self).__init__()
@@ -59,9 +59,9 @@ class DataManager(tlc.SingletonConfigurable, AstroConfigurable):
             self.mode_index = self._wModeTabs.selected_index
 
     def gui( self ) -> ip.Tab():
-        from spectraclass.gui.application import Astrolab
+        from spectraclass.gui.application import Spectraclass
         if self._wModeTabs is None:
-            Astrolab.set_astrolab_theme()
+            Spectraclass.set_astrolab_theme()
             mode_tabs = []
             self._wModeTabs = ip.Tab( layout = ip.Layout( width='auto', height='auto' ) )
             for iTab, mdmgr in self._mode_data_managers.items():
@@ -162,13 +162,13 @@ class ModeDataManager( tlc.Configurable, AstroModeConfigurable ):
             self._dset_selection.options = self.getDatasetList()
 
     def select_dataset(self, *args ):
-        from spectraclass.gui.application import Astrolab
+        from spectraclass.gui.application import Spectraclass
         self.dm.select_current_mode()
         if self.dm.dataset != self._dset_selection.value:
             print(f"Loading dataset '{self._dset_selection.value}', current dataset = '{self.dm.dataset}', current mode = '{self._mode}', current mode index = {self.dm.mode_index}, mdmgr id = {id(self)}")
             self.dm.dataset = self._dset_selection.value
             self.dm.select_dataset( self._dset_selection.value )
-        Astrolab.instance().refresh_all()
+        Spectraclass.instance().refresh_all()
 
     def getSelectionPanel(self ) -> ip.HBox:
         dsets: List[str] = self.getDatasetList()
@@ -185,14 +185,14 @@ class ModeDataManager( tlc.Configurable, AstroModeConfigurable ):
 
         nepochs_selector: ip.IntSlider = ip.IntSlider( min=50, max=500, description='UMAP nepochs:', value=rm.nepochs, continuous_update=False, layout=ip.Layout( width="auto" ) )
         alpha_selector: ip.FloatSlider = ip.FloatSlider( min=0.1, max=0.8, step=0.01, description='UMAP alpha:', value=rm.alpha, readout_format=".2f", continuous_update=False, layout=ip.Layout( width="auto" ) )
-        init_selector: ip.Select = ip.Select( options=["random","spectral"], description='UMAP init method:', value="random",  layout=ip.Layout( width="auto" ) )
+        init_selector: ip.Select = ip.Select( options=["random","spectral","autoencoder"], description='UMAP init method:', value="autoencoder",  layout=ip.Layout( width="auto" ) )
 
         def apply_handler(*args):
-            from spectraclass.gui.application import Astrolab
+            from spectraclass.gui.application import Spectraclass
             rm.nepochs = nepochs_selector.value
             rm.alpha = alpha_selector.value
             rm.init = init_selector.value
-            Astrolab.instance().save_config()
+            Spectraclass.instance().save_config()
         apply: ip.Button = ip.Button(description="Apply", layout=ip.Layout(flex='1 1 auto'), border='1px solid dimgrey')
         apply.on_click( apply_handler )
 

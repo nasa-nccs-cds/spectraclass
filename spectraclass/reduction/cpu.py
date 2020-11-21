@@ -913,7 +913,7 @@ def simplicial_set_embedding(
         #         embedding = init_data + random_state.normal( scale=0.001 * nndist, size=init_data.shape ).astype(np.float32)
         #     else:
         #         embedding = init_data
-
+    print( f"Completed UMAP initialization, init shape = {init_embedding.shape}")
     epochs_per_sample = make_epochs_per_sample(graph.data, n_epochs)
 
     head = graph.row
@@ -1140,8 +1140,10 @@ class cpUMAP(UMAP):
             self._a = self.a
             self._b = self.b
 
-        if self._init_embedding_ is not None:
-            init = self._init_embedding_
+        if self._embedding_ is not None:
+            init = check_array(self._embedding_, dtype=np.float32, accept_sparse=False)
+        elif self._init_embedding_ is not None:
+            init = check_array(self._init_embedding_, dtype=np.float32, accept_sparse=False)
         else:
             if isinstance(self.init, np.ndarray):
                 init = check_array(self.init, dtype=np.float32, accept_sparse=False)
@@ -1263,6 +1265,7 @@ class cpUMAP(UMAP):
             self.parallel,
             self.verbose,
         )
+        print(f"umap embedding complete, result shape = {self._embedding_.shape} " )
 
         self._input_hash = joblib.hash(self._raw_data)
         return self

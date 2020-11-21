@@ -9,7 +9,7 @@ import traitlets as tl
 from spectraclass.model.base import AstroConfigurable
 
 class ActivationFlowManager(tlc.SingletonConfigurable, AstroConfigurable):
-    nneighbors = tl.Int( 15 ).tag(config=True,sync=True)
+    nneighbors = tl.Int( 10 ).tag(config=True,sync=True)
 
     def __init__(self):
         super(ActivationFlowManager, self).__init__()
@@ -24,17 +24,20 @@ class ActivationFlowManager(tlc.SingletonConfigurable, AstroConfigurable):
             instance.clear()
 
     def getActivationFlow( self, point_data: xa.DataArray, **kwargs ) -> Optional["ActivationFlow"]:
-        if point_data is None: return None
-        dsid = point_data.attrs.get('dsid','global')
-        print( f"Get Activation flow for dsid {dsid}")
-        self.condition.acquire()
-        try:
-            result = self.instances.get( dsid, None )
-            if result is None:
-                result = ActivationFlow.instance( point_data, self.nneighbors, **kwargs )
-                self.instances[dsid] = result
-            self.condition.notifyAll()
-        finally:
-            self.condition.release()
+        result = None
+        if point_data is not None:
+            dsid = point_data.attrs.get('dsid','global')
+            print( f"Get Activation flow for dsid {dsid}")
+            self.condition.acquire()
+            try:
+                result = self.instances.get( dsid, None )
+                if result is None:
+                    result = ActivationFlow.instance( point_data, self.nneighbors, **kwargs )
+                    self.instances[dsid] = result
+                self.condition.notifyAll()
+            except Exception as err:
+                print( f"Error in getting ActivationFlow: {err}")
+            finally:
+                self.condition.release()
         return result
 

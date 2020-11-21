@@ -9,9 +9,9 @@ import traitlets.config as tlc
 from spectraclass.model.base import AstroConfigurable
 
 class ReductionManager(tlc.SingletonConfigurable, AstroConfigurable):
-    init = tl.Unicode("spectral").tag(config=True,sync=True)
+    init = tl.Unicode("autoencoder").tag(config=True,sync=True)
     nepochs = tl.Int( 100 ).tag(config=True,sync=True)
-    nneighbors = tl.Int(15).tag(config=True, sync=True)
+    nneighbors = tl.Int(10).tag(config=True, sync=True)
     alpha = tl.Float( 0.25 ).tag(config=True,sync=True)
     ndim = tl.Int( 3 ).tag(config=True,sync=True)
     target_weight = tl.Float( 0.5 ).tag(config=True,sync=True)
@@ -84,7 +84,10 @@ class ReductionManager(tlc.SingletonConfigurable, AstroConfigurable):
         encoder = Model(inputs=[inputlayer], outputs=[encoded])
         autoencoder.compile(loss='mse', optimizer='rmsprop')
         autoencoder.fit( encoder_input, encoder_input, epochs=epochs, batch_size=256, shuffle=True )
-        return  encoder.predict( encoder_input )
+        result = encoder.predict( encoder_input )
+        rmean, rstd = result.mean(axis=0), result.std()
+        print( f" Autoencoder_reduction, result:   shape = {result.shape}, rmean = {rmean}, rstd = {rstd} ")
+        return (result - rmean)/rstd
 
     def umap_init( self,  point_data: xa.DataArray, **kwargs ) -> Optional[np.ndarray]:
         from .cpu import UMAP
@@ -99,6 +102,8 @@ class ReductionManager(tlc.SingletonConfigurable, AstroConfigurable):
             mapper.set_embedding(mapper.input_data)
         else:
             print( f"umap_init: init = {self.init}")
+            if self.init == "autoencoder":
+                mapper.init_embedding(self.autoencoder_reduction(point_data.values, self.ndim, 2))
             mapper.init = self.init
             kwargs['nepochs'] = 1
             labels_data: np.ndarray = LabelsManager.instance().labels_data().values
@@ -112,8 +117,6 @@ class ReductionManager(tlc.SingletonConfigurable, AstroConfigurable):
         if 'alpha' not in kwargs.keys():   kwargs['alpha'] = self.alpha
         self._state = self.PROCESSED
         labels_data: np.ndarray = LabelsManager.instance().labels_data().values
-        mapper.clear_initialization()
-        mapper.init = mapper.embedding
         mapper.embed( mapper.input_data, labels_data, nngraph= mapper.flow.nnd, **kwargs )
         return mapper.embedding
 

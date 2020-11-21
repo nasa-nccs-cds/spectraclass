@@ -5,13 +5,13 @@ import os, ipywidgets as ipw
 import traitlets.config as tlc
 from spectraclass.model.base import AstroConfigurable
 
-class Astrolab(tlc.SingletonConfigurable, AstroConfigurable):
+class Spectraclass(tlc.SingletonConfigurable, AstroConfigurable):
 
     HOME = os.path.dirname( os.path.dirname( os.path.dirname(os.path.realpath(__file__)) ) )
     custom_theme = False
 
     def __init__(self):
-        super(Astrolab, self).__init__()
+        super(Spectraclass, self).__init__()
 
     def configure( self, name: str ):
         from spectraclass.data.manager import DataManager

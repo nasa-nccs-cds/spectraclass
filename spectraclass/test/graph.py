@@ -1,10 +1,10 @@
 import time
 import xarray as xa
-from spectraclass.gui.application import Astrolab
+from spectraclass.gui.application import Spectraclass
 from spectraclass.data.manager import DataManager
 from spectraclass.graph.base import ActivationFlow
 
-app = Astrolab.instance()
+app = Spectraclass.instance()
 app.configure("spectraclass")
 n_neighbors = 5
 t0 = time.time()

@@ -200,7 +200,7 @@ class UMAP(BaseEstimator):
 
     def __init__(
         self,
-        n_neighbors=15,
+        n_neighbors=10,
         n_components=2,
         metric="euclidean",
         metric_kwds=None,
@@ -277,6 +277,9 @@ class UMAP(BaseEstimator):
     def set_embedding(self, embed_ : np.ndarray ):
         self.external_embedding = embed_
 
+    def init_embedding(self, embed_ : np.ndarray ):
+        self._init_embedding_ = embed_
+
     @property
     def initial( self ) ->  np.ndarray:
         return self._init_embedding_
@@ -305,15 +308,13 @@ class UMAP(BaseEstimator):
             raise ValueError("min_dist must be less than or equal to spread")
         if self.min_dist < 0.0:
             raise ValueError("min_dist cannot be negative")
-        if not isinstance(self.init, str) and not isinstance(self.init, np.ndarray):
-            raise ValueError(f"init must be a string or ndarray: {self.init}")
-        if isinstance(self.init, str) and self.init not in ("spectral", "random"):
-            raise ValueError('string init values must be "spectral" or "random"')
-        if (
-            isinstance(self.init, np.ndarray)
-            and self.init.shape[1] != self.n_components
-        ):
-            raise ValueError("init ndarray must match n_components value")
+        if self._init_embedding_ is None:
+            if not isinstance(self.init, str) and not isinstance(self.init, np.ndarray):
+                raise ValueError(f"init must be a string or ndarray: {self.init}")
+            if isinstance(self.init, str) and self.init not in ("spectral", "random"):
+                raise ValueError('string init values must be "spectral" or "random"')
+            if ( isinstance(self.init, np.ndarray) and self.init.shape[1] != self.n_components ):
+                raise ValueError("init ndarray must match n_components value")
         if not isinstance(self.metric, str) and not callable(self.metric):
             raise ValueError("metric must be string or callable")
         if self.negative_sample_rate < 0:

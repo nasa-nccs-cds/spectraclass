@@ -1,7 +1,7 @@
 from spectraclass.data.manager import DataManager, ModeDataManager
-from spectraclass.gui.application import Astrolab
+from spectraclass.gui.application import Spectraclass
 
-app = Astrolab.instance()
+app = Spectraclass.instance()
 app.configure("spectraclass")
 
 dm: DataManager = DataManager.instance()

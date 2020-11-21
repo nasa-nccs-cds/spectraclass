@@ -72,10 +72,10 @@ class TableManager(tlc.SingletonConfigurable, AstroConfigurable):
 
     def spread_selection(self, niters=1):
         from ..graph.manager import ActivationFlowManager
-        from ..graph.cpu import cpActivationFlow
+        from ..graph.base import ActivationFlow
         project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("table")
         catalog_pids = np.arange( 0, project_dataset.reduction.shape[0] )
-        flow: cpActivationFlow = ActivationFlowManager.instance().getActivationFlow(project_dataset.reduction)
+        flow: ActivationFlow = ActivationFlowManager.instance().getActivationFlow(project_dataset.reduction)
         self._flow_class_map = np.copy( self._class_map )
 
         if flow.spread(self._flow_class_map, niters) is not None:
@@ -92,11 +92,11 @@ class TableManager(tlc.SingletonConfigurable, AstroConfigurable):
 
     def display_distance(self, niters=100):
         from ..graph.manager import ActivationFlowManager
-        from ..graph.cpu import cpActivationFlow
+        from ..graph.base import ActivationFlow
         project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("table")
         all_classes = (self.selected_class == 0)
         seed_points = self._class_map if all_classes else np.where( self._class_map == self.selected_class, self._class_map, np.array([0]) )
-        flow: cpActivationFlow = ActivationFlowManager.instance().create_flow(project_dataset.reduction)
+        flow: ActivationFlow = ActivationFlowManager.instance().getActivationFlow(project_dataset.reduction)
         print( f"  display_distance: seed_points = {seed_points.nonzero()}, all_classes = {all_classes}, selected_class = {self.selected_class} ")
         if flow.spread( seed_points, niters ) is not None:
             self.pcm.color_by_value( flow.P )

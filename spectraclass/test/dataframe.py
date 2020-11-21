@@ -2,10 +2,10 @@ from typing import List, Union, Tuple, Optional, Dict, Callable
 import time
 import xarray as xa
 import pandas as pd
-from spectraclass.gui.application import Astrolab
+from spectraclass.gui.application import Spectraclass
 from spectraclass.data.manager import DataManager
 
-app = Astrolab.instance()
+app = Spectraclass.instance()
 app.configure("spectraclass")
 
 t0 = time.time()

@@ -93,14 +93,17 @@ class PointCloudManager(tlc.SingletonConfigurable, AstroConfigurable):
         for iC in range( 0, self._n_point_bins ):
             self._binned_points[iC] = self.empty_pointset
 
-    def color_by_value( self, D: np.ndarray, base = 12.0 ):
+    def color_by_value( self, D: np.ndarray, base = 12.0, log_scale = False ):
         DM = ma.masked_invalid(D)
-        v1 = DM.max()/5.0; v0 = 0.016*v1
         N_log_bins = self._n_point_bins-1
-        print(f" binned_points: v1 = {v1}, v0 = {v0}, base = {base}, D.shape = {DM.shape}")
-        dmin, dmax = math.log(v0,base), math.log(v1,base)
-        lspace: np.ndarray = np.logspace( dmin, dmax, N_log_bins )
-        print(f"     ---> dmin = {dmin}, dmax = {dmax}, lspace = {lspace}")
+        if log_scale:
+            v1 = 0.9*DM.max(); v0 = 0.01*v1
+            print(f" binned_points: v1 = {v1}, v0 = {v0}, base = {base}, D.shape = {DM.shape}")
+            dmin, dmax = math.log(v0,base), math.log(v1,base)
+            lspace: np.ndarray = np.logspace( dmin, dmax, N_log_bins )
+            print(f"     ---> dmin = {dmin}, dmax = {dmax}, lspace = {lspace}")
+        else:
+            lspace: np.ndarray = np.linspace( DM.min(), DM.max(), N_log_bins )
         self._binned_points[0] = self._embedding[DM <= lspace[0]]
         print( f" binned_points[0]: size = {self._binned_points[0].shape[0]}, bin = (< {lspace[0]})")
         for iC in range(0,N_log_bins-1):

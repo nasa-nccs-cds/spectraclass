@@ -27,7 +27,7 @@ knn_graph = cupyx.scipy.sparse.csr_matrix( ( distances, indices, rowptr ), shape
 print( f"Completed KNN, graph shape = {knn_graph.shape}" )
 
 reducer = cuml.UMAP(
-    n_neighbors=15,
+    n_neighbors=10,
     n_components=3,
     n_epochs=500,
     min_dist=0.1,
