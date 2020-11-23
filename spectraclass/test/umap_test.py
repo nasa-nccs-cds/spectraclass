@@ -12,8 +12,8 @@ project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("spectra
 umap_data: xa.DataArray = project_dataset["reduction"].compute()
 
 umap = UMAP.instance()
-embedding = umap.transform( umap_data )
-print( f"Completed embedding, result shape = {embedding.shape}" )
+embedding = umap.embed( umap_data )
+
 
 
 

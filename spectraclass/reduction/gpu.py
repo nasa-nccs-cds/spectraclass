@@ -13,13 +13,13 @@ class gpUMAP(UMAP):
         self._mapper = None
 
     def embed( self, X, y=None, **kwargs ):
-        mapper = self.getMapper(X, y, **kwargs)
+        input, mapper = self.getMapper(X, y, **kwargs)
         t0 = time.time()
-        self._embedding_ = mapper.transform(X)
+        self._embedding_ = mapper.transform( input )
         print(f"Completed umap embed in time {time.time() - t0} sec, embedding shape = {self._embedding_.shape}")
         return self
 
-    def getMapper(self, X, y=None, **kwargs ):
+    def getMapper(self, X, y=None, **kwargs ) -> Tuple[cudf.DataFrame,cuml.UMAP]:
         input_data: cudf.DataFrame = self.getDataFrame(X)
         if self._mapper is None:
             t0 = time.time()
@@ -41,7 +41,10 @@ class gpUMAP(UMAP):
             raise Exception( f"Unsupport input type for gpUMAP: {X.__class__.__name__}")
 
     def transform(self, X: Union[xa.DataArray,np.ndarray]  ):
+        t0 = time.time()
         input_data, mapper = self.getMapper(X)
-        return mapper.transform(input_data)
+        result = mapper.transform(input_data)
+        print(f"Completed umap transform in time {time.time() - t0} sec, result shape = {result.shape}")
+        return result
 
 
