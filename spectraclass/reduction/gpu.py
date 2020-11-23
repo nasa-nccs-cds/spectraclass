@@ -27,7 +27,7 @@ class gpUMAP(UMAP):
             self._mapper = cuml.UMAP(init=self.init, n_neighbors=self.n_neighbors, n_components=self.n_components,
                                 n_epochs=self.n_epochs, min_dist=self.min_dist, output_type="numpy")
             self._mapper.fit(input_data)
-            print(f"Completed umap fit in time {time.time() - t0} sec, embedding shape = {self._embedding_.shape}")
+            print(f"Completed umap fit in time {time.time() - t0} sec")
         return self._mapper
 
     def getDataFrame(self, X ) -> cudf.DataFrame:
