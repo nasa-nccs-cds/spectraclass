@@ -64,15 +64,18 @@ class gpActivationFlow(ActivationFlow):
         converged = True
         t0 = time.time()
         source_pid: int = sample_data[0]
+
+        offsets = self.get_offset_series()
         distances = cupy.ravel( cupy.fromDlpack(self.D.to_dlpack()) )
         indices   = cupy.ravel( cupy.fromDlpack(self.I.to_dlpack()) )
-        dfOffsets = cudf.Series( self.get_offset_series() )
+
+        dfOffsets = cudf.Series( offsets )
         dfIndices = cudf.Series( indices )
         dfDistances = cudf.Series( distances )
 
-        print( f" offsets:   {dfOffsets.top(20)}")
-        print( f" distances: {dfDistances.top(20)}")
-        print( f" indices:   {dfIndices.top(20)}")
+        print( f" offsets:   {offsets[0:20]}")
+        print( f" distances: {distances[0:20]}")
+        print( f" indices:   {indices[0:20]}")
 
         G = cugraph.Graph()
         G.from_cudf_adjlist(dfOffsets, dfIndices, dfDistances )
