@@ -70,10 +70,14 @@ class gpActivationFlow(ActivationFlow):
         dfIndices = cudf.Series( indices )
         dfDistances = cudf.Series( distances )
 
+        print( f" offsets:   {dfOffsets.top(20)}")
+        print( f" distances: {dfDistances.top(20)}")
+        print( f" indices:   {dfIndices.top(20)}")
+
         G = cugraph.Graph()
         G.from_cudf_adjlist(dfOffsets, dfIndices, dfDistances )
         self.P = shortest_path( G, source_pid ).sort_values('distance')
-        print(f"Completed spread algorithm in time {time.time() - t0} sec, result {self.P.__class__} = {self.P.head(20)}")
+        print(f"Completed spread algorithm in time {time.time() - t0} sec, source = {source_pid}, result {self.P.__class__} = {self.P.head(20)}")
         self.reset = False
         return converged
 
