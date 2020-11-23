@@ -73,7 +73,7 @@ class gpActivationFlow(ActivationFlow):
         G = cugraph.Graph()
         G.from_cudf_adjlist(dfOffsets, dfIndices, dfDistances )
         self.P = shortest_path( G, source_pid )
-        print(f"Completed spread algorithm in time {time.time() - t0} sec, result = {self.P.head(100)}")
+        print(f"Completed spread algorithm in time {time.time() - t0} sec, result {self.P.__class__.__name__} = {self.P.head(20)}")
         self.reset = False
         return converged
 
