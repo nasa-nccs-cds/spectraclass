@@ -3,7 +3,7 @@ import numpy.ma as ma
 from .base import ActivationFlow
 import xarray as xa
 import numba
-import cudf, cuml, cupy, cupyx
+import cudf, cuml, cupy, cupyx, cugraph
 from cuml.neighbors import NearestNeighbors
 from cupyx.scipy.sparse import csr_matrix
 from cugraph.traversal.sssp import shortest_path
@@ -49,12 +49,31 @@ class gpActivationFlow(ActivationFlow):
         print(f"Completed KNN, sparse graph shape = {knn_graph.shape}")
         return knn_graph
 
+    def get_offset_series( self ):
+        ishp = self.I.shape
+        indices = np.repeat( np.arange( 0, ishp[0] ).reshape(ishp[0],1), ishp[1], axis = 1 )
+        return cupy.ravel( indices )
+
+    def cuIndices(self):
+        indices = cupy.fromDlpack(self.I.to_dlpack())
+        iseries =  cupy.ravel(indices)
+        print( f" cuIndices: shape = {indices.shape}, avals = {indices[0:10]}")
+        return iseries
+
     def spread( self, sample_data: np.ndarray, nIter: int = 1, **kwargs ) -> Optional[bool]:
         converged = True
+        source_pid: int = sample_data[0]
+        distances = cupy.ravel( cupy.fromDlpack(self.D.to_dlpack()) )
+        indices   = cupy.ravel( cupy.fromDlpack(self.I.to_dlpack()) )
+        dfOffsets = cudf.Series( self.get_offset_series() )
+        dfIndices = cudf.Series( indices )
+        dfDistances = cudf.Series( distances )
+
+        G = cugraph.Graph()
+        G.from_cudf_adjlist(dfOffsets, dfIndices, dfDistances )
 
         spdf = shortest_path( G, source_pid )
         spdf.sort_by("vertex")
-        distances = spdf["distance"]
 
         self.reset = False
         return converged

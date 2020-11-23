@@ -1,5 +1,6 @@
 import time
 import xarray as xa
+import numpy as np
 from spectraclass.gui.application import Spectraclass
 from spectraclass.data.manager import DataManager
 from spectraclass.graph.base import ActivationFlow
@@ -14,5 +15,7 @@ project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("spectra
 
 graph_data: xa.DataArray = project_dataset["reduction"]
 activation_flow = ActivationFlow.instance( graph_data, n_neighbors )
+activation_flow.spread( np.ndarray( [30] ) )
+print( "Completed" )
 
 
