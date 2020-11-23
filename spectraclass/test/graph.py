@@ -9,7 +9,7 @@ app = Spectraclass.instance()
 app.configure("spectraclass")
 n_neighbors = 5
 t0 = time.time()
-source = np.array( [30], dtype = np.int32 )
+source = np.array( [0], dtype = np.int32 )
 
 project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("spectraclass")
 # table_cols = project_dataset.attrs['colnames']
