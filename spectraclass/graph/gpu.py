@@ -62,6 +62,7 @@ class gpActivationFlow(ActivationFlow):
 
     def spread( self, sample_data: np.ndarray, nIter: int = 1, **kwargs ) -> Optional[bool]:
         converged = True
+        t0 = time.time()
         source_pid: int = sample_data[0]
         distances = cupy.ravel( cupy.fromDlpack(self.D.to_dlpack()) )
         indices   = cupy.ravel( cupy.fromDlpack(self.I.to_dlpack()) )
@@ -72,7 +73,7 @@ class gpActivationFlow(ActivationFlow):
         G = cugraph.Graph()
         G.from_cudf_adjlist(dfOffsets, dfIndices, dfDistances )
         self.P = shortest_path( G, source_pid )
-
+        print(f"Completed spread algorithm in time {time.time() - t0} sec, result = {self.P.head(2)}")
         self.reset = False
         return converged
 
