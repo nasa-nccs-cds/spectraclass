@@ -20,15 +20,15 @@ class gpUMAP(UMAP):
         return self
 
     def getMapper(self, X, y=None, **kwargs ):
+        input_data: cudf.DataFrame = self.getDataFrame(X)
         if self._mapper is None:
             t0 = time.time()
             print(f"Computing embedding, input shape = {X.shape}")
-            input_data: cudf.DataFrame = self.getDataFrame(X)
             self._mapper = cuml.UMAP(init=self.init, n_neighbors=self.n_neighbors, n_components=self.n_components,
                                 n_epochs=self.n_epochs, min_dist=self.min_dist, output_type="numpy")
             self._mapper.fit(input_data)
             print(f"Completed umap fit in time {time.time() - t0} sec")
-        return self._mapper
+        return input_data, self._mapper
 
     def getDataFrame(self, X ) -> cudf.DataFrame:
         if isinstance( X, xa.DataArray) or isinstance( X, np.ndarray ):
@@ -40,8 +40,8 @@ class gpUMAP(UMAP):
         else:
             raise Exception( f"Unsupport input type for gpUMAP: {X.__class__.__name__}")
 
-    def transform(self, X):
-        mapper = self.getMapper(X)
-        return mapper.transform(X)
+    def transform(self, X: Union[xa.DataArray,np.ndarray]  ):
+        input_data, mapper = self.getMapper(X)
+        return mapper.transform(input_data)
 
 
