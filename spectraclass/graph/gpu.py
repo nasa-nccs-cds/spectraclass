@@ -71,9 +71,7 @@ class gpActivationFlow(ActivationFlow):
 
         G = cugraph.Graph()
         G.from_cudf_adjlist(dfOffsets, dfIndices, dfDistances )
-
-        spdf = shortest_path( G, source_pid )
-        spdf.sort_by("vertex")
+        self.P = shortest_path( G, source_pid )
 
         self.reset = False
         return converged
