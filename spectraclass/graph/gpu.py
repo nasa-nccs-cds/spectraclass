@@ -27,6 +27,7 @@ class gpActivationFlow(ActivationFlow):
             if (nodes_data.size > 0):
                 t0 = time.time()
                 self.nodes = cudf.DataFrame({icol: nodes_data[:, icol] for icol in range(nodes_data.shape[1])})
+                print( f"NearestNeighbors{nodes_data.shape}: input nodes = {self.nodes.top(10)}")
                 self.nnd = NearestNeighbors( n_neighbors=self.nneighbors )
                 self.nnd.fit( self.nodes )
                 self.D, self.I = self.nnd.kneighbors( self.nodes, return_distance=True)
