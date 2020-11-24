@@ -91,6 +91,9 @@ class Spectraclass(tlc.SingletonConfigurable, AstroConfigurable):
     def __delete__(self, instance):
         self.save_config()
 
+    def show_gpu_usage(self):
+        os.system("nvidia-smi")
+
 
 
 
