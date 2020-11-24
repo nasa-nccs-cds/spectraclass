@@ -20,8 +20,9 @@ model.fit(X)
 
 # get 3 nearest neighbors
 distances, indices = model.kneighbors(X_cudf)
+print( indices.__class__ )
 
 # print results
-print(indices[0:25,:])
-print(distances[0:25,:])
+print(indices.head(10))
+print(distances.head(10))
 
