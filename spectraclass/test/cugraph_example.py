@@ -2,7 +2,7 @@ import cudf, os
 from cuml.neighbors import NearestNeighbors
 from cuml.datasets import make_blobs
 
-nverts = 10000
+nverts = 100000
 ndims = 16
 nneighbors = 5
 
