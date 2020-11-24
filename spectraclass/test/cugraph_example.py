@@ -2,17 +2,15 @@ import cudf, os
 from cuml.neighbors import NearestNeighbors
 from cuml.datasets import make_blobs
 
-nverts = 25
+nverts = 50
 X, _ = make_blobs( n_samples=nverts, centers=5, n_features=10, random_state=42 )
 
 # build a cudf Dataframe
 X_cudf = cudf.DataFrame(X)
-os.system("nvidia-smi")
 
 # fit model
 model = NearestNeighbors(n_neighbors=3)
 model.fit(X)
-os.system("nvidia-smi")
 
 # get 3 nearest neighbors
 distances, indices = model.kneighbors(X_cudf)
