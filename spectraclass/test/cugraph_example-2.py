@@ -29,7 +29,7 @@ offsets = sparse_graph.indptr
 indices = sparse_graph.indices
 
 #print( f"offsets:\n {offsets}" )
-print( f"indices:\n {indices[0,100].reshape(20,5)}" )
+print( f"indices:\n {indices[0:100].reshape(20,5)}" )
 
 # os.system("nvidia-smi")
 
