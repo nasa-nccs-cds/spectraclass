@@ -11,7 +11,7 @@ app.configure("spectraclass")
 nneighbors = 5
 
 project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("spectraclass")
-X = project_dataset["reduction"].values
+X = project_dataset["reduction"].values * 10
 print(f"Dataset input shape = {X.shape}, ")
 
 X_cudf = cudf.DataFrame(X)
