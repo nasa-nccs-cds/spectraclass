@@ -1,9 +1,11 @@
 import cudf
 from cuml.neighbors import NearestNeighbors
-from cuml.datasets import make_blobs
+import xarray as xa
+import numpy as np
+from spectraclass.data.manager import DataManager
 
-X, _ = make_blobs(n_samples=25, centers=5,
-                  n_features=10, random_state=42)
+project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("spectraclass")
+X: np.ndarray = project_dataset["reduction"].values[0:25,:]
 print(f"Input shape = {X.shape}")
 
 # build a cudf Dataframe
