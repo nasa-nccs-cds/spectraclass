@@ -4,7 +4,7 @@ from cuml.datasets import make_blobs
 from cupyx.scipy.sparse.csr import csr_matrix
 import scipy
 
-nverts = 100
+nverts = 100000
 ndims = 16
 nneighbors = 5
 
@@ -28,8 +28,8 @@ sparse_graph = cu_sparse_graph.get()
 offsets = sparse_graph.indptr
 indices = sparse_graph.indices
 
-print( f"offsets:\n {offsets}" )
-print( f"indices:\n {indices}" )
+#print( f"offsets:\n {offsets}" )
+print( f"indices:\n {indices[0,100].reshape(20,5)}" )
 
 # os.system("nvidia-smi")
 
