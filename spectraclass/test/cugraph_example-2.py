@@ -19,7 +19,11 @@ model.fit(X)
 
 # get 3 nearest neighbors
 sparse_graph = model.kneighbors_graph(X_cudf)
-os.system("nvidia-smi")
+
+print( f"sparse_graph: {sparse_graph.__class__}" )
+
+
+#os.system("nvidia-smi")
 
 # print results
 
