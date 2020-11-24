@@ -28,9 +28,10 @@ sparse_graph = cu_sparse_graph.get()
 offsets = sparse_graph.indptr
 indices = sparse_graph.indices
 
-print( f"sparse_graph: offsets shape = {offsets.shape}" )
+print( f"offsets:\n {offsets}" )
+print( f"indices:\n {indices}" )
 
-os.system("nvidia-smi")
+# os.system("nvidia-smi")
 
 # print results
 
