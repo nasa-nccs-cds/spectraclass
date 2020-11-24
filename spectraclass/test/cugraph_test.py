@@ -9,7 +9,7 @@ app = Spectraclass.instance()
 app.configure("spectraclass")
 
 project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("spectraclass")
-X: np.ndarray = project_dataset["reduction"].values[0:25,:]
+X: np.ndarray = project_dataset["reduction"].values
 print(f"Input shape = {X.shape}")
 X_cudf = cudf.DataFrame(X)
 print(f"X_cudf head = {X_cudf.head(10)}")
@@ -22,6 +22,6 @@ model.fit(X)
 distances, indices = model.kneighbors(X_cudf)
 
 # print results
-print(indices)
-print(distances)
+print(indices[0:25,:])
+print(distances[0:25,:])
 
