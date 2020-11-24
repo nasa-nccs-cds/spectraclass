@@ -204,7 +204,7 @@ class ModeDataManager( tlc.Configurable, AstroModeConfigurable ):
         self._model_dims_selector: ip.SelectionSlider = ip.SelectionSlider( options=range(3,50), description='Model Dimension:', value=self.model_dims, layout=ip.Layout( width="auto" ),
                                                    continuous_update=True, orientation='horizontal', readout=True, disabled=False  )
 
-        self._subsample_selector: ip.SelectionSlider = ip.SelectionSlider( options=range(1,50), description='Subsample:', value=self.subsample, layout=ip.Layout( width="auto" ),
+        self._subsample_selector: ip.SelectionSlider = ip.SelectionSlider( options=range(1,101), description='Subsample:', value=self.subsample, layout=ip.Layout( width="auto" ),
                                                    continuous_update=True, orientation='horizontal', readout=True, disabled=False  )
 
         load.on_click( self.prepare_inputs )

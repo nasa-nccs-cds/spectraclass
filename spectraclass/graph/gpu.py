@@ -65,12 +65,12 @@ class gpActivationFlow(ActivationFlow):
         t0 = time.time()
         source_pid: int = sample_data[0]
 
-        offsets = self.get_offset_series()
-        distances = cupy.ravel( cupy.fromDlpack(self.D.to_dlpack()) )
-        indices   = cupy.ravel( cupy.fromDlpack(self.I.to_dlpack()) )
+        offsets   = self.get_offset_series()
+        distances = cupy.ravel( cupy.fromDlpack( self.D.to_dlpack() ) )
+        indices   = cupy.ravel( cupy.fromDlpack( self.I.to_dlpack() ) )
 
-        dfOffsets = cudf.Series( offsets )
-        dfIndices = cudf.Series( indices )
+        dfOffsets   = cudf.Series( offsets )
+        dfIndices   = cudf.Series( indices )
         dfDistances = cudf.Series( distances )
 
         print( f" offsets:   {offsets[0:20]}")
