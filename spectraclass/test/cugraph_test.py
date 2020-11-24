@@ -7,7 +7,7 @@ from spectraclass.data.manager import DataManager
 
 app = Spectraclass.instance()
 app.configure("spectraclass")
-nVerts = 1000
+nVerts = 10000
 
 project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("spectraclass")
 full_input = project_dataset["reduction"]
