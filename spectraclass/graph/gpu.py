@@ -21,18 +21,19 @@ class gpActivationFlow(ActivationFlow):
         self.nodes: cudf.DataFrame = None
         self.setNodeData( nodes_data, **kwargs )
 
-    def setNodeData(self, nodes_data: xa.DataArray, **kwargs ):
-        print( f"{self.__class__.__name__}[{hex(id(self))}].setNodeData: input shape = {nodes_data.shape}" )
+    def setNodeData(self, node_data: xa.DataArray, **kwargs ):
+        input_data = node_data.values
+        print( f"{self.__class__.__name__}[{hex(id(self))}].setNodeData: input shape = {input_data.shape}" )
         if self.reset or (self.nodes is None):
-            if (nodes_data.size > 0):
+            if (input_data.size > 0):
                 t0 = time.time()
-                self.nodes = cudf.DataFrame({icol: nodes_data[:, icol] for icol in range(nodes_data.shape[1])})
-                print( f"NearestNeighbors{nodes_data.shape}: input nodes = {self.nodes.head(10)}")
+                self.nodes = cudf.DataFrame( input_data ) # {icol: nodes_data[:, icol] for icol in range(nodes_data.shape[1])})
+                print( f"NearestNeighbors{input_data.shape}: input nodes = {self.nodes.head(10)}")
                 self.nnd = NearestNeighbors( n_neighbors=self.nneighbors )
-                self.nnd.fit( self.nodes )
+                self.nnd.fit( input_data )
                 self.D, self.I = self.nnd.kneighbors( self.nodes, return_distance=True)
                 dt = (time.time()-t0)
-                print( f"Computed NN Graph with {self.nnd.n_neighbors} neighbors and {nodes_data.shape[0]} verts in {dt} sec ({dt/60} min)")
+                print( f"Computed NN Graph with {self.nnd.n_neighbors} neighbors and {input_data.shape[0]} verts in {dt} sec ({dt/60} min)")
                 print( f"  ---> Indices shape = {self.I.shape}, Distances shape = {self.D.shape} "  )
             else:
                 print( "No data available for this block")
