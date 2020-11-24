@@ -9,9 +9,10 @@ from spectraclass.data.manager import DataManager
 app = Spectraclass.instance()
 app.configure("spectraclass")
 nneighbors = 5
+nverts = 1000
 
 project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("spectraclass")
-X = project_dataset["reduction"].values * 10
+X = project_dataset["reduction"].values[0:nverts,:]
 print(f"Dataset input shape = {X.shape}, ")
 
 X_cudf = cudf.DataFrame(X)
