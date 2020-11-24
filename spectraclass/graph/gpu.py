@@ -67,7 +67,7 @@ class gpActivationFlow(ActivationFlow):
 
         print( f" ActivationFlow:  ")
         print(f" --> I.shape = {self.I.shape}")
-        print(f" --> I = {self.I[0:5,:]}")
+        print(f" --> I = {self.I.head(10)}")
 
         offsets   = self.get_offset_series()
         distances = cupy.ravel( cupy.fromDlpack( self.D.to_dlpack() ) )
