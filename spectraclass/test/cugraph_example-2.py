@@ -2,8 +2,9 @@ import cudf, os
 from cuml.neighbors import NearestNeighbors
 from cuml.datasets import make_blobs
 from cupyx.scipy.sparse.csr import csr_matrix
+import scipy
 
-nverts = 500000
+nverts = 100
 ndims = 16
 nneighbors = 5
 
@@ -19,9 +20,15 @@ model = NearestNeighbors(n_neighbors=nneighbors)
 model.fit(X)
 
 # get nearest neighbors
-sparse_graph: csr_matrix = model.kneighbors_graph(X_cudf)
-nz = sparse_graph.count_nonzero()
-print( f"sparse_graph: nz = {nz}" )
+cu_sparse_graph: csr_matrix = model.kneighbors_graph(X_cudf)
+sparse_graph = cu_sparse_graph.get()
+#offsets = cudf.Series(sparse_graph.indptr)
+#indices = cudf.Series(sparse_graph.indices)
+
+offsets = sparse_graph.indptr
+indices = sparse_graph.indices
+
+print( f"sparse_graph: offsets shape = {offsets.shape}" )
 
 os.system("nvidia-smi")
 
