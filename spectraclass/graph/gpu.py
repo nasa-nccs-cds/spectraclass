@@ -64,6 +64,7 @@ class gpActivationFlow(ActivationFlow):
         converged = True
         t0 = time.time()
         source_pid: int = sample_data[0]
+        print( f" ActivationFlow:  I.shape = {self.I.shape}")
 
         offsets   = self.get_offset_series()
         distances = cupy.ravel( cupy.fromDlpack( self.D.to_dlpack() ) )
