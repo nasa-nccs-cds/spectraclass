@@ -7,10 +7,12 @@ from spectraclass.data.manager import DataManager
 
 app = Spectraclass.instance()
 app.configure("spectraclass")
+nVerts = 1000
 
 project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("spectraclass")
-X: np.ndarray = project_dataset["reduction"].values
-print(f"Input shape = {X.shape}")
+full_input = project_dataset["reduction"]
+X = full_input.values[0:nVerts,:]
+print(f"Dataset shape = {full_input.shape}, input shape = {X.shape}, ")
 X_cudf = cudf.DataFrame(X)
 print(f"X_cudf head = {X_cudf.head(10)}")
 
