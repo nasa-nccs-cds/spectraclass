@@ -1,4 +1,5 @@
 import cudf
+import pandas as pd
 import numpy as np
 from cuml.datasets import make_blobs
 from cuml.neighbors import NearestNeighbors as cuNearestNeighbors
@@ -13,7 +14,9 @@ random_state = 0
 
 device_data, _ = make_blobs(n_samples=n_samples,  n_features=n_features,  centers=5, random_state=random_state)
 device_data = cudf.DataFrame(device_data)
-host_data = device_data.to_pandas()
+host_data: pd.DataFrame = device_data.to_pandas()
+
+print( f"\n host_data:\n {host_data.head(25)}")
 
 # Scikit-learn Model
 
