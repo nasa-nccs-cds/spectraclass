@@ -15,7 +15,7 @@ spectraclass_data = project_dataset["reduction"].values
 print(f"Spectraclass input shape = {spectraclass_data.shape}")
 sc_cudf_data = cudf.DataFrame(spectraclass_data)
 
-print( f"Spectraclass dataframe: ndim = {sc_cudf_data.ndim}, size = {sc_cudf_data.size}, col shape = {sc_cudf_data.columns.shape}, shape = {sc_cudf_data.index.shape}, np-shape = {sc_cudf_data.values.shape}, attrs = {sc_cudf_data.attrs}")
+print( f"Spectraclass dataframe: ndim = {sc_cudf_data.ndim}, size = {sc_cudf_data.size}, col shape = {sc_cudf_data.columns.shape}, shape = {sc_cudf_data.index.shape}, np-shape = {sc_cudf_data.values.shape}")
 print( f"  --> device_data.index.__class__ = {sc_cudf_data.index.__class__}")
 
 n_samples = spectraclass_data.shape[0]
@@ -24,5 +24,5 @@ scipy_data, _ = make_blobs(n_samples=n_samples,  n_features=n_features,  centers
 print(f"Scipy input shape = {scipy_data.shape}")
 scipy_cudf_data = cudf.DataFrame(scipy_data)
 
-print( f"scipy dataframe: ndim = {scipy_cudf_data.ndim}, size = {scipy_cudf_data.size}, col shape = {scipy_cudf_data.columns.shape}, shape = {scipy_cudf_data.index.shape}, np-shape = {scipy_cudf_data.values.shape}, attrs = {scipy_cudf_data.attrs}")
+print( f"scipy dataframe: ndim = {scipy_cudf_data.ndim}, size = {scipy_cudf_data.size}, col shape = {scipy_cudf_data.columns.shape}, shape = {scipy_cudf_data.index.shape}, np-shape = {scipy_cudf_data.values.shape}")
 print( f"  --> device_data.index.__class__ = {scipy_cudf_data.index.__class__}")
