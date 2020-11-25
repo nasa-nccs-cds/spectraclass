@@ -1,23 +1,24 @@
 import cudf
 import pandas as pd
 import numpy as np
-from cuml.datasets import make_blobs
 from cuml.neighbors import NearestNeighbors as cuNearestNeighbors
 from sklearn.neighbors import NearestNeighbors as skNearestNeighbors
+import xarray as xa
+from spectraclass.gui.application import Spectraclass
+from spectraclass.data.manager import DataManager
 
-n_samples = 2**17
-n_features = 40
+app = Spectraclass.instance()
+app.configure("spectraclass")
 print_rows = 25
-
-n_query = 2**13
+n_query = 10000
 n_neighbors = 4
 random_state = 0
 
-device_data, _ = make_blobs(n_samples=n_samples,  n_features=n_features,  centers=5, random_state=random_state)
-device_data = cudf.DataFrame(device_data)
-host_data: pd.DataFrame = device_data.to_pandas()
-
-print( f"\n INPUT DATA:\n {device_data.head(25)}")
+project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("spectraclass")
+host_data = project_dataset["reduction"].values
+print(f"Dataset input shape = {host_data.shape}")
+device_data = cudf.DataFrame(host_data)
+print( f"\nINPUT DATA:\n{device_data.head(10)}")
 
 # Scikit-learn Model
 
