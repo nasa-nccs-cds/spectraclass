@@ -5,17 +5,18 @@ from cuml.datasets import make_blobs
 from cuml.neighbors import NearestNeighbors as cuNearestNeighbors
 from sklearn.neighbors import NearestNeighbors as skNearestNeighbors
 
-n_samples = 2**17
-n_features = 40
+n_samples = 222232
+n_features = 16
 print_rows = 25
 
-n_query = 2**13
+n_query = 10000
 n_neighbors = 4
 random_state = 0
 
 device_data, _ = make_blobs(n_samples=n_samples,  n_features=n_features,  centers=5, random_state=random_state)
 device_data = cudf.DataFrame(device_data)
 host_data: pd.DataFrame = device_data.to_pandas()
+print( f"Host dataframe: ndim = {host_data.ndim}, size = {host_data.size}, col shape = {host_data.columns.shape}, shape = {host_data.index.shape}, np-shape = {host_data.values.shape}" )
 
 print( f"\n INPUT DATA:\n {device_data.head(25)}")
 

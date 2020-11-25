@@ -15,10 +15,12 @@ n_neighbors = 4
 random_state = 0
 
 project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("spectraclass")
-host_data = project_dataset["reduction"].values
-print(f"Dataset input shape = {host_data.shape}")
-device_data = cudf.DataFrame(host_data)
+input_data = project_dataset["reduction"].values
+print(f"Dataset input shape = {input_data.shape}")
+device_data = cudf.DataFrame(input_data)
+host_data: pd.DataFrame = device_data.to_pandas()
 print( f"\nINPUT DATA:\n{device_data.head(10)}")
+print( f"Host dataframe: ndim = {host_data.ndim}, size = {host_data.size}, col shape = {host_data.columns.shape}, shape = {host_data.index.shape}, np-shape = {host_data.values.shape}" )
 
 # Scikit-learn Model
 
