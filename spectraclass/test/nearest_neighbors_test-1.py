@@ -30,8 +30,8 @@ D_cuml, I_cuml = knn_cuml.kneighbors(device_data[:n_query], n_neighbors)
 print( f"\n D_cuml:\n {D_cuml.head(25)}")
 print( f"\n I_cuml:\n {I_cuml.head(25)}")
 
-print( f"\n D_sk:\n {D_cuml.head(25)}")
-print( f"\n I_sk:\n {I_cuml.head(25)}")
+print( f"\n D_sk:\n {D_sk[0:25]}")
+print( f"\n I_sk:\n {I_sk[0:25]}")
 
 # # Compare Results
 #
