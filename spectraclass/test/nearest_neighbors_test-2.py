@@ -36,6 +36,7 @@ D_cuml, I_cuml = knn_cuml.kneighbors(device_data[:n_query], n_neighbors)
 
 print( f"\n D_cuml:\n {D_cuml.head(print_rows)}")
 print( f"\n I_cuml:\n {I_cuml.head(print_rows)}")
+print( f"\n I_cuml sorted:\n {I_cuml.sorted('0').head(print_rows)}")
 
 print( f"\n D_sk:\n {D_sk[0:print_rows]}")
 print( f"\n I_sk:\n {I_sk[0:print_rows]}")
