@@ -27,16 +27,20 @@ knn_cuml = cuNearestNeighbors()
 knn_cuml.fit(device_data)
 D_cuml, I_cuml = knn_cuml.kneighbors(device_data[:n_query], n_neighbors)
 
-# Compare Results
+print( f" D_cuml class: {D_cuml.__class__}\n")
+print( f"\n D_cuml:\n {D_cuml.head(25)}")
+print( f"\n I_cuml:\n {I_cuml.head(25)}")
 
-passed = np.allclose(D_sk, D_cuml.as_gpu_matrix(), atol=1e-3)
-print('compare knn: cuml vs sklearn distances %s'%('equal'if passed else 'NOT equal'))
-
-sk_sorted = np.sort(I_sk, axis=1)
-cuml_sorted = np.sort(I_cuml.as_gpu_matrix(), axis=1)
-
-diff = sk_sorted - cuml_sorted
-
-passed = (len(diff[diff!=0]) / n_samples) < 1e-9
-print('compare knn: cuml vs sklearn indexes %s'%('equal'if passed else 'NOT equal'))
-
+# # Compare Results
+#
+# passed = np.allclose(D_sk, D_cuml.as_gpu_matrix(), atol=1e-3)
+# print('compare knn: cuml vs sklearn distances %s'%('equal'if passed else 'NOT equal'))
+#
+# sk_sorted = np.sort(I_sk, axis=1)
+# cuml_sorted = np.sort(I_cuml.as_gpu_matrix(), axis=1)
+#
+# diff = sk_sorted - cuml_sorted
+#
+# passed = (len(diff[diff!=0]) / n_samples) < 1e-9
+# print('compare knn: cuml vs sklearn indexes %s'%('equal'if passed else 'NOT equal'))
+#
