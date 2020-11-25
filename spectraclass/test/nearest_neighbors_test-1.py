@@ -27,9 +27,11 @@ knn_cuml = cuNearestNeighbors()
 knn_cuml.fit(device_data)
 D_cuml, I_cuml = knn_cuml.kneighbors(device_data[:n_query], n_neighbors)
 
-print( f" D_cuml class: {D_cuml.__class__}\n")
 print( f"\n D_cuml:\n {D_cuml.head(25)}")
 print( f"\n I_cuml:\n {I_cuml.head(25)}")
+
+print( f"\n D_sk:\n {D_cuml.head(25)}")
+print( f"\n I_sk:\n {I_cuml.head(25)}")
 
 # # Compare Results
 #
