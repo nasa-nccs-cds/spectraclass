@@ -7,6 +7,7 @@ from sklearn.neighbors import NearestNeighbors as skNearestNeighbors
 
 n_samples = 2**17
 n_features = 40
+print_rows = 100
 
 n_query = 2**13
 n_neighbors = 4
@@ -16,7 +17,7 @@ device_data, _ = make_blobs(n_samples=n_samples,  n_features=n_features,  center
 device_data = cudf.DataFrame(device_data)
 host_data: pd.DataFrame = device_data.to_pandas()
 
-print( f"\n host_data:\n {host_data.head(25)}")
+print( f"\n INPUT DATA:\n {device_data.head(25)}")
 
 # Scikit-learn Model
 
@@ -30,11 +31,11 @@ knn_cuml = cuNearestNeighbors()
 knn_cuml.fit(device_data)
 D_cuml, I_cuml = knn_cuml.kneighbors(device_data[:n_query], n_neighbors)
 
-print( f"\n D_cuml:\n {D_cuml.head(25)}")
-print( f"\n I_cuml:\n {I_cuml.head(25)}")
+print( f"\n D_cuml:\n {D_cuml.head(print_rows)}")
+print( f"\n I_cuml:\n {I_cuml.head(print_rows)}")
 
-print( f"\n D_sk:\n {D_sk[0:25]}")
-print( f"\n I_sk:\n {I_sk[0:25]}")
+print( f"\n D_sk:\n {D_sk[0:print_rows]}")
+print( f"\n I_sk:\n {I_sk[0:print_rows]}")
 
 # # Compare Results
 #
