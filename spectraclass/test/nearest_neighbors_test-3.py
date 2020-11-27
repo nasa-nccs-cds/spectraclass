@@ -7,8 +7,9 @@ from cudf.io.csv import read_csv
 
 print_rows = 25
 n_neighbors = 4
+dtypes = dict( samples=np.int32, model=np.int32, spectral_embedding=np.float32 )
 
-device_data: cudf.DataFrame = read_csv( "spectraclass_data.csv", dtype=np.float ).pivot(index='samples', columns='model')
+device_data: cudf.DataFrame = read_csv( "spectraclass_data.csv", dtype=dtypes ).pivot(index='samples', columns='model')
 host_data: pd.DataFrame = device_data.to_pandas()
 print( f"\nINPUT DATA:\n{device_data.head(10)}")
 print( f"Host dataframe: ndim = {host_data.ndim}, size = {host_data.size}, col shape = {host_data.columns.shape}, shape = {host_data.index.shape}, np-shape = {host_data.values.shape}" )
