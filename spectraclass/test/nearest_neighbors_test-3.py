@@ -1,18 +1,12 @@
-import cudf
+import cudf, os
 import pandas as pd
 import numpy as np
 from cuml.neighbors import NearestNeighbors as cuNearestNeighbors
 from sklearn.neighbors import NearestNeighbors as skNearestNeighbors
 from cudf.io.csv import read_csv
-import xarray as xa
-from spectraclass.gui.application import Spectraclass
 
-app = Spectraclass.instance()
-app.configure("spectraclass")
 print_rows = 25
-n_query = 10000
 n_neighbors = 4
-random_state = 0
 
 device_data: cudf.DataFrame = read_csv( "spectraclass_data.csv" )
 host_data: pd.DataFrame = device_data.to_pandas()
@@ -23,21 +17,23 @@ print( f"Host dataframe: ndim = {host_data.ndim}, size = {host_data.size}, col s
 
 knn_sk = skNearestNeighbors(algorithm="brute", n_jobs=-1)
 knn_sk.fit(host_data)
-D_sk, I_sk = knn_sk.kneighbors(host_data[:n_query], n_neighbors)
+D_sk, I_sk = knn_sk.kneighbors(host_data, n_neighbors)
 
 # cuML Model
 
 knn_cuml = cuNearestNeighbors()
 knn_cuml.fit(device_data)
-D_cuml, I_cuml = knn_cuml.kneighbors(device_data[:n_query], n_neighbors)
+D_cuml, I_cuml = knn_cuml.kneighbors(device_data, n_neighbors)
+
+print( f"\n D_sk:\n {D_sk[0:print_rows]}")
+print( f"\n I_sk:\n {I_sk[0:print_rows]}")
+print( f"\n I_sk shape = {I_sk.shape} ")
 
 print( f"\n D_cuml:\n {D_cuml.head(print_rows)}")
 print( f"\n I_cuml:\n {I_cuml.head(print_rows)}")
 print( f"\n I_cuml shape = {I_cuml.shape} ")
 
-print( f"\n D_sk:\n {D_sk[0:print_rows]}")
-print( f"\n I_sk:\n {I_sk[0:print_rows]}")
-print( f"\n I_sk shape = {I_sk.shape} ")
+os.system("nvidia-smi")
 
 # # Compare Results
 #
