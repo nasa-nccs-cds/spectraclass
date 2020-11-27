@@ -8,7 +8,7 @@ from cudf.io.csv import read_csv
 print_rows = 25
 n_neighbors = 4
 
-device_data: cudf.DataFrame = read_csv( "spectraclass_data.csv" ).pivot(index='samples', columns='model')
+device_data: cudf.DataFrame = read_csv( "spectraclass_data.csv", dtype=np.float32 ).pivot(index='samples', columns='model')
 host_data: pd.DataFrame = device_data.to_pandas()
 print( f"\nINPUT DATA:\n{device_data.head(10)}")
 print( f"Host dataframe: ndim = {host_data.ndim}, size = {host_data.size}, col shape = {host_data.columns.shape}, shape = {host_data.index.shape}, np-shape = {host_data.values.shape}" )
@@ -24,6 +24,7 @@ D_sk, I_sk = knn_sk.kneighbors(host_data, n_neighbors)
 knn_cuml = cuNearestNeighbors()
 knn_cuml.fit(device_data)
 D_cuml, I_cuml = knn_cuml.kneighbors(device_data, n_neighbors)
+os.system("nvidia-smi")
 
 print( f"\n D_sk:\n {D_sk[0:print_rows]}")
 print( f"\n I_sk:\n {I_sk[0:print_rows]}")
@@ -32,8 +33,6 @@ print( f"\n I_sk shape = {I_sk.shape} ")
 print( f"\n D_cuml:\n {D_cuml.head(print_rows)}")
 print( f"\n I_cuml:\n {I_cuml.head(print_rows)}")
 print( f"\n I_cuml shape = {I_cuml.shape} ")
-
-os.system("nvidia-smi")
 
 # # Compare Results
 #
