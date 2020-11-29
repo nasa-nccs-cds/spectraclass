@@ -1,4 +1,4 @@
-import cudf, cuml, cupy, cupyx
+import cudf, cuml, cupy, cupyx, os
 from cuml.neighbors import NearestNeighbors
 from cuml.datasets import make_blobs
 from cupyx.scipy.sparse.csr import csr_matrix
@@ -8,16 +8,17 @@ ndims = 16
 nneighbors = 5
 
 X, _ = make_blobs( n_samples=nverts, centers=5, n_features=ndims, random_state=42 )
-X_cudf = cudf.DataFrame(X)
-print( f"\nINPUT DATA:\n{X_cudf.head(10)}")
+cuX = cudf.DataFrame(X)
+print( f"\nINPUT DATA:\n{cuX.head(8)}")
 
-model = NearestNeighbors(n_neighbors=nneighbors)
-model.fit(X)
-sparse_graph: csr_matrix = model.kneighbors_graph(X_cudf)
+model = NearestNeighbors( n_neighbors=nneighbors, verbose=True )
+model.fit( cuX )
+sparse_graph: csr_matrix = model.kneighbors_graph( cuX, mode="distance" )
 
 reducer = cuml.UMAP( n_components=3 )
-embedding = reducer.fit_transform( X_cudf, knn_graph = sparse_graph )
+embedding = reducer.fit_transform( cuX, knn_graph = sparse_graph )
 print(f"Completed embedding, shape = {embedding.shape}")
+os.system("nvidia-smi")
 
 
 
