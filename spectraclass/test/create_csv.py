@@ -10,5 +10,5 @@ nrows = 20000
 
 project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("spectraclass")
 input_data: xa.DataArray = project_dataset["reduction"]
-input_data[0:nrows,:].to_dataframe("spectral_embedding").to_csv("spectraclass_data.csv")
+input_data[0:nrows,:].to_dataframe("spectral_embedding").to_csv("/tmp/spectraclass_data.csv")
 

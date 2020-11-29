@@ -1,7 +1,7 @@
 import cudf, os
 from cuml.neighbors import NearestNeighbors
 from cuml.datasets import make_blobs
-
+from cupyx.scipy.sparse.csr import csr_matrix
 nverts = 500000
 ndims = 16
 nneighbors = 5
