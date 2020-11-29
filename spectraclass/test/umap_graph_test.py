@@ -13,23 +13,10 @@ print( f"\nINPUT DATA:\n{X_cudf.head(10)}")
 
 model = NearestNeighbors(n_neighbors=nneighbors)
 model.fit(X)
-cu_sparse_graph: csr_matrix = model.kneighbors_graph(X_cudf)
-sparse_graph = cu_sparse_graph.get()
+sparse_graph: csr_matrix = model.kneighbors_graph(X_cudf)
 
-#offsets = cudf.Series(sparse_graph.indptr)
-#indices = cudf.Series(sparse_graph.indices)
-#offsets = sparse_graph.indptr
-#indices = sparse_graph.indices
-
-reducer = cuml.UMAP(
-    n_neighbors=10,
-    n_components=3,
-    n_epochs=500,
-    min_dist=0.1,
-    output_type="numpy"
-)
-
-embedding = reducer.fit_transform( X_cudf, knn_graph = cu_sparse_graph )
+reducer = cuml.UMAP( n_components=3 )
+embedding = reducer.fit_transform( X_cudf, knn_graph = sparse_graph )
 print(f"Completed embedding, shape = {embedding.shape}")
 
 
