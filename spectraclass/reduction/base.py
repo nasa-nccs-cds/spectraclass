@@ -270,7 +270,6 @@ class UMAP(BaseEstimator):
         self.b = b
 
         self.input_data: np.ndarray = None
-        self.flow: ActivationFlow = None
         self.scoord: xa.DataArray = None
 
 

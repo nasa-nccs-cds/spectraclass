@@ -4,11 +4,11 @@ from .base import ActivationFlow
 import xarray as xa
 import numba
 import cudf, cuml, cupy, cupyx, cugraph
-from cuml.neighbors import NearestNeighbors
 from cupyx.scipy.sparse import csr_matrix
 from cugraph.traversal.sssp import shortest_path
 from typing import List, Union, Tuple, Optional, Dict
 import os, time, threading, traceback
+USE_SKLEARN = True
 
 class gpActivationFlow(ActivationFlow):
 
@@ -18,23 +18,31 @@ class gpActivationFlow(ActivationFlow):
         self.D: cudf.DataFrame = None
         self.P: cudf.DataFrame = None
         self.C: cudf.DataFrame = None
-        self.nodes: cudf.DataFrame = None
+        self.nnd = None
         self.setNodeData( nodes_data, **kwargs )
 
     def setNodeData(self, node_data: xa.DataArray, **kwargs ):
         input_data = node_data.values
         print( f"{self.__class__.__name__}[{hex(id(self))}].setNodeData: input shape = {input_data.shape}" )
-        if self.reset or (self.nodes is None):
+        if self.reset or (self.I is None):
             if (input_data.size > 0):
                 t0 = time.time()
-                self.nodes = cudf.DataFrame( input_data ) # {icol: nodes_data[:, icol] for icol in range(nodes_data.shape[1])})
-                print( f"NearestNeighbors{input_data.shape}: input nodes = {self.nodes.head(10)}")
-                self.nnd = NearestNeighbors( n_neighbors=self.nneighbors )
-                self.nnd.fit( input_data )
-                self.D, self.I = self.nnd.kneighbors( self.nodes, return_distance=True)
+                if USE_SKLEARN:
+                    from sklearn.neighbors import NearestNeighbors
+                    self.nnd = NearestNeighbors( n_neighbors=self.nneighbors, n_jobs=-1 )
+                    self.nnd.fit( input_data )
+                    D_sk, I_sk = self.nnd.kneighbors( input_data, return_distance=True )
+                    self.D, self.I = cudf.DataFrame( D_sk ), cudf.DataFrame( I_sk )
+                else:
+                    from cuml.neighbors import NearestNeighbors
+                    nodes = cudf.DataFrame( input_data )
+                    print( f"NearestNeighbors{input_data.shape}: input nodes = {nodes.head(10)}")
+                    self.nnd = NearestNeighbors( n_neighbors=self.nneighbors )
+                    self.nnd.fit( input_data )
+                    self.D, self.I = self.nnd.kneighbors( nodes, return_distance=True)
                 dt = (time.time()-t0)
-                print( f"Computed NN Graph with {self.nnd.n_neighbors} neighbors and {input_data.shape[0]} verts in {dt} sec ({dt/60} min)")
-                print( f"  ---> Indices shape = {self.I.shape}, Distances shape = {self.D.shape} "  )
+                print( f"Computed NN Graph with {self.nneighbors} neighbors and {input_data.shape[0]} verts in {dt} sec ({dt/60} min)")
+                print( f"  ---> Indices shape = {self.I.shape}, Distances shape = {self.D.shape}\n Indices = {self.I.head(10)} "  )
             else:
                 print( "No data available for this block")
 

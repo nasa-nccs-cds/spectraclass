@@ -38,7 +38,7 @@ class gpUMAP(UMAP):
         elif isinstance(X, pd.DataFrame):
             return cudf.DataFrame(X)
         else:
-            raise Exception( f"Unsupport input type for gpUMAP: {X.__class__.__name__}")
+            raise Exception( f"Unsupported input type for gpUMAP: {X.__class__.__name__}")
 
     def transform(self, X: Union[xa.DataArray,np.ndarray]  ):
         t0 = time.time()

@@ -20,6 +20,21 @@ embedding = reducer.fit_transform( cuX, knn_graph = sparse_graph )
 print(f"Completed embedding, shape = {embedding.shape}")
 os.system("nvidia-smi")
 
+if ...:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -97,7 +97,6 @@ class ReductionManager(tlc.SingletonConfigurable, AstroConfigurable):
         mapper: UMAP = self.getUMapper(self._dsid, self.ndim)
         mapper.scoord = point_data.coords['samples']
         mapper.input_data = point_data.values
-        mapper.flow = ActivationFlowManager.instance().getActivationFlow(point_data)
         if point_data.shape[1] <= self.ndim:
             mapper.set_embedding(mapper.input_data)
         else:
@@ -107,7 +106,7 @@ class ReductionManager(tlc.SingletonConfigurable, AstroConfigurable):
             mapper.init = self.init
             kwargs['nepochs'] = 1
             labels_data: np.ndarray = LabelsManager.instance().labels_data().values
-            mapper.embed( mapper.input_data, labels_data, nngraph= mapper.flow.nnd, **kwargs)
+            mapper.embed( mapper.input_data, labels_data, **kwargs)
         return mapper.embedding
 
     def umap_embedding( self, **kwargs ) -> Optional[np.ndarray]:
@@ -117,7 +116,7 @@ class ReductionManager(tlc.SingletonConfigurable, AstroConfigurable):
         if 'alpha' not in kwargs.keys():   kwargs['alpha'] = self.alpha
         self._state = self.PROCESSED
         labels_data: np.ndarray = LabelsManager.instance().labels_data().values
-        mapper.embed( mapper.input_data, labels_data, nngraph= mapper.flow.nnd, **kwargs )
+        mapper.embed( mapper.input_data, labels_data, **kwargs )
         return mapper.embedding
 
     def xa_umap_embedding( self, **kwargs ) -> Optional[xa.DataArray]:
