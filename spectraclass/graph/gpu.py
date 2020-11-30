@@ -86,17 +86,13 @@ class gpActivationFlow(ActivationFlow):
 
         print(f" --> offsets.ravel = {offsets[0:25]}")
         print(f" --> I.ravel = {indices[0:25]}")
-
-        dfOffsets   = cudf.Series( offsets )
-        dfIndices   = cudf.Series( indices )
-        dfDistances = cudf.Series( distances )
-
         print( f" offsets:   {offsets[0:20]}")
         print( f" distances: {distances[0:20]}")
         print( f" indices:   {indices[0:20]}")
 
+        input_cudf = cudf.DataFrame( dict(source=cudf.Series( offsets ), destination=cudf.Series( indices ), distances=cudf.Series( distances ) ) )
         G = cugraph.Graph()
-        G.from_cudf_adjlist(dfOffsets, dfIndices, dfDistances )
+        G.from_cudf_edgelist( input_cudf, source='source', destination='destination', edge_attr='distances', renumber=False )
         self.P = shortest_path( G, source_pid ).sort_values('distance')
         print(f"Completed spread algorithm in time {time.time() - t0} sec, source = {source_pid}, result {self.P.__class__} = {self.P.head(20)}")
         self.reset = False
