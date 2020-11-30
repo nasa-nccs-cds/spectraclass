@@ -81,17 +81,16 @@ class gpActivationFlow(ActivationFlow):
         print(f" --> D = {self.D.head(10)}")
 
         offsets   = self.get_offset_series()
+        distances = cupy.ravel( cupy.fromDlpack( self.D.to_dlpack() ) )
+        indices   = cupy.ravel( cupy.fromDlpack( self.I.to_dlpack() ) )
+
         print(f" --> offsets.ravel = {offsets[0:25]}")
+        print(f" --> I.ravel = {indices[0:25]}")
+        print( f" offsets:   {offsets[0:20]}")
+        print( f" distances: {distances[0:20]}")
+        print( f" indices:   {indices[0:20]}")
 
-#        distances = cupy.ravel( cupy.fromDlpack( self.D.to_dlpack() ) )
-#        indices   = cupy.ravel( cupy.fromDlpack( self.I.to_dlpack() ) )
-        # print(f" --> I.ravel = {indices[0:25]}")
-        # print( f" offsets:   {offsets[0:20]}")
-        # print( f" distances: {distances[0:20]}")
-        # print( f" indices:   {indices[0:20]}")
-#        input_cudf = cudf.DataFrame( dict(source=cudf.Series( offsets ), destination=cudf.Series( indices ), distances=cudf.Series( distances ) ) )
-
-        input_cudf = cudf.DataFrame( dict(source=cudf.Series( offsets ), destination=self.I.columns[0], distances=self.D.columns[0] ) )
+        input_cudf = cudf.DataFrame( dict(source=cudf.Series( offsets ), destination=cudf.Series( indices ), distances=cudf.Series( distances ) ) )
         G = cugraph.Graph()
         G.from_cudf_edgelist( input_cudf, source='source', destination='destination', edge_attr='distances', renumber=False )
         self.P = shortest_path( G, source_pid ).sort_values('distance')
