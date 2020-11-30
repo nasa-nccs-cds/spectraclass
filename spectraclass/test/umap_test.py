@@ -1,4 +1,3 @@
-import time
 import xarray as xa
 from spectraclass.gui.application import Spectraclass
 from spectraclass.data.manager import DataManager
@@ -11,8 +10,9 @@ project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("spectra
 umap_data: xa.DataArray = project_dataset["reduction"].compute()
 
 umap = UMAP.instance( n_neighbors=n_neighbors,  n_components=3 )
-embedding = umap.embed( umap_data )
-print( embedding.__class__.__name__ )
+umap.embed( umap_data )
+print( "Embedding[0:10]:" )
+print( umap.embedding[0:10] )
 
 
 
