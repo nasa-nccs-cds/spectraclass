@@ -33,15 +33,18 @@ class ReductionManager(tlc.SingletonConfigurable, AstroConfigurable):
     def refresh(self):
         self._mapper = {}
 
-    def reduce(self, inputs: np.ndarray, reduction_method: str, ndim: int, nepochs: int = 1 ) -> np.ndarray:
+    def reduce(self, inputs: np.ndarray, reduction_method: str, ndim: int, nepochs: int = 1 ) -> Tuple[np.ndarray,np.ndarray]:
         if reduction_method.lower() == "autoencoder": return self.autoencoder_reduction( inputs, ndim, nepochs )
+        else: return ( inputs, inputs )
 
-    def xreduce(self, inputs: xa.DataArray, reduction_method: str, ndim: int ) -> xa.DataArray:
+    def xreduce(self, inputs: xa.DataArray, reduction_method: str, ndim: int ) -> Tuple[xa.DataArray,xa.DataArray]:
         if reduction_method.lower() == "autoencoder":
-            encoded_data = self.autoencoder_reduction( inputs.values, ndim )
+            ( encoded_data, reproduced_data ) = self.autoencoder_reduction( inputs.values, ndim )
             coords = {inputs.dims[0]: inputs.coords[inputs.dims[0]], inputs.dims[1]: np.arange(ndim)}
-            return xa.DataArray(encoded_data, dims=inputs.dims, coords=coords, attrs=inputs.attrs)
-        return inputs
+            x_encoded_data = xa.DataArray(encoded_data, dims=inputs.dims, coords=coords, attrs=inputs.attrs)
+            x_reproduced_data = inputs.copy( data=reproduced_data )
+            return ( x_encoded_data, x_reproduced_data )
+        return ( inputs, inputs )
 
     # def spectral_reduction(data, graph, n_components=3, sparsify=False):
     #     t0 = time.time()
@@ -59,7 +62,7 @@ class ReductionManager(tlc.SingletonConfigurable, AstroConfigurable):
     #     print(f"Completed spectral_embedding in {(time.time() - t0) / 60.0} min.")
     #     return rv
 
-    def autoencoder_reduction( self, encoder_input: np.ndarray, ndim: int, epochs: int = 1 ) -> np.ndarray:
+    def autoencoder_reduction( self, encoder_input: np.ndarray, ndim: int, epochs: int = 1 ) -> Tuple[np.ndarray,np.ndarray]:
         from keras.layers import Input, Dense
         from keras.models import Model
         input_dims = encoder_input.shape[1]
@@ -87,7 +90,8 @@ class ReductionManager(tlc.SingletonConfigurable, AstroConfigurable):
         result = encoder.predict( encoder_input )
         rmean, rstd = result.mean(axis=0), result.std()
         print( f" Autoencoder_reduction, result:   shape = {result.shape}, rmean = {rmean}, rstd = {rstd} ")
-        return (result - rmean)/rstd
+        scaled_result = (result - rmean)/rstd
+        return (scaled_result, autoencoder.predict(encoder_input))
 
     def umap_init( self,  point_data: xa.DataArray, **kwargs ) -> Optional[np.ndarray]:
         from .cpu import UMAP
@@ -102,7 +106,8 @@ class ReductionManager(tlc.SingletonConfigurable, AstroConfigurable):
         else:
             print( f"umap_init: init = {self.init}")
             if self.init == "autoencoder":
-                mapper.init_embedding(self.autoencoder_reduction(point_data.values, self.ndim, 2))
+                (reduction, reproduction) = self.autoencoder_reduction(point_data.values, self.ndim, 2)
+                mapper.init_embedding(reduction)
             mapper.init = self.init
             kwargs['nepochs'] = 1
             labels_data: np.ndarray = LabelsManager.instance().labels_data().values

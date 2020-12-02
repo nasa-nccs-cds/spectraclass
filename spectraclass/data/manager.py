@@ -145,9 +145,11 @@ class ModeDataManager( tlc.Configurable, AstroModeConfigurable ):
         data_vars.update( { f'plot-{vid}': self.getXarray( pspec[vid], xcoords, self.subsample, xdims, norm=pspec.get('norm','')) for vid in [ 'x', 'y' ] } )
         self.set_progress( 0.1 )
         if self.reduce_method != "None":
-           reduced_spectra = ReductionManager.instance().reduce( data_vars['embedding'], self.reduce_method, self.model_dims, self.reduce_nepochs )
+           input_data = data_vars['embedding']
+           (reduced_spectra, reproduced_spectra) = ReductionManager.instance().reduce( input_data, self.reduce_method, self.model_dims, self.reduce_nepochs )
            coords = dict( samples=xcoords['samples'], model=np.arange( self.model_dims ) )
            data_vars['reduction'] =  xa.DataArray( reduced_spectra, dims=['samples','model'], coords=coords )
+           data_vars['reproduction'] = input_data.copy( data=reproduced_spectra )
            self.set_progress( 0.8 )
 
         dataset = xa.Dataset( data_vars, coords=xcoords, attrs = {'type':'spectra'} )
