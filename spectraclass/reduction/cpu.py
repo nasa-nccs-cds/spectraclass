@@ -1109,7 +1109,7 @@ def find_ab_params(spread, min_dist):
 
 class cpUMAP(UMAP):
 
-    def getNNGraph(self, nodes: np.ndarray, n_neighbors: int, **kwargs ):
+    def getNNGraph(self, nodes: np.ndarray, **kwargs ):
         n_trees = kwargs.get('ntree', 5 + int(round((nodes.shape[0]) ** 0.5 / 20.0)))
         n_iters = kwargs.get('niter', max(5, 2 * int(round(np.log2(nodes.shape[0])))))
         nnd = NNDescent(nodes, n_trees=n_trees, n_iters=n_iters, n_neighbors=self.n_neighbors, max_candidates=60, verbose=True)

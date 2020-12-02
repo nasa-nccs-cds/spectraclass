@@ -4,6 +4,8 @@ import numpy as np
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type
 import traitlets as tl
 
+def pid( instance ): return hex(id(instance))[-4:]
+
 class Marker:
     def __init__(self,  pids: np.ndarray, cid: int ):
         self.cid = cid
@@ -45,7 +47,7 @@ class AstroConfigurable:
             tval = getattr(instance, tid)
             if trait.__class__.__name__ == "Unicode":  tval = f'"{tval}"'
             trait_values = trait_map.setdefault(instance.config_mode, {})
-            print( f"    *** add_trait_value[{instance.config_mode},{id(instance)}]: {cname+tid} -> {tval}")
+            print( f"    *** add_trait_value[{instance.config_mode},{pid(instance)}]: {cname+tid} -> {tval}")
             trait_values[cname + tid] = tval
 
     @classmethod

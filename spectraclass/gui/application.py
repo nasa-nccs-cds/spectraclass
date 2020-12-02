@@ -46,7 +46,7 @@ class Spectraclass(tlc.SingletonConfigurable, AstroConfigurable):
         print(f" process_menubar_action.on_value_change: {mname}.{dname} -> {op}")
 
     @classmethod
-    def set_astrolab_theme(cls):
+    def set_spectraclass_theme(cls):
         from IPython.display import display, HTML
         if cls.custom_theme:
             theme_file = os.path.join( cls.HOME, "themes", "spectraclass.css" )
@@ -60,7 +60,7 @@ class Spectraclass(tlc.SingletonConfigurable, AstroConfigurable):
         from spectraclass.gui.table import TableManager
         from spectraclass.gui.control import ActionsPanel
 
-        self.set_astrolab_theme()
+        self.set_spectraclass_theme()
         self.configure("spectraclass")
         css_border = '1px solid blue'
 

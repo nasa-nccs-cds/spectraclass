@@ -82,7 +82,7 @@ if (window.require) {
     window.require.config({
         map: {
             "*" : {
-                "astrolab": "nbextensions/spectraclass/index",
+                "spectraclass": "nbextensions/spectraclass/index",
             }
         }
     });

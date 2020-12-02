@@ -61,7 +61,7 @@ class DataManager(tlc.SingletonConfigurable, AstroConfigurable):
     def gui( self ) -> ip.Tab():
         from spectraclass.gui.application import Spectraclass
         if self._wModeTabs is None:
-            Spectraclass.set_astrolab_theme()
+            Spectraclass.set_spectraclass_theme()
             mode_tabs = []
             self._wModeTabs = ip.Tab( layout = ip.Layout( width='auto', height='auto' ) )
             for iTab, mdmgr in self._mode_data_managers.items():

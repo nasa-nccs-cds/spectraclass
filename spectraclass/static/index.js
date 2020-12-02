@@ -101,8 +101,8 @@ var HelloModel = widgets.DOMWidgetModel.extend({
     defaults: _.extend(widgets.DOMWidgetModel.prototype.defaults(), {
         _model_name : 'HelloModel',
         _view_name : 'HelloView',
-        _model_module : 'astrolab',
-        _view_module : 'astrolab',
+        _model_module : 'spectraclass',
+        _view_module : 'spectraclass',
         _model_module_version : '0.1.0',
         _view_module_version : '0.1.0',
         value : 'Hello World!'
@@ -17367,7 +17367,7 @@ module.exports = function(module) {
 /* 6 */
 /***/ (function(module, exports) {
 
-module.exports = {"name":"astrolab","version":"0.1.0","description":"Jupyterlab workbench supporting visual exploration and classification of astronomical xray and light curve data.","author":"Thomas Maxwell","main":"lib/index.js","repository":{"type":"git","url":"https://github.com/nasa-nccs-cds/astrolab2.git"},"keywords":["jupyter","widgets","ipython","ipywidgets","jupyterlab-extension"],"files":["lib/**/*.js","dist/*.js"],"scripts":{"clean":"rimraf dist/","prepublish":"webpack","build":"webpack","watch":"webpack --watch --mode=development","test":"echo \"Error: no test specified\" && exit 1"},"devDependencies":{"webpack":"^3.5.5","rimraf":"^2.6.1"},"dependencies":{"@jupyter-widgets/base":"^1.1 || ^2 || ^3","lodash":"^4.17.4"},"jupyterlab":{"extension":"lib/labplugin"}}
+module.exports = {"name":"spectraclass","version":"0.1.0","description":"Jupyterlab workbench supporting visual exploration and classification of astronomical xray and light curve data.","author":"Thomas Maxwell","main":"lib/index.js","repository":{"type":"git","url":"https://github.com/nasa-nccs-cds/spectraclass2.git"},"keywords":["jupyter","widgets","ipython","ipywidgets","jupyterlab-extension"],"files":["lib/**/*.js","dist/*.js"],"scripts":{"clean":"rimraf dist/","prepublish":"webpack","build":"webpack","watch":"webpack --watch --mode=development","test":"echo \"Error: no test specified\" && exit 1"},"devDependencies":{"webpack":"^3.5.5","rimraf":"^2.6.1"},"dependencies":{"@jupyter-widgets/base":"^1.1 || ^2 || ^3","lodash":"^4.17.4"},"jupyterlab":{"extension":"lib/labplugin"}}
 
 /***/ })
 /******/ ])});;
