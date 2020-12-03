@@ -58,14 +58,13 @@ class JbkGraph:
         self._selected_pids = idxs
 
     def plot(self):
-        y, yr = self.y, self.yrange
         self.fig.title.text = self.title
         if self.nlines == 1:
-            self._source.data.update( ys=self.y2, xs=self.x2, cmap=[1, 254] )
+            self._source.data.update( ys=self.y2, xs=self.x2, cmap=[0, 255] )
         else:
-            self._source.data.update( ys = y, xs=self.x, cmap = np.random.randint( 0, 255, self.nlines ) )
+            self._source.data.update( ys = self.y, xs=self.x, cmap = np.random.randint( 0, 255, self.nlines ) )
+        yr = self.yrange
         self.fig.y_range.update( start=yr[0], end=yr[1] )
-    #    print( f"           &&&&   GRAPH:plot-> title={self.title}, nlines={nlines}, y0 shape = {y[0].shape}, x0 shape = {self.x[0].shape}")
 
     @property
     def nlines(self) -> int:
