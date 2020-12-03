@@ -47,6 +47,7 @@ class JbkGraph:
             project_data: xa.Dataset = DataManager.instance().loadCurrentProject("graph")
             cls._x: np.ndarray = project_data["plot-x"].values
             cls._ploty: np.ndarray = project_data["plot-y"].values
+            cls._rploty: np.ndarray = project_data["reproduction"].values
             table_cols = DataManager.instance().table_cols
     #        print( f"           &&&&   JbkGraph init, using cols {table_cols} from {list(project_data.variables.keys())}, ploty shape = {cls._ploty.shape}" )
             cls._mdata: List[np.ndarray] = [ project_data[mdv].values for mdv in table_cols ]
@@ -58,7 +59,10 @@ class JbkGraph:
         y, yr = self.y, self.yrange
         nlines = len(y)
         self.fig.title.text = self.title
-        self._source.data.update( ys = y, xs=self.x, cmap = np.random.randint(0,255,nlines) )
+        if nlines == 1:
+            self._source.data.update( ys=[y[0],self.ry[0]], xs=self.x*2, cmap=[0, 255] )
+        else:
+            self._source.data.update( ys = y, xs=self.x, cmap = np.random.randint(0,255,nlines) )
         self.fig.y_range.update( start=yr[0], end=yr[1] )
     #    print( f"           &&&&   GRAPH:plot-> title={self.title}, nlines={nlines}, y0 shape = {y[0].shape}, x0 shape = {self.x[0].shape}")
 
@@ -70,6 +74,10 @@ class JbkGraph:
     @property
     def y( self ) -> List[ np.ndarray ]:
         return [ self._ploty[idx].squeeze() for idx in self._selected_pids ]
+
+    @property
+    def ry( self ) -> List[ np.ndarray ]:
+        return [ self._rploty[idx].squeeze() for idx in self._selected_pids ]
 
     @property
     def yrange(self):

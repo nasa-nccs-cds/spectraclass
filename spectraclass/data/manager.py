@@ -253,6 +253,8 @@ class ModeDataManager( tlc.Configurable, AstroModeConfigurable ):
             data_file = os.path.join( self.datasetDir, dsid + ".nc" )
             dataset: xa.Dataset = xa.open_dataset( data_file )
             print( f" ---> Opened Dataset {dsid} from file {data_file}")
+            vshapes = [ f"{vname}{dataset.variables[vname].shape}" for vname in dataset.variables.keys() ]
+            print(f"Variables: {', '.join(vshapes)}")
             dataset.attrs['dsid'] = dsid
             dataset.attrs['type'] = 'spectra'
             self.datasets[dsid] = dataset
