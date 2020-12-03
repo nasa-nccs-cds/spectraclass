@@ -15,6 +15,7 @@ from spectraclass.model.base import AstroConfigurable
 class JbkGraph:
     _x: np.ndarray = None
     _ploty: np.ndarray = None
+    _rploty: np.ndarray = None
     _mdata: List[np.ndarray] = None
 
     def __init__( self, **kwargs ):
@@ -39,6 +40,7 @@ class JbkGraph:
     def refresh(cls):
         cls._x = None
         cls._ploty = None
+        cls._rploty  = None
         cls._mdata = None
 
     @classmethod
@@ -57,18 +59,21 @@ class JbkGraph:
 
     def plot(self):
         y, yr = self.y, self.yrange
-        nlines = len(y)
         self.fig.title.text = self.title
-        if nlines == 1:
-            self._source.data.update( ys=[y[0],self.ry[0]], xs=self.x*2, cmap=[0, 255] )
+        if self.nlines == 1:
+            self._source.data.update( ys=self.y2, xs=self.x2, cmap=[1, 254] )
         else:
-            self._source.data.update( ys = y, xs=self.x, cmap = np.random.randint(0,255,nlines) )
+            self._source.data.update( ys = y, xs=self.x, cmap = np.random.randint( 0, 255, self.nlines ) )
         self.fig.y_range.update( start=yr[0], end=yr[1] )
     #    print( f"           &&&&   GRAPH:plot-> title={self.title}, nlines={nlines}, y0 shape = {y[0].shape}, x0 shape = {self.x[0].shape}")
 
     @property
+    def nlines(self) -> int:
+        return len( self._selected_pids )
+
+    @property
     def x(self) -> List[ np.ndarray ]:
-        if self._x.ndim == 1:   return [ self._x ] * len( self._selected_pids )
+        if self._x.ndim == 1:   return [ self._x ] * self.nlines
         else:                   return [ self._x[ pid ] for pid in self._selected_pids ]
 
     @property
@@ -78,6 +83,17 @@ class JbkGraph:
     @property
     def ry( self ) -> List[ np.ndarray ]:
         return [ self._rploty[idx].squeeze() for idx in self._selected_pids ]
+
+    @property
+    def x2( self ) -> List[ np.ndarray ]:
+        idx = self._selected_pids[0]
+        return [ self._x[ idx ] ] * 2
+
+    @property
+    def y2( self ) -> List[ np.ndarray ]:
+        idx = self._selected_pids[0]
+        print( f"           &&&&   GRAPH:y2-> idx={idx} ")
+        return [ self._ploty[idx].squeeze(), self._rploty[idx].squeeze() ]
 
     @property
     def yrange(self):
