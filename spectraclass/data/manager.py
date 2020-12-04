@@ -125,10 +125,11 @@ class ModeDataManager( tlc.Configurable, AstroModeConfigurable ):
             self.model_dims = self._model_dims_selector.value
             self.subsample = self._subsample_selector.value
 
-    def prepare_inputs( self, *args ):
+    def prepare_inputs( self, **kwargs ):
         self.dm.select_current_mode()
         self.update_gui_parameters()
         self.set_progress( 0.02 )
+        write = kwargs.get('write',True)
         file_name = f"raw" if self.reduce_method == "None" else f"{self.reduce_method}-{self.model_dims}"
         if self.subsample > 1: file_name = f"{file_name}-ss{self.subsample}"
         output_file = os.path.join( self.datasetDir, file_name + ".nc" )
@@ -154,10 +155,12 @@ class ModeDataManager( tlc.Configurable, AstroModeConfigurable ):
 
         dataset = xa.Dataset( data_vars, coords=xcoords, attrs = {'type':'spectra'} )
         dataset.attrs["colnames"] = mdata_vars
-        print( f"Writing output to {output_file}" )
-        dataset.to_netcdf( output_file, format='NETCDF4', engine='netcdf4' )
+        if write:
+            print( f"Writing output to {output_file}" )
+            dataset.to_netcdf( output_file, format='NETCDF4', engine='netcdf4' )
         self.updateDatasetList()
         self.set_progress( 1.0 )
+        return dataset
 
     def updateDatasetList(self):
         if self._dset_selection is not None:

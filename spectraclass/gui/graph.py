@@ -51,7 +51,7 @@ class JbkGraph:
             cls._ploty: np.ndarray = project_data["plot-y"].values
             cls._rploty: np.ndarray = project_data["reproduction"].values
             table_cols = DataManager.instance().table_cols
-    #        print( f"           &&&&   JbkGraph init, using cols {table_cols} from {list(project_data.variables.keys())}, ploty shape = {cls._ploty.shape}" )
+            print( f"           &&&&   JbkGraph init, using cols {table_cols} from {list(project_data.variables.keys())}, ploty shape = {cls._ploty.shape}, rploty shape = {cls._rploty.shape}" )
             cls._mdata: List[np.ndarray] = [ project_data[mdv].values for mdv in table_cols ]
 
     def select_items(self, idxs: List[int] ):
@@ -85,14 +85,14 @@ class JbkGraph:
 
     @property
     def x2( self ) -> List[ np.ndarray ]:
-        idx = self._selected_pids[0]
-        return [ self._x[ idx ] ] * 2
+        return [ self._x ] * 2 if (self._x.ndim == 1) else [ self._x[self._selected_pids[0]] ] * 2
 
     @property
     def y2( self ) -> List[ np.ndarray ]:
         idx = self._selected_pids[0]
-        print( f"           &&&&   GRAPH:y2-> idx={idx} ")
-        return [ self._ploty[idx].squeeze(), self._rploty[idx].squeeze() ]
+        rp = self._rploty[idx].squeeze()
+        print( f"           &&&&   GRAPH:y2-> idx={idx}, val[10] = {rp[:10]} ")
+        return [ self._ploty[idx].squeeze(), rp ]
 
     @property
     def yrange(self):

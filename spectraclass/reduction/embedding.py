@@ -65,12 +65,15 @@ class ReductionManager(tlc.SingletonConfigurable, AstroConfigurable):
     def autoencoder_reduction( self, encoder_input: np.ndarray, ndim: int, epochs: int = 1 ) -> Tuple[np.ndarray,np.ndarray]:
         from keras.layers import Input, Dense
         from keras.models import Model
+        from keras import losses
         input_dims = encoder_input.shape[1]
-        reduction_factor = 1.7
+        reduction_factor = 2
         inputlayer = Input( shape=[input_dims] )
         activation = 'tanh'
+        optimizer = 'rmsprop'
+        loss = "cosine_similarity"
         encoded = None
-        layer_dims, x = input_dims, inputlayer
+        layer_dims, x = int( round( input_dims / reduction_factor )), inputlayer
         while layer_dims > ndim:
             x = Dense(layer_dims, activation=activation)(x)
             layer_dims = int( round( layer_dims / reduction_factor ))
@@ -85,13 +88,19 @@ class ReductionManager(tlc.SingletonConfigurable, AstroConfigurable):
 #        earlystopping = EarlyStopping(monitor='loss', min_delta=0., patience=100, verbose=1, mode='auto')
         autoencoder = Model(inputs=[inputlayer], outputs=[decoded])
         encoder = Model(inputs=[inputlayer], outputs=[encoded])
-        autoencoder.compile(loss='mse', optimizer='rmsprop')
+        autoencoder.summary()
+        encoder.summary()
+
+        autoencoder.compile(loss=loss, optimizer=optimizer )
         autoencoder.fit( encoder_input, encoder_input, epochs=epochs, batch_size=256, shuffle=True )
-        result = encoder.predict( encoder_input )
-        rmean, rstd = result.mean(axis=0), result.std()
-        print( f" Autoencoder_reduction, result:   shape = {result.shape}, rmean = {rmean}, rstd = {rstd} ")
-        scaled_result = (result - rmean)/rstd
-        return (scaled_result, autoencoder.predict(encoder_input))
+        encoded_data = encoder.predict( encoder_input )
+        rmean, rstd = encoded_data.mean(axis=0), encoded_data.std()
+        scaled_encoding = (encoded_data - rmean)/rstd
+        reproduction = autoencoder.predict( encoder_input )
+        print(f" Autoencoder_reduction, result: shape = {encoded_data.shape}, rmean = {rmean}, rstd = {rstd} ")
+        print(f" ----> encoder_input: shape = {encoder_input.shape}, val[5][5] = {encoder_input[:5][:5]} ")
+        print(f" ----> reproduction: shape = {reproduction.shape}, val[5][5] = {reproduction[:5][:5]} ")
+        return (scaled_encoding, reproduction )
 
     def umap_init( self,  point_data: xa.DataArray, **kwargs ) -> Optional[np.ndarray]:
         from .cpu import UMAP
