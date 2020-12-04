@@ -33,7 +33,7 @@ class ReductionManager(tlc.SingletonConfigurable, AstroConfigurable):
     def refresh(self):
         self._mapper = {}
 
-    def reduce(self, inputs: np.ndarray, reduction_method: str, ndim: int, nepochs: int = 1 ) -> Tuple[np.ndarray,np.ndarray]:
+    def reduce(self, inputs: np.ndarray, reduction_method: str, ndim: int, nepochs: int = 1000 ) -> Tuple[np.ndarray,np.ndarray]:
         if reduction_method.lower() == "autoencoder": return self.autoencoder_reduction( inputs, ndim, nepochs )
         else: return ( inputs, inputs )
 
@@ -62,7 +62,7 @@ class ReductionManager(tlc.SingletonConfigurable, AstroConfigurable):
     #     print(f"Completed spectral_embedding in {(time.time() - t0) / 60.0} min.")
     #     return rv
 
-    def autoencoder_reduction( self, encoder_input: np.ndarray, ndim: int, epochs: int = 1 ) -> Tuple[np.ndarray,np.ndarray]:
+    def autoencoder_reduction( self, encoder_input: np.ndarray, ndim: int, epochs: int = 1000 ) -> Tuple[np.ndarray,np.ndarray]:
         from keras.layers import Input, Dense
         from keras.models import Model
         from keras import losses
@@ -115,7 +115,7 @@ class ReductionManager(tlc.SingletonConfigurable, AstroConfigurable):
         else:
             print( f"umap_init: init = {self.init}")
             if self.init == "autoencoder":
-                (reduction, reproduction) = self.autoencoder_reduction(point_data.values, self.ndim, 2)
+                (reduction, reproduction) = self.autoencoder_reduction( point_data.values, self.ndim )
                 mapper.init_embedding(reduction)
             mapper.init = self.init
             kwargs['nepochs'] = 1

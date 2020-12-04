@@ -80,10 +80,10 @@ class DataManager(tlc.SingletonConfigurable, AstroConfigurable):
         return self.mode_data_manager.loadCurrentProject()
 
 class ModeDataManager( tlc.Configurable, AstroModeConfigurable ):
-    model_dims = tl.Int(16).tag(config=True,sync=True)
+    model_dims = tl.Int(32).tag(config=True,sync=True)
     subsample = tl.Int( 5 ).tag(config=True,sync=True)
     reduce_method = tl.Unicode("Autoencoder").tag(config=True,sync=True)
-    reduce_nepochs = tl.Int( 2 ).tag(config=True,sync=True)
+    reduce_nepochs = tl.Int( 1000 ).tag(config=True,sync=True)
     cache_dir = tl.Unicode( os.path.expanduser("~/Development/Cache") ).tag(config=True)
     data_dir = tl.Unicode( os.path.expanduser("~/Development/Data") ).tag(config=True)
 
