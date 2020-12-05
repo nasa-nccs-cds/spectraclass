@@ -15,9 +15,9 @@ dm: DataManager = DataManager.instance()
 mdm: ModeDataManager = dm.mode_data_manager
 
 mdm.model_dims = 32
-mdm.subsample = 100
+mdm.subsample = 5
 mdm.reduce_method = "autoencoder"
-mdm.reduce_nepochs = 2000
+mdm.reduce_nepochs = 1000
 
 dataset = mdm.prepare_inputs( write=False )
 

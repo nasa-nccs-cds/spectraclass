@@ -125,7 +125,7 @@ class ModeDataManager( tlc.Configurable, AstroModeConfigurable ):
             self.model_dims = self._model_dims_selector.value
             self.subsample = self._subsample_selector.value
 
-    def prepare_inputs( self, **kwargs ):
+    def prepare_inputs( self, *args, **kwargs ):
         self.dm.select_current_mode()
         self.update_gui_parameters()
         self.set_progress( 0.02 )

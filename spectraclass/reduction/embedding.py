@@ -115,7 +115,7 @@ class ReductionManager(tlc.SingletonConfigurable, AstroConfigurable):
         else:
             print( f"umap_init: init = {self.init}")
             if self.init == "autoencoder":
-                (reduction, reproduction) = self.autoencoder_reduction( point_data.values, self.ndim )
+                (reduction, reproduction) = self.autoencoder_reduction( point_data.values, self.ndim, 50 )
                 mapper.init_embedding(reduction)
             mapper.init = self.init
             kwargs['nepochs'] = 1
