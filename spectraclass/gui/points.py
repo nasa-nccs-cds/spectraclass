@@ -8,10 +8,10 @@ from itkwidgets.widget_viewer import Viewer
 import xarray as xa
 import numpy.ma as ma
 import traitlets.config as tlc
-from spectraclass.model.base import AstroConfigurable, Marker
+from spectraclass.model.base import SCConfigurable, Marker
 from spectraclass.model.labels import LabelsManager
 
-class PointCloudManager(tlc.SingletonConfigurable, AstroConfigurable):
+class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
 
     def __init__(self):
         super(PointCloudManager, self).__init__()

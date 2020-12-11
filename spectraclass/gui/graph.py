@@ -10,7 +10,7 @@ from spectraclass.data.manager import DataManager
 from bokeh.models import ColumnDataSource
 import ipywidgets as ipw
 import traitlets.config as tlc
-from spectraclass.model.base import AstroConfigurable
+from spectraclass.model.base import SCConfigurable
 
 class JbkGraph:
     _x: np.ndarray = None
@@ -107,7 +107,7 @@ class JbkGraph:
             t = "multiplot"
         return t
 
-class GraphManager(tlc.SingletonConfigurable, AstroConfigurable):
+class GraphManager(tlc.SingletonConfigurable, SCConfigurable):
 
     def __init__( self ):
         super(GraphManager, self).__init__(  )

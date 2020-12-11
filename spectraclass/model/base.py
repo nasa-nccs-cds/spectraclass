@@ -29,7 +29,7 @@ class Marker:
             return True
         except: return False
 
-class AstroConfigurable:
+class SCConfigurable:
     config_classes = set()
 
     def __init__(self, **kwargs ):
@@ -95,11 +95,11 @@ class AstroConfigurable:
                 yield cl
 
 
-class AstroModeConfigurable(AstroConfigurable):
+class AstroModeConfigurable(SCConfigurable):
     _class_instances = {}
 
     def __init__( self, mode: str ):
-        AstroConfigurable.__init__(self)
+        SCConfigurable.__init__(self)
         self._mode = mode
         self._class_instances[mode] = self
 

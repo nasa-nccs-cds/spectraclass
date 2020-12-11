@@ -7,9 +7,9 @@ import numpy as np
 import ipywidgets as ipw
 from .points import PointCloudManager
 import traitlets.config as tlc
-from spectraclass.model.base import AstroConfigurable
+from spectraclass.model.base import SCConfigurable
 
-class ActionsPanel(tlc.SingletonConfigurable, AstroConfigurable):
+class ActionsPanel(tlc.SingletonConfigurable, SCConfigurable):
 
     def __init__(self):
         super(ActionsPanel, self).__init__()

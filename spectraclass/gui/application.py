@@ -3,9 +3,9 @@ from IPython.core.debugger import set_trace
 from collections import OrderedDict
 import os, ipywidgets as ipw
 import traitlets.config as tlc
-from spectraclass.model.base import AstroConfigurable
+from spectraclass.model.base import SCConfigurable
 
-class Spectraclass(tlc.SingletonConfigurable, AstroConfigurable):
+class Spectraclass(tlc.SingletonConfigurable, SCConfigurable):
 
     HOME = os.path.dirname( os.path.dirname( os.path.dirname(os.path.realpath(__file__)) ) )
     custom_theme = False

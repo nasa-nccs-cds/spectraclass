@@ -6,7 +6,7 @@ class ActivationFlow(object):
     _instance: "ActivationFlow" = None
 
     def __init__(self, n_neighbors: int, **kwargs ):
-        self.nneighbors = n_neighbors
+        self.nneighbors = 5 # n_neighbors
         self.reset = True
 
     def clear(self):

@@ -1,6 +1,7 @@
 import numpy as np
 from typing import List, Union, Tuple, Optional, Dict
 import os, math, pickle, glob
+from enum import Enum
 import ipywidgets as ip
 from functools import partial
 from collections import OrderedDict
@@ -9,9 +10,15 @@ from pathlib import Path
 import xarray as xa
 import traitlets as tl
 import traitlets.config as tlc
-from spectraclass.model.base import AstroConfigurable, AstroModeConfigurable
+from spectraclass.model.base import SCConfigurable, AstroModeConfigurable
 
-class DataManager(tlc.SingletonConfigurable, AstroConfigurable):
+class DataType(Enum):
+    Embedding = 1
+    Plot = 2
+    Image = 3
+    Directory = 4
+
+class DataManager(tlc.SingletonConfigurable, SCConfigurable):
     dataset = tl.Unicode("NONE").tag(config=True,sync=True)
     mode_index = tl.Int(0).tag(config=True,sync=True)
     proc_type = tl.Unicode('cpu').tag(config=True)
@@ -20,9 +27,11 @@ class DataManager(tlc.SingletonConfigurable, AstroConfigurable):
     name = tl.Unicode('spectraclass').tag(config=True)
 
     def __init__(self):
+        from .spatial import SpatialDataManager
         super(DataManager, self).__init__()
         self._wModeTabs: ip.Tab = None
         self._init_managers()
+        self.spatial = SpatialDataManager()
 
     def _init_managers(self):
         self._mode_data_managers = {}
@@ -119,7 +128,7 @@ class ModeDataManager( tlc.Configurable, AstroModeConfigurable ):
     def set_progress(self, pval: float ):
         if self._progress is not None:
             self._progress.value = pval
-
+..
     def update_gui_parameters(self):
         if self._model_dims_selector is not None:
             self.model_dims = self._model_dims_selector.value
