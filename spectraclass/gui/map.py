@@ -576,7 +576,7 @@ class LabelingConsole(SCConfigurable):
             if self.image is not None: self.initMarkersPlot()
         return self.image
 
-    def clearMarkersPlot(self):
+    def clearMarkersPlot( self ):
         offsets = np.ma.column_stack([[], []])
         self.marker_plot.set_offsets( offsets )
         self.plot_markers_image()
