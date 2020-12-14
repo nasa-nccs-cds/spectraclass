@@ -6,7 +6,9 @@ import traitlets.config as tlc
 import matplotlib as mpl
 from typing import List, Union, Tuple, Optional, Dict
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+from spectraclass.reduction.embedding import ReductionManager
 import matplotlib.pyplot as plt
+from collections import OrderedDict
 import os, math, pickle
 import rioxarray as rio
 from spectraclass.model.base import SCConfigurable
@@ -66,7 +68,7 @@ def get_rounded_dims( master_shape: List[int], subset_shape: List[int] ) -> List
 #             print( f" Can't read markers: {err}" )
 
 
-class SpatialDataManager(SCConfigurable):
+class SpatialDataManager(tlc.SingletonConfigurable, SCConfigurable):
     image_name = tl.Unicode("NONE").tag(config=True,sync=True)
     data_cache = tl.Unicode("NONE").tag(config=True, sync=True)
     data_dir = tl.Unicode("NONE").tag(config=True, sync=True)
@@ -77,14 +79,25 @@ class SpatialDataManager(SCConfigurable):
     block_dims = tl.List(tl.Int,(4,4),2,2).tag(config=True, sync=True)
     tile_shape = tl.List(tl.Int,(1000,1000),2,2).tag(config=True, sync=True)
     tile_dims = tl.List(tl.Int,(4,4),2,2).tag(config=True, sync=True)
+    name = tl.Unicode('hyperclass').tag(config=True)
+    mode_index = tl.Int(0).tag(config=True,sync=True)
+    MODES = ["aviris"]
     image_attrs = {}
 
     def __init__( self,  **kwargs ):   # Tile shape (y,x) matches image shape (row,col)
         SCConfigurable.__init__(self)
         self.cacheTileData = kwargs.get( 'cache_tile', True )
 
+    def config_file(self, config_mode=None) -> str :
+        if config_mode is None: config_mode = self.mode
+        return os.path.join( os.path.expanduser("~"), "." + self.name, config_mode + ".py" )
+
     def setImageName( self, fileName: str ):
         self.image_name = fileName[:-4] if fileName.endswith(".tif") else fileName
+
+    @property
+    def mode(self) -> str:
+        return self.MODES[ self.mode_index ]
 
     @property
     def iy(self):
@@ -352,5 +365,51 @@ class SpatialDataManager(SCConfigurable):
                 cbar.set_ticklabels( [ cval[1] for cval in colors ] )
         if showplot: plt.show()
         return img
+
+    def getXarray(self, id: str, xcoords: Dict, subsample: int, xdims: OrderedDict, **kwargs) -> xa.DataArray:
+        np_data: np.ndarray = SpatialDataManager.instance().getInputFileData(id, subsample, tuple(xdims.keys()))
+        dims, coords = [], {}
+        for iS in np_data.shape:
+            coord_name = xdims[iS]
+            dims.append(coord_name)
+            coords[coord_name] = xcoords[coord_name]
+        attrs = {**kwargs, 'name': id}
+        return xa.DataArray(np_data, dims=dims, coords=coords, name=id, attrs=attrs)
+
+    def prepare_inputs(self, input_vars, ssample=None):
+        SpatialDataManager.instance()
+        subsample = int(self.config.value("input.reduction/subsample", 1)) if ssample is None else ssample
+        #    values = { k: self.config.value(k) for k in self.config.allKeys() }
+        np_embedding = self.getInputFileData(input_vars['embedding'], subsample)
+        dims = np_embedding.shape
+        mdata_vars = list(input_vars['directory'])
+        xcoords = OrderedDict(samples=np.arange(dims[0]), bands=np.arange(dims[1]))
+        xdims = OrderedDict({dims[0]: 'samples', dims[1]: 'bands'})
+        data_vars = dict(
+            embedding=xa.DataArray(np_embedding, dims=xcoords.keys(), coords=xcoords, name=input_vars['embedding']))
+        data_vars.update({vid: self.getXarray(vid, xcoords, subsample, xdims) for vid in mdata_vars})
+        pspec = input_vars['plot']
+        data_vars.update(
+            {f'plot-{vid}': self.getXarray(pspec[vid], xcoords, subsample, xdims, norm=pspec.get('norm', '')) for vid in
+             ['x', 'y']})
+        reduction_method = self.config.value("input.reduction/method", 'None')
+        ndim = int(self.config.value("input.reduction/ndim", 32))
+        epochs = int(self.config.value("input.reduction/epochs", 20))
+        if reduction_method != "None":
+            reduced_spectra, reproduction = ReductionManager.instance().reduce( data_vars['embedding'], reduction_method, ndim, epochs )
+            coords = dict(samples=xcoords['samples'], model=np.arange(ndim))
+            data_vars['reduction'] = xa.DataArray(reduced_spectra, dims=['samples', 'model'], coords=coords)
+
+        dataset = xa.Dataset(data_vars, coords=xcoords, attrs={'type': 'spectra'})
+        dataset.attrs["colnames"] = mdata_vars
+        projId = self.config.value('project/id')
+        file_name = f"raw" if reduction_method == "None" else f"{reduction_method}-{ndim}"
+        if subsample > 1: file_name = f"{file_name}-ss{subsample}"
+        outputDir = os.path.join(self.config.value('data/cache'), projId)
+        mode = 0o777
+        os.makedirs(outputDir, mode, True)
+        output_file = os.path.join(outputDir, file_name + ".nc")
+        print(f"Writing output to {output_file}")
+        dataset.to_netcdf(output_file, format='NETCDF4', engine='netcdf4')
 
 

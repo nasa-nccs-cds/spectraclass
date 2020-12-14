@@ -1,19 +1,17 @@
-import sys, numpy as np
+import numpy as np
 import xarray as xa
 import rioxarray as rio
-from matplotlib import cm
-from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+from matplotlib.colors import ListedColormap
 from matplotlib.image import AxesImage
-from spectraclass.data.manager import DataManager, DataType
 from spectraclass.model.base import SCConfigurable
-from spectraclass.data.tile import Tile, Block
+from spectraclass.data.spatial.tile import Block
 from matplotlib.axes import Axes
-from typing import List, Union, Dict, Callable, Tuple, Optional, Any
+from typing import List, Union, Dict, Callable, Tuple, Any
 import collections.abc, traceback
 from spectraclass.data.google import GoogleMaps
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.collections import PathCollection
+
 
 # class LabelingWidget(QWidget):
 #     def __init__(self, parent, **kwargs):

@@ -1,5 +1,5 @@
-from.tile import Tile, Block
-from typing import List, Union, Dict, Callable, Tuple, Optional
+from spectraclass.data.spatial.tile import Block
+from typing import List
 from urllib import request
 from io import BytesIO
 import matplotlib.pyplot as plt
@@ -7,8 +7,7 @@ from matplotlib.figure import Figure
 from math import log, exp, tan, atan, ceil
 from PIL import Image
 import traitlets as tl
-import traitlets.config as tlc
-import sys, math, requests, traceback
+import requests, traceback
 from spectraclass.model.base import SCConfigurable
 
 class GoogleMaps(SCConfigurable):

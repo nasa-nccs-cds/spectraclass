@@ -1,29 +1,32 @@
 import matplotlib.widgets
 import matplotlib.patches
+import traitlets.config as tlc
 from spectraclass.data.google import GoogleMaps
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.gridspec import GridSpec, SubplotSpec
+from matplotlib.gridspec import GridSpec
 from matplotlib.lines import Line2D
 from matplotlib.axes import Axes
 from matplotlib.colors import Normalize
-from matplotlib.backend_bases import PickEvent, MouseEvent, MouseButton
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backend_bases import PickEvent, MouseButton, NavigationToolbar2
+from spectraclass.reduction.embedding import ReductionManager
 from collections import OrderedDict
 from spectraclass.data.manager import DataManager
 from spectraclass.model.labels import LabelsManager
+from spectraclass.gui.points import PointCloudManager
 from spectraclass.model.base import SCConfigurable, Marker
 from functools import partial
-from pyproj import Proj, transform
+from pyproj import Proj
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
-from spectraclass.data.tile import Tile, Block
+from spectraclass.data.spatial.tile import Tile, Block
 from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
 import pandas as pd
 import xarray as xa
 import numpy as np
-from typing import List, Union, Dict, Callable, Tuple, Optional, Any
-import time, math, atexit, os, traceback
+from typing import List, Dict, Tuple, Optional
+from spectraclass.data.spatial.manager import SpatialDataManager
+import math, atexit, os, traceback
 
 def get_color_bounds( color_values: List[float] ) -> List[float]:
     color_bounds = []
@@ -34,7 +37,7 @@ def get_color_bounds( color_values: List[float] ) -> List[float]:
     return color_bounds
 
 def lm(): return LabelsManager.instance()
-def dms(): return DataManager.instance().spatial
+def dms(): return SpatialDataManager.instance()
 
 class PageSlider(matplotlib.widgets.Slider):
 
@@ -101,14 +104,14 @@ class PageSlider(matplotlib.widgets.Slider):
         self.set_val(i)
         self._colorize(i)
 
-class LabelingConsole(SCConfigurable):
+class MapManager(tlc.SingletonConfigurable, SCConfigurable):
 
     RIGHT_BUTTON = 3
     MIDDLE_BUTTON = 2
     LEFT_BUTTON = 1
 
     def __init__( self, **kwargs ):   # class_labels: [ [label, RGBA] ... ]
-        SCConfigurable.__init__(self)
+        super(MapManager, self).__init__()
         self._debug = False
         self.currentFrame = 0
         self.block: Block = None
@@ -127,7 +130,6 @@ class LabelingConsole(SCConfigurable):
         self.new_image = None
         self.nFrames = None
         self._adding_marker = False
-
         self.figure: Figure = kwargs.pop( 'figure', None )
         self.google_figure: Figure = None
         if self.figure is None:
@@ -139,7 +141,7 @@ class LabelingConsole(SCConfigurable):
         self._tiles: Dict[List,Tile] = {}
         self.setup_plot(**kwargs)
 
-        google_actions = [[maptype, None, None, partial(self.run_task, self.download_google_map, "Accessing Landsat Image...", maptype, task_context='newfig')] for maptype in ['satellite', 'hybrid', 'terrain', 'roadmap']]
+#        google_actions = [[maptype, None, None, partial(self.run_task, self.download_google_map, "Accessing Landsat Image...", maptype, task_context='newfig')] for maptype in ['satellite', 'hybrid', 'terrain', 'roadmap']]
         self.menu_actions = OrderedDict( Layers = [ [ "Increase Labels Alpha", 'Ctrl+>', None, partial( self.update_image_alpha, "labels", True ) ],
                                                     [ "Decrease Labels Alpha", 'Ctrl+<', None, partial( self.update_image_alpha, "labels", False ) ],
                                                     [ "Increase Band Alpha",   'Alt+>',  None, partial( self.update_image_alpha, "bands", True ) ],
@@ -149,12 +151,15 @@ class LabelingConsole(SCConfigurable):
         atexit.register(self.exit)
         self._update(0)
 
+    def gui(self):
+        return self.figure.canvas
+
     @property
     def tile(self) -> Tile:
         return self._tiles.setdefault( tuple(dms().tile_index), Tile() )
 
     @property
-    def toolbar(self)-> NavigationToolbar:
+    def toolbar(self)-> NavigationToolbar2:
         return self.figure.canvas.toolbar
 
     @property
@@ -239,7 +244,7 @@ class LabelingConsole(SCConfigurable):
         self.add_marker( marker, transient, labeled=False )
 
     def setBlock( self, block_coords: Tuple[int], **kwargs ) -> Block:
-        print( f"LabelingConsole setBlock: {block_coords}")
+        print( f"MapManager setBlock: {block_coords}")
         self.clearLabels()
         reset = kwargs.get( 'reset', False )
         if reset: self.tile.reset()
@@ -287,25 +292,26 @@ class LabelingConsole(SCConfigurable):
 
     def build_model(self, *args, **kwargs):
         if self.block is None:
-            Task.taskNotAvailable( "Workflow violation", "Must load a block first", **kwargs )
+            print( "Workflow violation: Must load a block before building model" )
         else:
+            umapManager: ReductionManager = ReductionManager.instance()
             labels: xa.DataArray = self.getExtendedLabelPoints()
-            umapManager.embed( self.block, labels, **kwargs )
+            umapManager.umap_embedding( labels=labels, **kwargs )
             self.plot_markers_volume()
 
     def learn_classification( self, **kwargs  ):
         if self.block is None:
-            Task.taskNotAvailable( "Workflow violation", "Must load a block and spread some labels first", **kwargs )
+            print( "Workflow violation: Must load a block and spread some labels  before learning classification" )
         else:
             full_labels: xa.DataArray = self.getExtendedLabelPoints()
             print( f"Learning Classification, labels shape = {full_labels.shape}, nLabels = {np.count_nonzero( full_labels > 0 )}")
             event = dict(event="classify", type="learn", data=self.block, labels=full_labels )
-            self.submitEvent( event, EventMode.Gui )
+#            self.submitEvent( event, EventMode.Gui )
 
     def apply_classification( self, **kwargs ):
         print(f"Applying Classification")
         event = dict( event="classify", type="apply", data=self.block  )
-        self.submitEvent(event, EventMode.Gui )
+#        self.submitEvent(event, EventMode.Gui )
 
     def initLabels(self):
         nodata_value = -2
@@ -403,7 +409,7 @@ class LabelingConsole(SCConfigurable):
              (y0, y1) = ax.get_ylim()
              print(f"ZOOM Event: Updated bounds: ({x0},{x1}), ({y0},{y1})")
          event = dict(event="gui", type="zoom", xlim=ax.get_xlim(), ylim=ax.get_ylim())
-         self.submitEvent( event, EventMode.Foreground )
+#         self.submitEvent( event, EventMode.Foreground )
 
     def update_plots(self):
         if self.image is not None:
@@ -419,7 +425,7 @@ class LabelingConsole(SCConfigurable):
             self.labels_image.set_extent( self.block.extent() )
             self.labels_image.set_alpha(0.0)
         event = dict( event="gui", type="update" )
-        self.submitEvent(event, EventMode.Gui)
+#        self.submitEvent(event, EventMode.Gui)
 
     def onMouseRelease(self, event):
         if event.inaxes ==  self.plot_axes:
@@ -443,7 +449,7 @@ class LabelingConsole(SCConfigurable):
                         self.add_marker( marker, lm().selectedClass == 0, classification=classification )
                         self.dataLims = event.inaxes.dataLim
         except Exception as err:
-            print( f"LabelingConsole pick error: {err}" )
+            print( f"MapManager pick error: {err}" )
             traceback.print_exc(50)
 
     def add_marker(self, marker: Marker, transient: bool, **kwargs ):
@@ -461,7 +467,7 @@ class LabelingConsole(SCConfigurable):
                 otype = kwargs.get( "type", None )
                 if len(pids) > 0:
                     event = dict( event="pick", type="directory", otype=otype, pids=pids, transient=transient, mark=True, classification=classification )
-                    self.submitEvent( event, EventMode.Gui )
+ #                   self.submitEvent( event, EventMode.Gui )
         self._adding_marker = False
 
     # def undo_marker_selection(self, **kwargs ):
@@ -502,9 +508,6 @@ class LabelingConsole(SCConfigurable):
             self.labels_image.set_alpha(1.0)
             self.update_canvas()
 
-    def color_pointcloud(self, sample_labels: xa.DataArray, **kwargs ):
-        umapManager.color_pointcloud( sample_labels, **kwargs )
-
     def get_layer(self, layer_id: str ):
         if layer_id == "bands": return self.image
         if layer_id == "labels": return self.labels_image
@@ -519,12 +522,6 @@ class LabelingConsole(SCConfigurable):
             print( f"Update Image Alpha: {new_alpha}")
             image.set_alpha( new_alpha )
             self.figure.canvas.draw_idle()
-
-    def update_point_sizes( self, increase: bool, *args, **kwargs  ):
-        print( " ...update_point_sizes...  ")
-        umapManager.update_point_sizes( increase )
-        event = dict( event="gui", type="update" )
-        self.submitEvent(event, EventMode.Gui)
 
     # def clear_unlabeled(self):
     #     if self.marker_list:
@@ -541,6 +538,13 @@ class LabelingConsole(SCConfigurable):
                     colors.append( marker.color )
         return ycoords, xcoords, colors
 
+    def get_class_markers( self, **kwargs ) -> Dict[ int, List[int] ]:
+        class_markers = {}
+        for marker in lm().getMarkers():
+            pids = class_markers.setdefault( marker.cid, [] )
+            pids.extend( marker.pids )
+        return class_markers
+
     def plot_markers_image(self, **kwargs ):
         if self.marker_plot:
             ycoords, xcoords, colors = self.get_markers( **kwargs )
@@ -549,12 +553,10 @@ class LabelingConsole(SCConfigurable):
                 self.marker_plot.set_facecolor(colors)
 
     def plot_markers_volume(self, **kwargs):
-        ycoords, xcoords, colors = self.get_markers( **kwargs )
-        if len(xcoords):
-            umapManager.plot_markers( self.block, ycoords, xcoords, colors, **kwargs )
-        else:
-            reset = kwargs.get('reset', False)
-            if reset: umapManager.reset_markers()
+        pointCloudManager = PointCloudManager.instance()
+        class_markers = self.get_class_markers( **kwargs )
+        for cid, pids in class_markers.items():
+            pointCloudManager.mark_points( pids, cid )
 
     def update_canvas(self):
         self.figure.canvas.draw_idle()
@@ -563,7 +565,7 @@ class LabelingConsole(SCConfigurable):
         rightButton: bool = event.mouseevent.button == MouseButton.RIGHT
         if ( event.name == "pick_event" ) and ( event.artist == self.marker_plot ) and rightButton: #  and ( self.key_mode == Qt.Key_Shift ):
             self.delete_marker( event.mouseevent.ydata, event.mouseevent.xdata )
-            self.update_marker_plots()
+            self.update_plots()
 
 
     def delete_marker(self, y, x ) -> List[Marker]:

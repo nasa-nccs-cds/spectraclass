@@ -27,11 +27,9 @@ class DataManager(tlc.SingletonConfigurable, SCConfigurable):
     name = tl.Unicode('spectraclass').tag(config=True)
 
     def __init__(self):
-        from .spatial import SpatialDataManager
         super(DataManager, self).__init__()
         self._wModeTabs: ip.Tab = None
         self._init_managers()
-        self.spatial = SpatialDataManager()
 
     def _init_managers(self):
         self._mode_data_managers = {}
@@ -128,7 +126,7 @@ class ModeDataManager( tlc.Configurable, AstroModeConfigurable ):
     def set_progress(self, pval: float ):
         if self._progress is not None:
             self._progress.value = pval
-..
+
     def update_gui_parameters(self):
         if self._model_dims_selector is not None:
             self.model_dims = self._model_dims_selector.value

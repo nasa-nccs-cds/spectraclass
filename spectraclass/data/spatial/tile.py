@@ -4,12 +4,12 @@ import xarray as xa
 from typing import List, Union, Tuple, Optional, Dict
 from pyproj import Proj, transform
 from spectraclass.data.manager import DataManager, DataType
-from spectraclass.data.spatial import SpatialDataManager
+from spectraclass.data.spatial.manager import SpatialDataManager
 import os, math, pickle
-from ..graph.manager import ActivationFlowManager
+from spectraclass.graph.manager import ActivationFlowManager
 from spectraclass.reduction.embedding import ReductionManager
 
-def dms() -> SpatialDataManager:  return DataManager.instance().spatial
+def dms() -> SpatialDataManager:  return SpatialDataManager.instance()
 # def dm():  return DataManager.instance()
 
 class Tile:

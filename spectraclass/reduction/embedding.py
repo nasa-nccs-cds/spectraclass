@@ -129,8 +129,8 @@ class ReductionManager(tlc.SingletonConfigurable, SCConfigurable):
         if 'nepochs' not in kwargs.keys():   kwargs['nepochs'] = self.nepochs
         if 'alpha' not in kwargs.keys():   kwargs['alpha'] = self.alpha
         self._state = self.PROCESSED
-        labels_data: np.ndarray = LabelsManager.instance().labels_data().values
-        mapper.embed( mapper.input_data, labels_data, **kwargs )
+        labels_data: xa.DataArray = kwargs.get( 'labels', LabelsManager.instance().labels_data() )
+        mapper.embed( mapper.input_data, labels_data.values, **kwargs )
         return mapper.embedding
 
     def xa_umap_embedding( self, **kwargs ) -> Optional[xa.DataArray]:
