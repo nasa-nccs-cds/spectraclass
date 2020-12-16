@@ -3,7 +3,7 @@ import numpy as np
 import xarray as xa
 from typing import List, Union, Tuple, Optional, Dict
 from pyproj import Proj, transform
-from spectraclass.data.manager import DataManager, DataType
+from spectraclass.data.base import DataManager, DataType
 from spectraclass.data.spatial.manager import SpatialDataManager
 import os, math, pickle
 from spectraclass.graph.manager import ActivationFlowManager

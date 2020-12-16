@@ -7,11 +7,13 @@ import matplotlib as mpl
 from typing import List, Union, Tuple, Optional, Dict
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from spectraclass.reduction.embedding import ReductionManager
+from spectraclass.data.base import ModeDataManager
 import matplotlib.pyplot as plt
 from collections import OrderedDict
 import os, math, pickle
 import rioxarray as rio
 from spectraclass.model.base import SCConfigurable
+from .modes import *
 
 def get_color_bounds( color_values: List[float] ) -> List[float]:
     color_bounds = []
@@ -68,7 +70,7 @@ def get_rounded_dims( master_shape: List[int], subset_shape: List[int] ) -> List
 #             print( f" Can't read markers: {err}" )
 
 
-class SpatialDataManager(tlc.SingletonConfigurable, SCConfigurable):
+class SpatialDataManager(ModeDataManager):
     image_name = tl.Unicode("NONE").tag(config=True,sync=True)
     data_cache = tl.Unicode("NONE").tag(config=True, sync=True)
     data_dir = tl.Unicode("NONE").tag(config=True, sync=True)
@@ -117,7 +119,7 @@ class SpatialDataManager(tlc.SingletonConfigurable, SCConfigurable):
         y0, x0 = self.iy*self.tile_shape[0], self.ix*self.tile_shape[1]
         return ( y0, y0+self.tile_shape[0] ), ( x0, x0+self.tile_shape[1] )
 
-    def getXArray(self, fill_value: float, shape: Tuple[int], dims: Tuple[str], **kwargs ) -> xa.DataArray:
+    def getConstantXArray(self, fill_value: float, shape: Tuple[int], dims: Tuple[str], **kwargs) -> xa.DataArray:
         coords = kwargs.get( "coords", { dim: np.arange(shape[id]) for id, dim in enumerate(dims) } )
         result: xa.DataArray = xa.DataArray( np.full( shape, fill_value ), dims=dims, coords=coords )
         result.attrs.update( kwargs.get("attrs",{}) )

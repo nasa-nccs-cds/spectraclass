@@ -3,7 +3,7 @@ import time
 import xarray as xa
 import pandas as pd
 from spectraclass.gui.application import Spectraclass
-from spectraclass.data.manager import DataManager
+from spectraclass.data.base import DataManager
 
 app = Spectraclass.instance()
 app.configure("spectraclass")

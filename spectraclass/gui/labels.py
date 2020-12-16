@@ -141,7 +141,7 @@ class LabelsManager(tlc.SingletonConfigurable, SCConfigurable):
 
     def initData( self ):
         from ..graph.manager import ActivationFlowManager
-        from spectraclass.data.manager import DataManager
+        from spectraclass.data.base import DataManager
         project_data: xa.Dataset = DataManager.instance().loadCurrentProject("graph")
         point_data: xa.DataArray = project_data["plot-y"]
         self.initLabelsData( point_data )

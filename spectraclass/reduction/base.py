@@ -501,7 +501,7 @@ class UMAP(BaseEstimator):
 
     @classmethod
     def instance( cls, *args, **kwargs ):
-        from spectraclass.data.manager import DataManager
+        from spectraclass.data.base import DataManager
         ptype = DataManager.instance().proc_type
         mapper = None
         if ptype == "cpu":

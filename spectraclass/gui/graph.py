@@ -6,7 +6,7 @@ import ipywidgets as ip
 from typing import List, Union, Tuple, Optional, Dict, Callable
 import xarray as xa
 import numpy as np
-from spectraclass.data.manager import DataManager
+from spectraclass.data.base import DataManager
 from bokeh.models import ColumnDataSource
 import ipywidgets as ipw
 import traitlets.config as tlc

@@ -105,7 +105,7 @@ class AstroModeConfigurable(SCConfigurable):
 
     @classmethod
     def instance(cls):
-        from spectraclass.data.manager import DataManager
+        from spectraclass.data.base import DataManager
         return cls._class_instances[ DataManager.instance().mode ]
 
     @property

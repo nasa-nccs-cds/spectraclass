@@ -1,4 +1,4 @@
-from spectraclass.data.manager import DataManager, ModeDataManager
+from spectraclass.data.base import DataManager
 from spectraclass.gui.application import Spectraclass
 import numpy as np
 import math
@@ -7,19 +7,18 @@ from bokeh.models import ColumnDataSource
 from bokeh.plotting import figure
 from bokeh.transform import linear_cmap
 from bokeh.layouts import gridplot
+DataManager.setMode('swift')
 
 app = Spectraclass.instance()
 app.configure("spectraclass")
 
 dm: DataManager = DataManager.instance()
-mdm: ModeDataManager = dm.mode_data_manager
+dm.model_dims = 32
+dm.subsample = 5
+dm.reduce_method = "autoencoder"
+dm.reduce_nepochs = 1000
 
-mdm.model_dims = 32
-mdm.subsample = 5
-mdm.reduce_method = "autoencoder"
-mdm.reduce_nepochs = 1000
-
-dataset = mdm.prepare_inputs( write=False )
+dataset = dm.prepare_inputs( write=False )
 
 print( f"prepare_inputs: {dataset}" )
 

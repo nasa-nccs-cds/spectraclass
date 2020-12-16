@@ -1,5 +1,5 @@
 import time, math, numpy as np
-from spectraclass.data.manager import DataManager
+from spectraclass.data.base import DataManager
 from spectraclass.reduction.embedding import ReductionManager
 from typing import List, Union, Tuple, Optional, Dict, Callable
 from matplotlib import cm

@@ -10,7 +10,7 @@ from matplotlib.colors import Normalize
 from matplotlib.backend_bases import PickEvent, MouseButton, NavigationToolbar2
 from spectraclass.reduction.embedding import ReductionManager
 from collections import OrderedDict
-from spectraclass.data.manager import DataManager
+from spectraclass.data.base import DataManager
 from spectraclass.model.labels import LabelsManager
 from spectraclass.gui.points import PointCloudManager
 from spectraclass.model.base import SCConfigurable, Marker

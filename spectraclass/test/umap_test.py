@@ -1,6 +1,6 @@
 import xarray as xa
 from spectraclass.gui.application import Spectraclass
-from spectraclass.data.manager import DataManager
+from spectraclass.data.base import DataManager
 from spectraclass.reduction.base import UMAP
 
 app = Spectraclass.instance()

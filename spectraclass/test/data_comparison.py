@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import xarray as xa
 from spectraclass.gui.application import Spectraclass
-from spectraclass.data.manager import DataManager
+from spectraclass.data.base import DataManager
 
 app = Spectraclass.instance()
 app.configure("spectraclass")

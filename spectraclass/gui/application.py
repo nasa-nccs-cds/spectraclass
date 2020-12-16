@@ -14,7 +14,7 @@ class Spectraclass(tlc.SingletonConfigurable, SCConfigurable):
         super(Spectraclass, self).__init__()
 
     def configure( self, name: str ):
-        from spectraclass.data.manager import DataManager
+        from spectraclass.data.base import DataManager
         DataManager.instance().name = name
         cfg_file = DataManager.instance().config_file()
         from traitlets.config.loader import load_pyconfig_files
@@ -31,7 +31,7 @@ class Spectraclass(tlc.SingletonConfigurable, SCConfigurable):
             print( f"Configuration error: '{cfg_file}' is not a file.")
 
     def save_config( self ):
-        from spectraclass.data.manager import DataManager
+        from spectraclass.data.base import DataManager
         conf_dict = self.generate_config_file()
         globals = conf_dict.pop( 'global', {} )
         for mode, mode_conf_txt in conf_dict.items():

@@ -5,7 +5,7 @@ from cuml.neighbors import NearestNeighbors as cuNearestNeighbors
 from sklearn.neighbors import NearestNeighbors as skNearestNeighbors
 import xarray as xa
 from spectraclass.gui.application import Spectraclass
-from spectraclass.data.manager import DataManager
+from spectraclass.data.base import DataManager
 
 app = Spectraclass.instance()
 app.configure("spectraclass")

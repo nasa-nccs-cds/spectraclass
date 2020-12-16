@@ -17,7 +17,7 @@ class ActivationFlow(object):
 
     @classmethod
     def instance(cls, point_data: xa.DataArray, nneighbors: int, **kwargs ) -> "ActivationFlow":
-        from spectraclass.data.manager import DataManager
+        from spectraclass.data.base import DataManager
         ptype = DataManager.instance().proc_type
         if cls._instance is None:
             if ptype == "cpu":

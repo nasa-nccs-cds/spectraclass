@@ -1,4 +1,4 @@
-from spectraclass.data.manager import DataManager, ModeDataManager
+from spectraclass.data.base import DataManager, ModeDataManager
 from spectraclass.gui.application import Spectraclass
 
 app = Spectraclass.instance()

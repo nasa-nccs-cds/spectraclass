@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import ipywidgets as ipw
 from .widgets import ToggleButton
-from spectraclass.data.manager import DataManager
+from spectraclass.data.base import DataManager
 from .points import PointCloudManager
 from traitlets import traitlets
 from spectraclass.model.labels import LabelsManager

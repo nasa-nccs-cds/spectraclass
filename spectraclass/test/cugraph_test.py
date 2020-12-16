@@ -3,7 +3,7 @@ from cuml.neighbors import NearestNeighbors
 import xarray as xa
 import numpy as np
 from spectraclass.gui.application import Spectraclass
-from spectraclass.data.manager import DataManager
+from spectraclass.data.base import DataManager
 
 app = Spectraclass.instance()
 app.configure("spectraclass")
