@@ -6,16 +6,23 @@ from pyproj import Proj, transform
 from spectraclass.data.base import DataManager, DataType
 from spectraclass.data.spatial.manager import SpatialDataManager
 import os, math, pickle
-from spectraclass.graph.manager import ActivationFlowManager
-from spectraclass.reduction.embedding import ReductionManager
+import traitlets.config as tlc
+import traitlets as tl
 
 def dms() -> SpatialDataManager:  return SpatialDataManager.instance()
 # def dm():  return DataManager.instance()
 
-class Tile:
+class Tile(tlc.Configurable):
+    tile_size = tl.Int(1000).tag(config=True, sync=True)
+    tile_index = tl.List(tl.Int,(0,0),2,2).tag(config=True, sync=True)
+    block_size = tl.Int(250).tag(config=True, sync=True)
+    block_shape = tl.List(tl.Int,(250,250),2,2).tag(config=True, sync=True)
+    block_dims = tl.List(tl.Int,(4,4),2,2).tag(config=True, sync=True)
+    tile_shape = tl.List(tl.Int,(1000,1000),2,2).tag(config=True, sync=True)
+    tile_dims = tl.List(tl.Int,(4,4),2,2).tag(config=True, sync=True)
 
     def __init__(self, **kwargs ):
-        self.config = kwargs
+        super(Tile, self).__init__()
         self._data: Optional[xa.DataArray] = None
         self._transform: Optional[ProjectiveTransform] = None
         self.subsampling: int =  kwargs.get('subsample',1)
@@ -43,10 +50,10 @@ class Tile:
 
     def get_block_transform( self, iy, ix ) -> ProjectiveTransform:
         tr0 = self.data.attrs['transform']
-        iy0, ix0 = iy * dms().block_shape[0], ix * dms().block_shape[1]
+        iy0, ix0 = iy * self.block_shape[0], ix * self.block_shape[1]
         y0, x0 = tr0[5] + iy0 * tr0[4], tr0[2] + ix0 * tr0[0]
         tr1 = [ tr0[0], tr0[1], x0, tr0[3], tr0[4], y0, 0, 0, 1  ]
-        print( f"Tile transform: {tr0}, Block transform: {tr1}, tile indices = [{dms().tile_index}], block indices = [ {iy}, {ix} ]" )
+        print( f"Tile transform: {tr0}, Block transform: {tr1}, tile indices = [{self.tile_index}], block indices = [ {iy}, {ix} ]" )
         return  ProjectiveTransform( np.array(tr1).reshape(3, 3) )
 
     @property
@@ -55,7 +62,7 @@ class Tile:
 
     @property
     def nBlocks(self) -> List[ List[int] ]:
-        return [ self.data.shape[i+1]//dms().block_shape[i] for i in range(2) ]
+        return [ self.data.shape[i+1]//self.block_shape[i] for i in range(2) ]
 
     def getBlock(self, iy: int, ix: int, **kwargs ) -> Optional["Block"]:
         if self.data is None: return None
@@ -142,7 +149,7 @@ class Block:
 
     @property
     def shape(self) -> Tuple[int,int]:
-        return dms().block_shape
+        return self.tile.block_shape
 
     def getBounds(self ) -> Tuple[ Tuple[int,int], Tuple[int,int] ]:
         y0, x0 = self.block_coords[0]*self.shape[0], self.block_coords[1]*self.shape[1]
@@ -173,14 +180,12 @@ class Block:
             return point_data
 
     def reduce(self, data: xa.DataArray):
-        reduction_method = dataManager.config.value("input.reduction/method", None)
-        ndim = int(dataManager.config.value("input.reduction/ndim", 16 ) )
-        nepochs = int( dataManager.config.value("input.reduction/epochs", 200 ) )
-        if reduction_method != "None":
+        from spectraclass.reduction.embedding import ReductionManager
+        if dms().reduce_method != "":
             dave, dmag =  data.values.mean(0), 2.0*data.values.std(0)
             normed_data = ( data.values - dave ) / dmag
-            reduced_spectra, reproduction = reductionManager.reduce( normed_data, reduction_method, ndim, nepochs )
-            coords = dict( samples=data.coords['samples'], band=np.arange(ndim) )
+            reduced_spectra, reproduction = ReductionManager.instance().reduce( normed_data, dms().reduce_method, dms().model_dims, dms().reduce_nepochs )
+            coords = dict( samples=data.coords['samples'], band=np.arange(dms().model_dims) )
             return xa.DataArray( reduced_spectra, dims=['samples', 'band'], coords=coords )
         return data
 

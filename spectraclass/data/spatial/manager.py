@@ -74,21 +74,11 @@ class SpatialDataManager(ModeDataManager):
     image_name = tl.Unicode("NONE").tag(config=True,sync=True)
     data_cache = tl.Unicode("NONE").tag(config=True, sync=True)
     data_dir = tl.Unicode("NONE").tag(config=True, sync=True)
-    tile_size = tl.Int(1000).tag(config=True, sync=True)
-    tile_index = tl.List(tl.Int,(0,0),2,2).tag(config=True, sync=True)
-    block_size = tl.Int(250).tag(config=True, sync=True)
-    block_shape = tl.List(tl.Int,(250,250),2,2).tag(config=True, sync=True)
-    block_dims = tl.List(tl.Int,(4,4),2,2).tag(config=True, sync=True)
-    tile_shape = tl.List(tl.Int,(1000,1000),2,2).tag(config=True, sync=True)
-    tile_dims = tl.List(tl.Int,(4,4),2,2).tag(config=True, sync=True)
-    name = tl.Unicode('hyperclass').tag(config=True)
-    mode_index = tl.Int(0).tag(config=True,sync=True)
-    MODES = ["aviris"]
     image_attrs = {}
 
-    def __init__( self,  **kwargs ):   # Tile shape (y,x) matches image shape (row,col)
-        SCConfigurable.__init__(self)
-        self.cacheTileData = kwargs.get( 'cache_tile', True )
+    def __init__( self  ):   # Tile shape (y,x) matches image shape (row,col)
+        super(SpatialDataManager, self).__init__()
+        self.cacheTileData =  True
 
     def config_file(self, config_mode=None) -> str :
         if config_mode is None: config_mode = self.mode
@@ -96,10 +86,6 @@ class SpatialDataManager(ModeDataManager):
 
     def setImageName( self, fileName: str ):
         self.image_name = fileName[:-4] if fileName.endswith(".tif") else fileName
-
-    @property
-    def mode(self) -> str:
-        return self.MODES[ self.mode_index ]
 
     @property
     def iy(self):
@@ -378,38 +364,30 @@ class SpatialDataManager(ModeDataManager):
         attrs = {**kwargs, 'name': id}
         return xa.DataArray(np_data, dims=dims, coords=coords, name=id, attrs=attrs)
 
-    def prepare_inputs(self, input_vars, ssample=None):
-        SpatialDataManager.instance()
-        subsample = int(self.config.value("input.reduction/subsample", 1)) if ssample is None else ssample
-        #    values = { k: self.config.value(k) for k in self.config.allKeys() }
-        np_embedding = self.getInputFileData(input_vars['embedding'], subsample)
+    def prepare_inputs(self, *args, **kwargs ):
+        from spectraclass.data.base import DataManager
+        dm = DataManager.instance()
+        np_embedding = self.getInputFileData( self.INPUTS['embedding'], self.subsample)
         dims = np_embedding.shape
-        mdata_vars = list(input_vars['directory'])
+        mdata_vars = list( self.INPUTS['directory'])
         xcoords = OrderedDict(samples=np.arange(dims[0]), bands=np.arange(dims[1]))
         xdims = OrderedDict({dims[0]: 'samples', dims[1]: 'bands'})
-        data_vars = dict(
-            embedding=xa.DataArray(np_embedding, dims=xcoords.keys(), coords=xcoords, name=input_vars['embedding']))
-        data_vars.update({vid: self.getXarray(vid, xcoords, subsample, xdims) for vid in mdata_vars})
-        pspec = input_vars['plot']
-        data_vars.update(
-            {f'plot-{vid}': self.getXarray(pspec[vid], xcoords, subsample, xdims, norm=pspec.get('norm', '')) for vid in
-             ['x', 'y']})
-        reduction_method = self.config.value("input.reduction/method", 'None')
-        ndim = int(self.config.value("input.reduction/ndim", 32))
-        epochs = int(self.config.value("input.reduction/epochs", 20))
-        if reduction_method != "None":
-            reduced_spectra, reproduction = ReductionManager.instance().reduce( data_vars['embedding'], reduction_method, ndim, epochs )
-            coords = dict(samples=xcoords['samples'], model=np.arange(ndim))
+        data_vars = dict( embedding=xa.DataArray(np_embedding, dims=xcoords.keys(), coords=xcoords, name=input_vars['embedding']))
+        data_vars.update({vid: self.getXarray(vid, xcoords, self.subsample, xdims) for vid in mdata_vars})
+        pspec = self.INPUTS['plot']
+        data_vars.update(  {f'plot-{vid}': self.getXarray(pspec[vid], xcoords, self.subsample, xdims, norm=pspec.get('norm', '')) for vid in ['x', 'y']})
+
+        if self.reduce_method != "":
+            reduced_spectra, reproduction = ReductionManager.instance().reduce( data_vars['embedding'], self.reduce_method, self.model_dims, self.reduce_nepochs )
+            coords = dict(samples=xcoords['samples'], model=np.arange(self.model_dims))
             data_vars['reduction'] = xa.DataArray(reduced_spectra, dims=['samples', 'model'], coords=coords)
 
         dataset = xa.Dataset(data_vars, coords=xcoords, attrs={'type': 'spectra'})
         dataset.attrs["colnames"] = mdata_vars
-        projId = self.config.value('project/id')
-        file_name = f"raw" if reduction_method == "None" else f"{reduction_method}-{ndim}"
-        if subsample > 1: file_name = f"{file_name}-ss{subsample}"
-        outputDir = os.path.join(self.config.value('data/cache'), projId)
-        mode = 0o777
-        os.makedirs(outputDir, mode, True)
+        file_name = f"raw" if self.reduce_method == "" else f"{self.reduce_method}-{self.model_dims}"
+        if self.subsample > 1: file_name = f"{file_name}-ss{self.subsample}"
+        outputDir = os.path.join( self.cache_dir, dm.project_name )
+        os.makedirs(outputDir, 0o777, True)
         output_file = os.path.join(outputDir, file_name + ".nc")
         print(f"Writing output to {output_file}")
         dataset.to_netcdf(output_file, format='NETCDF4', engine='netcdf4')

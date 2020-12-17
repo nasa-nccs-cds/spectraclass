@@ -16,7 +16,6 @@ class DataType(Enum):
     Directory = 4
 
 class DataManager(tlc.SingletonConfigurable, SCConfigurable):
-    dataset = tl.Unicode("NONE").tag(config=True,sync=True)
     proc_type = tl.Unicode('cpu').tag(config=True)
     name = tl.Unicode('spectraclass').tag(config=True)
     _mode_data_managers_: Dict[str,Type[ModeDataManager]] = {}
@@ -46,6 +45,10 @@ class DataManager(tlc.SingletonConfigurable, SCConfigurable):
         return self._mode_data_manager_.mode
 
     @property
+    def project_name(self) -> str:
+        return ".".join( [ self.name, self.mode ] )
+
+    @property
     def config_mode(self):
         return "configuration"
 
@@ -67,6 +70,6 @@ class DataManager(tlc.SingletonConfigurable, SCConfigurable):
         print( f" DataManager: loadCurrentProject: {caller_id}" )
         return self._mode_data_manager_.loadCurrentProject()
 
-    def prepare_inputs( self, **kwargs ) -> xa.Dataset:
-        return self._mode_data_manager_.prepare_inputs( **kwargs )
+    def prepare_inputs( self, *args, **kwargs ) -> xa.Dataset:
+        return self._mode_data_manager_.prepare_inputs( *args, **kwargs )
 

@@ -15,16 +15,20 @@ from spectraclass.model.base import SCConfigurable, AstroModeConfigurable
 class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
     MODE = None
     METAVARS = None
+    INPUTS = None
+
+    dataset = tl.Unicode("NONE").tag(config=True,sync=True)
+    cache_dir = tl.Unicode(os.path.expanduser("~/Development/Cache")).tag(config=True)
+    data_dir = tl.Unicode(os.path.expanduser("~/Development/Data")).tag(config=True)
+
     model_dims = tl.Int(32).tag(config=True, sync=True)
     subsample = tl.Int(5).tag(config=True, sync=True)
     reduce_method = tl.Unicode("Autoencoder").tag(config=True, sync=True)
     reduce_nepochs = tl.Int(1000).tag(config=True, sync=True)
-    cache_dir = tl.Unicode(os.path.expanduser("~/Development/Cache")).tag(config=True)
-    data_dir = tl.Unicode(os.path.expanduser("~/Development/Data")).tag(config=True)
 
     def __init__(self, ):
         tlc.Configurable.__init__(self)
-        AstroModeConfigurable.__init__(self, self.mode)
+        AstroModeConfigurable.__init__( self, self.MODE )
         self.datasets = {}
         self._model_dims_selector: ip.SelectionSlider = None
         self._subsample_selector: ip.SelectionSlider = None
@@ -55,16 +59,6 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
         attrs = {**kwargs, 'name': id}
         return xa.DataArray(np_data, dims=dims, coords=coords, name=id, attrs=attrs)
 
-    def get_input_mdata(self):
-        if self.config_mode == "swift":
-            return dict(embedding='scaled_specs', directory=["target_names", "obsids"],
-                        plot=dict(y="specs", x='spectra_x_axis'))
-        elif self.config_mode == "tess":
-            return dict(embedding='scaled_lcs', directory=['tics', "camera", "chip", "dec", 'ra', 'tmag'],
-                        plot=dict(y="lcs", x='times'))
-        else:
-            raise Exception(f"Unknown data mode: {self.config_mode}, should be 'tess' or 'swift")
-
     def set_progress(self, pval: float):
         if self._progress is not None:
             self._progress.value = pval
@@ -81,17 +75,16 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
         file_name = f"raw" if self.reduce_method == "None" else f"{self.reduce_method}-{self.model_dims}"
         if self.subsample > 1: file_name = f"{file_name}-ss{self.subsample}"
         output_file = os.path.join(self.datasetDir, file_name + ".nc")
+        assert( self.INPUTS is not None, f"INPUTS undefined for mode {self.mode}")
 
-        input_vars = self.get_input_mdata()
-        np_embedding: np.ndarray = self.getInputFileData(input_vars['embedding'], self.subsample)
+        np_embedding: np.ndarray = self.getInputFileData( self.INPUTS['embedding'], self.subsample)
         dims = np_embedding.shape
-        mdata_vars = list(input_vars['directory'])
+        mdata_vars = list(self.INPUTS['directory'])
         xcoords = OrderedDict(samples=np.arange(dims[0]), bands=np.arange(dims[1]))
         xdims = OrderedDict({dims[0]: 'samples', dims[1]: 'bands'})
-        data_vars = dict(
-            embedding=xa.DataArray(np_embedding, dims=xcoords.keys(), coords=xcoords, name=input_vars['embedding']))
+        data_vars = dict( embedding=xa.DataArray(np_embedding, dims=xcoords.keys(), coords=xcoords, name=self.INPUTS['embedding']))
         data_vars.update({vid: self.getXarray(vid, xcoords, self.subsample, xdims) for vid in mdata_vars})
-        pspec = input_vars['plot']
+        pspec = self.INPUTS['plot']
         data_vars.update(
             {f'plot-{vid}': self.getXarray(pspec[vid], xcoords, self.subsample, xdims, norm=pspec.get('norm', '')) for
              vid in ['x', 'y']})
@@ -123,8 +116,8 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
         from spectraclass.gui.application import Spectraclass
         self.dm.select_current_mode()
         if self.dm.dataset != self._dset_selection.value:
-            print(
-                f"Loading dataset '{self._dset_selection.value}', current dataset = '{self.dm.dataset}', current mode = '{self._mode}', current mode index = {self.dm.mode_index}, mdmgr id = {id(self)}")
+            print( f"Loading dataset '{self._dset_selection.value}', current dataset = '{self.dm.dataset}', "
+                   f"current mode = '{self._mode}', current mode index = {self.dm.mode_index}, mdmgr id = {id(self)}")
             self.dm.dataset = self._dset_selection.value
             self.dm.select_dataset(self._dset_selection.value)
         Spectraclass.instance().refresh_all()
@@ -204,27 +197,7 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
         return wTab
 
     def getInputFileData(self, input_file_id: str, subsample: int = 1, dims: Tuple[int] = None) -> np.ndarray:
-        input_file_path = os.path.expanduser(
-            os.path.join(self.data_dir, self.dm.name, self.config_mode, f"{input_file_id}.pkl"))
-        try:
-            if os.path.isfile(input_file_path):
-                print(f"Reading unstructured {input_file_id} data from file {input_file_path}, dims = {dims}")
-                with open(input_file_path, 'rb') as f:
-                    result = pickle.load(f)
-                    if isinstance(result, np.ndarray):
-                        if dims is not None and (result.shape[0] == dims[1]) and result.ndim == 1: return result
-                        return result[::subsample]
-                    elif isinstance(result, list):
-                        #                        if dims is not None and ( len(result) == dims[1] ): return result
-                        subsampled = [result[i] for i in range(0, len(result), subsample)]
-                        if isinstance(result[0], np.ndarray):
-                            return np.vstack(subsampled)
-                        else:
-                            return np.array(subsampled)
-            else:
-                print(f"Error, the input path '{input_file_path}' is not a file.")
-        except Exception as err:
-            print(f" Can't read data[{input_file_id}] file {input_file_path}: {err}")
+        raise NotImplementedError()
 
     def loadDataset(self, dsid: str, *args, **kwargs) -> xa.Dataset:
         print(f"Load dataset {dsid}, current datasets = {self.datasets.keys()}")
