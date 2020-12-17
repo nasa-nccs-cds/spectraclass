@@ -87,23 +87,11 @@ class SpatialDataManager(ModeDataManager):
     def setImageName( self, fileName: str ):
         self.image_name = fileName[:-4] if fileName.endswith(".tif") else fileName
 
-    @property
-    def iy(self):
-        return self.tile_index[0]
-
-    @property
-    def ix(self):
-        return self.tile_index[1]
-
     @classmethod
     def extent(cls, image_data: xa.DataArray ) -> List[float]: # left, right, bottom, top
         xc, yc = image_data.coords[image_data.dims[-1]].values, image_data.coords[image_data.dims[-2]].values
         dx2, dy2 = (xc[1]-xc[0])/2, (yc[0]-yc[1])/2
         return [ xc[0]-dx2,  xc[-1]+dx2,  yc[-1]-dy2,  yc[0]+dy2 ]
-
-    def getTileBounds(self) -> Tuple[ Tuple[int,int], Tuple[int,int] ]:
-        y0, x0 = self.iy*self.tile_shape[0], self.ix*self.tile_shape[1]
-        return ( y0, y0+self.tile_shape[0] ), ( x0, x0+self.tile_shape[1] )
 
     def getConstantXArray(self, fill_value: float, shape: Tuple[int], dims: Tuple[str], **kwargs) -> xa.DataArray:
         coords = kwargs.get( "coords", { dim: np.arange(shape[id]) for id, dim in enumerate(dims) } )

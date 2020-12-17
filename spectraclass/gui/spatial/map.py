@@ -138,7 +138,6 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
         self.flow_iterations = kwargs.get( 'flow_iterations', 1 )
         self.frame_marker: Optional[Line2D] = None
         self.control_axes = {}
-        self._tiles: Dict[List,Tile] = {}
         self.setup_plot(**kwargs)
 
 #        google_actions = [[maptype, None, None, partial(self.run_task, self.download_google_map, "Accessing Landsat Image...", maptype, task_context='newfig')] for maptype in ['satellite', 'hybrid', 'terrain', 'roadmap']]
@@ -153,10 +152,6 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
 
     def gui(self):
         return self.figure.canvas
-
-    @property
-    def tile(self) -> Tile:
-        return self._tiles.setdefault( tuple(dms().tile_index), Tile() )
 
     @property
     def toolbar(self)-> NavigationToolbar2:

@@ -8,18 +8,18 @@ from spectraclass.data.spatial.manager import SpatialDataManager
 import os, math, pickle
 import traitlets.config as tlc
 import traitlets as tl
+from spectraclass.model.base import SCConfigurable
+
 
 def dms() -> SpatialDataManager:  return SpatialDataManager.instance()
 # def dm():  return DataManager.instance()
 
 class Tile(tlc.Configurable):
-    tile_size = tl.Int(1000).tag(config=True, sync=True)
-    tile_index = tl.List(tl.Int,(0,0),2,2).tag(config=True, sync=True)
+
     block_size = tl.Int(250).tag(config=True, sync=True)
     block_shape = tl.List(tl.Int,(250,250),2,2).tag(config=True, sync=True)
     block_dims = tl.List(tl.Int,(4,4),2,2).tag(config=True, sync=True)
-    tile_shape = tl.List(tl.Int,(1000,1000),2,2).tag(config=True, sync=True)
-    tile_dims = tl.List(tl.Int,(4,4),2,2).tag(config=True, sync=True)
+
 
     def __init__(self, **kwargs ):
         super(Tile, self).__init__()
@@ -259,3 +259,30 @@ class Block:
     def multi_coords2pindex(self, ycoords: List[float], xcoords: List[float] ) -> np.ndarray:
         ( yi, xi ) = self.multi_coords2indices( ycoords, xcoords )
         return self.index_array.values[ yi, xi ]
+
+class TileManager(tlc.SingletonConfigurable, SCConfigurable):
+    tile_size = tl.Int(1000).tag(config=True, sync=True)
+    tile_index = tl.List(tl.Int, (0, 0), 2, 2).tag(config=True, sync=True)
+    tile_shape = tl.List(tl.Int,(1000,1000),2,2).tag(config=True, sync=True)
+    tile_dims = tl.List(tl.Int,(4,4),2,2).tag(config=True, sync=True)
+
+    def __init__(self, **kwargs):
+        tlc.SingletonConfigurable.__init__(self)
+        SCConfigurable.__init__(self)
+        self._tiles: Dict[List, Tile] = {}
+
+    @property
+    def iy(self):
+        return self.tile_index[0]
+
+    @property
+    def ix(self):
+        return self.tile_index[1]
+
+    @property
+    def tile(self) -> Tile:
+        return self._tiles.setdefault(tuple(self.tile_index), Tile())
+
+    def getTileBounds(self ) -> Tuple[ Tuple[int,int], Tuple[int,int] ]:
+        y0, x0 = self.iy*self.tile_shape[0], self.ix*self.tile_shape[1]
+        return ( y0, y0+self.tile_shape[0] ), ( x0, x0+self.tile_shape[1] )
