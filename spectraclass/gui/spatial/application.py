@@ -14,10 +14,14 @@ class Spectraclass(tlc.SingletonConfigurable, SCConfigurable):
     def __init__(self):
         super(Spectraclass, self).__init__()
 
-    def configure( self, name: str ):
+    def initialize( self, name: str, mode: str ) -> "DataManager":
+        dm = self.configure(name,mode)
+        self.save_config()
+
+    def configure( self, name: str, mode: str ) -> "DataManager":
         from spectraclass.data.base import DataManager
-        DataManager.instance().name = name
-        cfg_file = SpatialDataManager.instance().config_file()
+        dm = DataManager.initialize(name,mode)
+        cfg_file = DataManager.instance().config_file()
         from traitlets.config.loader import load_pyconfig_files
         if os.path.isfile(cfg_file):
             (dir, fname) = os.path.split(cfg_file)
@@ -30,11 +34,12 @@ class Spectraclass(tlc.SingletonConfigurable, SCConfigurable):
                 instance.update_config(config)
         else:
             print( f"Configuration error: '{cfg_file}' is not a file.")
+        return dm
 
     def save_config( self ):
         from spectraclass.data.base import DataManager
         conf_dict = self.generate_config_file()
-        globals = conf_dict.pop( 'global', {} )
+        globals = conf_dict.pop( 'global', "" )
         for mode, mode_conf_txt in conf_dict.items():
             cfg_file = os.path.realpath( DataManager.instance().config_file(mode) )
             os.makedirs( os.path.dirname(cfg_file), exist_ok=True )

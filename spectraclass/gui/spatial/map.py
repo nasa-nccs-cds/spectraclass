@@ -336,12 +336,12 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
 
     def getLabeledPointData( self, update = True ) -> xa.DataArray:
         if update: self.updateLabelsFromMarkers()
-        labeledPointData = dms().raster2points( self.labels )
+        labeledPointData = SpatialDataManager.raster2points( self.labels )
         return labeledPointData
 
     def getExtendedLabelPoints( self ) -> xa.DataArray:
         if self.label_map is None: return self.getLabeledPointData( True )
-        return dms().raster2points( self.label_map )
+        return SpatialDataManager.raster2points( self.label_map )
 
     @property
     def data(self):

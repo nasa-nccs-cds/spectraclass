@@ -75,7 +75,7 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
         file_name = f"raw" if self.reduce_method == "None" else f"{self.reduce_method}-{self.model_dims}"
         if self.subsample > 1: file_name = f"{file_name}-ss{self.subsample}"
         output_file = os.path.join(self.datasetDir, file_name + ".nc")
-        assert( self.INPUTS is not None, f"INPUTS undefined for mode {self.mode}")
+        assert (self.INPUTS is not None), f"INPUTS undefined for mode {self.mode}"
 
         np_embedding: np.ndarray = self.getInputFileData( self.INPUTS['embedding'], self.subsample)
         dims = np_embedding.shape
@@ -85,15 +85,11 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
         data_vars = dict( embedding=xa.DataArray(np_embedding, dims=xcoords.keys(), coords=xcoords, name=self.INPUTS['embedding']))
         data_vars.update({vid: self.getXarray(vid, xcoords, self.subsample, xdims) for vid in mdata_vars})
         pspec = self.INPUTS['plot']
-        data_vars.update(
-            {f'plot-{vid}': self.getXarray(pspec[vid], xcoords, self.subsample, xdims, norm=pspec.get('norm', '')) for
-             vid in ['x', 'y']})
+        data_vars.update(  {f'plot-{vid}': self.getXarray(pspec[vid], xcoords, self.subsample, xdims, norm=pspec.get('norm','spectral')) for vid in ['x', 'y'] } )
         self.set_progress(0.1)
         if self.reduce_method != "None":
             input_data = data_vars['embedding']
-            (reduced_spectra, reproduced_spectra) = ReductionManager.instance().reduce(input_data, self.reduce_method,
-                                                                                       self.model_dims,
-                                                                                       self.reduce_nepochs)
+            (reduced_spectra, reproduced_spectra) = ReductionManager.instance().reduce(input_data, self.reduce_method, self.model_dims, self.reduce_nepochs)
             coords = dict(samples=xcoords['samples'], model=np.arange(self.model_dims))
             data_vars['reduction'] = xa.DataArray(reduced_spectra, dims=['samples', 'model'], coords=coords)
             data_vars['reproduction'] = input_data.copy(data=reproduced_spectra)

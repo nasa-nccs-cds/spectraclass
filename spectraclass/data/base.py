@@ -21,8 +21,9 @@ class DataManager(tlc.SingletonConfigurable, SCConfigurable):
     _mode_data_managers_: Dict[str,Type[ModeDataManager]] = {}
 
     @classmethod
-    def setMode( cls , mode: str ):
+    def initialize(cls, name: str, mode: str):
         dataManager = cls.instance()
+        dataManager.name = name
         if mode.lower() not in cls._mode_data_managers_: raise Exception( f"Mode {mode} is not defined")
         dataManager._mode_data_manager_ = cls._mode_data_managers_[ mode.lower() ]()
         return dataManager
@@ -38,7 +39,9 @@ class DataManager(tlc.SingletonConfigurable, SCConfigurable):
 
     def config_file(self, config_mode=None) -> str :
         if config_mode is None: config_mode = self.mode
-        return os.path.join( os.path.expanduser("~"), "." + self.name, config_mode + ".py" )
+        config_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "config",  self.name )
+        os.makedirs( config_dir, mode = 0o777, exist_ok = True )
+        return os.path.join( config_dir, config_mode + ".py" )
 
     @property
     def mode(self) -> str:

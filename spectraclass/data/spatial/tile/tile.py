@@ -6,20 +6,8 @@ from pyproj import Proj, transform
 from spectraclass.data.base import DataManager, DataType
 from spectraclass.data.spatial.manager import SpatialDataManager
 import os, math, pickle
-import traitlets.config as tlc
-import traitlets as tl
-from spectraclass.model.base import SCConfigurable
 
-
-def dms() -> SpatialDataManager:  return SpatialDataManager.instance()
-# def dm():  return DataManager.instance()
-
-class Tile(tlc.Configurable):
-
-    block_size = tl.Int(250).tag(config=True, sync=True)
-    block_shape = tl.List(tl.Int,(250,250),2,2).tag(config=True, sync=True)
-    block_dims = tl.List(tl.Int,(4,4),2,2).tag(config=True, sync=True)
-
+class Tile:
 
     def __init__(self, **kwargs ):
         super(Tile, self).__init__()
@@ -29,17 +17,13 @@ class Tile(tlc.Configurable):
 
     @property
     def data(self) -> xa.DataArray:
+        from spectraclass.data.spatial.tile.manager import TileManager
         if self._data is None:
-            self._data: xa.DataArray = dms().getTileData(  **self.config )
+            self._data: xa.DataArray = TileManager.instance().getTileData()
         return self._data
-
 
     def reset(self):
         self._data = None
-
-    @property
-    def name(self) -> str:
-        return dms().tileFileName()
 
     @property
     def transform(self) -> Optional[ProjectiveTransform]:
@@ -48,21 +32,9 @@ class Tile(tlc.Configurable):
             self._transform = ProjectiveTransform( np.array(list(self.data.attrs['transform']) + [0, 0, 1]).reshape(3, 3) )
         return self._transform
 
-    def get_block_transform( self, iy, ix ) -> ProjectiveTransform:
-        tr0 = self.data.attrs['transform']
-        iy0, ix0 = iy * self.block_shape[0], ix * self.block_shape[1]
-        y0, x0 = tr0[5] + iy0 * tr0[4], tr0[2] + ix0 * tr0[0]
-        tr1 = [ tr0[0], tr0[1], x0, tr0[3], tr0[4], y0, 0, 0, 1  ]
-        print( f"Tile transform: {tr0}, Block transform: {tr1}, tile indices = [{self.tile_index}], block indices = [ {iy}, {ix} ]" )
-        return  ProjectiveTransform( np.array(tr1).reshape(3, 3) )
-
     @property
     def filename(self) -> str:
         return self.data.attrs['filename']
-
-    @property
-    def nBlocks(self) -> List[ List[int] ]:
-        return [ self.data.shape[i+1]//self.block_shape[i] for i in range(2) ]
 
     def getBlock(self, iy: int, ix: int, **kwargs ) -> Optional["Block"]:
         if self.data is None: return None
@@ -89,8 +61,7 @@ class Block:
         self.init_task = None
         self.config = kwargs
         self.block_coords = (iy,ix)
-        self.data = self._getData()
-        self.transform = tile.get_block_transform( iy, ix )
+        self.data: Optional[xa.DataArray] = self._getData()
         self.index_array: xa.DataArray = self.get_index_array()
         self._flow = None
         self._samples_axis: Optional[xa.DataArray] = None
@@ -101,15 +72,22 @@ class Block:
         self._point_data = None
 
     @property
+    def transform( self ):
+        from spectraclass.data.spatial.tile.manager import TileManager
+        return TileManager.instance().get_block_transform( *self.block_coords )
+
+    @property
     def dsid( self ):
-        return "-".join( [ self.tile.name ] + [ str(i) for i in self.block_coords ] )
+        from spectraclass.data.spatial.tile.manager import TileManager
+        return "-".join( [ TileManager.instance().tileFileName() ] + [ str(i) for i in self.block_coords ] )
 
     def _getData( self ) -> Optional[xa.DataArray]:
+        from spectraclass.data.spatial.tile.manager import TileManager
         if self.tile.data is None: return None
         ybounds, xbounds = self.getBounds()
         block_raster = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
         block_raster.attrs['block_coords'] = self.block_coords
-        block_raster.name = f"{self.tile.name}_b-{self.block_coords[0]}-{self.block_coords[1]}"
+        block_raster.name = f"{TileManager.instance().tileFileName()}_b-{self.block_coords[0]}-{self.block_coords[1]}"
         return block_raster
 
     def get_index_array(self) -> xa.DataArray:
@@ -149,7 +127,8 @@ class Block:
 
     @property
     def shape(self) -> Tuple[int,int]:
-        return self.tile.block_shape
+        from spectraclass.data.spatial.tile.manager import TileManager
+        return TileManager.instance().block_shape
 
     def getBounds(self ) -> Tuple[ Tuple[int,int], Tuple[int,int] ]:
         y0, x0 = self.block_coords[0]*self.shape[0], self.block_coords[1]*self.shape[1]
@@ -160,10 +139,10 @@ class Block:
         if dstype == DataType.Embedding:
             if self._point_data is None:
                 subsample = kwargs.get( 'subsample', None )
-                result: xa.DataArray =  dms().raster2points( self.data )
+                result: xa.DataArray =  SpatialDataManager.raster2points( self.data )
                 if result.size > 0:
                     ptData: xa.DataArray = result if subsample is None else result[::subsample]
-                    self._point_data =  self.reduce( ptData )
+                    self._point_data =  SpatialDataManager.instance().reduce( ptData )
                 else:
                     self._point_data = result
                 self._samples_axis = self._point_data.coords['samples']
@@ -172,22 +151,12 @@ class Block:
             return self._point_data
         elif dstype == DataType.Plot:
             subsample = kwargs.get('subsample', None)
-            result: xa.DataArray = dms().raster2points(self.data)
+            result: xa.DataArray = SpatialDataManager.raster2points(self.data)
             if result.size > 0:     point_data = result if subsample is None else result[::subsample]
             else:                   point_data = result
             point_data.attrs['dsid'] = "-".join([str(i) for i in self.block_coords])
             point_data.attrs['type'] = 'block'
             return point_data
-
-    def reduce(self, data: xa.DataArray):
-        from spectraclass.reduction.embedding import ReductionManager
-        if dms().reduce_method != "":
-            dave, dmag =  data.values.mean(0), 2.0*data.values.std(0)
-            normed_data = ( data.values - dave ) / dmag
-            reduced_spectra, reproduction = ReductionManager.instance().reduce( normed_data, dms().reduce_method, dms().model_dims, dms().reduce_nepochs )
-            coords = dict( samples=data.coords['samples'], band=np.arange(dms().model_dims) )
-            return xa.DataArray( reduced_spectra, dims=['samples', 'band'], coords=coords )
-        return data
 
     @property
     def samples_axis(self) -> xa.DataArray:
@@ -214,8 +183,8 @@ class Block:
         elif band_range is not None:
             plot_data = self.data.isel( band=slice( band_range[0], band_range[1] ) ).mean(dim="band", skipna=True)
         else:
-            plot_data =  dms().getRGB(self.data)
-        dms().plotRaster( plot_data, **kwargs )
+            plot_data =  SpatialDataManager.getRGB(self.data)
+        SpatialDataManager.plotRaster( plot_data, **kwargs )
         return plot_data
 
     def coords2indices(self, cy, cx) -> Dict:
@@ -260,29 +229,4 @@ class Block:
         ( yi, xi ) = self.multi_coords2indices( ycoords, xcoords )
         return self.index_array.values[ yi, xi ]
 
-class TileManager(tlc.SingletonConfigurable, SCConfigurable):
-    tile_size = tl.Int(1000).tag(config=True, sync=True)
-    tile_index = tl.List(tl.Int, (0, 0), 2, 2).tag(config=True, sync=True)
-    tile_shape = tl.List(tl.Int,(1000,1000),2,2).tag(config=True, sync=True)
-    tile_dims = tl.List(tl.Int,(4,4),2,2).tag(config=True, sync=True)
 
-    def __init__(self, **kwargs):
-        tlc.SingletonConfigurable.__init__(self)
-        SCConfigurable.__init__(self)
-        self._tiles: Dict[List, Tile] = {}
-
-    @property
-    def iy(self):
-        return self.tile_index[0]
-
-    @property
-    def ix(self):
-        return self.tile_index[1]
-
-    @property
-    def tile(self) -> Tile:
-        return self._tiles.setdefault(tuple(self.tile_index), Tile())
-
-    def getTileBounds(self ) -> Tuple[ Tuple[int,int], Tuple[int,int] ]:
-        y0, x0 = self.iy*self.tile_shape[0], self.ix*self.tile_shape[1]
-        return ( y0, y0+self.tile_shape[0] ), ( x0, x0+self.tile_shape[1] )

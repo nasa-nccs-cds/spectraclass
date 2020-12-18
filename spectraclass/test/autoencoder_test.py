@@ -7,7 +7,7 @@ from bokeh.models import ColumnDataSource
 from bokeh.plotting import figure
 from bokeh.transform import linear_cmap
 from bokeh.layouts import gridplot
-DataManager.setMode('tess')
+DataManager.initialize('tess')
 
 app = Spectraclass.instance()
 app.configure("spectraclass")
