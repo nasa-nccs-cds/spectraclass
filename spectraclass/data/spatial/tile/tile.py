@@ -41,12 +41,6 @@ class Tile:
         block = Block( self, iy, ix, **kwargs )
         return block
 
-    # def getPointData( self, **kwargs ) -> xa.DataArray:
-    #     subsample = kwargs.get( 'subsample', None )
-    #     if subsample is None: subsample = self.subsampling
-    #     point_data = dms().raster2points( self.data )
-    #     return point_data[::subsample]
-
     def coords2index(self, cy, cx ) -> Tuple[int,int]:     # -> iy, ix
         coords = self.transform.inverse(np.array([[cx, cy], ]))
         return (math.floor(coords[0, 1]), math.floor(coords[0, 0]))
@@ -66,7 +60,7 @@ class Block:
         self._flow = None
         self._samples_axis: Optional[xa.DataArray] = None
         tr = self.transform.params.flatten()
-        self.data.attrs['transform'] = self.transform
+        self.data.attrs['transform'] = self.transform.params.flatten().tolist()
         self._xlim = [ tr[2], tr[2] + tr[0] * (self.data.shape[2]) ]
         self._ylim = [ tr[5] + tr[4] * (self.data.shape[1]), tr[5] ]
         self._point_data = None
@@ -84,10 +78,11 @@ class Block:
     def _getData( self ) -> Optional[xa.DataArray]:
         from spectraclass.data.spatial.tile.manager import TileManager
         if self.tile.data is None: return None
+        tile_name = TileManager.instance().tileFileName(False)
         ybounds, xbounds = self.getBounds()
         block_raster = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
         block_raster.attrs['block_coords'] = self.block_coords
-        block_raster.name = f"{TileManager.instance().tileFileName()}_b-{self.block_coords[0]}-{self.block_coords[1]}"
+        block_raster.name = f"{tile_name}_b-{self.block_coords[0]}-{self.block_coords[1]}"
         return block_raster
 
     def get_index_array(self) -> xa.DataArray:
@@ -135,28 +130,14 @@ class Block:
         return ( y0, y0+self.shape[0] ), ( x0, x0+self.shape[1] )
 
     def getPointData( self, **kwargs ) -> xa.DataArray:
-        dstype = kwargs.get('dstype', DataType.Embedding)
-        if dstype == DataType.Embedding:
-            if self._point_data is None:
-                subsample = kwargs.get( 'subsample', None )
-                result: xa.DataArray =  SpatialDataManager.raster2points( self.data )
-                if result.size > 0:
-                    ptData: xa.DataArray = result if subsample is None else result[::subsample]
-                    self._point_data =  SpatialDataManager.instance().reduce( ptData )
-                else:
-                    self._point_data = result
-                self._samples_axis = self._point_data.coords['samples']
-                self._point_data.attrs['dsid'] = "-".join( [ str(i) for i in self.block_coords ] )
-                self._point_data.attrs['type'] = 'block'
-            return self._point_data
-        elif dstype == DataType.Plot:
-            subsample = kwargs.get('subsample', None)
-            result: xa.DataArray = SpatialDataManager.raster2points(self.data)
-            if result.size > 0:     point_data = result if subsample is None else result[::subsample]
-            else:                   point_data = result
-            point_data.attrs['dsid'] = "-".join([str(i) for i in self.block_coords])
-            point_data.attrs['type'] = 'block'
-            return point_data
+        if self._point_data is None:
+            subsample = kwargs.get( 'subsample', 1 )
+            result: xa.DataArray =  SpatialDataManager.raster2points( self.data )
+            self._point_data = result if (result.size == 0 ) else result[::subsample]
+            self._samples_axis = self._point_data.coords['samples']
+            self._point_data.attrs['dsid'] = "-".join( [ str(i) for i in self.block_coords ] )
+            self._point_data.attrs['type'] = 'block'
+        return self._point_data
 
     @property
     def samples_axis(self) -> xa.DataArray:

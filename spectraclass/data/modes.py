@@ -192,7 +192,7 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
         wTab.set_title(2, "Configure")
         return wTab
 
-    def getInputFileData(self, input_file_id: str, subsample: int = 1, dims: Tuple[int] = None) -> np.ndarray:
+    def getInputFileData(self) -> np.ndarray:
         raise NotImplementedError()
 
     def loadDataset(self, dsid: str, *args, **kwargs) -> xa.Dataset:

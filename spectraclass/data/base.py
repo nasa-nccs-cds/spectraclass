@@ -66,8 +66,8 @@ class DataManager(tlc.SingletonConfigurable, SCConfigurable):
             self._wGui = self._mode_data_manager_.gui()
         return self._wGui
 
-    def getInputFileData(self, input_file_id: str, subsample: int = 1, dims: Tuple[int] = None) -> np.ndarray:
-        return self._mode_data_manager_.getInputFileData( input_file_id, subsample, dims )
+    def getInputFileData(self) -> np.ndarray:
+        return self._mode_data_manager_.getInputFileData( )
 
     def loadCurrentProject(self, caller_id: str ) -> xa.Dataset:
         print( f" DataManager: loadCurrentProject: {caller_id}" )
