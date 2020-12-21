@@ -234,22 +234,21 @@ class SpatialDataManager(ModeDataManager):
     def prepare_inputs(self, *args, **kwargs ):
         from spectraclass.data.spatial.tile.tile import Block, DataType
         block: Block = self.tiles.getBlock( )
-        block_data: xa.DataArray = block.getPointData( dstype = DataType.Embedding, subsample = self.subsample )
-        model_coords = dict( samples=np.arange(block_data.shape[0]), model=np.arange(self.model_dims) )
+        ( block_data, point_data ) = block.getPointData( dstype = DataType.Embedding, subsample = self.subsample )
+        model_coords = dict( samples=block_data.samples, model=np.arange(self.model_dims) )
         data_vars = dict( raw=block_data )
         if self.reduce_method != "":
             reduced_spectra, reproduction = ReductionManager.instance().reduce( block_data, self.reduce_method, self.model_dims, self.reduce_nepochs )
             data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
             data_vars['reproduction'] = block_data.copy( data=reproduction )
-
-        full_coords = dict( band=np.arange(block_data.shape[1]), **model_coords )
-        dataset = xa.Dataset( data_vars, coords=full_coords, attrs={'type': 'spectra'} )
-        file_name = f"raw" if self.reduce_method == "" else f"{self.reduce_method}-{self.model_dims}"
-        if self.subsample > 1: file_name = f"{file_name}-ss{self.subsample}"
+#        full_coords = dict( band=np.arange(block_data.shape[1]), **model_coords )
+        dataset = xa.Dataset( data_vars, attrs={'type': 'spectra'} ) # coords=full_coords,
+        file_name_base = f"raw" if self.reduce_method == "None" else f"{self.reduce_method}-{self.model_dims}"
+        self.dataset = f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
+        output_file = os.path.join(self.datasetDir, self.dataset + ".nc")
         outputDir = os.path.join( self.cache_dir, dm().project_name )
         os.makedirs(outputDir, 0o777, True)
-        output_file = os.path.join(outputDir, file_name + ".nc")
         print(f"Writing output to {output_file}")
-        dataset.to_netcdf(output_file, format='NETCDF4', engine='netcdf4')
+        dataset.to_netcdf(output_file)
 
 

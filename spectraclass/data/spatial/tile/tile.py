@@ -63,7 +63,8 @@ class Block:
         self.data.attrs['transform'] = self.transform.params.flatten().tolist()
         self._xlim = [ tr[2], tr[2] + tr[0] * (self.data.shape[2]) ]
         self._ylim = [ tr[5] + tr[4] * (self.data.shape[1]), tr[5] ]
-        self._point_data = None
+        self._point_data: Optional[xa.DataArray] = None
+        self._point_coords: Optional[xa.DataArray] = None
 
     @property
     def transform( self ):
@@ -129,15 +130,17 @@ class Block:
         y0, x0 = self.block_coords[0]*self.shape[0], self.block_coords[1]*self.shape[1]
         return ( y0, y0+self.shape[0] ), ( x0, x0+self.shape[1] )
 
-    def getPointData( self, **kwargs ) -> xa.DataArray:
+    def getPointData( self, **kwargs ) -> Tuple[xa.DataArray,xa.DataArray]:
         if self._point_data is None:
             subsample = kwargs.get( 'subsample', 1 )
             result: xa.DataArray =  SpatialDataManager.raster2points( self.data )
-            self._point_data = result if (result.size == 0 ) else result[::subsample]
+            self._point_coords: xa.DataArray = result.samples
+            self._point_data = result.assign_coords( samples = np.arange( 0, self._point_coords.shape[0] ) )
+            if ( self._point_data.size > 0 ):  self._point_data = self._point_data[::subsample]
             self._samples_axis = self._point_data.coords['samples']
             self._point_data.attrs['dsid'] = "-".join( [ str(i) for i in self.block_coords ] )
             self._point_data.attrs['type'] = 'block'
-        return self._point_data
+        return (self._point_data, self._point_coords)
 
     @property
     def samples_axis(self) -> xa.DataArray:

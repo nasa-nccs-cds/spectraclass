@@ -25,7 +25,7 @@ class Spectraclass(tlc.SingletonConfigurable, SCConfigurable):
         from traitlets.config.loader import load_pyconfig_files
         if os.path.isfile(cfg_file):
             (dir, fname) = os.path.split(cfg_file)
-            config_files = [ 'spatial_config.py', fname ]
+            config_files = [ 'configuration.py', fname ]
             print(f"Loading config files: {config_files} from dir {dir}")
             config = load_pyconfig_files( config_files, dir )
             for clss in self.config_classes:
@@ -67,7 +67,6 @@ class Spectraclass(tlc.SingletonConfigurable, SCConfigurable):
         from spectraclass.gui.spatial.map import MapManager
 
         self.set_spectraclass_theme()
-        self.configure("spectraclass")
         css_border = '1px solid blue'
 
         mapManager = MapManager.instance()

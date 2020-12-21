@@ -72,12 +72,12 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
         self.update_gui_parameters()
         self.set_progress(0.02)
         write = kwargs.get('write', True)
-        file_name = f"raw" if self.reduce_method == "None" else f"{self.reduce_method}-{self.model_dims}"
-        if self.subsample > 1: file_name = f"{file_name}-ss{self.subsample}"
-        output_file = os.path.join(self.datasetDir, file_name + ".nc")
+        file_name_base = f"raw" if self.reduce_method == "None" else f"{self.reduce_method}-{self.model_dims}"
+        self.dataset = f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
+        output_file = os.path.join(self.datasetDir, self.dataset + ".nc")
         assert (self.INPUTS is not None), f"INPUTS undefined for mode {self.mode}"
 
-        np_embedding: np.ndarray = self.getInputFileData( self.INPUTS['embedding'], self.subsample)
+        np_embedding: np.ndarray = self.getInputFileData()
         dims = np_embedding.shape
         mdata_vars = list(self.INPUTS['directory'])
         xcoords = OrderedDict(samples=np.arange(dims[0]), bands=np.arange(dims[1]))
@@ -195,19 +195,22 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
     def getInputFileData(self) -> np.ndarray:
         raise NotImplementedError()
 
-    def loadDataset(self, dsid: str, *args, **kwargs) -> xa.Dataset:
-        print(f"Load dataset {dsid}, current datasets = {self.datasets.keys()}")
-        if dsid is None: return None
-        if dsid not in self.datasets:
-            data_file = os.path.join(self.datasetDir, dsid + ".nc")
+    def loadDataset(self, *args, **kwargs) -> xa.Dataset:
+        print(f"Load dataset {self.dataset}, current datasets = {self.datasets.keys()}")
+        if self.dataset not in self.datasets:
+            data_file = os.path.join(self.datasetDir, self.dataset + ".nc")
             dataset: xa.Dataset = xa.open_dataset(data_file)
-            print(f" ---> Opened Dataset {dsid} from file {data_file}")
-            vshapes = [f"{vname}{dataset.variables[vname].shape}" for vname in dataset.variables.keys()]
-            print(f"Variables: {', '.join(vshapes)}")
-            dataset.attrs['dsid'] = dsid
+            vnames = dataset.variables.keys()
+            vshapes = [f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
+            print(f" ---> Opened Dataset {self.dataset} from file {data_file}\n\t -> variables: {' '.join(vshapes)}")
+            if 'plot-x' not in vnames:
+                raw_data: xa.DataArray = dataset['raw']
+                dataset['plot-y'] = raw_data
+                dataset['plot-x'] = np.arange(0,raw_data.shape[0])
+            dataset.attrs['dsid'] = self.dataset
             dataset.attrs['type'] = 'spectra'
-            self.datasets[dsid] = dataset
-        return self.datasets[dsid]
+            self.datasets[self.dataset] = dataset
+        return self.datasets[self.dataset]
 
     def getDatasetList(self):
         dset_glob = os.path.expanduser(f"{self.datasetDir}/*.nc")
@@ -222,7 +225,7 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
         return DataManager.instance()
 
     def loadCurrentProject(self) -> xa.Dataset:
-        return self.loadDataset(self.dm.dataset)
+        return self.loadDataset( )
 
     @property
     def datasetDir(self):

@@ -1,4 +1,4 @@
-from spectraclass.data.spatial.tile import Block
+from spectraclass.data.spatial.tile.tile import Block
 from typing import List
 from urllib import request
 from io import BytesIO

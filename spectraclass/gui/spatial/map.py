@@ -18,7 +18,7 @@ from functools import partial
 from pyproj import Proj
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
-from spectraclass.data.spatial.tile import Tile, Block
+from spectraclass.data.spatial.tile.tile import Tile, Block
 from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
 import pandas as pd
@@ -229,8 +229,8 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
 
 
     def point_coords( self, point_index: int ) -> Dict:
-        samples: xa.DataArray = self.block.getPointData().coords['samples']
-        selected_sample: np.ndarray = samples[ point_index ].values
+        block_data, point_data = self.block.getPointData()
+        selected_sample: np.ndarray = point_data[ point_index ].values
         return dict( y = selected_sample[1], x = selected_sample[0] )
 
     def mark_point( self, pid: int, transient: bool ):
