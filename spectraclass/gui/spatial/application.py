@@ -45,6 +45,7 @@ class Spectraclass(tlc.SingletonConfigurable, SCConfigurable):
             os.makedirs( os.path.dirname(cfg_file), exist_ok=True )
             with open( cfg_file, "w" ) as cfile_handle:
                 print( f"Writing config file: {cfg_file}")
+#                if os.path.exists(cfg_file): os.remove(cfg_file)
                 conf_txt = mode_conf_txt if mode == "configuration" else '\n'.join( [ mode_conf_txt, globals ] )
                 cfile_handle.write( conf_txt )
 

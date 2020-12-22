@@ -33,8 +33,8 @@ class ReductionManager(tlc.SingletonConfigurable, SCConfigurable):
     def refresh(self):
         self._mapper = {}
 
-    def reduce(self, inputs: np.ndarray, reduction_method: str, ndim: int, nepochs: int = 1000 ) -> Tuple[np.ndarray,np.ndarray]:
-        if reduction_method.lower() == "autoencoder": return self.autoencoder_reduction( inputs, ndim, nepochs )
+    def reduce(self, inputs: np.ndarray, reduction_method: str, ndim: int, nepochs: int = 100, sparsity: float = 0.0 ) -> Tuple[np.ndarray,np.ndarray]:
+        if reduction_method.lower() == "autoencoder": return self.autoencoder_reduction( inputs, ndim, nepochs, sparsity )
         else: return ( inputs, inputs )
 
     def xreduce(self, inputs: xa.DataArray, reduction_method: str, ndim: int ) -> Tuple[xa.DataArray,xa.DataArray]:
@@ -62,25 +62,25 @@ class ReductionManager(tlc.SingletonConfigurable, SCConfigurable):
     #     print(f"Completed spectral_embedding in {(time.time() - t0) / 60.0} min.")
     #     return rv
 
-    def autoencoder_reduction( self, encoder_input: np.ndarray, ndim: int, epochs: int = 1000 ) -> Tuple[np.ndarray,np.ndarray]:
+    def autoencoder_reduction( self, encoder_input: np.ndarray, ndim: int, epochs: int = 100, sparsity: float = 0.0 ) -> Tuple[np.ndarray,np.ndarray]:
         from keras.layers import Input, Dense
         from keras.models import Model
-        from keras import losses
+        from keras import losses, regularizers
+        from scipy.stats import entropy
         input_dims = encoder_input.shape[1]
         reduction_factor = 2
         inputlayer = Input( shape=[input_dims] )
         activation = 'tanh'
         optimizer = 'rmsprop'
         loss = "cosine_similarity"
-        encoded = None
         layer_dims, x = int( round( input_dims / reduction_factor )), inputlayer
         while layer_dims > ndim:
             x = Dense(layer_dims, activation=activation)(x)
             layer_dims = int( round( layer_dims / reduction_factor ))
-        layer_dims = ndim
+        encoded = x = Dense( ndim, activation=activation, activity_regularizer=regularizers.l1( sparsity ) )(x)
+        layer_dims = int( round( ndim * reduction_factor ))
         while layer_dims < input_dims:
             x = Dense(layer_dims, activation=activation)(x)
-            if encoded is None: encoded = x
             layer_dims = int( round( layer_dims * reduction_factor ))
         decoded = Dense( input_dims, activation='sigmoid' )(x)
 
@@ -94,12 +94,14 @@ class ReductionManager(tlc.SingletonConfigurable, SCConfigurable):
         autoencoder.compile(loss=loss, optimizer=optimizer )
         autoencoder.fit( encoder_input, encoder_input, epochs=epochs, batch_size=256, shuffle=True )
         encoded_data = encoder.predict( encoder_input )
-        rmean, rstd = encoded_data.mean(axis=0), encoded_data.std()
+        rmean, rstd = encoded_data.mean(axis=0), encoded_data.std()  # np.apply_along_axis(entropy,1,encoded_data).mean()
         scaled_encoding = (encoded_data - rmean)/rstd
         reproduction = autoencoder.predict( encoder_input )
-        print(f" Autoencoder_reduction, result: shape = {encoded_data.shape}, rmean = {rmean}, rstd = {rstd} ")
+        print(f" Autoencoder_reduction result: shape = {encoded_data.shape}")
         print(f" ----> encoder_input: shape = {encoder_input.shape}, val[5][5] = {encoder_input[:5][:5]} ")
         print(f" ----> reproduction: shape = {reproduction.shape}, val[5][5] = {reproduction[:5][:5]} ")
+        print(f" ----> encoding: shape = {encoded_data.shape}, val[5][5] = {encoded_data[:5][:5]} ")
+        print(f" ----> encoding: sparsity = {sparsity}, mean={encoded_data.mean()}")  # , entropy = {sparseness}
         return (scaled_encoding, reproduction )
 
     def umap_init( self,  point_data: xa.DataArray, **kwargs ) -> Optional[np.ndarray]:

@@ -16,6 +16,7 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
     MODE = None
     METAVARS = None
     INPUTS = None
+    VALID_BANDS = None
 
     dataset = tl.Unicode("NONE").tag(config=True,sync=True)
     cache_dir = tl.Unicode(os.path.expanduser("~/Development/Cache")).tag(config=True)
@@ -25,6 +26,7 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
     subsample = tl.Int(5).tag(config=True, sync=True)
     reduce_method = tl.Unicode("Autoencoder").tag(config=True, sync=True)
     reduce_nepochs = tl.Int(1000).tag(config=True, sync=True)
+    reduce_sparsity = tl.Float( 10e-5 ).tag(config=True,sync=True)
 
     def __init__(self, ):
         tlc.Configurable.__init__(self)
@@ -46,6 +48,9 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
 
     def register(self):
         pass
+
+    def valid_bands(self) -> Optional[List]:
+        return self.VALID_BANDS
 
     @classmethod
     def getXarray(cls, id: str, xcoords: Dict, subsample: int, xdims: OrderedDict, **kwargs) -> xa.DataArray:
@@ -89,7 +94,7 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
         self.set_progress(0.1)
         if self.reduce_method != "None":
             input_data = data_vars['embedding']
-            (reduced_spectra, reproduced_spectra) = ReductionManager.instance().reduce(input_data, self.reduce_method, self.model_dims, self.reduce_nepochs)
+            (reduced_spectra, reproduced_spectra) = ReductionManager.instance().reduce(input_data, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity)
             coords = dict(samples=xcoords['samples'], model=np.arange(self.model_dims))
             data_vars['reduction'] = xa.DataArray(reduced_spectra, dims=['samples', 'model'], coords=coords)
             data_vars['reproduction'] = input_data.copy(data=reproduced_spectra)
@@ -98,6 +103,7 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
         dataset = xa.Dataset(data_vars, coords=xcoords, attrs={'type': 'spectra'})
         dataset.attrs["colnames"] = mdata_vars
         if write:
+            if os.path.exists(output_file): os.remove(output_file)
             print(f"Writing output to {output_file}")
             dataset.to_netcdf(output_file, format='NETCDF4', engine='netcdf4')
         self.updateDatasetList()

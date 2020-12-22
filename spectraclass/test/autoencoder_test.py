@@ -28,8 +28,8 @@ r: np.ndarray = dataset['reproduction'].values
 def rescale( x ): return x/x.mean()
 
 
-nrows, ncols = 3,4
-pw, ph = 1800//ncols, 800//nrows
+nrows, ncols = 10,10
+pw, ph = 2200//ncols, 1200//nrows
 plots = []
 for ir in range(nrows):
     rows = []

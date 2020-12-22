@@ -95,7 +95,7 @@ class SpatialDataManager(ModeDataManager):
         if self.reduce_method != "":
             dave, dmag =  data.values.mean(0), 2.0*data.values.std(0)
             normed_data = ( data.values - dave ) / dmag
-            reduced_spectra, reproduction = ReductionManager.instance().reduce( normed_data, self.reduce_method, self.model_dims, self.reduce_nepochs )
+            reduced_spectra, reproduction = ReductionManager.instance().reduce( normed_data, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
             coords = dict( samples=data.coords['samples'], band=np.arange( self.model_dims )  )
             return xa.DataArray( reduced_spectra, dims=['samples', 'band'], coords=coords )
         return data
@@ -238,7 +238,7 @@ class SpatialDataManager(ModeDataManager):
         model_coords = dict( samples=block_data.samples, model=np.arange(self.model_dims) )
         data_vars = dict( raw=block_data )
         if self.reduce_method != "":
-            reduced_spectra, reproduction = ReductionManager.instance().reduce( block_data, self.reduce_method, self.model_dims, self.reduce_nepochs )
+            reduced_spectra, reproduction = ReductionManager.instance().reduce( block_data, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
             data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
             data_vars['reproduction'] = block_data.copy( data=reproduction )
 #        full_coords = dict( band=np.arange(block_data.shape[1]), **model_coords )
@@ -249,6 +249,7 @@ class SpatialDataManager(ModeDataManager):
         outputDir = os.path.join( self.cache_dir, dm().project_name )
         os.makedirs(outputDir, 0o777, True)
         print(f"Writing output to {output_file}")
+        if os.path.exists(output_file): os.remove(output_file)
         dataset.to_netcdf(output_file)
 
 

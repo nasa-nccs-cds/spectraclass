@@ -90,8 +90,7 @@ class TileManager(tlc.SingletonConfigurable, SCConfigurable):
         if tile_data is None: return None
         tile_data = self.mask_nodata(tile_data)
         init_shape = [*tile_data.shape]
-        valid_bands = [[0, 193], [214, 283], [319,
-                                              421]]  # self.config.value('data/valid_bands', None ) # [[0, 195], [214, 286], [319, 421]] #
+        valid_bands = DataManager.instance().valid_bands()
         if valid_bands is not None:
             dataslices = [tile_data.isel(band=slice(valid_band[0], valid_band[1])) for valid_band in valid_bands]
             tile_data = xa.concat(dataslices, dim="band")
@@ -170,6 +169,7 @@ class TileManager(tlc.SingletonConfigurable, SCConfigurable):
         if not filename.endswith(".tif"): filename = filename + ".tif"
         output_file = os.path.join(self.data_cache, filename)
         try:
+            if os.path.exists(output_file): os.remove(output_file)
             print(f"Writing (raster) tile file {output_file}")
             raster_data.rio.to_raster(output_file)
             return output_file
