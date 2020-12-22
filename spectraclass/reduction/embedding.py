@@ -94,14 +94,12 @@ class ReductionManager(tlc.SingletonConfigurable, SCConfigurable):
         autoencoder.compile(loss=loss, optimizer=optimizer )
         autoencoder.fit( encoder_input, encoder_input, epochs=epochs, batch_size=256, shuffle=True )
         encoded_data = encoder.predict( encoder_input )
-        rmean, rstd = encoded_data.mean(axis=0), encoded_data.std()  # np.apply_along_axis(entropy,1,encoded_data).mean()
-        scaled_encoding = (encoded_data - rmean)/rstd
+        scaled_encoding = encoded_data/encoded_data.std()
         reproduction = autoencoder.predict( encoder_input )
-        print(f" Autoencoder_reduction result: shape = {encoded_data.shape}")
+        print(f" Autoencoder_reduction with sparsity={sparsity}, result: shape = {encoded_data.shape}")
         print(f" ----> encoder_input: shape = {encoder_input.shape}, val[5][5] = {encoder_input[:5][:5]} ")
         print(f" ----> reproduction: shape = {reproduction.shape}, val[5][5] = {reproduction[:5][:5]} ")
-        print(f" ----> encoding: shape = {encoded_data.shape}, val[5][5] = {encoded_data[:5][:5]} ")
-        print(f" ----> encoding: sparsity = {sparsity}, mean={encoded_data.mean()}")  # , entropy = {sparseness}
+        print(f" ----> encoding: shape = {scaled_encoding.shape}, val[5][5] = {scaled_encoding[:5][:5]} ")
         return (scaled_encoding, reproduction )
 
     def umap_init( self,  point_data: xa.DataArray, **kwargs ) -> Optional[np.ndarray]:

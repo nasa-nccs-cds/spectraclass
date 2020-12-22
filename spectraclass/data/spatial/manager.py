@@ -158,6 +158,7 @@ class SpatialDataManager(ModeDataManager):
         else:
             point_data = stacked_raster.dropna(dim='samples', how='any')
         print(f" raster2points -> [{raster.name}]: Using {point_data.shape[0]} valid samples out of {stacked_raster.shape[0]} pixels")
+        point_data.attrs['dsid'] = raster.name
         return point_data
 
     @classmethod
@@ -234,16 +235,16 @@ class SpatialDataManager(ModeDataManager):
     def prepare_inputs(self, *args, **kwargs ):
         from spectraclass.data.spatial.tile.tile import Block, DataType
         block: Block = self.tiles.getBlock( )
-        ( block_data, point_data ) = block.getPointData( dstype = DataType.Embedding, subsample = self.subsample )
-        model_coords = dict( samples=block_data.samples, model=np.arange(self.model_dims) )
-        data_vars = dict( raw=block_data )
+        ( point_data, point_coords ) = block.getPointData( dstype = DataType.Embedding, subsample = self.subsample )
+        dsid = point_data.attrs['dsid']
+        model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
+        data_vars = dict( raw=point_data )
         if self.reduce_method != "":
-            reduced_spectra, reproduction = ReductionManager.instance().reduce( block_data, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
+            reduced_spectra, reproduction = ReductionManager.instance().reduce( point_data, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
             data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
-            data_vars['reproduction'] = block_data.copy( data=reproduction )
-#        full_coords = dict( band=np.arange(block_data.shape[1]), **model_coords )
-        dataset = xa.Dataset( data_vars, attrs={'type': 'spectra'} ) # coords=full_coords,
-        file_name_base = f"raw" if self.reduce_method == "None" else f"{self.reduce_method}-{self.model_dims}"
+            data_vars['reproduction'] = point_data.copy( data=reproduction )
+        dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
+        file_name_base = dsid if self.reduce_method == "None" else f"{dsid}-{self.reduce_method}-{self.model_dims}"
         self.dataset = f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
         output_file = os.path.join(self.datasetDir, self.dataset + ".nc")
         outputDir = os.path.join( self.cache_dir, dm().project_name )

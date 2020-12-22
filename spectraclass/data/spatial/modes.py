@@ -5,7 +5,7 @@ class AvirisDataManager(SpatialDataManager):
     MODE = "aviris"
     METAVARS = []
     INPUTS = dict()
-    VALID_BANDS = [[3, 193], [214, 283], [319, 421]]
+    VALID_BANDS = [[5, 193], [214, 283], [319, 421]]
 
     def __init__(self):
         super(AvirisDataManager, self).__init__()

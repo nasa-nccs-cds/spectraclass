@@ -48,7 +48,8 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
     def init_data( self, **kwargs  ):
         project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("points")
         reduced_data: xa.DataArray = project_dataset.reduction
-        reduced_data.attrs['dsid'] = project_dataset.attrs['dsid']
+#        reduced_data.attrs['dsid'] = project_dataset.attrs['dsid']
+        print( f"UMAP init, init data shape = {reduced_data.shape}")
         self._embedding = ReductionManager.instance().umap_init( reduced_data, **kwargs  )
         self._points = self._embedding
         self.initialize_markers()

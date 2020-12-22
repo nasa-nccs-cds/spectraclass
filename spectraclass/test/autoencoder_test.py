@@ -1,4 +1,4 @@
-import numpy as np
+import random, numpy as np
 from bokeh.io import show
 from bokeh.models import ColumnDataSource
 from bokeh.plotting import figure
@@ -12,7 +12,7 @@ dm: DataManager = app.configure("demo1",'aviris')
 dataset = dm.loadCurrentProject( "main" )
 
 input: np.ndarray = dataset['raw'].values
-x: np.ndarray = np.arange( input.shape[0] )
+x: np.ndarray = np.arange( input.shape[1] )
 r: np.ndarray = dataset['reproduction'].values
 
 # nplots = 11
@@ -31,10 +31,11 @@ def rescale( x ): return x/x.mean()
 nrows, ncols = 10,10
 pw, ph = 2200//ncols, 1200//nrows
 plots = []
+sc = random.choices( np.arange( input.shape[0] ),  k=nrows*ncols )
 for ir in range(nrows):
     rows = []
     for ic in range(ncols):
-        ip = ic + ir*ncols
+        ip = sc[ ic + ir*ncols ]
         p = figure( plot_width=pw, plot_height=ph )
         xcoords =  [ x, x ]
         ycoords =  [ rescale(input[ip]), rescale(r[ip]) ]

@@ -138,8 +138,8 @@ class Block:
             self._point_data = result.assign_coords( samples = np.arange( 0, self._point_coords.shape[0] ) )
             if ( self._point_data.size > 0 ):  self._point_data = self._point_data[::subsample]
             self._samples_axis = self._point_data.coords['samples']
-            self._point_data.attrs['dsid'] = "-".join( [ str(i) for i in self.block_coords ] )
             self._point_data.attrs['type'] = 'block'
+            self._point_data.attrs['dsid'] = result.attrs['dsid']
         return (self._point_data, self._point_coords)
 
     @property

@@ -151,6 +151,7 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
         self._update(0)
 
     def gui(self):
+        self.setBlock()
         return self.figure.canvas
 
     @property
@@ -225,7 +226,7 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
         cid = event.get('classification',-1)
         ic = cid if (cid > 0) else lm().selectedClass
         color = lm().colors[ic]
-        return Marker( color, pids, ic )
+        return Marker( pids, ic )
 
 
     def point_coords( self, point_index: int ) -> Dict:
@@ -235,15 +236,15 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
 
     def mark_point( self, pid: int, transient: bool ):
         cid, color = lm().selectedColor( not transient )
-        marker = Marker( color, [pid], cid )
+        marker = Marker( [pid], cid )
         self.add_marker( marker, transient, labeled=False )
 
-    def setBlock( self, block_coords: Tuple[int], **kwargs ) -> Block:
-        print( f"MapManager setBlock: {block_coords}")
+    def setBlock( self, **kwargs ) -> Block:
+        from spectraclass.data.spatial.tile.manager import TileManager
         self.clearLabels()
         reset = kwargs.get( 'reset', False )
-        if reset: self.tile.reset()
-        self.block: Block = self.tile.getBlock( *block_coords )
+        tm = TileManager.instance()
+        self.block: Block = tm.getBlock()
         if self.block is not None:
             self.nFrames = self.data.shape[0]
             self.band_axis = kwargs.pop('band', 0)
@@ -267,9 +268,6 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
 
     def getNewImage(self):
         return self.new_image
-
-    def getTile(self):
-        return self.tile
 
     def download_google_map(self, type: str, *args, **kwargs):
         self.new_image = self.google.get_tiled_google_map( type, self.google_maps_zoom_level )
@@ -313,7 +311,7 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
         template = self.block.data[0].squeeze( drop=True )
         self.labels: xa.DataArray = xa.full_like( template, -1, dtype=np.int32 ).where( template.notnull(), nodata_value )
         self.labels.attrs['_FillValue'] = nodata_value
-        self.labels.name = self.block.data.name + "_labels"
+        self.labels.name = f"{self.block.data.name}_labels"
         self.labels.attrs[ 'long_name' ] = [ "labels" ]
 
     def clearLabels( self):
@@ -384,9 +382,10 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
         return self.data.coords[  self.data.dims[iCoord] ].values
 
     def create_image(self, **kwargs ) -> Optional[AxesImage]:
-        image = None
+        image: Optional[AxesImage] = None
         z: xa.DataArray =  self.data[ 0, :, : ]
         nValid = np.count_nonzero(~np.isnan(z))
+        print( f"\n ********* Creating Map Image, nValid={nValid}, image shape = {z.shape}")
         if nValid > 0:
             colorbar = kwargs.pop( 'colorbar', False )
             image: AxesImage =  dms().plotRaster( z, ax=self.plot_axes, colorbar=colorbar, alpha=0.5, **kwargs )
@@ -408,12 +407,14 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
 
     def update_plots(self):
         if self.image is not None:
+            from spectraclass.data.base import DataManager
+            dm = DataManager.instance()
             frame_data: xa.DataArray = self.data[ self.currentFrame ]
             self.image.set_data( frame_data.values  )
             drange = dms().get_color_bounds( frame_data )
             self.image.set_norm( Normalize( **drange ) )
             self.image.set_extent( self.block.extent() )
-            plot_name = os.path.basename(self.data.name)
+            plot_name = os.path.basename( dm.dataset )
             self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
             self.plot_axes.title.set_fontsize( 8 )
         if self.labels_image is not None:
@@ -440,7 +441,7 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
                         ptindices = self.block.pindex2indices(pid)
                         classification = self.label_map.values[ ptindices['iy'], ptindices['ix'] ] if (self.label_map is not None) else -1
                         cid = lm().selectedClass
-                        marker = Marker( lm().colors[cid], [pid], lm().selectedClass )
+                        marker = Marker( [pid], lm().selectedClass )
                         self.add_marker( marker, lm().selectedClass == 0, classification=classification )
                         self.dataLims = event.inaxes.dataLim
         except Exception as err:

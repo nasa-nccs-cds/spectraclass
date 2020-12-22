@@ -48,6 +48,10 @@ class DataManager(tlc.SingletonConfigurable, SCConfigurable):
         return self._mode_data_manager_.mode
 
     @property
+    def dataset(self) -> str:
+        return self._mode_data_manager_.dataset
+
+    @property
     def project_name(self) -> str:
         return ".".join( [ self.name, self.mode ] )
 

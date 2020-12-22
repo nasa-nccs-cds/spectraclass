@@ -1,8 +1,9 @@
 from spectraclass.data.base import DataManager
 from spectraclass.gui.spatial.application import Spectraclass
+import xarray as xa
 
 app = Spectraclass.instance()
 dm: DataManager = app.configure("demo1",'aviris')
-dm.prepare_inputs()
-app.save_config()
+project_data: xa.Dataset = dm.loadCurrentProject("graph")
+
 
