@@ -1,9 +1,7 @@
 import numpy as np
 from typing import List, Union, Tuple, Optional, Dict
 import os, math, pickle, glob
-from enum import Enum
 import ipywidgets as ip
-from functools import partial
 from collections import OrderedDict
 from spectraclass.reduction.embedding import ReductionManager
 from pathlib import Path
@@ -11,6 +9,11 @@ import xarray as xa
 import traitlets as tl
 import traitlets.config as tlc
 from spectraclass.model.base import SCConfigurable, AstroModeConfigurable
+from spectraclass.gui.application import Spectraclass
+from spectraclass.model.labels import LabelsManager
+from ..graph.manager import ActivationFlowManager
+from ..graph.base import ActivationFlow
+from spectraclass.gui.points import PointCloudManager
 
 class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
     MODE = None
@@ -115,7 +118,7 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
             self._dset_selection.options = self.getDatasetList()
 
     def select_dataset(self, *args):
-        from spectraclass.gui.application import Spectraclass
+
         self.dm.select_current_mode()
         if self.dm.dataset != self._dset_selection.value:
             print( f"Loading dataset '{self._dset_selection.value}', current dataset = '{self.dm.dataset}', "
@@ -201,6 +204,9 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
     def getInputFileData(self) -> np.ndarray:
         raise NotImplementedError()
 
+    def execute_task(self, task: str):
+        raise NotImplementedError()
+
     def loadDataset(self, *args, **kwargs) -> xa.Dataset:
         print(f"Load dataset {self.dataset}, current datasets = {self.datasets.keys()}")
         if self.dataset not in self.datasets:
@@ -212,7 +218,7 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
             if 'plot-x' not in vnames:
                 raw_data: xa.DataArray = dataset['raw']
                 dataset['plot-y'] = raw_data
-                dataset['plot-x'] = np.arange(0,raw_data.shape[0])
+                dataset['plot-x'] = np.arange(0,raw_data.shape[1])
             dataset.attrs['dsid'] = self.dataset
             dataset.attrs['type'] = 'spectra'
             self.datasets[self.dataset] = dataset
@@ -238,3 +244,38 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
         dsdir = os.path.join(self.cache_dir, self.dm.name, self.config_mode)
         os.makedirs(dsdir, exist_ok=True)
         return dsdir
+
+    def spread_selection(self, niters=1):
+        from .base import DataManager
+        project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("datamgr")
+        catalog_pids = np.arange( 0, project_dataset.reduction.shape[0] )
+        flow: ActivationFlow = ActivationFlowManager.instance().getActivationFlow(project_dataset.reduction)
+        self._flow_class_map: np.ndarray = LabelsManager.instance().labels_data().data()
+
+        if flow.spread(self._flow_class_map, niters) is not None:
+            self._flow_class_map = flow.get_classes()
+            all_classes = (LabelsManager.instance().selectedClass == 0)
+            for cid, label in enumerate( LabelsManager.instance().labels ):
+                if all_classes or (LabelsManager.instance().selectedClass == cid):
+                    new_indices: np.ndarray = catalog_pids[ self._flow_class_map == cid ]
+                    if new_indices.size > 0:
+ #                       MapManager.instance().
+                        PointCloudManager.instance().mark_points( new_indices, cid )
+            PointCloudManager.instance().update_plot()
+
+    def display_distance(self, niters=100):
+        from .base import DataManager
+        project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("table")
+        seed_points = LabelsManager.instance().currentMarker.pids
+        flow: ActivationFlow = ActivationFlowManager.instance().getActivationFlow(project_dataset.reduction)
+        if flow.spread( seed_points, niters ) is not None:
+            PointCloudManager.instance().color_by_value( flow.get_distances() )
+
+    def undo_action(self):
+        action: Action = LabelsManager.instance().popAction()
+        if action is not None:
+            if action.type == "mark":
+                self.clear_pids( action.cid, action.pids )
+            elif action.type == "color":
+                self.pcm.clear_bins()
+        self.pcm.update_plot( )

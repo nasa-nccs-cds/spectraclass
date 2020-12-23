@@ -890,6 +890,7 @@ def simplicial_set_embedding(
         init_embedding = random_state.uniform(
             low=-10.0, high=10.0, size=(graph.shape[0], n_components)
         ).astype(np.float32)
+        print(f"Completed UMAP random initialization, init shape = {init_embedding.shape}")
     elif isinstance(init, str) and init == "spectral":
         # We add a little noise to avoid local minima for optimization to come
         initialisation = spectral_layout(
@@ -903,8 +904,11 @@ def simplicial_set_embedding(
         expansion = 10.0 / np.abs(initialisation).max()
         spectral_embedding = (initialisation * expansion).astype(np.float32)
         init_embedding = spectral_embedding + random_state.normal(scale=0.0001, size=[graph.shape[0], n_components]).astype( np.float32 )
+        print(f"Completed UMAP spectral initialization, init shape = {init_embedding.shape}")
     else:
         init_embedding = np.array(init)
+        print(f"Executing UMAP on existing initialization, init shape = {init_embedding.shape}")
+
         # if len(init_data.shape) == 2:
         #     if np.unique(init_data, axis=0).shape[0] < init_data.shape[0]:
         #         tree = KDTree(init_data)
@@ -913,7 +917,7 @@ def simplicial_set_embedding(
         #         embedding = init_data + random_state.normal( scale=0.001 * nndist, size=init_data.shape ).astype(np.float32)
         #     else:
         #         embedding = init_data
-    print( f"Completed UMAP initialization, init shape = {init_embedding.shape}")
+
     epochs_per_sample = make_epochs_per_sample(graph.data, n_epochs)
 
     head = graph.row

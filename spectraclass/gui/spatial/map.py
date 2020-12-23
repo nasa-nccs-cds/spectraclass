@@ -10,7 +10,7 @@ from matplotlib.colors import Normalize
 from matplotlib.backend_bases import PickEvent, MouseButton, NavigationToolbar2
 from spectraclass.reduction.embedding import ReductionManager
 from collections import OrderedDict
-from spectraclass.data.base import DataManager
+from spectraclass.gui.graph import GraphManager
 from spectraclass.model.labels import LabelsManager
 from spectraclass.gui.points import PointCloudManager
 from spectraclass.model.base import SCConfigurable, Marker
@@ -360,7 +360,7 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
     def setup_plot(self, **kwargs):
         self.plot_grid: GridSpec = self.figure.add_gridspec( 4, 4 )
         self.plot_axes = self.figure.add_subplot( self.plot_grid[:,:] )
-        self.figure.suptitle(f"Point Labeling Console",fontsize=14)
+#        self.figure.suptitle(f"Point Labeling Console",fontsize=14)
         # for iC in range(2):
         #     y0,y1 = 2*iC, 2*(iC+1)
         #     self.control_axes[iC] = self.figure.add_subplot( self.plot_grid[y0:y1, -1] )
@@ -432,17 +432,19 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
         #             listener.set_axis_limits( self.plot_axes.get_xlim(), self.plot_axes.get_ylim() )
 
     def onMouseClick(self, event):
+        print(f"MouseClick event = {event}")
         try:
             if event.xdata != None and event.ydata != None:
                 if not self.toolbarMode and (event.inaxes == self.plot_axes) and (self.key_mode == None):
                     rightButton: bool = int(event.button) == self.RIGHT_BUTTON
                     pid = self.block.coords2pindex( event.ydata, event.xdata )
                     if pid >= 0:
+                        cid = lm().selectedClass
+                        print( f"Adding marker for pid = {pid}, cid = {cid}")
                         ptindices = self.block.pindex2indices(pid)
                         classification = self.label_map.values[ ptindices['iy'], ptindices['ix'] ] if (self.label_map is not None) else -1
-                        cid = lm().selectedClass
-                        marker = Marker( [pid], lm().selectedClass )
-                        self.add_marker( marker, lm().selectedClass == 0, classification=classification )
+                        marker = Marker( [pid], cid )
+                        self.add_marker( marker, cid == 0, classification=classification )
                         self.dataLims = event.inaxes.dataLim
         except Exception as err:
             print( f"MapManager pick error: {err}" )
@@ -463,7 +465,8 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
                 otype = kwargs.get( "type", None )
                 if len(pids) > 0:
                     event = dict( event="pick", type="directory", otype=otype, pids=pids, transient=transient, mark=True, classification=classification )
- #                   self.submitEvent( event, EventMode.Gui )
+                    GraphManager.instance().on_selection(event)
+                    PointCloudManager.instance().on_selection( event )
         self._adding_marker = False
 
     # def undo_marker_selection(self, **kwargs ):

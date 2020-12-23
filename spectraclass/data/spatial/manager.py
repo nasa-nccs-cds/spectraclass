@@ -253,4 +253,20 @@ class SpatialDataManager(ModeDataManager):
         if os.path.exists(output_file): os.remove(output_file)
         dataset.to_netcdf(output_file)
 
-
+    def execute_task( self, task: str ):
+        from spectraclass.gui.points import PointCloudManager
+        from spectraclass.gui.spatial.map import MapManager
+        pcm = PointCloudManager.instance()
+        mm = MapManager.instance()
+        if task == "embed":
+            pcm.reembed()
+        elif task == "mark":
+            cid: int = pcm.mark_points()
+        elif task == "spread":
+            mm
+        elif task == "clear":
+            mm.clearLabels()
+        elif task == "undo":
+            pass
+        elif task == "distance":
+            pcm.color_by_value( )

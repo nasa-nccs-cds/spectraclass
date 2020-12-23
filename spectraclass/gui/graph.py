@@ -12,6 +12,10 @@ import ipywidgets as ipw
 import traitlets.config as tlc
 from spectraclass.model.base import SCConfigurable
 
+def rescale( x: np.ndarray ):
+    xs= x.squeeze()
+    return xs / xs.mean()
+
 class JbkGraph:
     _x: np.ndarray = None
     _ploty: np.ndarray = None
@@ -77,11 +81,11 @@ class JbkGraph:
 
     @property
     def y( self ) -> List[ np.ndarray ]:
-        return [ self._ploty[idx].squeeze() for idx in self._selected_pids ]
+        return [ rescale( self._ploty[idx] ) for idx in self._selected_pids ]
 
     @property
     def ry( self ) -> List[ np.ndarray ]:
-        return [ self._rploty[idx].squeeze() for idx in self._selected_pids ]
+        return [ rescale( self._rploty[idx] ) for idx in self._selected_pids ]
 
     @property
     def x2( self ) -> List[ np.ndarray ]:
@@ -90,14 +94,15 @@ class JbkGraph:
     @property
     def y2( self ) -> List[ np.ndarray ]:
         idx = self._selected_pids[0]
-        rp = self._rploty[idx].squeeze()
+        rp = rescale( self._rploty[idx] )
         print( f"           &&&&   GRAPH:y2-> idx={idx}, val[10] = {rp[:10]} ")
-        return [ self._ploty[idx].squeeze(), rp ]
+        return [ rescale( self._ploty[idx] ), rp ]
 
     @property
     def yrange(self):
         ydata = self._ploty[ self._selected_pids ]
-        return ( ydata.min(), ydata.max() )
+        ys = ydata / ydata.mean( axis=1 )
+        return ( ys.min(), ys.max() )
 
     @property
     def title(self ) -> str:

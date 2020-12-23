@@ -3,8 +3,6 @@ import numpy as np
 import xarray as xa
 from typing import List, Union, Tuple, Optional, Dict
 from pyproj import Proj, transform
-from spectraclass.data.base import DataManager, DataType
-from spectraclass.data.spatial.manager import SpatialDataManager
 import os, math, pickle
 
 class Tile:
@@ -131,6 +129,7 @@ class Block:
         return ( y0, y0+self.shape[0] ), ( x0, x0+self.shape[1] )
 
     def getPointData( self, **kwargs ) -> Tuple[xa.DataArray,xa.DataArray]:
+        from spectraclass.data.spatial.manager import SpatialDataManager
         if self._point_data is None:
             subsample = kwargs.get( 'subsample', 1 )
             result: xa.DataArray =  SpatialDataManager.raster2points( self.data )
@@ -160,6 +159,7 @@ class Block:
         return self.data[ :, index['iy'], index['ix'] ].values.reshape(1, -1)
 
     def plot(self,  **kwargs ) -> xa.DataArray:
+        from spectraclass.data.spatial.manager import SpatialDataManager
         color_band = kwargs.pop( 'color_band', None )
         band_range = kwargs.pop( 'band_range', None )
         if color_band is not None:

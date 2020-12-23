@@ -62,6 +62,12 @@ class cpActivationFlow(ActivationFlow):
         self.C: np.ndarray = None
         self.setNodeData( nodes_data, **kwargs )
 
+    def get_distances(self) -> np.ndarray:
+        return self.P
+
+    def get_classes(self) -> np.ndarray:
+        return self.C
+
     def setNodeData(self, nodes_data: xa.DataArray, **kwargs ):
         if self.reset or (self.nodes is None):
             if (nodes_data.size > 0):

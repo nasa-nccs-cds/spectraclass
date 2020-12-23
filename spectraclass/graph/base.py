@@ -12,6 +12,12 @@ class ActivationFlow(object):
     def clear(self):
         self.reset = True
 
+    def get_distances(self) -> np.ndarray:
+        raise NotImplementedError()
+
+    def get_classes(self) -> np.ndarray:
+        raise NotImplementedError()
+
     def spread( self, sample_data: np.ndarray, nIter: int = 1, **kwargs ) -> Optional[bool]:
         raise NotImplementedError()
 

@@ -21,6 +21,12 @@ class gpActivationFlow(ActivationFlow):
         self.nnd = None
         self.setNodeData( nodes_data, **kwargs )
 
+    def get_distances(self) -> np.ndarray:
+        return self.P
+
+    def get_classes(self) -> np.ndarray:
+        return self.C
+
     def setNodeData(self, node_data: xa.DataArray, **kwargs ):
         input_data = node_data.values
         print( f"{self.__class__.__name__}[{hex(id(self))}].setNodeData: input shape = {input_data.shape}" )

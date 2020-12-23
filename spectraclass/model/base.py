@@ -7,9 +7,10 @@ import traitlets as tl
 def pid( instance ): return hex(id(instance))[-4:]
 
 class Marker:
-    def __init__(self,  pids: np.ndarray, cid: int ):
+    def __init__(self, pids: Union[List[int],np.ndarray], cid: int ):
         self.cid = cid
-        self.pids = np.unique( pids )
+        pid_array = pids if isinstance( pids, np.ndarray ) else np.array( pids )
+        self.pids = np.unique( pid_array )
 
     def isTransient(self):
         return self.cid == 0
@@ -47,13 +48,13 @@ class SCConfigurable:
             tval = getattr(instance, tid)
             if trait.__class__.__name__ == "Unicode":  tval = f'"{tval}"'
             trait_values = trait_map.setdefault(instance.config_mode, {})
-            print( f"    *** add_trait_value[{instance.config_mode},{pid(instance)}]: {cname+tid} -> {tval}")
+ #           print( f"    *** add_trait_value[{instance.config_mode},{pid(instance)}]: {cname+tid} -> {tval}")
             trait_values[cname + tid] = tval
 
     @classmethod
     def generate_config_file( cls ) -> Dict[str,str]:
         trait_map: Dict = {}
-        print( f"Generate config file, classes = {[clss.__name__ for clss in cls.config_classes]}")
+#        print( f"Generate config file, classes = {[clss.__name__ for clss in cls.config_classes]}")
         for clss in cls.config_classes:
             instance: tlc.Configurable = clss.instance()
             cls.add_trait_values( trait_map, f"c.{instance.__class__.__name__}.", instance )

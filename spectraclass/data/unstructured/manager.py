@@ -32,3 +32,21 @@ class UnstructuredDataManager(ModeDataManager):
                 print(f"Error, the input path '{input_file_path}' is not a file.")
         except Exception as err:
             print(f" Can't read data[{self.dataset}] file {input_file_path}: {err}")
+
+    def execute_task( self, task: str ):
+        from spectraclass.gui.points import PointCloudManager
+        from spectraclass.gui.table import TableManager
+        tmgr = TableManager.instance()
+        if task == "embed":
+            PointCloudManager.instance().reembed()
+        elif task == "mark":
+            tmgr.mark_selection()
+        elif task == "spread":
+            tmgr.spread_selection()
+        elif task == "clear":
+            tmgr.clear_current_class()
+        elif task == "undo":
+            tmgr.undo_action()
+        elif task == "distance":
+            tmgr.display_distance()
+

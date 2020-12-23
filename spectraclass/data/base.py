@@ -83,3 +83,6 @@ class DataManager(tlc.SingletonConfigurable, SCConfigurable):
     def valid_bands(self) -> Optional[List]:
         return self._mode_data_manager_.valid_bands()
 
+    def execute_task(self, task: str ):
+        return self._mode_data_manager_.execute_task(task)
+

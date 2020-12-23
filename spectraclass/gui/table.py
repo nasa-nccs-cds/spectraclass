@@ -70,47 +70,6 @@ class TableManager(tlc.SingletonConfigurable, SCConfigurable):
     def pcm(self) -> PointCloudManager:
         return PointCloudManager.instance()
 
-    def spread_selection(self, niters=1):
-        from ..graph.manager import ActivationFlowManager
-        from ..graph.base import ActivationFlow
-        project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("table")
-        catalog_pids = np.arange( 0, project_dataset.reduction.shape[0] )
-        flow: ActivationFlow = ActivationFlowManager.instance().getActivationFlow(project_dataset.reduction)
-        self._flow_class_map = np.copy( self._class_map )
-
-        if flow.spread(self._flow_class_map, niters) is not None:
-            self._flow_class_map = flow.C
-            all_classes = (self.selected_class == 0)
-            for cid, table in enumerate( self._tables[1:], 1 ):
-                if all_classes or (self.selected_class == cid):
-                    new_indices: np.ndarray = catalog_pids[ self._flow_class_map == cid ]
-                    if new_indices.size > 0:
-                        selection_table: pd.DataFrame = self._tables[0].df.loc[ new_indices ]
-                        table.df = pd.concat([table.df, selection_table]).drop_duplicates()
-                        self.pcm.mark_points( selection_table.index.to_numpy(), cid )
-            self.pcm.update_plot()
-
-    def display_distance(self, niters=100):
-        from ..graph.manager import ActivationFlowManager
-        from ..graph.base import ActivationFlow
-        project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("table")
-        all_classes = (self.selected_class == 0)
-        seed_points = self._class_map if all_classes else np.where( self._class_map == self.selected_class, self._class_map, np.array([0]) )
-        flow: ActivationFlow = ActivationFlowManager.instance().getActivationFlow(project_dataset.reduction)
-        print( f"  display_distance: seed_points = {seed_points.nonzero()}, all_classes = {all_classes}, selected_class = {self.selected_class} ")
-        if flow.spread( seed_points, niters ) is not None:
-            self.pcm.color_by_value( flow.P )
-
-    def undo_action(self):
-        from spectraclass.model.labels import Action
-        action: Action = LabelsManager.instance().popAction()
-        if action is not None:
-            if action.type == "mark":
-                self.clear_pids( action.cid, action.pids )
-            elif action.type == "color":
-                self.pcm.clear_bins()
-        self.pcm.update_plot( )
-
     def clear_pids(self, cid: int, pids: List[int] ):
         self._tables[0].change_selection([])
         self.drop_rows( cid, pids )

@@ -9,10 +9,10 @@ import traitlets.config as tlc
 from spectraclass.model.base import SCConfigurable
 
 class ReductionManager(tlc.SingletonConfigurable, SCConfigurable):
-    init = tl.Unicode("autoencoder").tag(config=True,sync=True)
-    nepochs = tl.Int( 100 ).tag(config=True,sync=True)
-    nneighbors = tl.Int(10).tag(config=True, sync=True)
-    alpha = tl.Float( 0.25 ).tag(config=True,sync=True)
+    init = tl.Unicode("random").tag(config=True,sync=True)
+    nepochs = tl.Int( 200 ).tag(config=True,sync=True)
+    nneighbors = tl.Int( 8 ).tag(config=True, sync=True)
+    alpha = tl.Float( 2.2 ).tag(config=True,sync=True)
     ndim = tl.Int( 3 ).tag(config=True,sync=True)
     target_weight = tl.Float( 0.5 ).tag(config=True,sync=True)
 
@@ -99,7 +99,7 @@ class ReductionManager(tlc.SingletonConfigurable, SCConfigurable):
         print(f" Autoencoder_reduction with sparsity={sparsity}, result: shape = {encoded_data.shape}")
         print(f" ----> encoder_input: shape = {encoder_input.shape}, val[5][5] = {encoder_input[:5][:5]} ")
         print(f" ----> reproduction: shape = {reproduction.shape}, val[5][5] = {reproduction[:5][:5]} ")
-        print(f" ----> encoding: shape = {scaled_encoding.shape}, val[5][5] = {scaled_encoding[:5][:5]} ")
+        print(f" ----> encoding: shape = {scaled_encoding.shape}, val[5][5]108 = {scaled_encoding[:5][:5]} ")
         return (scaled_encoding, reproduction )
 
     def umap_init( self,  point_data: xa.DataArray, **kwargs ) -> Optional[np.ndarray]:
@@ -130,6 +130,7 @@ class ReductionManager(tlc.SingletonConfigurable, SCConfigurable):
         if 'alpha' not in kwargs.keys():   kwargs['alpha'] = self.alpha
         self._state = self.PROCESSED
         labels_data: xa.DataArray = kwargs.get( 'labels', LabelsManager.instance().labels_data() )
+        print( f"Executing UMAP embedding with input data shape = {mapper.input_data.shape}, parms: {kwargs}")
         mapper.embed( mapper.input_data, labels_data.values, **kwargs )
         return mapper.embedding
 

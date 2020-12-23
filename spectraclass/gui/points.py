@@ -1,5 +1,4 @@
 import time, math, numpy as np
-from spectraclass.data.base import DataManager
 from spectraclass.reduction.embedding import ReductionManager
 from typing import List, Union, Tuple, Optional, Dict, Callable
 from matplotlib import cm
@@ -46,9 +45,10 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
         return np.empty(shape=[0], dtype=np.int)
 
     def init_data( self, **kwargs  ):
+        from spectraclass.data.base import DataManager
         project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("points")
         reduced_data: xa.DataArray = project_dataset.reduction
-#        reduced_data.attrs['dsid'] = project_dataset.attrs['dsid']
+        reduced_data.attrs['dsid'] = project_dataset.attrs['dsid']
         print( f"UMAP init, init data shape = {reduced_data.shape}")
         self._embedding = ReductionManager.instance().umap_init( reduced_data, **kwargs  )
         self._points = self._embedding
@@ -74,12 +74,13 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
         print( f"  ***** POINTS- mark_points[0], #pids = {len(pids)}")
         self.update_plot()
 
-    def mark_points(self, pids: np.ndarray, cid: int = -1, update=False):
+    def mark_points(self, point_ids: np.ndarray = None, cid: int = -1, update=True):
         from spectraclass.model.labels import LabelsManager
-        print( f"PointCloudManager.mark_points: pids = {pids}, cid = {cid}")
-        self.initialize_markers()
         lmgr = LabelsManager.instance()
         icid: int = cid if cid > 0 else lmgr.current_cid
+        pids = point_ids if point_ids is not None else lmgr.currentMarker.pids
+        print( f"PointCloudManager.mark_points: pids = {pids}, cid = {cid}")
+        self.initialize_markers()
         self.clear_pids( pids )
         self.clear_points(0)
         self._marker_pids[icid] = np.append( self._marker_pids[icid], pids )
