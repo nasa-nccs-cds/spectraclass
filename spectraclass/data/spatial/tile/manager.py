@@ -38,7 +38,7 @@ class TileManager(tlc.SingletonConfigurable, SCConfigurable):
         self.cacheTileData = True
 
     def tileFileName( self, with_extension = True ) -> str:
-        return self.getTileFileName( self.image_name, with_extension )
+        return self.getTileFileName( DataManager.instance().getImageName(self.image_name), with_extension )
 
     @property
     def config_mode(self):
@@ -73,6 +73,10 @@ class TileManager(tlc.SingletonConfigurable, SCConfigurable):
     def getTileFileName(self, image_name: str, with_extension = True ) -> str:
         tile_file_name = f"{image_name}.{self._fmt(self.tile_shape)}_{self._fmt(self.tile_index)}"
         return tile_file_name + ".tif" if with_extension else tile_file_name
+
+    def tileName( self, base_name: str = None ) -> str:
+        base = self.image_name if base_name is None else base_name
+        return f"{base}.{self._fmt(self.tile_shape)}_{self._fmt(self.tile_index)}"
 
     def _fmt(self, value) -> str:
         return str(value).strip("([])").replace(",", "-").replace(" ", "")
@@ -139,58 +143,26 @@ class TileManager(tlc.SingletonConfigurable, SCConfigurable):
     def _getTileDataFromImage(self) -> Optional[xa.DataArray]:
         tm = TileManager.instance()
         tm.setTilesPerImage()
-        input_file = os.path.join( self.data_dir, self.image_name + ".tif" )
-        full_input_bands: xa.DataArray = self.readGeotiff( input_file )
+        full_input_bands: xa.DataArray = DataManager.instance().modal.readGeotiff(False)
         if full_input_bands is None: return None
         ybounds, xbounds = tm.getTileBounds()
         tile_raster = full_input_bands[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1]]
-        tile_filename = tm.tileFileName()
-        tile_raster.attrs['filename'] = tile_filename
+        tile_raster.attrs['tilename'] = tm.tileName()
         tile_raster.attrs['image'] = self.image_name
         tile_raster.attrs['image_shape'] = full_input_bands.shape
         self.image_attrs[self.image_name] = dict(shape=full_input_bands.shape[-2:], attrs=full_input_bands.attrs)
         tm.set_tile_data_attributes(tile_raster)
-        if self.cacheTileData: self.writeGeotiff(tile_raster, tile_filename)
+        if self.cacheTileData: DataManager.instance().modal.writeGeotiff( tile_raster )
         return tile_raster
 
-    def _readTileFile(self, iband=-1) -> Optional[xa.DataArray]:
+    def _readTileFile(self) -> Optional[xa.DataArray]:
         image_specs = self.image_attrs.get(self.image_name, None)
         TileManager.instance().setTilesPerImage(image_specs)
-        tile_file_path = os.path.join( self.data_cache, self.tileFileName() )
-        print(f"Reading tile file {tile_file_path}")
-        tile_raster: Optional[xa.DataArray] = self.readGeotiff(tile_file_path, iband)
+        tile_raster: Optional[xa.DataArray] = DataManager.instance().modal.readGeotiff(True)
         if tile_raster is not None:
-            tile_raster.name = f"{self.image_name}: Band {iband + 1}" if (iband >= 0) else self.image_name
-            tile_raster.attrs['filename'] = tile_file_path
+            tile_raster.name = self.tileName()
+            tile_raster.attrs['tilename'] = self.tileName()
         return tile_raster
-
-    def writeGeotiff(self, raster_data: xa.DataArray, filename: str = None) -> Optional[str]:
-        if filename is None: filename = raster_data.name
-        if not filename.endswith(".tif"): filename = filename + ".tif"
-        output_file = os.path.join(self.data_cache, filename)
-        try:
-            if os.path.exists(output_file): os.remove(output_file)
-            print(f"Writing (raster) tile file {output_file}")
-            raster_data.rio.to_raster(output_file)
-            return output_file
-        except Exception as err:
-            print(f"Unable to write raster file to {output_file}: {err}")
-            return None
-
-    def readGeotiff(self, input_file_path: str, iband=-1) -> Optional[xa.DataArray]:
-        try:
-            input_bands: xa.DataArray = rio.open_rasterio(input_file_path)
-            if 'transform' not in input_bands.attrs.keys():
-                gts = input_bands.spatial_ref.GeoTransform.split()
-                input_bands.attrs['transform'] = [float(gts[i]) for i in [1, 2, 0, 4, 5, 3]]
-            print(f"Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}")
-            if iband >= 0:
-                return input_bands[iband]
-            else:
-                return input_bands
-        except Exception as err:
-            print(f"WARNING: can't read input file {input_file_path}: {err}")
-            return None
 
     @classmethod
     def mask_nodata(self, raster: xa.DataArray) -> xa.DataArray:

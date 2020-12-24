@@ -233,25 +233,27 @@ class SpatialDataManager(ModeDataManager):
         return xa.DataArray(np_data, dims=dims, coords=coords, name=id, attrs=attrs)
 
     def prepare_inputs(self, *args, **kwargs ):
-        from spectraclass.data.spatial.tile.tile import Block, DataType
+        from spectraclass.data.spatial.tile.tile import Block
+        from spectraclass.data.base import DataType
         block: Block = self.tiles.getBlock( )
-        ( point_data, point_coords ) = block.getPointData( dstype = DataType.Embedding, subsample = self.subsample )
-        dsid = point_data.attrs['dsid']
-        model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
-        data_vars = dict( raw=point_data )
-        if self.reduce_method != "":
-            reduced_spectra, reproduction = ReductionManager.instance().reduce( point_data, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
-            data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
-            data_vars['reproduction'] = point_data.copy( data=reproduction )
-        dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
-        file_name_base = dsid if self.reduce_method == "None" else f"{dsid}-{self.reduce_method}-{self.model_dims}"
-        self.dataset = f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
-        output_file = os.path.join(self.datasetDir, self.dataset + ".nc")
-        outputDir = os.path.join( self.cache_dir, dm().project_name )
-        os.makedirs(outputDir, 0o777, True)
-        print(f"Writing output to {output_file}")
-        if os.path.exists(output_file): os.remove(output_file)
-        dataset.to_netcdf(output_file)
+        if block is not None:
+            ( point_data, point_coords ) = block.getPointData( dstype = DataType.Embedding, subsample = self.subsample )
+            dsid = point_data.attrs['dsid']
+            model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
+            data_vars = dict( raw=point_data )
+            if self.reduce_method != "":
+                reduced_spectra, reproduction = ReductionManager.instance().reduce( point_data, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
+                data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
+                data_vars['reproduction'] = point_data.copy( data=reproduction )
+            dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
+            file_name_base = dsid if self.reduce_method == "None" else f"{dsid}-{self.reduce_method}-{self.model_dims}"
+            self.dataset = f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
+            output_file = os.path.join(self.datasetDir, self.dataset + ".nc")
+            outputDir = os.path.join( self.cache_dir, dm().project_name )
+            os.makedirs(outputDir, 0o777, True)
+            print(f"Writing output to {output_file}")
+            if os.path.exists(output_file): os.remove(output_file)
+            dataset.to_netcdf(output_file)
 
     def execute_task( self, task: str ):
         from spectraclass.gui.points import PointCloudManager
@@ -270,3 +272,32 @@ class SpatialDataManager(ModeDataManager):
             pass
         elif task == "distance":
             pcm.color_by_value( )
+
+    def getFilePath(self, use_tile: bool ) -> str:
+        base_dir = self.tiles.data_dir
+        base_file = self.tiles.tileName() if use_tile else self.tiles.image_name
+        return f"{base_dir}/{base_file}.tif"
+
+    def writeGeotiff(self, raster_data: xa.DataArray ) -> Optional[str]:
+        output_file = os.path.join( self.tiles.data_cache, self.tiles.tileName() + ".tif" )
+        try:
+            if os.path.exists(output_file): os.remove(output_file)
+            print(f"Writing (raster) tile file {output_file}")
+            raster_data.rio.to_raster(output_file)
+            return output_file
+        except Exception as err:
+            print(f"Unable to write raster file to {output_file}: {err}")
+            return None
+
+    def readGeotiff(self, read_tile: bool ) -> Optional[xa.DataArray]:
+        input_file_path = self.getFilePath( read_tile )
+        try:
+            input_bands: xa.DataArray = rio.open_rasterio(input_file_path)
+            if 'transform' not in input_bands.attrs.keys():
+                gts = input_bands.spatial_ref.GeoTransform.split()
+                input_bands.attrs['transform'] = [float(gts[i]) for i in [1, 2, 0, 4, 5, 3]]
+            print(f"Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}")
+            return input_bands
+        except Exception as err:
+            print(f"WARNING: can't read input file {input_file_path}: {err}")
+            return None

@@ -48,6 +48,10 @@ class DataManager(tlc.SingletonConfigurable, SCConfigurable):
         return self._mode_data_manager_.mode
 
     @property
+    def modal(self) -> ModeDataManager:
+        return self._mode_data_manager_
+
+    @property
     def dataset(self) -> str:
         return self._mode_data_manager_.dataset
 

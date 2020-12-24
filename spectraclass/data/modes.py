@@ -271,6 +271,9 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
         if flow.spread( seed_points, niters ) is not None:
             PointCloudManager.instance().color_by_value( flow.get_distances() )
 
+    def getImageName(self, base_image_name: str ) -> str:
+        return base_image_name
+
     def undo_action(self):
         action: Action = LabelsManager.instance().popAction()
         if action is not None:
