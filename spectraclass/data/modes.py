@@ -254,9 +254,9 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
 
         if flow.spread(self._flow_class_map, niters) is not None:
             self._flow_class_map = flow.get_classes()
-            all_classes = (LabelsManager.instance().selectedClass == 0)
+            all_classes = (LabelsManager.instance().current_cid == 0)
             for cid, label in enumerate( LabelsManager.instance().labels ):
-                if all_classes or (LabelsManager.instance().selectedClass == cid):
+                if all_classes or (LabelsManager.instance().current_cid == cid):
                     new_indices: np.ndarray = catalog_pids[ self._flow_class_map == cid ]
                     if new_indices.size > 0:
  #                       MapManager.instance().

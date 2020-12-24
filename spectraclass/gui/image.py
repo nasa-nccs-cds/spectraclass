@@ -4,7 +4,7 @@ import rioxarray as rio
 from matplotlib.colors import ListedColormap
 from matplotlib.image import AxesImage
 from spectraclass.model.base import SCConfigurable
-from spectraclass.data.spatial.tile import Block
+from spectraclass.data.spatial.tile.tile import Block
 from matplotlib.axes import Axes
 from typing import List, Union, Dict, Callable, Tuple, Any
 import collections.abc, traceback
@@ -56,37 +56,37 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 #         self.canvas.mpl_update()
 #         self.update()
 #         self.repaint()
-
-class LabelingCanvas(SCConfigurable):
-
-    def __init__(self,  **kwargs ):
-        SCConfigurable.__init__(self)
-        self.figure = Figure()
-
-    def setBlock(self, block_coords: Tuple[int], **kwargs   ):
-        return self.console.setBlock( block_coords, **kwargs  )
-
-    @property
-    def button_actions(self) -> Dict[str,Callable]:
-        return self.console.button_actions
-
-    @property
-    def menu_actions(self) -> Dict:
-        return self.console.menu_actions
-
-    def mpl_update(self):
-        self.console.update_canvas()
-        self.update()
-        self.repaint()
-
-    def getNewImage(self):
-        return self.console.getNewImage()
-
-    def getBlock(self) -> Block:
-        return self.console.block
-
-    def extent(self):
-        return self.console.block.extent()
+#
+# class LabelingCanvas(SCConfigurable):
+#
+#     def __init__(self,  **kwargs ):
+#         SCConfigurable.__init__(self)
+#         self.figure = Figure()
+#
+#     def setBlock(self, block_coords: Tuple[int], **kwargs   ):
+#         return self.console.setBlock( block_coords, **kwargs  )
+#
+#     @property
+#     def button_actions(self) -> Dict[str,Callable]:
+#         return self.console.button_actions
+#
+#     @property
+#     def menu_actions(self) -> Dict:
+#         return self.console.menu_actions
+#
+#     def mpl_update(self):
+#         self.console.update_canvas()
+#         self.update()
+#         self.repaint()
+#
+#     def getNewImage(self):
+#         return self.console.getNewImage()
+#
+#     def getBlock(self) -> Block:
+#         return self.console.block
+#
+#     def extent(self):
+#         return self.console.block.extent()
 
 class SatellitePlotManager(QObject, EventClient):
 

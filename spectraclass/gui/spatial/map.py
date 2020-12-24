@@ -169,7 +169,7 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
         if eid == 'pick':
             transient = event.pop('transient',True)
             if etype == 'vtkpoint':
-                cid = lm().selectedClass
+                cid = lm().current_cid
                 for point_index in event['pids']:
                     self.mark_point( point_index, cid==0 )
             else:
@@ -224,7 +224,7 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
                 pids = [pid]
 
         cid = event.get('classification',-1)
-        ic = cid if (cid > 0) else lm().selectedClass
+        ic = cid if (cid > 0) else lm().current_cid
         color = lm().colors[ic]
         return Marker( pids, ic )
 
@@ -439,7 +439,7 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
                     rightButton: bool = int(event.button) == self.RIGHT_BUTTON
                     pid = self.block.coords2pindex( event.ydata, event.xdata )
                     if pid >= 0:
-                        cid = lm().selectedClass
+                        cid = lm().current_cid
                         print( f"Adding marker for pid = {pid}, cid = {cid}")
                         ptindices = self.block.pindex2indices(pid)
                         classification = self.label_map.values[ ptindices['iy'], ptindices['ix'] ] if (self.label_map is not None) else -1
@@ -463,10 +463,12 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
                 pids = [pid for pid in marker.pids if pid >= 0]
                 classification = kwargs.get( "classification", -1 )
                 otype = kwargs.get( "type", None )
-                if len(pids) > 0:
-                    event = dict( event="pick", type="directory", otype=otype, pids=pids, transient=transient, mark=True, classification=classification )
-                    GraphManager.instance().on_selection(event)
-                    PointCloudManager.instance().on_selection( event )
+                PointCloudManager.instance().mark_points( pids, classification )
+                GraphManager.instance().plot_graph(pids)
+
+                # if len(pids) > 0:
+                #     event = dict( event="pick", type="directory", otype=otype, pids=pids, transient=transient, mark=True, classification=classification )
+                #     GraphManager.instance().on_selection(event)
         self._adding_marker = False
 
     # def undo_marker_selection(self, **kwargs ):
@@ -534,7 +536,7 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
                 if (coords is not None) and self.block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
                     ycoords.append( coords['y'] )
                     xcoords.append( coords['x'] )
-                    colors.append( marker.color )
+                    colors.append( lm().colors[marker.cid] )
         return ycoords, xcoords, colors
 
     def get_class_markers( self, **kwargs ) -> Dict[ int, List[int] ]:
@@ -547,6 +549,7 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
     def plot_markers_image(self, **kwargs ):
         if self.marker_plot:
             ycoords, xcoords, colors = self.get_markers( **kwargs )
+            print(f" ** plot markers image, nmarkers = {len(ycoords)}")
             if len(ycoords) > 0:
                 self.marker_plot.set_offsets(np.c_[xcoords, ycoords])
                 self.marker_plot.set_facecolor(colors)
@@ -583,6 +586,7 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
         self.plot_markers_image()
 
     def initMarkersPlot(self):
+        print( "Init Markers Plot")
         self.marker_plot: PathCollection = self.plot_axes.scatter([], [], s=50, zorder=2, alpha=1, picker=True)
         self.marker_plot.set_edgecolor([0, 0, 0])
         self.marker_plot.set_linewidth(2)

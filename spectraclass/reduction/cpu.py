@@ -887,9 +887,7 @@ def simplicial_set_embedding(
     init_embedding = None
 
     if isinstance(init, str) and init == "random":
-        init_embedding = random_state.uniform(
-            low=-10.0, high=10.0, size=(graph.shape[0], n_components)
-        ).astype(np.float32)
+        init_embedding = random_state.uniform( low=-10.0, high=10.0, size=(graph.shape[0], n_components) ).astype(np.float32)
         print(f"Completed UMAP random initialization, init shape = {init_embedding.shape}")
     elif isinstance(init, str) and init == "spectral":
         # We add a little noise to avoid local minima for optimization to come

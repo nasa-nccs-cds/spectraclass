@@ -144,7 +144,7 @@ class Block:
     @property
     def samples_axis(self) -> xa.DataArray:
         if self._samples_axis is None: self.getPointData()
-        return  self._samples_axis
+        return  self._point_coords
 
     def getSelectedPointData( self, cy: List[float], cx: List[float] ) -> np.ndarray:
         yIndices, xIndices = self.multi_coords2indices(cy, cx)
@@ -191,6 +191,7 @@ class Block:
             return dict( y = selected_sample[0], x = selected_sample[1] )
         except Exception as err:
             print( f" --> pindex2coords Error: {err}" )
+            print(f" Samples Axis shape: {self.samples_axis.shape}, pid = {point_index}" )
 
     def pindex2indices(self, point_index: int) -> Dict:
         try:

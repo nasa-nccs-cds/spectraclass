@@ -77,9 +77,8 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
     def mark_points(self, point_ids: np.ndarray = None, cid: int = -1, update=True):
         from spectraclass.model.labels import LabelsManager
         lmgr = LabelsManager.instance()
-        icid: int = cid if cid > 0 else lmgr.current_cid
+        icid: int = cid if cid > -1 else lmgr.current_cid
         pids = point_ids if point_ids is not None else lmgr.currentMarker.pids
-        print( f"PointCloudManager.mark_points: pids = {pids}, cid = {cid}")
         self.initialize_markers()
         self.clear_pids( pids )
         self.clear_points(0)
@@ -87,6 +86,7 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
         marked_points: np.ndarray = self._embedding[ self._marker_pids[icid], : ]
 #        print( f"  ***** POINTS- mark_points[{icid}], #pids = {len(pids)}, #points = {marked_points.shape[0]}")
         self._marker_points[ icid ] = marked_points # np.concatenate(  [ self._marker_points[ icid ], marked_points ] )
+        print(f"PointCloudManager.mark_points: added pids = {pids}, cid = {icid}, cid marked points = [{self._marker_pids[icid]}]")
         lmgr.addAction( "mark", "points", pids, icid )
         if update: self.update_plot()
         return lmgr.current_cid

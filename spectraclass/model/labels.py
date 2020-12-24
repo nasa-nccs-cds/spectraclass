@@ -59,7 +59,6 @@ class LabelsManager(tlc.SingletonConfigurable, SCConfigurable):
         super(LabelsManager, self).__init__()
         self._colors = None
         self._labels = None
-        self.selectedClass = 0
         self._markers: List[Marker] = []
         self._flow: ActivationFlow = None
         self._actions = []
@@ -81,6 +80,7 @@ class LabelsManager(tlc.SingletonConfigurable, SCConfigurable):
 
     def set_selected_class(self, iclass, *args ):
         self._selected_class = iclass
+        print(f"LabelsManager: set selected class = {iclass}")
         for iB, button in enumerate(self._buttons):
             if iB == self._selected_class:  button.layout = {'border': '3px solid #FFFF00'}
             else:                           button.layout = {'border': '1px solid darkkhaki'}
@@ -101,7 +101,7 @@ class LabelsManager(tlc.SingletonConfigurable, SCConfigurable):
         return self._flow
 
     def addAction(self, type: str, source: str, pids: List[int] = None, cid=None, **kwargs ):
-        if cid == None: cid = self.selectedClass
+        if cid == None: cid = self.current_cid
         new_action = Action(type, source, pids, cid, **kwargs)
         if type == "mark": self.addMarker( Marker(pids,cid) )
         print(f"ADD ACTION: {new_action}")
@@ -202,10 +202,10 @@ class LabelsManager(tlc.SingletonConfigurable, SCConfigurable):
 
     @property
     def selectedLabel(self):
-        return self._labels[ self.selectedClass ]
+        return self._labels[ self.current_cid ]
 
     def selectedColor(self, mark: bool ) -> Tuple[int,List[float]]:
-        icolor = self.selectedClass if mark else 0
+        icolor = self.current_cid if mark else 0
         return icolor, self._colors[ icolor ]
 
     @property
