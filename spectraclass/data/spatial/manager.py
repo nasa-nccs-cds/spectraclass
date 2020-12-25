@@ -265,13 +265,13 @@ class SpatialDataManager(ModeDataManager):
         elif task == "mark":
             cid: int = pcm.mark_points()
         elif task == "spread":
-            mm
+            self.spread_selection()
         elif task == "clear":
             mm.clearLabels()
         elif task == "undo":
             pass
         elif task == "distance":
-            pcm.color_by_value( )
+            self.display_distance()
 
     def getFilePath(self, use_tile: bool ) -> str:
         base_dir = self.tiles.data_dir

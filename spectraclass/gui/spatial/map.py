@@ -415,6 +415,7 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
             self.image.set_norm( Normalize( **drange ) )
             self.image.set_extent( self.block.extent() )
             plot_name = os.path.basename( dm.dataset )
+            print( f" #### Update Map: data shape = {frame_data.shape}, range = {drange}, extent = {self.block.extent()}")
             self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
             self.plot_axes.title.set_fontsize( 8 )
         if self.labels_image is not None:
