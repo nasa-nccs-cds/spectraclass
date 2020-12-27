@@ -19,6 +19,7 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
         super(PointCloudManager, self).__init__()
         self._gui: Viewer = None
         self._n_point_bins = 27
+        self._color_values = None
         self.initialize_points()
 
     def initialize_points(self):
@@ -98,26 +99,24 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
         for iC in range( 0, self._n_point_bins ):
             self._binned_points[iC] = self.empty_pointset
 
-    def color_by_value( self, D: np.ndarray, base = 12.0, log_scale = False ):
-        DM = ma.masked_invalid(D)
-        N_log_bins = self._n_point_bins-1
-        if log_scale:
-            v1 = 0.9*DM.max(); v0 = 0.01*v1
-            print(f" binned_points: v1 = {v1}, v0 = {v0}, base = {base}, D.shape = {DM.shape}")
-            dmin, dmax = math.log(v0,base), math.log(v1,base)
-            lspace: np.ndarray = np.logspace( dmin, dmax, N_log_bins )
-            print(f"     ---> dmin = {dmin}, dmax = {dmax}, lspace = {lspace}")
-        else:
-            dmin, dmax = DM.min(), DM.max()
-            lspace: np.ndarray = np.linspace( dmin, dmax, N_log_bins )
-            print(f" $$$COLOR: Coloring point cloud with range =: {[dmin, dmax]}")
-        self._binned_points[0] = self._embedding[DM <= lspace[0]]
-        for iC in range(0,N_log_bins-1):
-            mask: np.ndarray =  ( DM > lspace[iC] ) & ( DM <= lspace[iC+1] )
-            self._binned_points[iC+1] = self._embedding[ mask ]
-        self._binned_points[-1] = self._embedding[ DM >  lspace[-1] ]
-        LabelsManager.instance().addAction( "color", "points" )
-        self.update_plot()
+    def color_by_value( self, values: np.ndarray = None, **kwargs ):
+        self.update_plot(**kwargs)
+        if values is not None: self._color_values = ma.masked_invalid( values )
+        if self._color_values is not None:
+            vmin, vmax = self.get_color_bounds()
+            lspace: np.ndarray = np.linspace( vmin, vmax, self._n_point_bins-1 )
+            print(f" $$$COLOR: Coloring point cloud with bounds = {(vmin,vmax)}")
+            self._binned_points[0] = self._points[self._color_values <= lspace[0]]
+            for iC in range(0,self._n_point_bins-2):
+                mask: np.ndarray =  ( self._color_values > lspace[iC] ) & ( self._color_values <= lspace[iC+1] )
+                self._binned_points[iC+1] = self._points[ mask ]
+            self._binned_points[-1] = self._points[ self._color_values >  lspace[-1] ]
+            LabelsManager.instance().addAction( "color", "points" )
+
+    def get_color_bounds( self ):
+        from spectraclass.data.spatial.manager import SpatialDataManager
+        (ave, std)= ( self._color_values.mean(),  self._color_values.std() )
+        return ( ave - std * SpatialDataManager.colorstretch, ave + std * SpatialDataManager.colorstretch  )
 
     def clear_pids(self, pids: np.ndarray, **kwargs):
         if self._marker_pids is not None:

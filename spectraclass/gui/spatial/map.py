@@ -409,14 +409,18 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
          event = dict(event="gui", type="zoom", xlim=ax.get_xlim(), ylim=ax.get_ylim())
 #         self.submitEvent( event, EventMode.Foreground )
 
+    def frame_color_pointcloud( self, **kwargs ):
+        pcm = PointCloudManager.instance()
+        frame_data: xa.DataArray = self.data[self.currentFrame]
+        pcm.color_by_value( frame_data.values.flatten(), **kwargs )
+        return frame_data
+
     def update_plots(self):
         if self.image is not None:
             from spectraclass.data.base import DataManager
-            pcm = PointCloudManager.instance()
             dm = DataManager.instance()
-            frame_data: xa.DataArray = self.data[ self.currentFrame ]
+            frame_data: xa.DataArray = self.frame_color_pointcloud()
             self.image.set_data( frame_data.values  )
-            pcm.color_by_value( frame_data.values.flatten() )
             drange = dms().get_color_bounds( frame_data )
             self.image.set_norm( Normalize( **drange ) )
             self.image.set_extent( self.block.extent() )

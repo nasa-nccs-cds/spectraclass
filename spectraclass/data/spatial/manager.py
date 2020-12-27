@@ -71,6 +71,7 @@ def get_color_bounds( color_values: List[float] ) -> List[float]:
 
 
 class SpatialDataManager(ModeDataManager):
+    colorstretch = 1.25
 
     def __init__( self  ):   # Tile shape (y,x) matches image shape (row,col)
         super(SpatialDataManager, self).__init__()
@@ -147,8 +148,6 @@ class SpatialDataManager(ModeDataManager):
         result.attrs = raster.attrs
         return result
 
-
-
     @classmethod
     def raster2points(cls, raster: xa.DataArray ) -> xa.DataArray:
         stacked_raster = raster.stack(samples=raster.dims[-2:]).transpose()
@@ -163,10 +162,9 @@ class SpatialDataManager(ModeDataManager):
 
     @classmethod
     def get_color_bounds( cls, raster: xa.DataArray ):
-        colorstretch = 1.25
         ave = raster.mean(skipna=True).values
         std = raster.std(skipna=True).values
-        return dict( vmin= ave - std*colorstretch, vmax= ave + std*colorstretch  )
+        return dict( vmin= ave - std * cls.colorstretch, vmax= ave + std * cls.colorstretch  )
 
     @classmethod
     def plotRaster(cls, raster: xa.DataArray, **kwargs ):
