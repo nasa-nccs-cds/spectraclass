@@ -1,4 +1,4 @@
-import time, math, numpy as np
+import time, math, os, numpy as np
 from spectraclass.reduction.embedding import ReductionManager
 from typing import List, Union, Tuple, Optional, Dict, Callable
 from matplotlib import cm
@@ -7,10 +7,13 @@ from itkwidgets.widget_viewer import Viewer
 import xarray as xa
 import numpy.ma as ma
 import traitlets.config as tlc
+import traitlets as tl
 from spectraclass.model.base import SCConfigurable, Marker
 from spectraclass.model.labels import LabelsManager
 
 class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
+
+    color_map = tl.Unicode("jet").tag(config=True)  # "gist_rainbow"
 
     def __init__(self):
         super(PointCloudManager, self).__init__()
@@ -105,15 +108,14 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
             lspace: np.ndarray = np.logspace( dmin, dmax, N_log_bins )
             print(f"     ---> dmin = {dmin}, dmax = {dmax}, lspace = {lspace}")
         else:
-            lspace: np.ndarray = np.linspace( DM.min(), DM.max(), N_log_bins )
+            dmin, dmax = DM.min(), DM.max()
+            lspace: np.ndarray = np.linspace( dmin, dmax, N_log_bins )
+            print(f" $$$COLOR: Coloring point cloud with range =: {[dmin, dmax]}")
         self._binned_points[0] = self._embedding[DM <= lspace[0]]
-        print( f" binned_points[0]: size = {self._binned_points[0].shape[0]}, bin = (< {lspace[0]})")
         for iC in range(0,N_log_bins-1):
             mask: np.ndarray =  ( DM > lspace[iC] ) & ( DM <= lspace[iC+1] )
             self._binned_points[iC+1] = self._embedding[ mask ]
-            print( f" binned_points[{iC+1}]: size = {self._binned_points[iC].shape[0]}, bin = [{lspace[iC]},{lspace[iC+1]}]")
         self._binned_points[-1] = self._embedding[ DM >  lspace[-1] ]
-        print(f" binned_points[{self._n_point_bins-1}]: size = {self._binned_points[-1].shape[0]}, bin = (> {lspace[-1]})")
         LabelsManager.instance().addAction( "color", "points" )
         self.update_plot()
 
@@ -148,7 +150,7 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
     def gui(self, **kwargs ):
         if self._gui is None:
             self.init_data()
-            bin_colors = self.get_bin_colors("gist_rainbow") # self.get_bin_colors("jet",True)
+            bin_colors = self.get_bin_colors( self.color_map )
             ptcolors = [ [1.0, 1.0, 1.0, 1.0], ] + bin_colors + LabelsManager.instance().colors[::-1]
             ptsizes = [1]*(self._n_point_bins+1) + [8]*LabelsManager.instance().nLabels
             self._gui = view( point_sets = self.point_sets, point_set_sizes=ptsizes, point_set_colors=ptcolors, background=[0,0,0] )

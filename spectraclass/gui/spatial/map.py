@@ -346,6 +346,10 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
         return None if self.block is None else self.block.data
 
     @property
+    def frame_data(self) -> np.ndarray:
+        return self.data[ :, self.currentFrame].flatten().values()
+
+    @property
     def toolbarMode(self) -> str:
         return self.toolbar.mode
 
@@ -408,9 +412,11 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
     def update_plots(self):
         if self.image is not None:
             from spectraclass.data.base import DataManager
+            pcm = PointCloudManager.instance()
             dm = DataManager.instance()
             frame_data: xa.DataArray = self.data[ self.currentFrame ]
             self.image.set_data( frame_data.values  )
+            pcm.color_by_value( frame_data.values.flatten() )
             drange = dms().get_color_bounds( frame_data )
             self.image.set_norm( Normalize( **drange ) )
             self.image.set_extent( self.block.extent() )

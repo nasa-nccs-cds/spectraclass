@@ -1,7 +1,3 @@
-from typing import List, Union, Tuple, Optional, Dict, Callable
-from IPython.core.debugger import set_trace
-from collections import OrderedDict
-from spectraclass.data.spatial.manager import SpatialDataManager
 import os, ipywidgets as ipw
 import traitlets.config as tlc
 from spectraclass.model.base import SCConfigurable
@@ -74,10 +70,10 @@ class Spectraclass(tlc.SingletonConfigurable, SCConfigurable):
         graphManager = GraphManager.instance()
         pointCloudManager = PointCloudManager.instance()
 
-        map = mapManager.gui()
         graph = graphManager.gui()
         points = pointCloudManager.instance().gui()
         actionsPanel = ActionsPanel.instance().gui()
+        map = mapManager.gui()
 
         control = ipw.VBox([actionsPanel, map, graph], layout=ipw.Layout( flex='0 0 700px', border=css_border) )
         plot = ipw.VBox([points], layout=ipw.Layout( flex='1 1 auto', border=css_border) )
