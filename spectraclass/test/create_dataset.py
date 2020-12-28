@@ -1,5 +1,5 @@
 from spectraclass.data.base import DataManager, ModeDataManager
-from spectraclass.gui.application import Spectraclass
+from spectraclass.gui.unstructured.application import Spectraclass
 
 app = Spectraclass.instance()
 app.configure("spectraclass")

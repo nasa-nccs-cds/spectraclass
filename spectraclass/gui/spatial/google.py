@@ -2,16 +2,88 @@ from spectraclass.data.spatial.tile.tile import Block
 from typing import List
 from urllib import request
 from io import BytesIO
-import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
 from math import log, exp, tan, atan, ceil
 from PIL import Image
 import traitlets as tl
 import requests, traceback
 from spectraclass.model.base import SCConfigurable
+import traitlets.config as tlc
+from matplotlib.axes import Axes
+import matplotlib.pyplot as plt
+from matplotlib.image import AxesImage
 
-class GoogleMaps(SCConfigurable):
+class GooglePlotManager(tlc.SingletonConfigurable, SCConfigurable):
     api_key = tl.Unicode("google/api_key").tag(config=True)
+
+    RIGHT_BUTTON = 3
+    MIDDLE_BUTTON = 2
+    LEFT_BUTTON = 1
+
+    def __init__( self ):
+        super(GooglePlotManager, self).__init__()
+        self.figure = plt.figure(2)
+        self.plot = None
+        self.image = None
+        self.block = None
+        self.axes: Axes = self.figure.add_subplot(111)
+        self.axes.get_xaxis().set_visible(False)
+        self.axes.get_yaxis().set_visible(False)
+        self.figure.set_constrained_layout_pads( w_pad=0., h_pad=0. )
+        self.google_maps_zoom_level = 17
+        self.google = None
+
+    def setBlock(self, block: Block = None, type ='satellite'):
+        from spectraclass.data.spatial.tile.manager import TileManager
+        if block is None:
+            tm = TileManager.instance()
+            self.block: Block = tm.getBlock()
+            print("  @@GPM:  Getting block from TileManager")
+        else:
+            if block == self.block:
+                print( "  @@GPM:  Using existing block")
+                return
+            else:
+                self.block = block
+                print("  @@GPM:  Setting block")
+        self.google = GoogleMaps( block, self.api_key )
+        try:
+            extent = block.extent(4326)
+            print( f"Setting satellite image extent: {extent}, xlim = {block.xlim}, ylim = {block.ylim}")
+            print(f"Google Earth block center coords: {(extent[2]+extent[3])/2},{(extent[1]+extent[0])/2}")
+            self.image = self.google.get_tiled_google_map(type, extent, self.google_maps_zoom_level)
+            self.plot: AxesImage = self.axes.imshow(self.image, extent=extent, alpha=1.0, aspect='auto' )
+            self.axes.set_xlim(extent[0],extent[1])
+            self.axes.set_ylim(extent[2],extent[3])
+            self._mousepress = self.plot.figure.canvas.mpl_connect('button_press_event', self.onMouseClick )
+            self.figure.canvas.draw_idle()
+        except AttributeError:
+            print( "Cant get spatial bounds for satellite image")
+        except Exception:
+            traceback.print_exc()
+
+    def set_axis_limits( self, xlims, ylims ):
+        if self.image is not None:
+            xlims1, ylims1 = self.block.project_extent( xlims, ylims, 4326 )
+            self.axes.set_xlim(*xlims1 )
+            self.axes.set_ylim(*ylims1)
+            print( f"Setting satellite image bounds: {xlims} {ylims} -> {xlims1} {ylims1}")
+            self.figure.canvas.draw_idle()
+
+    def onMouseClick(self, event):
+        if event.xdata != None and event.ydata != None:
+            if event.inaxes ==  self.axes:
+                rightButton: bool = int(event.button) == self.RIGHT_BUTTON
+                event = dict( event="pick", type="image", lat=event.ydata, lon=event.xdata, button=int(event.button), transient=rightButton )
+                print( f"SatellitePlot Mouse-click: {event}")
+
+    def mpl_update(self):
+        self.figure.canvas.draw_idle()
+
+    def gui(self):
+        self.setBlock()
+        return self.figure.canvas
+
+class GoogleMaps():
 
     tau = 6.283185307179586
     DEGREE = tau / 360
@@ -19,26 +91,22 @@ class GoogleMaps(SCConfigurable):
     MAXSIZE = 640
     LOGO_CUTOFF = 32
 
-    def __init__( self, block: Block ):
+    def __init__( self, block: Block, api_key: str ):
+        self.api_key = api_key
         self.image_size = [ 800, 800 ]
-        self.figure: Figure = None
-        self.ax = None
         self.block = block
 
     def extent(self, epsg: int ):
         return self.block.extent( epsg )
 
-    def get_google_map( self, type: str, zoom=14  ):
+    def get_google_map( self, type: str, zoom=14  ) -> Image.Image:
         extent = self.block.extent( 4326 )   # left, right, bottom, top
         center = [ (extent[0]+extent[1])/2, (extent[2]+extent[3])/2 ]
         url = f"http://maps.googleapis.com/maps/api/staticmap?center={center[0]},{center[1]}&size={self.image_size[0]}x{self.image_size[1]}&zoom={zoom}&sensor=false&key={self.api_key}&maptype={type}"
         print( f"Accessing google map at {center[0]},{center[1]} with dimensions {self.image_size[0]}x{self.image_size[1]}\n  ** url = {url}" )
         buffer = BytesIO(request.urlopen(url).read())
         google_image: Image.Image = Image.open(buffer)
-        if self.figure is not None: self.figure.remove()
-        self.figure, self.ax = plt.subplots(1, 1)
-        self.ax.imshow(google_image, extent=extent, alpha=1.0)
-        plt.show( block = False )
+        return google_image
 
     @classmethod
     def latlon2pixels(cls, lat, lon, zoom):

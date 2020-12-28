@@ -23,7 +23,9 @@ class ActivationFlowManager(tlc.SingletonConfigurable, SCConfigurable):
         for instance in self.instances.values():
             instance.clear()
 
-    def getActivationFlow( self, point_data: xa.DataArray, **kwargs ) -> Optional["ActivationFlow"]:
+    def getActivationFlow( self, **kwargs ) -> Optional["ActivationFlow"]:
+        from spectraclass.data.base import DataManager
+        point_data: xa.DataArray = DataManager.instance().getModelData()
         result = None
         if point_data is not None:
             dsid = point_data.attrs.get('dsid','global')

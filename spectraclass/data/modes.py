@@ -1,6 +1,6 @@
 import numpy as np
-from typing import List, Union, Tuple, Optional, Dict
-import os, math, pickle, glob
+from typing import List, Optional, Dict
+import os, glob
 import ipywidgets as ip
 from collections import OrderedDict
 from spectraclass.reduction.embedding import ReductionManager
@@ -8,8 +8,8 @@ from pathlib import Path
 import xarray as xa
 import traitlets as tl
 import traitlets.config as tlc
-from spectraclass.model.base import SCConfigurable, AstroModeConfigurable
-from spectraclass.gui.application import Spectraclass
+from spectraclass.model.base import AstroModeConfigurable
+from spectraclass.gui.unstructured.application import Spectraclass
 from spectraclass.model.labels import LabelsManager
 from ..graph.manager import ActivationFlowManager
 from ..graph.base import ActivationFlow
@@ -151,7 +151,7 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
                                              layout=ip.Layout(width="auto"))
 
         def apply_handler(*args):
-            from spectraclass.gui.application import Spectraclass
+            from spectraclass.gui.unstructured.application import Spectraclass
             rm.nepochs = nepochs_selector.value
             rm.alpha = alpha_selector.value
             rm.init = init_selector.value
@@ -246,11 +246,9 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
         return dsdir
 
     def spread_selection(self, niters=1):
-        from .base import DataManager
-        project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("datamgr")
-        catalog_pids = np.arange( 0, project_dataset.reduction.shape[0] )
-        flow: ActivationFlow = ActivationFlowManager.instance().getActivationFlow(project_dataset.reduction)
-        self._flow_class_map: np.ndarray = LabelsManager.instance().labels_data().data()
+        flow: ActivationFlow = ActivationFlowManager.instance().getActivationFlow()
+        self._flow_class_map: np.ndarray = LabelsManager.instance().labels_data().data
+        catalog_pids = np.arange(0, self._flow_class_map.shape[0])
 
         if flow.spread(self._flow_class_map, niters) is not None:
             self._flow_class_map = flow.get_classes()
@@ -259,16 +257,13 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
                 if all_classes or (LabelsManager.instance().current_cid == cid):
                     new_indices: np.ndarray = catalog_pids[ self._flow_class_map == cid ]
                     if new_indices.size > 0:
- #                       MapManager.instance().
                         PointCloudManager.instance().mark_points( new_indices, cid )
             PointCloudManager.instance().update_plot()
 
     def display_distance(self, niters=100):
-        from .base import DataManager
-        project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("table")
-        seed_points = LabelsManager.instance().currentMarker.pids
-        flow: ActivationFlow = ActivationFlowManager.instance().getActivationFlow(project_dataset.reduction)
-        if flow.spread( seed_points, niters ) is not None:
+        seed_points: xa.DataArray = LabelsManager.instance().getSeedPointMask()
+        flow: ActivationFlow = ActivationFlowManager.instance().getActivationFlow()
+        if flow.spread( seed_points.data, niters ) is not None:
             PointCloudManager.instance().color_by_value( flow.get_distances() )
 
     def getImageName(self, base_image_name: str ) -> str:

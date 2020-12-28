@@ -1,12 +1,12 @@
 import numpy as np
-from typing import List, Union, Tuple, Optional, Dict, Type
-import os, math, pickle, glob
+from typing import List, Optional, Dict, Type
+import os
 from enum import Enum
 import ipywidgets as ip
 import xarray as xa
 import traitlets as tl
 import traitlets.config as tlc
-from spectraclass.model.base import SCConfigurable, AstroModeConfigurable
+from spectraclass.model.base import SCConfigurable
 from .modes import ModeDataManager
 
 class DataType(Enum):
@@ -68,7 +68,7 @@ class DataManager(tlc.SingletonConfigurable, SCConfigurable):
         return self._mode_data_manager_.metavars
 
     def gui( self ) -> ip.Tab():
-        from spectraclass.gui.application import Spectraclass
+        from spectraclass.gui.unstructured.application import Spectraclass
         if self._wGui is None:
             Spectraclass.set_spectraclass_theme()
             self._wGui = self._mode_data_manager_.gui()
@@ -89,4 +89,17 @@ class DataManager(tlc.SingletonConfigurable, SCConfigurable):
 
     def execute_task(self, task: str ):
         return self._mode_data_manager_.execute_task(task)
+
+    def graph_flow(self, niters: int = 1 ):
+        return self._mode_data_manager_.spread_selection( niters )
+
+    def distance(self, niters: int = 100 ):
+        return self._mode_data_manager_.display_distance( niters )
+
+    def getModelData(self) -> xa.DataArray:
+        project_dataset: xa.Dataset = self.loadCurrentProject("getModelData")
+        model_data: xa.DataArray = project_dataset['reduction']
+        model_data.attrs['dsid'] = project_dataset.attrs['dsid']
+        return model_data
+
 

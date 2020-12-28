@@ -1,8 +1,7 @@
 import cudf
 from cuml.neighbors import NearestNeighbors
 import xarray as xa
-import numpy as np
-from spectraclass.gui.application import Spectraclass
+from spectraclass.gui.unstructured.application import Spectraclass
 from spectraclass.data.base import DataManager
 
 app = Spectraclass.instance()

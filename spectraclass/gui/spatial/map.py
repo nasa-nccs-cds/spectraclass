@@ -1,11 +1,11 @@
 import matplotlib.widgets
 import matplotlib.patches
-import traitlets.config as tlc
-from spectraclass.data.google import GoogleMaps
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.gridspec import GridSpec
 from matplotlib.lines import Line2D
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from matplotlib.image import AxesImage
 from matplotlib.colors import Normalize
 from matplotlib.backend_bases import PickEvent, MouseButton, NavigationToolbar2
 from spectraclass.reduction.embedding import ReductionManager
@@ -16,11 +16,11 @@ from spectraclass.gui.points import PointCloudManager
 from spectraclass.model.base import SCConfigurable, Marker
 from functools import partial
 from pyproj import Proj
+import traitlets.config as tlc
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
-from spectraclass.data.spatial.tile.tile import Tile, Block
-from matplotlib.figure import Figure
-from matplotlib.image import AxesImage
+from spectraclass.data.spatial.tile.tile import Block
+from .google import GooglePlotManager
 import pandas as pd
 import xarray as xa
 import numpy as np
@@ -125,15 +125,11 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
         self.dataLims = {}
         self.key_mode = None
         self.currentClass = 0
-        self.google: GoogleMaps = None
-        self.google_maps_zoom_level = 17
-        self.new_image = None
         self.nFrames = None
         self._adding_marker = False
         self.figure: Figure = kwargs.pop( 'figure', None )
-        self.google_figure: Figure = None
         if self.figure is None:
-            self.figure = plt.figure()
+            self.figure = plt.figure(1)
         self.labels_image: Optional[AxesImage] = None
         self.flow_iterations = kwargs.get( 'flow_iterations', 1 )
         self.frame_marker: Optional[Line2D] = None
@@ -145,7 +141,6 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
                                                     [ "Decrease Labels Alpha", 'Ctrl+<', None, partial( self.update_image_alpha, "labels", False ) ],
                                                     [ "Increase Band Alpha",   'Alt+>',  None, partial( self.update_image_alpha, "bands", True ) ],
                                                     [ "Decrease Band Alpha",   'Alt+<',  None, partial( self.update_image_alpha, "bands", False ) ] ] )
- #                                                   OrderedDict( GoogleMaps=google_actions )  ]  )
 
         atexit.register(self.exit)
         self._update(0)
@@ -258,24 +253,18 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
             if image is not None:
                 self.add_slider(**kwargs)
                 self.initLabels()
-
-                self.google = GoogleMaps( self.block )
                 self.update_plot_axis_bounds()
                 self.plot_markers_image()
                 self.update_plots()
+                GooglePlotManager.instance().setBlock(self.block)
 
         return self.block
-
-    def getNewImage(self):
-        return self.new_image
-
-    def download_google_map(self, type: str, *args, **kwargs):
-        self.new_image = self.google.get_tiled_google_map( type, self.google_maps_zoom_level )
 
     def update_plot_axis_bounds( self ):
         if self.plot_axes is not None:
             self.plot_axes.set_xlim( self.block.xlim )
             self.plot_axes.set_ylim( self.block.ylim )
+            GooglePlotManager.instance().set_axis_limits(self.block.xlim, self.block.ylim)
 
 
     # def computeMixingSpace(self, *args, **kwargs):
@@ -628,4 +617,3 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
 
     def exit(self):
         pass
-

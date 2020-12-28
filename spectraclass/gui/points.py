@@ -67,7 +67,8 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
 
     def update_plot( self, **kwargs ):
         self._points = kwargs.get( 'points', self._embedding )
-        self._gui.point_sets = self.point_sets
+        if self._gui is not None:
+            self._gui.point_sets = self.point_sets
 
     def on_selection(self, selection_event: Dict ):
         selection = selection_event['pids']
@@ -87,10 +88,13 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
         self.clear_pids( pids )
         self.clear_points(0)
         self._marker_pids[icid] = np.append( self._marker_pids[icid], pids )
-        marked_points: np.ndarray = self._embedding[ self._marker_pids[icid], : ]
-#        print( f"  ***** POINTS- mark_points[{icid}], #pids = {len(pids)}, #points = {marked_points.shape[0]}")
-        self._marker_points[ icid ] = marked_points # np.concatenate(  [ self._marker_points[ icid ], marked_points ] )
-        print(f"PointCloudManager.mark_points: added pids = {pids}, cid = {icid}, cid marked points = [{self._marker_pids[icid]}]")
+        if self._embedding is None:
+            print( "WARNING: Can't mark points in PointCloudManager which is not initialized")
+        else:
+            marked_points: np.ndarray = self._embedding[ self._marker_pids[icid], : ]
+    #        print( f"  ***** POINTS- mark_points[{icid}], #pids = {len(pids)}, #points = {marked_points.shape[0]}")
+            self._marker_points[ icid ] = marked_points # np.concatenate(  [ self._marker_points[ icid ], marked_points ] )
+            print(f"PointCloudManager.mark_points: added pids = {pids}, cid = {icid}, cid marked points = [{self._marker_pids[icid]}]")
         lmgr.addAction( "mark", "points", pids, icid )
         if update: self.update_plot()
         return lmgr.current_cid

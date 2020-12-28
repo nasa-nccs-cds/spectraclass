@@ -234,3 +234,10 @@ class LabelsManager(tlc.SingletonConfigurable, SCConfigurable):
             labels_dict[ label ] = set_alpha( self._colors[index], alpha )
         return labels_dict
 
+    def getSeedPointMask(self) -> xa.DataArray:
+        from spectraclass.data.base import DataManager
+        model_data: xa.DataArray = DataManager.instance().getModelData()
+        seed_points = xa.full_like(model_data[:, 0], float('nan'))
+        seed_points[ self.currentMarker.pids ] = 1
+        return seed_points
+

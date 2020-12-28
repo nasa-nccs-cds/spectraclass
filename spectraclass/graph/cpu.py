@@ -101,7 +101,7 @@ class cpActivationFlow(ActivationFlow):
         if (self.P is None) or self.reset:   self.P = np.full( self.C.shape, float('inf'), dtype=np.float32 )
         self.P = np.where( sample_mask, self.P, 0.0 )
         print(f"Beginning graph flow iterations, #C = {label_count}")
-        t0 = time.time()
+#        t0 = time.time()
         converged = False
         for iter in range(nIter):
             try:
@@ -119,8 +119,8 @@ class cpActivationFlow(ActivationFlow):
                 traceback.print_exc(50)
                 break
 
-        t1 = time.time()
-        print(f"Completed graph flow {nIter} iterations in {(t1 - t0)} sec, #marked = {np.count_nonzero(self.C)}")
+#        t1 = time.time()
+ #       print(f"Completed graph flow {nIter} iterations in {(t1 - t0)} sec, #marked = {np.count_nonzero(self.C)}")
         self.reset = False
         return converged
 

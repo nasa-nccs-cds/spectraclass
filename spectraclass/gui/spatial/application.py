@@ -62,22 +62,26 @@ class Spectraclass(tlc.SingletonConfigurable, SCConfigurable):
         from spectraclass.gui.points import PointCloudManager
         from spectraclass.gui.control import ActionsPanel
         from spectraclass.gui.spatial.map import MapManager
+        from spectraclass.gui.spatial.google import GooglePlotManager
 
         self.set_spectraclass_theme()
         css_border = '1px solid blue'
 
-        mapManager = MapManager.instance()
-        graphManager = GraphManager.instance()
-        pointCloudManager = PointCloudManager.instance()
+        map = MapManager.instance()
+        graph = GraphManager.instance()
+        pcm = PointCloudManager.instance()
+        gpm = GooglePlotManager.instance()
+        actions = ActionsPanel.instance()
 
-        graph = graphManager.gui()
-        points = pointCloudManager.instance().gui()
-        actionsPanel = ActionsPanel.instance().gui()
-        map = mapManager.gui()
+#        plot = ipw.Tab(layout=ipw.Layout(width='auto', height='auto', border=css_border) )
+#        for iT, title in enumerate(['satellite', 'embedding']): plot.set_title(iT, title)
+#        x = gpm.gui()
+#        plot.children = [ pcm.gui(), pcm.gui() ]
 
-        control = ipw.VBox([actionsPanel, map, graph], layout=ipw.Layout( flex='0 0 700px', border=css_border) )
-        plot = ipw.VBox([points], layout=ipw.Layout( flex='1 1 auto', border=css_border) )
-        gui = ipw.HBox([control, plot ])
+        plot = ipw.VBox( [ pcm.gui(), graph.gui() ], layout=ipw.Layout( flex='0 0 700px', border=css_border ) )
+        control = ipw.VBox([ actions.gui(), map.gui(), gpm.gui() ], layout=ipw.Layout( flex='0 0 700px', border=css_border) )
+
+        gui = ipw.HBox( [control, plot ] )
         self.save_config()
         if embed: ActionsPanel.instance().embed()
         return gui

@@ -1,8 +1,7 @@
-from typing import List, Union, Tuple, Optional, Dict, Callable
 import time
 import xarray as xa
 import pandas as pd
-from spectraclass.gui.application import Spectraclass
+from spectraclass.gui.unstructured.application import Spectraclass
 from spectraclass.data.base import DataManager
 
 app = Spectraclass.instance()

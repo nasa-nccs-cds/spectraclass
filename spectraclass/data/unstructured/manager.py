@@ -1,8 +1,8 @@
-from spectraclass.data.base import DataManager, ModeDataManager
+from spectraclass.data.base import ModeDataManager
 from .modes import *
 import numpy as np
-from typing import List, Union, Tuple, Optional, Dict
-import os, math, pickle, glob
+import os, pickle
+
 
 class UnstructuredDataManager(ModeDataManager):
 
@@ -35,7 +35,7 @@ class UnstructuredDataManager(ModeDataManager):
 
     def execute_task( self, task: str ):
         from spectraclass.gui.points import PointCloudManager
-        from spectraclass.gui.table import TableManager
+        from spectraclass.gui.unstructured.table import TableManager
         tmgr = TableManager.instance()
         if task == "embed":
             PointCloudManager.instance().reembed()

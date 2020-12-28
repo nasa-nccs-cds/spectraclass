@@ -1,6 +1,3 @@
-from typing import List, Union, Tuple, Optional, Dict, Callable
-from IPython.core.debugger import set_trace
-from collections import OrderedDict
 import os, ipywidgets as ipw
 import traitlets.config as tlc
 from spectraclass.model.base import SCConfigurable
@@ -58,7 +55,7 @@ class Spectraclass(tlc.SingletonConfigurable, SCConfigurable):
     def gui( self, embed: bool = False ):
         from spectraclass.gui.graph import GraphManager
         from spectraclass.gui.points import PointCloudManager
-        from spectraclass.gui.table import TableManager
+        from spectraclass.gui.unstructured.table import TableManager
         from spectraclass.gui.control import ActionsPanel
 
         self.set_spectraclass_theme()

@@ -1,9 +1,7 @@
 import cudf, os
 from cuml.neighbors import NearestNeighbors
-from cuml.datasets import make_blobs
 import xarray as xa
-import numpy as np
-from spectraclass.gui.application import Spectraclass
+from spectraclass.gui.unstructured.application import Spectraclass
 from spectraclass.data.base import DataManager
 
 app = Spectraclass.instance()
