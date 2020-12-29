@@ -91,7 +91,7 @@ class cpActivationFlow(ActivationFlow):
     def spread( self, sample_data: np.ndarray, nIter: int = 1, **kwargs ) -> Optional[bool]:
         sample_mask = sample_data == 0
         if self.C is None or self.reset:
-            self.C = np.array( sample_data, dtype=np.int32 )
+            self.C = np.array( sample_data, dtype=np.dtype(np.int32) )
         else:
             self.C = np.where( sample_mask, self.C, sample_data )
         label_count = np.count_nonzero(self.C)
@@ -100,11 +100,13 @@ class cpActivationFlow(ActivationFlow):
             return None
         if (self.P is None) or self.reset:   self.P = np.full( self.C.shape, float('inf'), dtype=np.float32 )
         self.P = np.where( sample_mask, self.P, 0.0 )
-        print(f"Beginning graph flow iterations, #C = {label_count}")
+        print(f"Beginning graph flow iterations, #C = {label_count}, C[10] = {self.C[:10]}")
 #        t0 = time.time()
         converged = False
         for iter in range(nIter):
             try:
+#                print( f"iterate_spread_labels: " )
+#                for iX, X in enumerate([ self.I, self.D, self.C, self.P ]): print( f" I{iX} -> {X.shape}:{X.dtype}" )
                 iterate_spread_labels( self.I, self.D, self.C, self.P )
                 new_label_count = np.count_nonzero(self.C)
                 if new_label_count == label_count:

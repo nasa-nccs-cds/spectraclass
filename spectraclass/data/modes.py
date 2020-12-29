@@ -15,6 +15,10 @@ from ..graph.manager import ActivationFlowManager
 from ..graph.base import ActivationFlow
 from spectraclass.gui.points import PointCloudManager
 
+
+def invert( X: np.ndarray ) -> np.ndarray:
+    return X.max() - X
+
 class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
     MODE = None
     METAVARS = None
@@ -247,24 +251,30 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
 
     def spread_selection(self, niters=1):
         flow: ActivationFlow = ActivationFlowManager.instance().getActivationFlow()
+        from spectraclass.gui.spatial.map import MapManager
+        pcm = PointCloudManager.instance()
+        mm = MapManager.instance()
         self._flow_class_map: np.ndarray = LabelsManager.instance().labels_data().data
         catalog_pids = np.arange(0, self._flow_class_map.shape[0])
 
         if flow.spread(self._flow_class_map, niters) is not None:
             self._flow_class_map = flow.get_classes()
+            pcm.clear_bins()
             all_classes = (LabelsManager.instance().current_cid == 0)
             for cid, label in enumerate( LabelsManager.instance().labels ):
                 if all_classes or (LabelsManager.instance().current_cid == cid):
                     new_indices: np.ndarray = catalog_pids[ self._flow_class_map == cid ]
                     if new_indices.size > 0:
-                        PointCloudManager.instance().mark_points( new_indices, cid )
-            PointCloudManager.instance().update_plot()
+                        pcm.mark_points( new_indices, cid )
+            pcm.update_plot()
+            mm.plot_markers_image()
 
     def display_distance(self, niters=100):
+        pcm = PointCloudManager.instance()
         seed_points: xa.DataArray = LabelsManager.instance().getSeedPointMask()
         flow: ActivationFlow = ActivationFlowManager.instance().getActivationFlow()
         if flow.spread( seed_points.data, niters ) is not None:
-            PointCloudManager.instance().color_by_value( flow.get_distances() )
+            pcm.color_by_value( flow.get_distances() )
 
     def getImageName(self, base_image_name: str ) -> str:
         return base_image_name

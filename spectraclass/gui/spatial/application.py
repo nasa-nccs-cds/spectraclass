@@ -66,20 +66,16 @@ class Spectraclass(tlc.SingletonConfigurable, SCConfigurable):
 
         self.set_spectraclass_theme()
         css_border = '1px solid blue'
-
         map = MapManager.instance()
         graph = GraphManager.instance()
         pcm = PointCloudManager.instance()
         gpm = GooglePlotManager.instance()
         actions = ActionsPanel.instance()
 
-#        plot = ipw.Tab(layout=ipw.Layout(width='auto', height='auto', border=css_border) )
-#        for iT, title in enumerate(['satellite', 'embedding']): plot.set_title(iT, title)
-#        x = gpm.gui()
-#        plot.children = [ pcm.gui(), pcm.gui() ]
-
-        plot = ipw.VBox( [ pcm.gui(), graph.gui() ], layout=ipw.Layout( flex='0 0 700px', border=css_border ) )
-        control = ipw.VBox([ actions.gui(), map.gui(), gpm.gui() ], layout=ipw.Layout( flex='0 0 700px', border=css_border) )
+        plot = ipw.Accordion( children = [ pcm.gui(), gpm.gui() ], layout=ipw.Layout( flex='0 0 700px', border=css_border ) )
+        for iT, title in enumerate(['embedding', 'satellite']): plot.set_title(iT, title)
+#        plot = ipw.VBox( [ pcm.gui(), graph.gui() ], layout=ipw.Layout( flex='0 0 700px', border=css_border ) )
+        control = ipw.VBox([ actions.gui(), map.gui(), graph.gui() ], layout=ipw.Layout( flex='0 0 700px', border=css_border) )
 
         gui = ipw.HBox( [control, plot ] )
         self.save_config()

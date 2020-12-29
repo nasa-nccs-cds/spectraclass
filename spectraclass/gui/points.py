@@ -13,7 +13,7 @@ from spectraclass.model.labels import LabelsManager
 
 class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
 
-    color_map = tl.Unicode("jet").tag(config=True)  # "gist_rainbow"
+    color_map = tl.Unicode("gist_rainbow").tag(config=True)  # "gist_rainbow" "jet"
 
     def __init__(self):
         super(PointCloudManager, self).__init__()
@@ -102,6 +102,7 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
     def clear_bins(self):
         for iC in range( 0, self._n_point_bins ):
             self._binned_points[iC] = self.empty_pointset
+        self.set_base_points_alpha(1.0)
 
     def color_by_value( self, values: np.ndarray = None, **kwargs ):
         self.update_plot(**kwargs)
@@ -111,10 +112,28 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
             lspace: np.ndarray = np.linspace( vmin, vmax, self._n_point_bins-1 )
             print(f" $$$COLOR: Coloring point cloud with bounds = {(vmin,vmax)}")
             self._binned_points[0] = self._points[self._color_values <= lspace[0]]
+            print(f" $$$COLOR: BIN-0, x<{lspace[0]}, nvals = {self._binned_points[0].size}")
             for iC in range(0,self._n_point_bins-2):
                 mask: np.ndarray =  ( self._color_values > lspace[iC] ) & ( self._color_values <= lspace[iC+1] )
                 self._binned_points[iC+1] = self._points[ mask ]
+                print(f" $$$COLOR: BIN-{iC+1}, {lspace[iC]}<x<{lspace[iC+1]}, nvals = {self._binned_points[iC+1].size}")
             self._binned_points[-1] = self._points[ self._color_values >  lspace[-1] ]
+            print(f" $$$COLOR: BIN-{self._n_point_bins-1}, x>{lspace[-1]}, nvals = {self._binned_points[-1].size}")
+            LabelsManager.instance().addAction( "color", "points" )
+            self.set_base_points_alpha(0.0)
+
+    def color_by_value_inverted( self, values: np.ndarray = None, **kwargs ):
+        self.update_plot(**kwargs)
+        if values is not None: self._color_values = ma.masked_invalid( values )
+        if self._color_values is not None:
+            (vmin, vmax), lsb = self.get_color_bounds(), self._n_point_bins-2
+            lspace: np.ndarray = np.linspace( vmin, vmax, lsb+1 )
+            print(f" $$$COLOR: Coloring point cloud with bounds = {(vmin,vmax)}")
+            self._binned_points[0] = self._points[ self._color_values > lspace[lsb] ]
+            for iC in range(0,lsb):
+                mask: np.ndarray =  ( self._color_values > lspace[lsb-1-iC] ) & ( self._color_values <= lspace[lsb-iC] )
+                self._binned_points[iC+1] = self._points[ mask ]
+            self._binned_points[-1] = self._points[ self._color_values <=  lspace[0] ]
             LabelsManager.instance().addAction( "color", "points" )
 
     def get_color_bounds( self ):
@@ -153,12 +172,21 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
     def gui(self, **kwargs ):
         if self._gui is None:
             self.init_data()
-            bin_colors = self.get_bin_colors( self.color_map )
-            ptcolors = [ [1.0, 1.0, 1.0, 1.0], ] + bin_colors + LabelsManager.instance().colors[::-1]
+            invert = False
+            bin_colors = [ x[:3] for x in self.get_bin_colors( self.color_map, invert ) ]
+            pt_colors =  [ [1.0, 1.0, 1.0], ] + bin_colors + LabelsManager.instance().colors[::-1]
+            pt_alphas = [1.0] * len( pt_colors )
             ptsizes = [1]*(self._n_point_bins+1) + [8]*LabelsManager.instance().nLabels
-            self._gui = view( point_sets = self.point_sets, point_set_sizes=ptsizes, point_set_colors=ptcolors, background=[0,0,0] )
-            self._gui.layout = { 'width': 'auto', 'flex': '1 1 auto' }
+            self._gui = view( point_sets = self.point_sets, point_set_sizes=ptsizes, point_set_colors=pt_colors, point_set_opacities=pt_alphas, background=[0,0,0] )
+            self._gui.layout = dict( width= 'auto', flex= '1 0 1200px' )
         return self._gui
+
+    def set_base_points_alpha( self, alpha: float ):
+        alphas = list( self._gui.point_set_opacities )
+        alphas[0] = alpha
+        self._gui.point_set_opacities = alphas
+        print(f"Set point set opacities: {self._gui.point_set_opacities}")
+        self.update_plot()
 
     def refresh(self):
         self._gui = None

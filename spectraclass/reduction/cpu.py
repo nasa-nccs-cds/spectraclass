@@ -1023,7 +1023,7 @@ def optimize_layout_euclidean(
     epoch_of_next_negative_sample = epochs_per_negative_sample.copy()
     epoch_of_next_sample = epochs_per_sample.copy()
     optimize_fn = numba.njit( _optimize_layout_euclidean_single_epoch, fastmath=True, parallel=parallel )
-    plot_update_period = 10
+    plot_update_period = 25
     if n_epochs == 1:
         pass
     else:
@@ -1056,6 +1056,7 @@ def optimize_layout_euclidean(
         if verbose and n % int(n_epochs / 10) == 0:
             print("\tcompleted ", n, " / ", n_epochs, "epochs")
 
+    PointCloudManager.instance().color_by_value(points=head_embedding)
     return head_embedding
 
 @numba.njit()

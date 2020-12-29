@@ -30,7 +30,7 @@ class JbkGraph:
             ys=self.y,  # y coords for each line (list of lists)
             cmap=[1]  # data to use for colormapping
         ))
-        self.fig = figure( title=self.title, height=300, width=1000, background_fill_color='#efefef' )
+        self.fig = figure( title=self.title, height=250, width=1000, background_fill_color='#efefef' )
         self._r = self.fig.multi_line( 'xs', 'ys', source=self._source, line_color=linear_cmap('cmap', "Turbo256", 0, 255), line_width=1.5, alpha=0.8 )
     #    print(f"Creating BokehModel; x0 shape = {self.x[0].shape},  y0 shape = {self.y[0].shape}")
         self._model = jbk.BokehModel( self.fig, layout = ip.Layout( width= 'auto', height= 'auto' ) )
@@ -141,7 +141,7 @@ class GraphManager(tlc.SingletonConfigurable, SCConfigurable):
         current_graph.plot()
 
     def _createGui( self, **kwargs ) -> ipw.Tab():
-        wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 330px' ) )
+        wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 300px' ) )
         for iG in range(self._ngraphs):
             self._graphs.append( JbkGraph( **kwargs ) )
             wTab.set_title(iG, str(iG))

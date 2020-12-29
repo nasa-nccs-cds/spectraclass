@@ -3,11 +3,17 @@ from typing import List, Union, Dict, Callable, Tuple, Optional, Any
 import collections.abc
 from functools import partial
 import ipywidgets as ipw
+import matplotlib.colors as mcolors
 from ..graph.base import ActivationFlow
 import traitlets.config as tlc
 from spectraclass.model.base import SCConfigurable, Marker
 import xarray as xa
 import numpy as np
+
+
+def c2rgb( color: Union[str,List] ) -> List:
+    if isinstance(color, str):  return mcolors.to_rgb(color)
+    else:                       return color[:3]
 
 def h2c( hexColor: str ) -> List[float]:
     hc = hexColor.strip( "# ")
@@ -228,16 +234,10 @@ class LabelsManager(tlc.SingletonConfigurable, SCConfigurable):
         self._colors = [ item[1] for item in label_list ]
         self._labels = [ item[0] for item in label_list ]
 
-    def toDict( self, alpha ) -> OrderedDict:
-        labels_dict = OrderedDict()
-        for index, label in enumerate(self._labels):
-            labels_dict[ label ] = set_alpha( self._colors[index], alpha )
-        return labels_dict
-
     def getSeedPointMask(self) -> xa.DataArray:
         from spectraclass.data.base import DataManager
         model_data: xa.DataArray = DataManager.instance().getModelData()
-        seed_points = xa.full_like(model_data[:, 0], float('nan'))
+        seed_points = xa.full_like( model_data[:, 0], 0, np.dtype(np.int32) )
         seed_points[ self.currentMarker.pids ] = 1
         return seed_points
 
