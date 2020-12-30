@@ -257,21 +257,57 @@ class SpatialDataManager(ModeDataManager):
 
     def execute_task( self, task: str ):
         from spectraclass.gui.points import PointCloudManager
-        from spectraclass.gui.spatial.map import MapManager
         pcm = PointCloudManager.instance()
-        mm = MapManager.instance()
         if task == "embed":
             pcm.reembed()
         elif task == "mark":
-            cid: int = pcm.mark_points()
+            self.mark()
         elif task == "spread":
             self.spread_selection()
         elif task == "clear":
-            mm.clearLabels()
+            self.clear()
         elif task == "undo":
-            pass
+            self.undo_action()
         elif task == "distance":
             self.display_distance()
+
+    def mark(self):
+        from spectraclass.gui.points import PointCloudManager
+        from spectraclass.gui.spatial.map import MapManager
+        pcm = PointCloudManager.instance()
+        mm = MapManager.instance()
+        pcm.mark_points(update=True)
+        mm.plot_markers_image()
+
+    def clear(self):
+        from spectraclass.gui.points import PointCloudManager
+        from spectraclass.gui.spatial.map import MapManager
+        pcm = PointCloudManager.instance()
+        mm = MapManager.instance()
+        mm.clearLabels()
+        pcm.clear()
+
+    def undo_action(self):
+        from spectraclass.gui.spatial.map import MapManager
+        from spectraclass.gui.points import PointCloudManager
+        from spectraclass.model.labels import LabelsManager
+        from spectraclass.model.labels import Action
+        from spectraclass.model.base import Marker
+        mm = MapManager.instance()
+        pcm = PointCloudManager.instance()
+        lm = LabelsManager.instance()
+        action: Action = lm.popAction()
+        if action is not None:
+            if action.type == "mark":
+                m: Marker = lm.popMarker()
+                pcm.clear_pids( m.cid, m.pids )
+                mm.plot_markers_image()
+            elif action.type == "color":
+                pcm.clear_bins()
+        pcm.update_plot( )
+
+    #            lm.popMarker()
+    #           pcm.update_markers()
 
     def getFilePath(self, use_tile: bool ) -> str:
         base_dir = self.tiles.data_dir
@@ -281,6 +317,7 @@ class SpatialDataManager(ModeDataManager):
     def writeGeotiff(self, raster_data: xa.DataArray ) -> Optional[str]:
         output_file = os.path.join( self.tiles.data_cache, self.tiles.tileName() + ".tif" )
         try:
+            os.makedirs( self.tiles.data_cache, exist_ok=True )
             if os.path.exists(output_file): os.remove(output_file)
             print(f"Writing (raster) tile file {output_file}")
             raster_data.rio.to_raster(output_file)

@@ -307,6 +307,7 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
         if self.block is not None:
              self.initLabels()
              lm().clearMarkers()
+             self.plot_markers_image()
              if self.labels_image is not None:
                 self.labels_image.set_alpha(0.0)
 
@@ -458,12 +459,11 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
             else:
                 lm().addMarker(marker)
                 self.plot_markers_image(**kwargs)
-                self.update_canvas()
 
                 pids = [pid for pid in marker.pids if pid >= 0]
                 classification = kwargs.get( "classification", -1 )
                 otype = kwargs.get( "type", None )
-                PointCloudManager.instance().mark_points( pids, classification )
+                PointCloudManager.instance().mark_points( pids, classification, update=True )
                 GraphManager.instance().plot_graph(pids)
 
                 # if len(pids) > 0:
@@ -553,12 +553,14 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
             if len(ycoords) > 0:
                 self.marker_plot.set_offsets(np.c_[xcoords, ycoords])
                 self.marker_plot.set_facecolor(colors)
+            self.update_canvas()
 
     def plot_markers_volume(self, **kwargs):
-        pointCloudManager = PointCloudManager.instance()
+        pcm = PointCloudManager.instance()
         class_markers = self.get_class_markers( **kwargs )
         for cid, pids in class_markers.items():
-            pointCloudManager.mark_points( pids, cid )
+            pcm.mark_points( pids, cid )
+        pcm.update_plot()
 
     def update_canvas(self):
         self.figure.canvas.draw_idle()

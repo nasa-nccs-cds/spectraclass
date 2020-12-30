@@ -266,24 +266,16 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
                     new_indices: np.ndarray = catalog_pids[ self._flow_class_map == cid ]
                     if new_indices.size > 0:
                         pcm.mark_points( new_indices, cid )
-            pcm.update_plot()
             mm.plot_markers_image()
+            self.display_distance( 20 )
 
     def display_distance(self, niters=100):
         pcm = PointCloudManager.instance()
         seed_points: xa.DataArray = LabelsManager.instance().getSeedPointMask()
         flow: ActivationFlow = ActivationFlowManager.instance().getActivationFlow()
         if flow.spread( seed_points.data, niters ) is not None:
-            pcm.color_by_value( flow.get_distances() )
+            pcm.color_by_value( flow.get_distances(), distance=True )
 
     def getImageName(self, base_image_name: str ) -> str:
         return base_image_name
 
-    def undo_action(self):
-        action: Action = LabelsManager.instance().popAction()
-        if action is not None:
-            if action.type == "mark":
-                self.clear_pids( action.cid, action.pids )
-            elif action.type == "color":
-                self.pcm.clear_bins()
-        self.pcm.update_plot( )

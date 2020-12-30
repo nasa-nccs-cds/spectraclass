@@ -76,6 +76,9 @@ class LabelsManager(tlc.SingletonConfigurable, SCConfigurable):
         self.wSelectedClass: ipw.HBox = None
         self._buttons = []
 
+    def clear_pids(self, cid: int, pids: np.ndarray, **kwargs):
+        pass
+
     @property
     def current_class(self) -> str:
         return self._labels[ self._selected_class ]
@@ -235,9 +238,13 @@ class LabelsManager(tlc.SingletonConfigurable, SCConfigurable):
         self._labels = [ item[0] for item in label_list ]
 
     def getSeedPointMask(self) -> xa.DataArray:
-        from spectraclass.data.base import DataManager
-        model_data: xa.DataArray = DataManager.instance().getModelData()
-        seed_points = xa.full_like( model_data[:, 0], 0, np.dtype(np.int32) )
-        seed_points[ self.currentMarker.pids ] = 1
-        return seed_points
+        if self.currentMarker is None:
+            print( "Error: Must Label some points before executing this operation!")
+            return xa.DataArray( np.empty(shape=[0], dtype=np.int) )
+        else:
+            from spectraclass.data.base import DataManager
+            model_data: xa.DataArray = DataManager.instance().getModelData()
+            seed_points = xa.full_like( model_data[:, 0], 0, np.dtype(np.int32) )
+            seed_points[ self.currentMarker.pids ] = 1
+            return seed_points
 

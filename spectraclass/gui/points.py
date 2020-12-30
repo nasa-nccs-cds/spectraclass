@@ -29,8 +29,8 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
         self._marker_points: List[np.ndarray] = None
         self._marker_pids: List[np.ndarray] = None
 
-    def initialize_markers(self):
-        if self._marker_points is None:
+    def initialize_markers(self, reset= False ):
+        if (self._marker_points is None) or reset:
             nLabels = LabelsManager.instance().nLabels
             self._marker_points: List[np.ndarray] = [ self.empty_pointset for ic in range( nLabels ) ]
             self._marker_pids: List[np.ndarray] = [ self.empty_pids for ic in range( nLabels ) ]
@@ -68,6 +68,7 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
     def update_plot( self, **kwargs ):
         self._points = kwargs.get( 'points', self._embedding )
         if self._gui is not None:
+            print(f"Updating point sets, sizes: {[ps.size for ps in self.point_sets]}")
             self._gui.point_sets = self.point_sets
 
     def on_selection(self, selection_event: Dict ):
@@ -79,13 +80,15 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
         print( f"  ***** POINTS- mark_points[0], #pids = {len(pids)}")
         self.update_plot()
 
-    def mark_points(self, point_ids: np.ndarray = None, cid: int = -1, update=True):
+    def mark_points(self, point_ids: np.ndarray = None, cid: int = -1, update=False):
         from spectraclass.model.labels import LabelsManager
         lmgr = LabelsManager.instance()
         icid: int = cid if cid > -1 else lmgr.current_cid
-        pids = point_ids if point_ids is not None else lmgr.currentMarker.pids
+        if point_ids is None: lmgr.currentMarker.cid = icid
+        else: lmgr.addMarker( Marker( point_ids, icid ) )
+        pids = lmgr.currentMarker.pids
         self.initialize_markers()
-        self.clear_pids( pids )
+        self.clear_pids( icid, pids )
         self.clear_points(0)
         self._marker_pids[icid] = np.append( self._marker_pids[icid], pids )
         if self._embedding is None:
@@ -104,50 +107,42 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
             self._binned_points[iC] = self.empty_pointset
         self.set_base_points_alpha(1.0)
 
+    def clear(self):
+        self.clear_bins()
+        self.initialize_markers( True )
+        self.update_plot()
+
     def color_by_value( self, values: np.ndarray = None, **kwargs ):
-        self.update_plot(**kwargs)
-        if values is not None: self._color_values = ma.masked_invalid( values )
+        is_distance = kwargs.get( 'distance', False )
+#        mask: ma.MaskedArray = None
+        if values is not None: self._color_values = values # ma.masked_invalid( values )
         if self._color_values is not None:
-            vmin, vmax = self.get_color_bounds()
-            lspace: np.ndarray = np.linspace( vmin, vmax, self._n_point_bins-1 )
-            print(f" $$$COLOR: Coloring point cloud with bounds = {(vmin,vmax)}")
-            self._binned_points[0] = self._points[self._color_values <= lspace[0]]
-            print(f" $$$COLOR: BIN-0, x<{lspace[0]}, nvals = {self._binned_points[0].size}")
-            for iC in range(0,self._n_point_bins-2):
-                mask: np.ndarray =  ( self._color_values > lspace[iC] ) & ( self._color_values <= lspace[iC+1] )
-                self._binned_points[iC+1] = self._points[ mask ]
-                print(f" $$$COLOR: BIN-{iC+1}, {lspace[iC]}<x<{lspace[iC+1]}, nvals = {self._binned_points[iC+1].size}")
-            self._binned_points[-1] = self._points[ self._color_values >  lspace[-1] ]
-            print(f" $$$COLOR: BIN-{self._n_point_bins-1}, x>{lspace[-1]}, nvals = {self._binned_points[-1].size}")
+            (vmin, vmax), npb = ( ( 0.0, self._color_values.max() ) if is_distance else self.get_color_bounds() ), self._n_point_bins
+            pts = self._points # ma.masked_invalid( self._points )
+            lspace: np.ndarray = np.linspace( vmin, vmax, npb+1 )
+            for iC in range( 0, npb ):
+                if iC == 0:          mask = self._color_values <= lspace[iC+1]
+                elif (iC == npb-1):  mask = self._color_values > lspace[iC]
+                else:                mask = ( self._color_values > lspace[iC] ) & ( self._color_values <= lspace[iC+1] )
+                self._binned_points[iC] = pts[ mask ]
+                print(f" $$$COLOR: BIN-{iC}, [ {lspace[iC]} -> {lspace[iC+1]} ], nvals = {self._binned_points[iC].size}, #mask-points = {np.count_nonzero(mask)}") # , #mask-invalid={ma.count_masked(mask)}" )
             LabelsManager.instance().addAction( "color", "points" )
             self.set_base_points_alpha(0.0)
-
-    def color_by_value_inverted( self, values: np.ndarray = None, **kwargs ):
-        self.update_plot(**kwargs)
-        if values is not None: self._color_values = ma.masked_invalid( values )
-        if self._color_values is not None:
-            (vmin, vmax), lsb = self.get_color_bounds(), self._n_point_bins-2
-            lspace: np.ndarray = np.linspace( vmin, vmax, lsb+1 )
-            print(f" $$$COLOR: Coloring point cloud with bounds = {(vmin,vmax)}")
-            self._binned_points[0] = self._points[ self._color_values > lspace[lsb] ]
-            for iC in range(0,lsb):
-                mask: np.ndarray =  ( self._color_values > lspace[lsb-1-iC] ) & ( self._color_values <= lspace[lsb-iC] )
-                self._binned_points[iC+1] = self._points[ mask ]
-            self._binned_points[-1] = self._points[ self._color_values <=  lspace[0] ]
-            LabelsManager.instance().addAction( "color", "points" )
+            self.update_plot(**kwargs)
 
     def get_color_bounds( self ):
         from spectraclass.data.spatial.manager import SpatialDataManager
         (ave, std)= ( self._color_values.mean(),  self._color_values.std() )
         return ( ave - std * SpatialDataManager.colorstretch, ave + std * SpatialDataManager.colorstretch  )
 
-    def clear_pids(self, pids: np.ndarray, **kwargs):
+    def clear_pids(self, cid: int, pids: np.ndarray, **kwargs):
         if self._marker_pids is not None:
             dpts = np.vectorize(lambda x: x in pids)
             for iC, marker_pids in enumerate( self._marker_pids ):
-                if len( marker_pids ) > 0:
-                    self._marker_pids[iC] = np.delete( self._marker_pids[iC], dpts(marker_pids) )
-                    self._marker_points[iC] = self._embedding[self._marker_pids[iC], :] if len( self._marker_pids[iC] ) > 0 else self.empty_pointset
+ #               if (cid < 0) or (iC == cid):
+                    if len( marker_pids ) > 0:
+                        self._marker_pids[iC] = np.delete( self._marker_pids[iC], dpts(marker_pids) )
+                        self._marker_points[iC] = self._embedding[self._marker_pids[iC], :] if len( self._marker_pids[iC] ) > 0 else self.empty_pointset
 
     def clear_points(self, icid: int, **kwargs ):
         if self._marker_pids is not None:
@@ -176,7 +171,7 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
             bin_colors = [ x[:3] for x in self.get_bin_colors( self.color_map, invert ) ]
             pt_colors =  [ [1.0, 1.0, 1.0], ] + bin_colors + LabelsManager.instance().colors[::-1]
             pt_alphas = [1.0] * len( pt_colors )
-            ptsizes = [1]*(self._n_point_bins+1) + [8]*LabelsManager.instance().nLabels
+            ptsizes = [1] + [1]*self._n_point_bins + [8]*LabelsManager.instance().nLabels
             self._gui = view( point_sets = self.point_sets, point_set_sizes=ptsizes, point_set_colors=pt_colors, point_set_opacities=pt_alphas, background=[0,0,0] )
             self._gui.layout = dict( width= 'auto', flex= '1 0 1200px' )
         return self._gui

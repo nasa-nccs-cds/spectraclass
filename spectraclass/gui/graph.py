@@ -30,7 +30,7 @@ class JbkGraph:
             ys=self.y,  # y coords for each line (list of lists)
             cmap=[1]  # data to use for colormapping
         ))
-        self.fig = figure( title=self.title, height=250, width=1000, background_fill_color='#efefef' )
+        self.fig = figure( title=self.title, height=250, width=750, background_fill_color='#efefef' )
         self._r = self.fig.multi_line( 'xs', 'ys', source=self._source, line_color=linear_cmap('cmap', "Turbo256", 0, 255), line_width=1.5, alpha=0.8 )
     #    print(f"Creating BokehModel; x0 shape = {self.x[0].shape},  y0 shape = {self.y[0].shape}")
         self._model = jbk.BokehModel( self.fig, layout = ip.Layout( width= 'auto', height= 'auto' ) )
@@ -64,7 +64,7 @@ class JbkGraph:
     def plot(self):
         self.fig.title.text = self.title
         if self.nlines == 1:
-            self._source.data.update( ys=self.y2, xs=self.x2, cmap=[0, 255] )
+            self._source.data.update( ys=self.y2, xs=self.x2, cmap=[0, 100] )
         else:
             self._source.data.update( ys = self.y, xs=self.x, cmap = np.random.randint( 0, 255, self.nlines ) )
         yr = self.yrange
