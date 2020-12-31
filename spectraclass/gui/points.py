@@ -11,6 +11,9 @@ import traitlets as tl
 from spectraclass.model.base import SCConfigurable, Marker
 from spectraclass.model.labels import LabelsManager
 
+def pcm() -> "PointCloudManager":
+    return PointCloudManager.instance()
+
 class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
 
     color_map = tl.Unicode("gist_rainbow").tag(config=True)  # "gist_rainbow" "jet"
@@ -68,7 +71,7 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
     def update_plot( self, **kwargs ):
         self._points = kwargs.get( 'points', self._embedding )
         if self._gui is not None:
-            print(f"Updating point sets, sizes: {[ps.size for ps in self.point_sets]}")
+            print(f"Updating point sets, sizes: {[ps.shape[0] for ps in self.point_sets]}")
             self._gui.point_sets = self.point_sets
             self._gui.update_rendered_image()
 
@@ -77,12 +80,17 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
         self.update_markers(selection)
         self.update_plot()
 
-    def update_markers(self, pids: List[int] = None ):
+    def update_points(self, new_points: np.ndarray ):
+        self.update_markers(points=new_points)
+        self.color_by_value(points=new_points)
+
+    def update_markers(self, pids: List[int] = None, **kwargs ):
         if pids is None:
             from spectraclass.model.labels import LabelsManager
+            points = kwargs.get('points',self._embedding)
             self.initialize_markers(True)
             for marker in LabelsManager.instance().getMarkers():
-                self._marker_points[ marker.cid ] = np.append( self._marker_points[ marker.cid ], self._embedding[ marker.pids, : ], 0 )
+                self._marker_points[ marker.cid ] = np.append( self._marker_points[ marker.cid ], points[ marker.pids, : ], 0 )
         else:
             self._marker_points[0] = self._embedding[ pids, : ]
             print( f"  ***** POINTS- mark_points[0], #pids = {len(pids)}")
@@ -134,9 +142,9 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
                 elif (iC == npb-1):  mask = ( colors > lspace[iC] ) & ( colors < sys.float_info.max )
                 else:                mask = ( colors > lspace[iC] ) & ( colors <= lspace[iC+1] )
                 self._binned_points[iC] = pts[ mask ]
-                print(f" $$$COLOR: BIN-{iC}, [ {lspace[iC]} -> {lspace[iC+1]} ], nvals = {self._binned_points[iC].size}, #mask-points = {np.count_nonzero(mask)}" )
+                print(f" $$$COLOR: BIN-{iC}, [ {lspace[iC]} -> {lspace[iC+1]} ], nvals = {self._binned_points[iC].shape[0]}, #mask-points = {np.count_nonzero(mask)}" )
             LabelsManager.instance().addAction( "color", "points" )
-            self.set_base_points_alpha(0.15)
+            self.set_base_points_alpha(0.1)
             self.update_plot(**kwargs)
 
     def get_color_bounds( self ):
@@ -148,8 +156,9 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
         if self._marker_pids is not None:
             dpts = np.vectorize(lambda x: x in pids)
             for iC, marker_pids in enumerate( self._marker_pids ):
- #               if (cid < 0) or (iC == cid):
+                if (cid < 0) or (iC == cid):
                     if len( marker_pids ) > 0:
+                        print( f" $$$PCM: clear_pids[{cid}]: {pids.tolist()}" )
                         self._marker_pids[iC] = np.delete( self._marker_pids[iC], dpts(marker_pids) )
                         self._marker_points[iC] = self._embedding[self._marker_pids[iC], :] if len( self._marker_pids[iC] ) > 0 else self.empty_pointset
 
@@ -182,7 +191,7 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
             pt_alphas = [1.0] * len( pt_colors )
             ptsizes = [1] + [1]*self._n_point_bins + [8]*LabelsManager.instance().nLabels
             self._gui = view( point_sets = self.point_sets, point_set_sizes=ptsizes, point_set_colors=pt_colors, point_set_opacities=pt_alphas, background=[0,0,0] )
-            self._gui.layout = dict( width= 'auto', flex= '1 0 1200px' )
+            self._gui.layout = dict( width= '100%', flex= '1 0 1200px' )
         return self._gui
 
     def set_base_points_alpha( self, alpha: float ):

@@ -104,6 +104,9 @@ class PageSlider(matplotlib.widgets.Slider):
         self.set_val(i)
         self._colorize(i)
 
+def mm() -> "MapManager":
+    return MapManager.instance()
+
 class MapManager(tlc.SingletonConfigurable, SCConfigurable):
 
     RIGHT_BUTTON = 3

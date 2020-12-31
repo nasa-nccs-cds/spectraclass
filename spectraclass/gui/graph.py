@@ -112,6 +112,9 @@ class JbkGraph:
             t = "multiplot"
         return t
 
+def gm() -> "GraphManager":
+    return GraphManager.instance()
+
 class GraphManager(tlc.SingletonConfigurable, SCConfigurable):
 
     def __init__( self ):

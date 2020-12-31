@@ -56,7 +56,7 @@ class Spectraclass(tlc.SingletonConfigurable, SCConfigurable):
         from spectraclass.gui.graph import GraphManager
         from spectraclass.gui.points import PointCloudManager
         from spectraclass.gui.unstructured.table import TableManager
-        from spectraclass.gui.control import ActionsPanel
+        from spectraclass.gui.control import ActionsManager
 
         self.set_spectraclass_theme()
         self.configure("spectraclass")
@@ -72,13 +72,13 @@ class Spectraclass(tlc.SingletonConfigurable, SCConfigurable):
 
         tableManager.add_selection_listerner(graphManager.on_selection)
         tableManager.add_selection_listerner(pointCloudManager.on_selection)
-        actionsPanel = ActionsPanel.instance().gui()
+        actionsPanel = ActionsManager.instance().gui()
 
         control = ipw.VBox([actionsPanel, table], layout=ipw.Layout( flex='0 0 600px', border=css_border) )
         plot = ipw.VBox([points, graph], layout=ipw.Layout( flex='1 1 auto', border=css_border) )
         gui = ipw.HBox([control, plot])
         self.save_config()
-        if embed: ActionsPanel.instance().embed()
+        if embed: ActionsManager.instance().embed()
         return gui
 
     def refresh_all(self):

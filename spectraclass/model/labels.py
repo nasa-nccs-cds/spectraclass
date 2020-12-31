@@ -59,6 +59,9 @@ class Action:
     def spec(self):
         return dict( atype=self.type, source=self.source , pids=self.pids, cid=self.cid, **self.args )
 
+def lm() -> "LabelsManager":
+    return LabelsManager.instance()
+
 class LabelsManager(tlc.SingletonConfigurable, SCConfigurable):
 
     def __init__(self):
@@ -67,7 +70,7 @@ class LabelsManager(tlc.SingletonConfigurable, SCConfigurable):
         self._labels = None
         self._markers: List[Marker] = []
         self._flow: ActivationFlow = None
-        self._actions = []
+        self._actions: List[Action] = []
         self._labels_data: xa.DataArray = None
         self._selected_class = 0
         self._optype = None
@@ -112,9 +115,20 @@ class LabelsManager(tlc.SingletonConfigurable, SCConfigurable):
     def addAction(self, type: str, source: str, pids: List[int] = None, cid=None, **kwargs ):
         if cid == None: cid = self.current_cid
         new_action = Action(type, source, pids, cid, **kwargs)
-        if type == "mark": self.addMarker( Marker(pids,cid) )
         print(f"ADD ACTION: {new_action}")
-        self._actions.append( new_action )
+        if type == "mark": self.addMarker( Marker(pids,cid) )
+        repeat_color = (type == "color") and self.hasActions and (self.topAction.type == "color")
+        if not repeat_color:
+            self._actions.append( new_action )
+
+    @property
+    def hasActions(self) -> bool:
+        return len(self._actions) > 0
+
+    @property
+    def topAction(self) -> Optional[Action]:
+        try:        return  self._actions[-1]
+        except:     return None
 
     def popAction(self) -> Optional[Action]:
         try:

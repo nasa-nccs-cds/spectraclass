@@ -1,12 +1,12 @@
 from .manager import SpatialDataManager
 from typing import List, Union, Tuple, Optional, Dict, Callable
-import os
+import os, sys
 
 class AvirisDataManager(SpatialDataManager):
     MODE = "aviris"
     METAVARS = []
     INPUTS = dict()
-    VALID_BANDS = [[5, 193], [214, 283], [319, 421]]
+    VALID_BANDS = [ [5, 193], [214, 283], [319, sys.maxsize] ]
 
     def __init__(self):
         super(AvirisDataManager, self).__init__()
@@ -15,6 +15,7 @@ class DesisDataManager(SpatialDataManager):
     MODE = "desis"
     METAVARS = []
     INPUTS = dict()
+    VALID_BANDS = [ [5, sys.maxsize], ]
 
     def __init__(self):
         super(DesisDataManager, self).__init__()

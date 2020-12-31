@@ -9,6 +9,8 @@ from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from spectraclass.reduction.embedding import ReductionManager
 from spectraclass.data.base import ModeDataManager
 import matplotlib.pyplot as plt
+from spectraclass.model.labels import Action
+from spectraclass.model.base import Marker
 from collections import OrderedDict
 import os, math, pickle
 import rioxarray as rio
@@ -272,42 +274,30 @@ class SpatialDataManager(ModeDataManager):
             self.display_distance()
 
     def mark(self):
-        from spectraclass.gui.points import PointCloudManager
-        from spectraclass.gui.spatial.map import MapManager
-        pcm = PointCloudManager.instance()
-        mm = MapManager.instance()
-        pcm.mark_points(update=True)
-        mm.plot_markers_image()
+        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.spatial.map import MapManager, mm
+        pcm().mark_points(update=True)
+        mm().plot_markers_image()
 
     def clear(self):
-        from spectraclass.gui.points import PointCloudManager
-        from spectraclass.gui.spatial.map import MapManager
-        pcm = PointCloudManager.instance()
-        mm = MapManager.instance()
-        mm.clearLabels()
-        pcm.clear()
+        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.spatial.map import MapManager, mm
+        mm().clearLabels()
+        pcm().clear()
 
     def undo_action(self):
-        from spectraclass.gui.spatial.map import MapManager
-        from spectraclass.gui.points import PointCloudManager
-        from spectraclass.model.labels import LabelsManager
-        from spectraclass.model.labels import Action
-        from spectraclass.model.base import Marker
-        mm = MapManager.instance()
-        pcm = PointCloudManager.instance()
-        lm = LabelsManager.instance()
-        action: Action = lm.popAction()
+        from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.model.labels import LabelsManager, lm
+        action: Action = lm().popAction()
         if action is not None:
             if action.type == "mark":
-                m: Marker = lm.popMarker()
-                pcm.clear_pids( m.cid, m.pids )
-                mm.plot_markers_image()
+                m: Marker = lm().popMarker()
+                pcm().clear_pids( m.cid, m.pids )
+                mm().plot_markers_image()
             elif action.type == "color":
-                pcm.clear_bins()
-        pcm.update_plot( )
-
-    #            lm.popMarker()
-    #           pcm.update_markers()
+                pcm().clear_bins()
+        pcm().update_plot( )
 
     def getFilePath(self, use_tile: bool ) -> str:
         base_dir = self.tiles.data_dir

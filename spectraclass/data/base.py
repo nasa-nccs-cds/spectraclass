@@ -15,6 +15,9 @@ class DataType(Enum):
     Image = 3
     Directory = 4
 
+def dm() -> "DataManager":
+    return DataManager.instance()
+
 class DataManager(tlc.SingletonConfigurable, SCConfigurable):
     proc_type = tl.Unicode('cpu').tag(config=True)
     name = tl.Unicode('spectraclass').tag(config=True)

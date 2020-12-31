@@ -9,10 +9,13 @@ from .points import PointCloudManager
 import traitlets.config as tlc
 from spectraclass.model.base import SCConfigurable
 
-class ActionsPanel(tlc.SingletonConfigurable, SCConfigurable):
+def am() -> "ActionsManager":
+    return ActionsManager.instance()
+
+class ActionsManager(tlc.SingletonConfigurable, SCConfigurable):
 
     def __init__(self):
-        super(ActionsPanel, self).__init__()
+        super(ActionsManager, self).__init__()
         self._wGui: ipw.Box = None
         self._buttons = {}
 
@@ -40,4 +43,50 @@ class ActionsPanel(tlc.SingletonConfigurable, SCConfigurable):
 
     def embed(self):
         self.on_button_click("embed")
+
+def cm() -> "ControlsManager":
+    return ControlsManager.instance()
+
+class ControlsManager(tlc.SingletonConfigurable, SCConfigurable):
+
+    def __init__(self):
+        super(ControlsManager, self).__init__()
+        self._wGui: ipw.Tab = None
+        self._buttons = {}
+
+    def gui(self, **kwargs ) -> ipw.Box:
+        if self._wGui is None:
+            self._wGui = self._createGui( **kwargs )
+        return self._wGui
+
+    def _createGui( self, **kwargs ) -> ipw.Box:
+        wTab = ipw.Tab()
+        tabNames = [ "data", "pointcloud", "map", "graph", "google" ]
+        children = []
+        for iT, title in enumerate( tabNames ):
+            wTab.set_title( iT, title )
+            children.append( self.createPanel(title) )
+        wTab.children = children
+        return wTab
+
+    def createPanel(self, title: str ):
+        return ipw.VBox()
+
+
+def ufm() -> "UserFeedbackManager":
+    return UserFeedbackManager.instance()
+
+class UserFeedbackManager(tlc.SingletonConfigurable, SCConfigurable):
+
+        def __init__(self):
+            super(UserFeedbackManager, self).__init__()
+            self._wGui: ipw.Text = ipw.Text( value='', placeholder='', description='messages:', disabled=True, layout = ip.Layout(width="100%") )
+
+        def gui(self, **kwargs) -> ipw.Text:
+            return self._wGui
+
+        def show(self, message: str):
+            self._wGui.value = message
+
+
 

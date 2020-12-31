@@ -58,28 +58,22 @@ class Spectraclass(tlc.SingletonConfigurable, SCConfigurable):
             display(HTML('<style type="text/css">%s</style>Customized changes loaded.' % css))
 
     def gui( self, embed: bool = False ):
-        from spectraclass.gui.graph import GraphManager
-        from spectraclass.gui.points import PointCloudManager
-        from spectraclass.gui.control import ActionsPanel
-        from spectraclass.gui.spatial.map import MapManager
-        from spectraclass.gui.spatial.google import GooglePlotManager
+        from spectraclass.gui.graph import GraphManager, gm
+        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.control import ActionsManager, am, ControlsManager, cm, UserFeedbackManager, ufm
+        from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.gui.spatial.google import GooglePlotManager, gpm
 
         self.set_spectraclass_theme()
         css_border = '1px solid blue'
-        map = MapManager.instance()
-        graph = GraphManager.instance()
-        pcm = PointCloudManager.instance()
-        gpm = GooglePlotManager.instance()
-        actions = ActionsPanel.instance()
-
-        plot = ipw.Accordion( children = [ pcm.gui(), gpm.gui() ], layout=ipw.Layout( flex='0 0 700px', border=css_border ) )
-        for iT, title in enumerate(['embedding', 'satellite']): plot.set_title(iT, title)
-#        plot = ipw.VBox( [ pcm.gui(), graph.gui() ], layout=ipw.Layout( flex='0 0 700px', border=css_border ) )
-        control = ipw.VBox([ actions.gui(), map.gui(), graph.gui() ], layout=ipw.Layout( flex='0 0 700px', border=css_border) )
-
-        gui = ipw.HBox( [control, plot ] )
+        collapsibles = ipw.Accordion( children = [ cm().gui(), pcm().gui(), gpm().gui() ], layout=ipw.Layout( width='100%' ) )
+        for iT, title in enumerate(['controls', 'embedding', 'satellite']): collapsibles.set_title(iT, title)
+        collapsibles.selected_index = 1
+        plot = ipw.VBox([ collapsibles, ufm().gui() ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
+        control = ipw.VBox( [ am().gui(), mm().gui(), gm().gui() ], layout=ipw.Layout( flex='0 0 700px'), border=css_border )
+        gui = ipw.HBox( [control, plot ], layout=ipw.Layout( width='100%' ) )
         self.save_config()
-        if embed: ActionsPanel.instance().embed()
+        if embed: ActionsManager.instance().embed()
         return gui
 
     def refresh_all(self):

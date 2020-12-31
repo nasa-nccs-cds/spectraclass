@@ -15,6 +15,9 @@ def get_rounded_dims( master_shape: List[int], subset_shape: List[int] ) -> List
     dims = [ int(round(ms/ss)) for (ms,ss) in zip(master_shape,subset_shape) ]
     return [ max(d, 1) for d in dims ]
 
+def tm() -> "TileManager":
+    return TileManager.instance()
+
 class TileManager(tlc.SingletonConfigurable, SCConfigurable):
 
     tile_size = tl.Int(1000).tag(config=True, sync=True)

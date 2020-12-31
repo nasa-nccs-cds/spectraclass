@@ -12,6 +12,9 @@ from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 from matplotlib.image import AxesImage
 
+def gpm() -> "GooglePlotManager":
+    return GooglePlotManager.instance()
+
 class GooglePlotManager(tlc.SingletonConfigurable, SCConfigurable):
     api_key = tl.Unicode("google/api_key").tag(config=True)
 

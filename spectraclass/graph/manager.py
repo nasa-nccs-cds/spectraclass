@@ -8,6 +8,9 @@ import traitlets.config as tlc
 import traitlets as tl
 from spectraclass.model.base import SCConfigurable
 
+def afm() -> "ActivationFlowManager":
+    return ActivationFlowManager.instance()
+
 class ActivationFlowManager(tlc.SingletonConfigurable, SCConfigurable):
     nneighbors = tl.Int( 5 ) #  .tag(config=True,sync=True)
 

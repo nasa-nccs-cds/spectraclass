@@ -1,6 +1,6 @@
 import numpy as np
 from typing import List, Optional, Dict
-import os, glob
+import os, glob, sys
 import ipywidgets as ip
 from collections import OrderedDict
 from spectraclass.reduction.embedding import ReductionManager
@@ -10,10 +10,10 @@ import traitlets as tl
 import traitlets.config as tlc
 from spectraclass.model.base import AstroModeConfigurable
 from spectraclass.gui.unstructured.application import Spectraclass
-from spectraclass.model.labels import LabelsManager
-from ..graph.manager import ActivationFlowManager
+from spectraclass.model.labels import LabelsManager, lm
+from ..graph.manager import ActivationFlowManager, afm
 from ..graph.base import ActivationFlow
-from spectraclass.gui.points import PointCloudManager
+from spectraclass.gui.points import PointCloudManager, pcm
 
 
 def invert( X: np.ndarray ) -> np.ndarray:
@@ -250,31 +250,29 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
         return dsdir
 
     def spread_selection(self, niters=1):
-        flow: ActivationFlow = ActivationFlowManager.instance().getActivationFlow()
+        flow: ActivationFlow = afm().getActivationFlow()
         from spectraclass.gui.spatial.map import MapManager
-        pcm = PointCloudManager.instance()
         mm = MapManager.instance()
-        self._flow_class_map: np.ndarray = LabelsManager.instance().labels_data().data
+        self._flow_class_map: np.ndarray = lm().labels_data().data
         catalog_pids = np.arange(0, self._flow_class_map.shape[0])
 
         if flow.spread(self._flow_class_map, niters) is not None:
             self._flow_class_map = flow.get_classes()
-            pcm.clear_bins()
-            all_classes = (LabelsManager.instance().current_cid == 0)
-            for cid, label in enumerate( LabelsManager.instance().labels ):
-                if all_classes or (LabelsManager.instance().current_cid == cid):
+            pcm().clear_bins()
+            all_classes = ( lm().current_cid == 0 )
+            for cid, label in enumerate( lm().labels ):
+                if all_classes or ( lm().current_cid == cid ):
                     new_indices: np.ndarray = catalog_pids[ self._flow_class_map == cid ]
                     if new_indices.size > 0:
-                        pcm.mark_points( new_indices, cid )
+                        pcm().mark_points( new_indices, cid )
             mm.plot_markers_image()
-            self.display_distance( 20 )
+            self.display_distance()
 
     def display_distance(self, niters=100):
-        pcm = PointCloudManager.instance()
-        seed_points: xa.DataArray = LabelsManager.instance().getSeedPointMask()
-        flow: ActivationFlow = ActivationFlowManager.instance().getActivationFlow()
+        seed_points: xa.DataArray = lm().getSeedPointMask()
+        flow: ActivationFlow = afm().getActivationFlow()
         if flow.spread( seed_points.data, niters ) is not None:
-            pcm.color_by_value( flow.get_distances(), distance=True )
+            pcm().color_by_value( flow.get_distances(), distance=True )
 
     def getImageName(self, base_image_name: str ) -> str:
         return base_image_name
