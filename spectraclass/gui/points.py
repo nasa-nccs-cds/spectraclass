@@ -1,4 +1,4 @@
-import time, math, os, numpy as np
+import time, math, os, sys, numpy as np
 from spectraclass.reduction.embedding import ReductionManager
 from typing import List, Union, Tuple, Optional, Dict, Callable
 from matplotlib import cm
@@ -70,15 +70,22 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
         if self._gui is not None:
             print(f"Updating point sets, sizes: {[ps.size for ps in self.point_sets]}")
             self._gui.point_sets = self.point_sets
+            self._gui.update_rendered_image()
 
     def on_selection(self, selection_event: Dict ):
         selection = selection_event['pids']
         self.update_markers(selection)
-
-    def update_markers(self, pids: List[int]):
-        self._marker_points[0] = self._embedding[ pids, : ]
-        print( f"  ***** POINTS- mark_points[0], #pids = {len(pids)}")
         self.update_plot()
+
+    def update_markers(self, pids: List[int] = None ):
+        if pids is None:
+            from spectraclass.model.labels import LabelsManager
+            self.initialize_markers(True)
+            for marker in LabelsManager.instance().getMarkers():
+                self._marker_points[ marker.cid ] = np.append( self._marker_points[ marker.cid ], self._embedding[ marker.pids, : ], 0 )
+        else:
+            self._marker_points[0] = self._embedding[ pids, : ]
+            print( f"  ***** POINTS- mark_points[0], #pids = {len(pids)}")
 
     def mark_points(self, point_ids: np.ndarray = None, cid: int = -1, update=False):
         from spectraclass.model.labels import LabelsManager
@@ -114,20 +121,22 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
 
     def color_by_value( self, values: np.ndarray = None, **kwargs ):
         is_distance = kwargs.get( 'distance', False )
-#        mask: ma.MaskedArray = None
-        if values is not None: self._color_values = values # ma.masked_invalid( values )
+        if values is not None:
+            self._color_values = ma.masked_invalid(values)
         if self._color_values is not None:
+            colors = self._color_values.filled(sys.float_info.max)
             (vmin, vmax), npb = ( ( 0.0, self._color_values.max() ) if is_distance else self.get_color_bounds() ), self._n_point_bins
-            pts = self._points # ma.masked_invalid( self._points )
+            print( f" $$$color_by_value: (vmin, vmax, npb) = {(vmin, vmax, npb)}, points (max, min, shape) = { (self._points.max(), self._points.min(), self._points.shape) }" )
+            pts: np.ndarray = ma.masked_invalid( self._points ).filled( sys.float_info.max )
             lspace: np.ndarray = np.linspace( vmin, vmax, npb+1 )
             for iC in range( 0, npb ):
-                if iC == 0:          mask = self._color_values <= lspace[iC+1]
-                elif (iC == npb-1):  mask = self._color_values > lspace[iC]
-                else:                mask = ( self._color_values > lspace[iC] ) & ( self._color_values <= lspace[iC+1] )
+                if iC == 0:          mask = colors <= lspace[iC+1]
+                elif (iC == npb-1):  mask = ( colors > lspace[iC] ) & ( colors < sys.float_info.max )
+                else:                mask = ( colors > lspace[iC] ) & ( colors <= lspace[iC+1] )
                 self._binned_points[iC] = pts[ mask ]
-                print(f" $$$COLOR: BIN-{iC}, [ {lspace[iC]} -> {lspace[iC+1]} ], nvals = {self._binned_points[iC].size}, #mask-points = {np.count_nonzero(mask)}") # , #mask-invalid={ma.count_masked(mask)}" )
+                print(f" $$$COLOR: BIN-{iC}, [ {lspace[iC]} -> {lspace[iC+1]} ], nvals = {self._binned_points[iC].size}, #mask-points = {np.count_nonzero(mask)}" )
             LabelsManager.instance().addAction( "color", "points" )
-            self.set_base_points_alpha(0.0)
+            self.set_base_points_alpha(0.15)
             self.update_plot(**kwargs)
 
     def get_color_bounds( self ):
