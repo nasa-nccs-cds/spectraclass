@@ -553,6 +553,9 @@ class MapManager(tlc.SingletonConfigurable, SCConfigurable):
             if len(ycoords) > 0:
                 self.marker_plot.set_offsets(np.c_[xcoords, ycoords])
                 self.marker_plot.set_facecolor(colors)
+            else:
+                offsets = np.ma.column_stack([[], []])
+                self.marker_plot.set_offsets(offsets)
             self.update_canvas()
 
     def plot_markers_volume(self, **kwargs):
