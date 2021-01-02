@@ -30,15 +30,34 @@ class Marker:
             return True
         except: return False
 
-class SCConfigurable:
-    config_classes = set()
+class SCSingletonConfigurable(tlc.LoggingConfigurable):
+    config_instances = []
+    _instance = None
+    _instantiated = None
 
-    def __init__(self, **kwargs ):
-        self.config_classes.add( self.__class__ )
+    def __init__(self, *args, **kwargs ):
+        super(SCSingletonConfigurable, self).__init__()
+        self._contingent_configuration_()
+        self.config_instances.append( self )
 
-    @property
-    def config_mode(self):
-        return "global"
+    @classmethod
+    def instance(cls, *args, **kwargs):
+        if cls._instance is None:
+            inst = cls(*args, **kwargs)
+            cls._instance = inst
+            cls._instantiated = cls
+        assert cls._instantiated == cls, f"Error, conflicting singleton instantiations: {cls} vs {cls._instantiated}"
+        return cls._instance
+
+    @classmethod
+    def initialized(cls):
+        return hasattr(cls, "_instance") and cls._instance is not None
+
+    def _contingent_configuration_(self):
+        from spectraclass.data.base import DataManager
+        try:                dm = DataManager.instance()
+        except TypeError:   raise Exception( f"Error, attempt to instantiate '{self.__class__}' before DataManager is initialized" )
+        self.update_config(dm.sysconfig)
 
     def refresh(self): pass
 
@@ -55,9 +74,8 @@ class SCConfigurable:
     def generate_config_file( cls ) -> Dict[str,str]:
         trait_map: Dict = {}
 #        print( f"Generate config file, classes = {[clss.__name__ for clss in cls.config_classes]}")
-        for clss in cls.config_classes:
-            instance: tlc.Configurable = clss.instance()
-            cls.add_trait_values( trait_map, f"c.{instance.__class__.__name__}.", instance )
+        for inst in cls.config_instances:
+            cls.add_trait_values( trait_map, f"c.{inst.__class__.__name__}.", inst )
         result: Dict = {}
         for mode, trait_values in trait_map.items():
             lines = ['']
@@ -66,49 +84,19 @@ class SCConfigurable:
             result[ mode ] = '\n'.join(lines)
         return result
 
-    @classmethod
-    def _classes_inc_parents(cls):
-        """Iterate through configurable classes, including configurable parents """
-        seen = set()
-        for c in cls.config_classes:
-            # We want to sort parents before children, so we reverse the MRO
-            for parent in reversed(c.mro()):
-                if issubclass(parent, tlc.Configurable) and (parent not in seen):
-                    seen.add(parent)
-                    yield parent
-
-    @classmethod
-    def _classes_with_config_traits(cls):
-        """ Yields only classes with configurable traits, and their subclasses.  """
-        cls_to_config = OrderedDict( (cls, bool(cls.class_own_traits(config=True))) for cls in cls._classes_inc_parents())
-
-        def is_any_parent_included(cls):
-            return any(b in cls_to_config and cls_to_config[b] for b in cls.__bases__)
-
-        ## Mark "empty" classes for inclusion if their parents own-traits, and loop until no more classes gets marked.
-        while True:
-            to_incl_orig = cls_to_config.copy()
-            cls_to_config = OrderedDict( (cls, inc_yes or is_any_parent_included(cls)) for cls, inc_yes in cls_to_config.items())
-            if cls_to_config == to_incl_orig:
-                break
-        for cl, inc_yes in cls_to_config.items():
-            if inc_yes:
-                yield cl
-
-
-class AstroModeConfigurable(SCConfigurable):
-    _class_instances = {}
-
-    def __init__( self, mode: str ):
-        SCConfigurable.__init__(self)
-        self._mode = mode
-        self._class_instances[mode] = self
-
-    @classmethod
-    def instance(cls):
-        from spectraclass.data.base import DataManager
-        return cls._class_instances[ DataManager.instance().mode ]
-
-    @property
-    def config_mode(self):
-        return self._mode
+# class AstroModeConfigurable(SCSingletonConfigurable):
+#     _class_instances = {}
+#
+#     def __init__( self, mode: str ):
+#         SCSingletonConfigurable.__init__(self)
+#         self._mode = mode
+#         self._class_instances[mode] = self
+#
+#     @classmethod
+#     def instance(cls):
+#         from spectraclass.data.base import DataManager
+#         return cls._class_instances[ DataManager.instance().mode ]
+#
+#     @property
+#     def config_mode(self):
+#         return self._mode

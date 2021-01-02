@@ -6,12 +6,12 @@ from typing import List, Union, Tuple, Optional, Dict
 import os, time, threading, traceback
 import traitlets.config as tlc
 import traitlets as tl
-from spectraclass.model.base import SCConfigurable
+from spectraclass.model.base import SCSingletonConfigurable
 
 def afm() -> "ActivationFlowManager":
     return ActivationFlowManager.instance()
 
-class ActivationFlowManager(tlc.SingletonConfigurable, SCConfigurable):
+class ActivationFlowManager(SCSingletonConfigurable):
     nneighbors = tl.Int( 5 ) #  .tag(config=True,sync=True)
 
     def __init__(self):

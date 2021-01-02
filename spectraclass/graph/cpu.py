@@ -5,6 +5,7 @@ from .base import ActivationFlow
 import xarray as xa
 import numba
 from typing import List, Union, Tuple, Optional, Dict
+from spectraclass.gui.control import UserFeedbackManager, ufm
 import os, time, threading, traceback
 
 @numba.njit(fastmath=True,
@@ -96,7 +97,7 @@ class cpActivationFlow(ActivationFlow):
             self.C = np.where( sample_mask, self.C, sample_data )
         label_count = np.count_nonzero(self.C)
         if label_count == 0:
-            print( "Workflow violation: Must label some points before this algorithm can be applied"  )
+            ufm().show( "Workflow violation: Must label some points before this algorithm can be applied", "red" )
             return None
         if (self.P is None) or self.reset:   self.P = np.full( self.C.shape, float('inf'), dtype=np.float32 )
         self.P = np.where( sample_mask, self.P, 0.0 )

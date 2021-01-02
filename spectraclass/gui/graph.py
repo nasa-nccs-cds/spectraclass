@@ -10,7 +10,7 @@ from spectraclass.data.base import DataManager
 from bokeh.models import ColumnDataSource
 import ipywidgets as ipw
 import traitlets.config as tlc
-from spectraclass.model.base import SCConfigurable
+from spectraclass.model.base import SCSingletonConfigurable
 
 def rescale( x: np.ndarray ):
     xs= x.squeeze()
@@ -115,7 +115,7 @@ class JbkGraph:
 def gm() -> "GraphManager":
     return GraphManager.instance()
 
-class GraphManager(tlc.SingletonConfigurable, SCConfigurable):
+class GraphManager(SCSingletonConfigurable):
 
     def __init__( self ):
         super(GraphManager, self).__init__(  )

@@ -42,10 +42,10 @@
 #         self.update()
 #         self.repaint()
 #
-# class LabelingCanvas(SCConfigurable):
+# class LabelingCanvas(SCSingletonConfigurable):
 #
 #     def __init__(self,  **kwargs ):
-#         SCConfigurable.__init__(self)
+#         SCSingletonConfigurable.__init__(self)
 #         self.figure = Figure()
 #
 #     def setBlock(self, block_coords: Tuple[int], **kwargs   ):
@@ -73,7 +73,7 @@
 #     def extent(self):
 #         return self.console.block.extent()
 
-# class GooglePlotManager(SCConfigurable):
+# class GooglePlotManager(SCSingletonConfigurable):
 #
 #     def __init__(self):
 #         QObject.__init__(self)

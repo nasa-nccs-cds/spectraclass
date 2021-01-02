@@ -8,13 +8,13 @@ import xarray as xa
 import numpy.ma as ma
 import traitlets.config as tlc
 import traitlets as tl
-from spectraclass.model.base import SCConfigurable, Marker
+from spectraclass.model.base import SCSingletonConfigurable, Marker
 from spectraclass.model.labels import LabelsManager
 
 def pcm() -> "PointCloudManager":
     return PointCloudManager.instance()
 
-class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
+class PointCloudManager(SCSingletonConfigurable):
 
     color_map = tl.Unicode("gist_rainbow").tag(config=True)  # "gist_rainbow" "jet"
 
@@ -97,11 +97,16 @@ class PointCloudManager(tlc.SingletonConfigurable, SCConfigurable):
 
     def mark_points(self, point_ids: np.ndarray = None, cid: int = -1, update=False):
         from spectraclass.model.labels import LabelsManager
+        from spectraclass.gui.control import UserFeedbackManager, ufm
         lmgr = LabelsManager.instance()
         icid: int = cid if cid > -1 else lmgr.current_cid
+        if icid == 0: ufm().show( "Must select a class label in order to mark points." )
         if point_ids is None: lmgr.currentMarker.cid = icid
         else: lmgr.addMarker( Marker( point_ids, icid ) )
         pids = lmgr.currentMarker.pids
+        if not pids:
+            ufm().show( "Must select point(s) to mark." )
+            return
         self.initialize_markers()
         self.clear_pids( icid, pids )
         self.clear_points(0)

@@ -6,9 +6,9 @@ import numpy as np, time, traceback
 from ..model.labels import LabelsManager
 import traitlets as tl
 import traitlets.config as tlc
-from spectraclass.model.base import SCConfigurable
+from spectraclass.model.base import SCSingletonConfigurable
 
-class ReductionManager(tlc.SingletonConfigurable, SCConfigurable):
+class ReductionManager(SCSingletonConfigurable):
     init = tl.Unicode("random").tag(config=True,sync=True)
     nepochs = tl.Int( 200 ).tag(config=True,sync=True)
     nneighbors = tl.Int( 8 ).tag(config=True, sync=True)

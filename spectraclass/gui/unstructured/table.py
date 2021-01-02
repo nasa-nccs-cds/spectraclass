@@ -12,9 +12,9 @@ from spectraclass.gui.points import PointCloudManager
 from traitlets import traitlets
 from spectraclass.model.labels import LabelsManager
 import traitlets.config as tlc
-from spectraclass.model.base import SCConfigurable
+from spectraclass.model.base import SCSingletonConfigurable
 
-class TableManager(tlc.SingletonConfigurable, SCConfigurable):
+class TableManager(SCSingletonConfigurable):
 
     def __init__(self):
         super(TableManager, self).__init__()

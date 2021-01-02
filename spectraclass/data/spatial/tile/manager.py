@@ -8,7 +8,7 @@ import rioxarray as rio
 import os, math, pickle
 import traitlets.config as tlc
 import traitlets as tl
-from spectraclass.model.base import SCConfigurable
+from spectraclass.model.base import SCSingletonConfigurable
 from .tile import Tile, Block
 
 def get_rounded_dims( master_shape: List[int], subset_shape: List[int] ) -> List[int]:
@@ -18,7 +18,7 @@ def get_rounded_dims( master_shape: List[int], subset_shape: List[int] ) -> List
 def tm() -> "TileManager":
     return TileManager.instance()
 
-class TileManager(tlc.SingletonConfigurable, SCConfigurable):
+class TileManager(SCSingletonConfigurable):
 
     tile_size = tl.Int(1000).tag(config=True, sync=True)
     tile_index = tl.List(tl.Int, (0, 0), 2, 2).tag(config=True, sync=True)

@@ -7,9 +7,7 @@ from spectraclass.reduction.embedding import ReductionManager
 from pathlib import Path
 import xarray as xa
 import traitlets as tl
-import traitlets.config as tlc
-from spectraclass.model.base import AstroModeConfigurable
-from spectraclass.gui.unstructured.application import Spectraclass
+from spectraclass.model.base import SCSingletonConfigurable, Marker
 from spectraclass.model.labels import LabelsManager, lm
 from ..graph.manager import ActivationFlowManager, afm
 from ..graph.base import ActivationFlow
@@ -19,7 +17,7 @@ from spectraclass.gui.points import PointCloudManager, pcm
 def invert( X: np.ndarray ) -> np.ndarray:
     return X.max() - X
 
-class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
+class ModeDataManager(SCSingletonConfigurable):
     MODE = None
     METAVARS = None
     INPUTS = None
@@ -36,8 +34,7 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
     reduce_sparsity = tl.Float( 10e-5 ).tag(config=True,sync=True)
 
     def __init__(self, ):
-        tlc.Configurable.__init__(self)
-        AstroModeConfigurable.__init__( self, self.MODE )
+        super(ModeDataManager,self).__init__()
         self.datasets = {}
         self._model_dims_selector: ip.SelectionSlider = None
         self._subsample_selector: ip.SelectionSlider = None
@@ -129,7 +126,7 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
                    f"current mode = '{self._mode}', current mode index = {self.dm.mode_index}, mdmgr id = {id(self)}")
             self.dm.dataset = self._dset_selection.value
             self.dm.select_dataset(self._dset_selection.value)
-        Spectraclass.instance().refresh_all()
+        self.dm.refresh_all()
 
     def getSelectionPanel(self) -> ip.HBox:
         dsets: List[str] = self.getDatasetList()
@@ -159,7 +156,6 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
             rm.nepochs = nepochs_selector.value
             rm.alpha = alpha_selector.value
             rm.init = init_selector.value
-            Spectraclass.instance().save_config()
 
         apply: ip.Button = ip.Button(description="Apply", layout=ip.Layout(flex='1 1 auto'), border='1px solid dimgrey')
         apply.on_click(apply_handler)
@@ -245,7 +241,7 @@ class ModeDataManager(tlc.Configurable, AstroModeConfigurable):
 
     @property
     def datasetDir(self):
-        dsdir = os.path.join(self.cache_dir, self.dm.name, self.config_mode)
+        dsdir = os.path.join( self.cache_dir, self.dm.name, self.MODE )
         os.makedirs(dsdir, exist_ok=True)
         return dsdir
 

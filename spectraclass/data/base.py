@@ -5,9 +5,13 @@ from enum import Enum
 import ipywidgets as ip
 import xarray as xa
 import traitlets as tl
-import traitlets.config as tlc
-from spectraclass.model.base import SCConfigurable
+from inspect import isclass
+from pkgutil import iter_modules
+from pathlib import Path
+from importlib import import_module
+from spectraclass.model.base import SCSingletonConfigurable
 from .modes import ModeDataManager
+from traitlets.config.loader import Config
 
 class DataType(Enum):
     Embedding = 1
@@ -18,37 +22,92 @@ class DataType(Enum):
 def dm() -> "DataManager":
     return DataManager.instance()
 
-class DataManager(tlc.SingletonConfigurable, SCConfigurable):
+def register_modes():
+    for mode_class in ['spatial','unstructured']:
+        package_dir = Path( __file__ ).resolve().parent.joinpath(mode_class)
+        for ( _, module_name, _ ) in iter_modules([package_dir]):
+            if module_name == "modes":
+                # import the module and iterate through its attributes
+                module = import_module(f"spectraclass.data.{mode_class}.{module_name}")
+                for attribute_name in dir(module):
+                    attribute = getattr(module, attribute_name)
+                    if isclass(attribute) and issubclass(attribute, ModeDataManager):
+                        if attribute.MODE is not None:
+                            # Add the class to this package's variables
+                            globals()[attribute_name] = attribute
+                            DataManager.register_mode(attribute)
+
+class DataManager(SCSingletonConfigurable):
     proc_type = tl.Unicode('cpu').tag(config=True)
-    name = tl.Unicode('spectraclass').tag(config=True)
     _mode_data_managers_: Dict[str,Type[ModeDataManager]] = {}
+
+    def __init__(self):
+        self._config: Config = None
+        self.name = None
+        self._mode_data_manager_: ModeDataManager = None
+        super(DataManager, self).__init__()
+        self._wGui = None
+
+    def _contingent_configuration_(self):
+        pass
+
+    @property
+    def sysconfig(self) -> Config:
+        if self._config is None: raise TypeError( "DataManager not initialized" )
+        return self._config
 
     @classmethod
     def initialize(cls, name: str, mode: str):
         dataManager = cls.instance()
-        dataManager.name = name
-        if mode.lower() not in cls._mode_data_managers_: raise Exception( f"Mode {mode} is not defined")
-        dataManager._mode_data_manager_ = cls._mode_data_managers_[ mode.lower() ]()
+        dataManager._configure_( name, mode )
+        if mode.lower() not in cls._mode_data_managers_: raise Exception( f"Mode {mode} is not defined, available modes = {cls._mode_data_managers_.keys()}")
+        dataManager._mode_data_manager_ = cls._mode_data_managers_[ mode.lower() ].instance()
         return dataManager
+
+    def _configure_(self, name: str, mode: str ):
+        self.name = name
+        cfg_file = self.config_file( name, mode )
+        from traitlets.config.loader import load_pyconfig_files
+        if os.path.isfile(cfg_file):
+            (dir, fname) = os.path.split(cfg_file)
+            config_files = ['configuration.py', fname]
+            print(f"Loading config files: {config_files} from dir {dir}")
+            self._config = load_pyconfig_files(config_files, dir)
+            self.update_config( self._config )
+        else:
+            print(f"Configuration error: '{cfg_file}' is not a file.")
+
+    def save_config(self):
+        conf_dict = self.generate_config_file()
+        globals = conf_dict.pop('global', "")
+        for mode, mode_conf_txt in conf_dict.items():
+            cfg_file = os.path.realpath( self.config_file( self.name, mode ) )
+            os.makedirs(os.path.dirname(cfg_file), exist_ok=True)
+            with open(cfg_file, "w") as cfile_handle:
+                print(f"Writing config file: {cfg_file}")
+                #                if os.path.exists(cfg_file): os.remove(cfg_file)
+                conf_txt = mode_conf_txt if mode == "configuration" else '\n'.join([mode_conf_txt, globals])
+                cfile_handle.write(conf_txt)
+
+    def refresh_all(self):
+        self.save_config()
+        for inst in self.config_instances: inst.refresh()
+        print( "Refreshed Configuration")
 
     @classmethod
     def register_mode(cls, manager_type: Type[ModeDataManager] ):
+        print( f"DataManager registering ModeDataManager[{manager_type.MODE.lower()}]: {manager_type}")
         cls._mode_data_managers_[ manager_type.MODE.lower() ] = manager_type
 
-    def __init__(self):
-        super(DataManager, self).__init__()
-        self._mode_data_manager_: ModeDataManager = None
-        self._wGui = None
-
-    def config_file(self, config_mode=None) -> str :
-        if config_mode is None: config_mode = self.mode
-        config_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "config",  self.name )
+    @classmethod
+    def config_file( cls, name: str, mode:str ) -> str :
+        config_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "config",  name )
         os.makedirs( config_dir, mode = 0o777, exist_ok = True )
-        return os.path.join( config_dir, config_mode + ".py" )
+        return os.path.join( config_dir, mode + ".py" )
 
     @property
     def mode(self) -> str:
-        return self._mode_data_manager_.mode
+        return self._mode_data_manager_.MODE
 
     @property
     def modal(self) -> ModeDataManager:
@@ -105,4 +164,7 @@ class DataManager(tlc.SingletonConfigurable, SCConfigurable):
         model_data.attrs['dsid'] = project_dataset.attrs['dsid']
         return model_data
 
+    def __delete__(self, instance):
+        self.save_config()
 
+register_modes()

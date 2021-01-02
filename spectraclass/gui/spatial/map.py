@@ -13,7 +13,7 @@ from collections import OrderedDict
 from spectraclass.gui.graph import GraphManager
 from spectraclass.model.labels import LabelsManager
 from spectraclass.gui.points import PointCloudManager
-from spectraclass.model.base import SCConfigurable, Marker
+from spectraclass.model.base import SCSingletonConfigurable, Marker
 from functools import partial
 from pyproj import Proj
 import traitlets.config as tlc
@@ -107,7 +107,7 @@ class PageSlider(matplotlib.widgets.Slider):
 def mm() -> "MapManager":
     return MapManager.instance()
 
-class MapManager(tlc.SingletonConfigurable, SCConfigurable):
+class MapManager(SCSingletonConfigurable):
 
     RIGHT_BUTTON = 3
     MIDDLE_BUTTON = 2

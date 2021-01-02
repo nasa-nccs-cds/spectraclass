@@ -6,7 +6,7 @@ import ipywidgets as ipw
 import matplotlib.colors as mcolors
 from ..graph.base import ActivationFlow
 import traitlets.config as tlc
-from spectraclass.model.base import SCConfigurable, Marker
+from spectraclass.model.base import SCSingletonConfigurable, Marker
 import xarray as xa
 import numpy as np
 
@@ -62,7 +62,7 @@ class Action:
 def lm() -> "LabelsManager":
     return LabelsManager.instance()
 
-class LabelsManager(tlc.SingletonConfigurable, SCConfigurable):
+class LabelsManager(SCSingletonConfigurable):
 
     def __init__(self):
         super(LabelsManager, self).__init__()
@@ -91,6 +91,8 @@ class LabelsManager(tlc.SingletonConfigurable, SCConfigurable):
         return self._selected_class
 
     def set_selected_class(self, iclass, *args ):
+        from spectraclass.gui.control import UserFeedbackManager, ufm
+        ufm().clear()
         self._selected_class = iclass
         print(f"LabelsManager: set selected class = {iclass}")
         for iB, button in enumerate(self._buttons):
@@ -113,6 +115,8 @@ class LabelsManager(tlc.SingletonConfigurable, SCConfigurable):
         return self._flow
 
     def addAction(self, type: str, source: str, pids: List[int] = None, cid=None, **kwargs ):
+        from spectraclass.gui.control import UserFeedbackManager, ufm
+        ufm().clear()
         if cid == None: cid = self.current_cid
         new_action = Action(type, source, pids, cid, **kwargs)
         print(f"ADD ACTION: {new_action}")
@@ -252,8 +256,9 @@ class LabelsManager(tlc.SingletonConfigurable, SCConfigurable):
         self._labels = [ item[0] for item in label_list ]
 
     def getSeedPointMask(self) -> xa.DataArray:
+        from spectraclass.gui.control import UserFeedbackManager, ufm
         if self.currentMarker is None:
-            print( "Error: Must Label some points before executing this operation!")
+            ufm().show( "Error: Must Label some points before executing this operation!", "red" )
             return xa.DataArray( np.empty(shape=[0], dtype=np.int) )
         else:
             from spectraclass.data.base import DataManager

@@ -5,14 +5,13 @@ from functools import partial
 import xarray as xa
 import numpy as np
 import ipywidgets as ipw
-from .points import PointCloudManager
 import traitlets.config as tlc
-from spectraclass.model.base import SCConfigurable
+from spectraclass.model.base import SCSingletonConfigurable
 
 def am() -> "ActionsManager":
     return ActionsManager.instance()
 
-class ActionsManager(tlc.SingletonConfigurable, SCConfigurable):
+class ActionsManager(SCSingletonConfigurable):
 
     def __init__(self):
         super(ActionsManager, self).__init__()
@@ -47,7 +46,7 @@ class ActionsManager(tlc.SingletonConfigurable, SCConfigurable):
 def cm() -> "ControlsManager":
     return ControlsManager.instance()
 
-class ControlsManager(tlc.SingletonConfigurable, SCConfigurable):
+class ControlsManager(SCSingletonConfigurable):
 
     def __init__(self):
         super(ControlsManager, self).__init__()
@@ -76,17 +75,21 @@ class ControlsManager(tlc.SingletonConfigurable, SCConfigurable):
 def ufm() -> "UserFeedbackManager":
     return UserFeedbackManager.instance()
 
-class UserFeedbackManager(tlc.SingletonConfigurable, SCConfigurable):
+class UserFeedbackManager(SCSingletonConfigurable):
 
         def __init__(self):
             super(UserFeedbackManager, self).__init__()
-            self._wGui: ipw.Text = ipw.Text( value='', placeholder='', description='messages:', disabled=True, layout = ip.Layout(width="100%") )
+            self._wGui: ipw.HTML = ipw.HTML( value='', placeholder='', description='messages:',
+                                             layout = ip.Layout(width="100%"), border= '1px solid dimgrey' )
 
-        def gui(self, **kwargs) -> ipw.Text:
+        def gui(self, **kwargs) -> ipw.HTML:
             return self._wGui
 
-        def show(self, message: str):
-            self._wGui.value = message
+        def show(self, message: str, color: str = "white" ):
+            self._wGui.value = f'<p style="color:{color}"><b>{message}</b></p>'
+
+        def clear(self):
+            self._wGui.value = ""
 
 
 

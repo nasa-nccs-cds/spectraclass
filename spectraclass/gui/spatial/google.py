@@ -6,7 +6,7 @@ from math import log, exp, tan, atan, ceil
 from PIL import Image
 import traitlets as tl
 import requests, traceback
-from spectraclass.model.base import SCConfigurable
+from spectraclass.model.base import SCSingletonConfigurable
 import traitlets.config as tlc
 from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
@@ -15,7 +15,7 @@ from matplotlib.image import AxesImage
 def gpm() -> "GooglePlotManager":
     return GooglePlotManager.instance()
 
-class GooglePlotManager(tlc.SingletonConfigurable, SCConfigurable):
+class GooglePlotManager(SCSingletonConfigurable):
     api_key = tl.Unicode("google/api_key").tag(config=True)
 
     RIGHT_BUTTON = 3
