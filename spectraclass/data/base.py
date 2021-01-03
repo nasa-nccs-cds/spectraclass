@@ -62,6 +62,7 @@ class DataManager(SCSingletonConfigurable):
         dataManager._configure_( name, mode )
         if mode.lower() not in cls._mode_data_managers_: raise Exception( f"Mode {mode} is not defined, available modes = {cls._mode_data_managers_.keys()}")
         dataManager._mode_data_manager_ = cls._mode_data_managers_[ mode.lower() ].instance()
+        dataManager.save_config()
         return dataManager
 
     def _configure_(self, name: str, mode: str ):
@@ -80,13 +81,13 @@ class DataManager(SCSingletonConfigurable):
     def save_config(self):
         conf_dict = self.generate_config_file()
         globals = conf_dict.pop('global', "")
-        for mode, mode_conf_txt in conf_dict.items():
-            cfg_file = os.path.realpath( self.config_file( self.name, mode ) )
+        for scope, mode_conf_txt in conf_dict.items():
+            cfg_file = os.path.realpath( self.config_file( self.name, scope ) )
             os.makedirs(os.path.dirname(cfg_file), exist_ok=True)
             with open(cfg_file, "w") as cfile_handle:
                 print(f"Writing config file: {cfg_file}")
                 #                if os.path.exists(cfg_file): os.remove(cfg_file)
-                conf_txt = mode_conf_txt if mode == "configuration" else '\n'.join([mode_conf_txt, globals])
+                conf_txt = mode_conf_txt if scope == "configuration" else '\n'.join([mode_conf_txt, globals])
                 cfile_handle.write(conf_txt)
 
     def refresh_all(self):
@@ -100,10 +101,10 @@ class DataManager(SCSingletonConfigurable):
         cls._mode_data_managers_[ manager_type.MODE.lower() ] = manager_type
 
     @classmethod
-    def config_file( cls, name: str, mode:str ) -> str :
+    def config_file( cls, name: str, scope:str ) -> str :
         config_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "config",  name )
         os.makedirs( config_dir, mode = 0o777, exist_ok = True )
-        return os.path.join( config_dir, mode + ".py" )
+        return os.path.join( config_dir, scope + ".py" )
 
     @property
     def mode(self) -> str:

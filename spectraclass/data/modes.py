@@ -46,6 +46,9 @@ class ModeDataManager(SCSingletonConfigurable):
         if not self.MODE: raise NotImplementedError(f"Mode {self.MODE} has not been implemented")
         return self.MODE
 
+    def config_scope(self):
+        return self.mode
+
     @property
     def metavars(self):
         return self.METAVARS

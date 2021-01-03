@@ -1,8 +1,6 @@
 import traitlets.config as tlc
-from collections import OrderedDict
 import numpy as np
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type
-import traitlets as tl
 
 def pid( instance ): return hex(id(instance))[-4:]
 
@@ -49,6 +47,9 @@ class SCSingletonConfigurable(tlc.LoggingConfigurable):
         assert cls._instantiated == cls, f"Error, conflicting singleton instantiations: {cls} vs {cls._instantiated}"
         return cls._instance
 
+    def config_scope(self):
+        return "configuration"
+
     @classmethod
     def initialized(cls):
         return hasattr(cls, "_instance") and cls._instance is not None
@@ -62,11 +63,11 @@ class SCSingletonConfigurable(tlc.LoggingConfigurable):
     def refresh(self): pass
 
     @classmethod
-    def add_trait_values( cls, trait_map: Dict, cname: str, instance: tlc.Configurable ):
+    def add_trait_values( cls, trait_map: Dict, cname: str, instance: "SCSingletonConfigurable" ):
         for tid, trait in instance.class_traits(config=True).items():
             tval = getattr(instance, tid)
             if trait.__class__.__name__ == "Unicode":  tval = f'"{tval}"'
-            trait_values = trait_map.setdefault(instance.config_mode, {})
+            trait_values = trait_map.setdefault( instance.config_scope(), {} )
  #           print( f"    *** add_trait_value[{instance.config_mode},{pid(instance)}]: {cname+tid} -> {tval}")
             trait_values[cname + tid] = tval
 
