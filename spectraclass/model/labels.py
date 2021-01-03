@@ -4,7 +4,7 @@ import collections.abc
 from functools import partial
 import ipywidgets as ipw
 import matplotlib.colors as mcolors
-from ..graph.base import ActivationFlow
+from ..graph.manager import ActivationFlow
 import traitlets.config as tlc
 from spectraclass.model.base import SCSingletonConfigurable, Marker
 import xarray as xa

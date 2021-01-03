@@ -3,7 +3,7 @@ import xarray as xa
 import numpy as np
 from spectraclass.gui.unstructured.application import Spectraclass
 from spectraclass.data.base import DataManager
-from spectraclass.graph.base import ActivationFlow
+from spectraclass.graph.manager import ActivationFlow
 
 app = Spectraclass.instance()
 app.configure("spectraclass")

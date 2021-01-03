@@ -13,22 +13,23 @@ class gpUMAP(UMAP):
         self._mapper = None
 
     def embed( self, X, y=None, **kwargs ):
-        input, mapper = self.getMapper(X, y, **kwargs)
+        input = self.trainMapper(X, y, **kwargs)
         t0 = time.time()
-        self._embedding_ = mapper.transform( input )
+        self._embedding_ = self._mapper.transform( input, knn_graph = self.getNNGraph() )
         print(f"Completed umap embed in time {time.time() - t0} sec, embedding shape = {self._embedding_.shape}")
         return self
 
-    def getMapper(self, X, y=None, **kwargs ) -> Tuple[cudf.DataFrame,cuml.UMAP]:
+    def trainMapper(self, X, y=None, **kwargs) -> Tuple[cudf.DataFrame, cuml.UMAP]:
+        from ..graph.manager import ActivationFlowManager, afm, ActivationFlow
         input_data: cudf.DataFrame = self.getDataFrame(X)
         if self._mapper is None:
             t0 = time.time()
             print(f"Computing embedding, input shape = {X.shape}")
             self._mapper = cuml.UMAP(init=self.init, n_neighbors=self.n_neighbors, n_components=self.n_components,
                                 n_epochs=self.n_epochs, min_dist=self.min_dist, output_type="numpy")
-            self._mapper.fit(input_data)
+            self._mapper.fit(input_data, knn_graph = self.getNNGraph() )
             print(f"Completed umap fit in time {time.time() - t0} sec")
-        return input_data, self._mapper
+        return input_data
 
     def getDataFrame(self, X ) -> cudf.DataFrame:
         if isinstance( X, xa.DataArray) or isinstance( X, np.ndarray ):
@@ -42,8 +43,8 @@ class gpUMAP(UMAP):
 
     def transform(self, X: Union[xa.DataArray,np.ndarray]  ):
         t0 = time.time()
-        input_data, mapper = self.getMapper(X)
-        result = mapper.transform(input_data)
+        input_data = self.trainMapper(X)
+        result = self._mapper.transform( input_data, knn_graph = self.getNNGraph() )
         print(f"Completed umap transform in time {time.time() - t0} sec, result shape = {result.shape}")
         return result
 

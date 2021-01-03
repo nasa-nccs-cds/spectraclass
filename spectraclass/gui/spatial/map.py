@@ -8,15 +8,14 @@ from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
 from matplotlib.colors import Normalize
 from matplotlib.backend_bases import PickEvent, MouseButton, NavigationToolbar2
-from spectraclass.reduction.embedding import ReductionManager
+from spectraclass.reduction.embedding import ReductionManager, rm
 from collections import OrderedDict
-from spectraclass.gui.graph import GraphManager
-from spectraclass.model.labels import LabelsManager
-from spectraclass.gui.points import PointCloudManager
+from spectraclass.gui.graph import GraphManager, gm
+from spectraclass.model.labels import LabelsManager, lm
+from spectraclass.gui.points import PointCloudManager, pcm
 from spectraclass.model.base import SCSingletonConfigurable, Marker
 from functools import partial
 from pyproj import Proj
-import traitlets.config as tlc
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
 from spectraclass.data.spatial.tile.tile import Block
@@ -36,8 +35,9 @@ def get_color_bounds( color_values: List[float] ) -> List[float]:
     color_bounds.append( color_values[-1] + 0.5 )
     return color_bounds
 
-def lm(): return LabelsManager.instance()
-def dms(): return SpatialDataManager.instance()
+def dms() -> SpatialDataManager:
+    from spectraclass.data.base import DataManager, dm
+    return dm().modal
 
 class PageSlider(matplotlib.widgets.Slider):
 
@@ -327,7 +327,8 @@ class MapManager(SCSingletonConfigurable):
 
     def getLabeledPointData( self, update = True ) -> xa.DataArray:
         if update: self.updateLabelsFromMarkers()
-        labeledPointData = SpatialDataManager.raster2points( self.labels )
+        sdm: SpatialDataManager = dm().modal
+        labeledPointData = sdm.raster2points( self.labels )
         return labeledPointData
 
     def getExtendedLabelPoints( self ) -> xa.DataArray:

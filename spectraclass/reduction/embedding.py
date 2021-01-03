@@ -155,3 +155,6 @@ class ReductionManager(SCSingletonConfigurable):
             self._mapper[mid] = mapper
         self._current_mapper = mapper
         return mapper
+
+def rm():
+    return ReductionManager.instance()

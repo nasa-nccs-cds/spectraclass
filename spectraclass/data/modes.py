@@ -9,8 +9,7 @@ import xarray as xa
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable, Marker
 from spectraclass.model.labels import LabelsManager, lm
-from ..graph.manager import ActivationFlowManager, afm
-from ..graph.base import ActivationFlow
+from ..graph.manager import ActivationFlow, ActivationFlowManager, afm
 from spectraclass.gui.points import PointCloudManager, pcm
 
 
@@ -35,6 +34,7 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def __init__(self, ):
         super(ModeDataManager,self).__init__()
+        assert self.MODE, f"Attempt to instantiate intermediate SingletonConfigurable class: {self.__class__}"
         self.datasets = {}
         self._model_dims_selector: ip.SelectionSlider = None
         self._subsample_selector: ip.SelectionSlider = None

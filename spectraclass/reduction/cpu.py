@@ -1112,12 +1112,6 @@ def find_ab_params(spread, min_dist):
 
 class cpUMAP(UMAP):
 
-    def getNNGraph(self, nodes: np.ndarray, **kwargs ):
-        n_trees = kwargs.get('ntree', 5 + int(round((nodes.shape[0]) ** 0.5 / 20.0)))
-        n_iters = kwargs.get('niter', max(5, 2 * int(round(np.log2(nodes.shape[0])))))
-        nnd = NNDescent(nodes, n_trees=n_trees, n_iters=n_iters, n_neighbors=self.n_neighbors, max_candidates=60, verbose=True)
-        return nnd
-
     def embed( self, X: np.ndarray, y: np.ndarray=None, **kwargs ):
         """Fit X into an embedded space.
 
@@ -1141,7 +1135,7 @@ class cpUMAP(UMAP):
 
         X = check_array(X, dtype=np.float32, accept_sparse="csr", order="C")
         self._raw_data = X
-        self._rp_forest: NNDescent = kwargs.get( 'nngraph', self.getNNGraph( X, **kwargs ) )
+        self._rp_forest: NNDescent = kwargs.get( 'nngraph', self.getNNGraph() )
 
         # Handle all the optional arguments, setting default
         if self.a is None or self.b is None:

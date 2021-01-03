@@ -2,7 +2,6 @@ from __future__ import print_function
 import locale
 from warnings import warn
 from sklearn.base import BaseEstimator
-from spectraclass.graph.base import ActivationFlow
 import numpy as np
 import xarray as xa
 import scipy.sparse
@@ -272,6 +271,15 @@ class UMAP(BaseEstimator):
         self.input_data: np.ndarray = None
         self.scoord: xa.DataArray = None
 
+
+    def getNNGraph( self ):
+        from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
+        return afm().getActivationFlow().getGraph()
+
+        # n_trees = kwargs.get('ntree', 5 + int(round((nodes.shape[0]) ** 0.5 / 20.0)))
+        # n_iters = kwargs.get('niter', max(5, 2 * int(round(np.log2(nodes.shape[0])))))
+        # nnd = NNDescent(nodes, n_trees=n_trees, n_iters=n_iters, n_neighbors=self.n_neighbors, max_candidates=60, verbose=True)
+        # return nnd
 
     def set_embedding(self, embed_ : np.ndarray ):
         self.external_embedding = embed_

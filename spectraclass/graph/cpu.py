@@ -1,7 +1,7 @@
 from pynndescent import NNDescent
 import numpy as np
 import numpy.ma as ma
-from .base import ActivationFlow
+from .manager import ActivationFlow
 import xarray as xa
 import numba
 from typing import List, Union, Tuple, Optional, Dict
@@ -61,7 +61,7 @@ class cpActivationFlow(ActivationFlow):
         self.D: np.ndarray = None
         self.P: np.ndarray = None
         self.C: np.ndarray = None
-        self.setNodeData( nodes_data, **kwargs )
+        self.setNodeData( nodes_data )
 
     def get_distances(self) -> np.ndarray:
         return self.P
@@ -69,25 +69,27 @@ class cpActivationFlow(ActivationFlow):
     def get_classes(self) -> np.ndarray:
         return self.C
 
-    def setNodeData(self, nodes_data: xa.DataArray, **kwargs ):
+    def setNodeData(self, nodes_data: xa.DataArray ):
         if self.reset or (self.nodes is None):
             if (nodes_data.size > 0):
                 t0 = time.time()
                 self.nodes = nodes_data
-                self.nnd = self.getNNGraph( nodes_data, self.nneighbors,  **kwargs )
-                self.I = self.nnd.neighbor_graph[0]
-                self.D = self.nnd.neighbor_graph[1]
+                self.getGraph()
+                self.I = self._knn_graph.neighbor_graph[0]
+                self.D = self._knn_graph.neighbor_graph[1]
                 dt = (time.time()-t0)
-                print( f"Computed NN Graph with {self.nnd.n_neighbors} neighbors and {nodes_data.shape[0]} verts in {dt} sec ({dt/60} min)")
+                print( f"Computed NN Graph with {self._knn_graph.n_neighbors} neighbors and {nodes_data.shape[0]} verts in {dt} sec ({dt/60} min)")
             else:
                 print( "No data available for this block")
 
-    @classmethod
-    def getNNGraph(cls, nodes: xa.DataArray, n_neighbors: int, **kwargs ):
-        n_trees = kwargs.get('ntree', 5 + int(round((nodes.shape[0]) ** 0.5 / 20.0)))
-        n_iters = kwargs.get('niter', max(5, 2 * int(round(np.log2(nodes.shape[0])))))
-        nnd = NNDescent(nodes.values, n_trees=n_trees, n_iters=n_iters, n_neighbors=n_neighbors, max_candidates=60, verbose=True)
-        return nnd
+    def getGraph(self):
+        if self._knn_graph is None:
+            n_trees =  5 + int(round((self.nodes.shape[0]) ** 0.5 / 20.0))
+            n_iters =  max(5, 2 * int(round(np.log2(self.nodes.shape[0]))))
+            kwargs = dict( n_trees=n_trees, n_iters=n_iters, n_neighbors=self.nneighbors, max_candidates=60, verbose=True, metric = self.metric )
+            if self.metric == "minkowski": kwargs['metric_kwds'] = dict( p=self.p )
+            self._knn_graph = NNDescent( self.nodes.values, **kwargs )
+        return self._knn_graph
 
     def spread( self, sample_data: np.ndarray, nIter: int = 1, **kwargs ) -> Optional[bool]:
         sample_mask = sample_data == 0

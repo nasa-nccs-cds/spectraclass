@@ -103,10 +103,10 @@ class PointCloudManager(SCSingletonConfigurable):
         if icid == 0: ufm().show( "Must select a class label in order to mark points." )
         if point_ids is None: lmgr.currentMarker.cid = icid
         else: lmgr.addMarker( Marker( point_ids, icid ) )
-        pids = lmgr.currentMarker.pids
-        if not pids:
+        if lmgr.currentMarker.isEmpty:
             ufm().show( "Must select point(s) to mark." )
             return
+        pids = lmgr.currentMarker.pids
         self.initialize_markers()
         self.clear_pids( icid, pids )
         self.clear_points(0)
