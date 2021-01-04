@@ -65,7 +65,7 @@ class ActivationFlowManager(SCSingletonConfigurable):
             try:
                 result = self.instances.get( dsid, None )
                 if result is None:
-                    metric_specs = self.metric.split("=")
+                    metric_specs = self.metric.split("-")
                     kwargs = dict( metric = metric_specs[0] )
                     kwargs['p'] = int(metric_specs[1]) if len( metric_specs ) > 1 else 2
                     result = ActivationFlow.instance( point_data, self.nneighbors, **kwargs )

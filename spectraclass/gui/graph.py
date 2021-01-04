@@ -95,7 +95,7 @@ class JbkGraph:
     def y2( self ) -> List[ np.ndarray ]:
         idx = self._selected_pids[0]
         rp = rescale( self._rploty[idx] )
-        print( f"           &&&&   GRAPH:y2-> idx={idx}, val[10] = {rp[:10]} ")
+#        print( f"           &&&&   GRAPH:y2-> idx={idx}, val[10] = {rp[:10]} ")
         return [ rescale( self._ploty[idx] ), rp ]
 
     @property

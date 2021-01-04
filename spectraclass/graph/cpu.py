@@ -30,7 +30,7 @@ def getFilteredLabels( labels: np.ndarray ) -> np.ndarray:
         "label_spec": numba.int32[:],
         "C": numba.int32[:],
         "P": numba.float32[:],
-        "D": numba.float32[:,:],
+        "D": numba.float64[:,:],
     },)
 def iterate_spread_labels( I: np.ndarray, D: np.ndarray, C: np.ndarray, P: np.ndarray ):
     for iN in np.arange( 1, I.shape[1], dtype=np.int32 ):
@@ -75,8 +75,9 @@ class cpActivationFlow(ActivationFlow):
                 t0 = time.time()
                 self.nodes = nodes_data
                 self.getGraph()
-                self.I = self._knn_graph.neighbor_graph[0]
-                self.D = self._knn_graph.neighbor_graph[1]
+                self.I: np.ndarray = self._knn_graph.neighbor_graph[0]
+                self.D: np.ndarray = self._knn_graph.neighbor_graph[1]
+                print(f" --->  $$$D: setNodeData D=> {self.D.__class__}:{self.D.dtype}")
                 dt = (time.time()-t0)
                 print( f"Computed NN Graph with {self._knn_graph.n_neighbors} neighbors and {nodes_data.shape[0]} verts in {dt} sec ({dt/60} min)")
             else:

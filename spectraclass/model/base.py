@@ -67,18 +67,18 @@ class SCSingletonConfigurable(tlc.LoggingConfigurable):
     @classmethod
     def add_trait_values( cls, trait_map: Dict, cname: str, instance: "SCSingletonConfigurable" ):
         class_traits = instance.class_traits(config=True)
-        print(f"  ADDING TRAITS [{instance.__class__}]: {class_traits.keys()}")
+#        print(f"  ADDING TRAITS [{instance.__class__}]: {class_traits.keys()}")
         for tid, trait in class_traits.items():
             tval = getattr(instance, tid)
             if trait.__class__.__name__ == "Unicode":  tval = f'"{tval}"'
             trait_values = trait_map.setdefault( instance.config_scope(), {} )
-            print( f"    *** add_trait_value[{instance.config_scope()},{pid(instance)}]: {cname+tid} -> {tval}")
+#            print( f"    *** add_trait_value[{instance.config_scope()},{pid(instance)}]: {cname+tid} -> {tval}")
             trait_values[cname + tid] = tval
 
     @classmethod
     def generate_config_file( cls ) -> Dict[str,str]:
         trait_map: Dict = {}
-        print( f"Generate config file, classes = {[inst.__class__ for inst in cls.config_instances]}")
+#        print( f"Generate config file, classes = {[inst.__class__ for inst in cls.config_instances]}")
         for inst in cls.config_instances:
             cls.add_trait_values( trait_map, f"c.{inst.__class__.__name__}.", inst )
         result: Dict = {}
@@ -88,20 +88,3 @@ class SCSingletonConfigurable(tlc.LoggingConfigurable):
                 lines.append( f"{name} = {value}")
             result[ mode ] = '\n'.join(lines)
         return result
-
-# class AstroModeConfigurable(SCSingletonConfigurable):
-#     _class_instances = {}
-#
-#     def __init__( self, mode: str ):
-#         SCSingletonConfigurable.__init__(self)
-#         self._mode = mode
-#         self._class_instances[mode] = self
-#
-#     @classmethod
-#     def instance(cls):
-#         from spectraclass.data.base import DataManager
-#         return cls._class_instances[ DataManager.instance().mode ]
-#
-#     @property
-#     def config_mode(self):
-#         return self._mode
