@@ -27,6 +27,8 @@ class Spectraclass(SCSingletonConfigurable):
         from spectraclass.gui.points import PointCloudManager
         from spectraclass.gui.unstructured.table import TableManager
         from spectraclass.gui.control import ActionsManager
+        from spectraclass.data.base import DataManager, dm
+
 
         self.set_spectraclass_theme()
         css_border = '1px solid blue'
@@ -47,6 +49,7 @@ class Spectraclass(SCSingletonConfigurable):
         plot = ipw.VBox([points, graph], layout=ipw.Layout( flex='1 1 auto', border=css_border) )
         gui = ipw.HBox([control, plot])
         if embed: ActionsManager.instance().embed()
+        dm().save_config()
         return gui
 
     def show_gpu_usage(self):

@@ -23,6 +23,7 @@ class ModeDataManager(SCSingletonConfigurable):
     VALID_BANDS = None
 
     dataset = tl.Unicode("NONE").tag(config=True,sync=True)
+    image_name = tl.Unicode("NONE").tag(config=True ,sync=True)
     cache_dir = tl.Unicode(os.path.expanduser("~/Development/Cache")).tag(config=True)
     data_dir = tl.Unicode(os.path.expanduser("~/Development/Data")).tag(config=True)
 
@@ -122,7 +123,6 @@ class ModeDataManager(SCSingletonConfigurable):
             self._dset_selection.options = self.getDatasetList()
 
     def select_dataset(self, *args):
-
         self.dm.select_current_mode()
         if self.dm.dataset != self._dset_selection.value:
             print( f"Loading dataset '{self._dset_selection.value}', current dataset = '{self.dm.dataset}', "
@@ -273,6 +273,4 @@ class ModeDataManager(SCSingletonConfigurable):
         if flow.spread( seed_points.data, niters ) is not None:
             pcm().color_by_value( flow.get_distances(), distance=True )
 
-    def getImageName(self, base_image_name: str ) -> str:
-        return base_image_name
 

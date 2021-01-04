@@ -23,6 +23,7 @@ class Spectraclass(SCSingletonConfigurable):
 
     def gui( self, embed: bool = False ):
         from spectraclass.gui.graph import GraphManager, gm
+        from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.gui.control import ActionsManager, am, ControlsManager, cm, UserFeedbackManager, ufm
         from spectraclass.gui.spatial.map import MapManager, mm
@@ -37,10 +38,12 @@ class Spectraclass(SCSingletonConfigurable):
         control = ipw.VBox( [ am().gui(), mm().gui(), gm().gui() ], layout=ipw.Layout( flex='0 0 700px'), border=css_border )
         gui = ipw.HBox( [control, plot ], layout=ipw.Layout( width='100%' ) )
         if embed: ActionsManager.instance().embed()
+        dm().save_config()
         return gui
 
     def show_gpu_usage(self):
         os.system("nvidia-smi")
+
 
 
 

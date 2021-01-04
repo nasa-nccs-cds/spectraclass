@@ -47,6 +47,7 @@ class DataManager(SCSingletonConfigurable):
         self._mode_data_manager_: ModeDataManager = None
         super(DataManager, self).__init__()
         self._wGui = None
+        self.auto_write = False
 
     def _contingent_configuration_(self):
         pass
@@ -62,7 +63,6 @@ class DataManager(SCSingletonConfigurable):
         dataManager._configure_( name, mode )
         if mode.lower() not in cls._mode_data_managers_: raise Exception( f"Mode {mode} is not defined, available modes = {cls._mode_data_managers_.keys()}")
         dataManager._mode_data_manager_ = cls._mode_data_managers_[ mode.lower() ].instance()
-        dataManager.save_config()
         return dataManager
 
     def _configure_(self, name: str, mode: str ):
@@ -71,24 +71,23 @@ class DataManager(SCSingletonConfigurable):
         from traitlets.config.loader import load_pyconfig_files
         if os.path.isfile(cfg_file):
             (dir, fname) = os.path.split(cfg_file)
-            config_files = ['configuration.py', fname]
+            config_files = ['global.py', fname]
             print(f"Loading config files: {config_files} from dir {dir}")
             self._config = load_pyconfig_files(config_files, dir)
             self.update_config( self._config )
         else:
             print(f"Configuration error: '{cfg_file}' is not a file.")
 
-    def save_config(self):
-        conf_dict = self.generate_config_file()
-        globals = conf_dict.pop('global', "")
-        for scope, mode_conf_txt in conf_dict.items():
-            cfg_file = os.path.realpath( self.config_file( self.name, scope ) )
-            os.makedirs(os.path.dirname(cfg_file), exist_ok=True)
-            with open(cfg_file, "w") as cfile_handle:
-                print(f"Writing config file: {cfg_file}")
-                #                if os.path.exists(cfg_file): os.remove(cfg_file)
-                conf_txt = mode_conf_txt if scope == "configuration" else '\n'.join([mode_conf_txt, globals])
-                cfile_handle.write(conf_txt)
+    def save_config( self, conditional = False ):
+        if not conditional or (self.auto_write == True):
+            self.auto_write = True
+            conf_dict = self.generate_config_file()
+            for scope, mode_conf_txt in conf_dict.items():
+                cfg_file = os.path.realpath( self.config_file( self.name, scope ) )
+                os.makedirs(os.path.dirname(cfg_file), exist_ok=True)
+                with open(cfg_file, "w") as cfile_handle:
+                    print(f"Writing config file: {cfg_file}")
+                    cfile_handle.write(mode_conf_txt)
 
     def refresh_all(self):
         self.save_config()
@@ -115,6 +114,10 @@ class DataManager(SCSingletonConfigurable):
         return self._mode_data_manager_
 
     @property
+    def cache_dir(self) -> str:
+        return os.path.join( self.modal.cache_dir, self.name, self.modal.MODE )
+
+    @property
     def dataset(self) -> str:
         return self._mode_data_manager_.dataset
 
@@ -124,7 +127,7 @@ class DataManager(SCSingletonConfigurable):
 
     @property
     def config_mode(self):
-        return "configuration"
+        return "global"
 
     @property
     def table_cols(self) -> List:

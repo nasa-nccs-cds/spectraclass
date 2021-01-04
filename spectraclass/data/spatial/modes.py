@@ -12,7 +12,7 @@ class AvirisDataManager(SpatialDataManager):
         super(AvirisDataManager, self).__init__()
 
 class DesisDataManager(SpatialDataManager):
-    MODE = "desis"
+    MODE = "DESIS"
     METAVARS = []
     INPUTS = dict()
     VALID_BANDS = [ [5, sys.maxsize], ]
@@ -21,10 +21,6 @@ class DesisDataManager(SpatialDataManager):
         super(DesisDataManager, self).__init__()
 
     def getFilePath(self, use_tile: bool ) -> str:
-        base_dir = self.tiles.data_dir
-        base_file = self.tiles.tileName() if use_tile else self.tiles.image_name
-        base_image = f"{base_dir}/{base_file}-SPECTRAL_IMAGE"
-        mdata_file = f"{base_dir}/{base_file}-METADATA.xml"
-        if not os.path.isfile( base_image + ".xml" ) and os.path.isfile( mdata_file ):
-            os.system(f'ln -s "{mdata_file}" "{base_image}.xml"')
-        return f"{base_image}.tif"
+        data_dir = os.path.join( self.data_dir, self.MODE )
+        base_file = self.tiles.getTileFileName() if use_tile else self.tiles.image_name
+        return f"{data_dir}/processed/{base_file}"

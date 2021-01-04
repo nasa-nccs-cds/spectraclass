@@ -46,8 +46,8 @@ class ActivationFlow():
             raise NotImplementedError( f"Error, unimplemented proc_type: {ptype}")
 
 class ActivationFlowManager(SCSingletonConfigurable):
-    nneighbors = tl.Int( 5 ) #  .tag(config=True,sync=True)
-    metric = tl.Unicode("euclidean")
+    nneighbors = tl.Int( 5 ).tag(config=True,sync=True)
+    metric = tl.Unicode("euclidean").tag(config=True,sync=True)
 
     def __init__(self):
         super(ActivationFlowManager, self).__init__()

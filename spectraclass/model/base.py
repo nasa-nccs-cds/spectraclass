@@ -40,15 +40,17 @@ class SCSingletonConfigurable(tlc.LoggingConfigurable):
 
     @classmethod
     def instance(cls, *args, **kwargs):
+        from spectraclass.data.base import DataManager, dm
         if cls._instance is None:
             inst = cls(*args, **kwargs)
             cls._instance = inst
             cls._instantiated = cls
+            dm().save_config(True)
         assert cls._instantiated == cls, f"Error, conflicting singleton instantiations: {cls} vs {cls._instantiated}"
         return cls._instance
 
     def config_scope(self):
-        return "configuration"
+        return "global"
 
     @classmethod
     def initialized(cls):
@@ -64,17 +66,19 @@ class SCSingletonConfigurable(tlc.LoggingConfigurable):
 
     @classmethod
     def add_trait_values( cls, trait_map: Dict, cname: str, instance: "SCSingletonConfigurable" ):
-        for tid, trait in instance.class_traits(config=True).items():
+        class_traits = instance.class_traits(config=True)
+        print(f"  ADDING TRAITS [{instance.__class__}]: {class_traits.keys()}")
+        for tid, trait in class_traits.items():
             tval = getattr(instance, tid)
             if trait.__class__.__name__ == "Unicode":  tval = f'"{tval}"'
             trait_values = trait_map.setdefault( instance.config_scope(), {} )
- #           print( f"    *** add_trait_value[{instance.config_mode},{pid(instance)}]: {cname+tid} -> {tval}")
+            print( f"    *** add_trait_value[{instance.config_scope()},{pid(instance)}]: {cname+tid} -> {tval}")
             trait_values[cname + tid] = tval
 
     @classmethod
     def generate_config_file( cls ) -> Dict[str,str]:
         trait_map: Dict = {}
-#        print( f"Generate config file, classes = {[clss.__name__ for clss in cls.config_classes]}")
+        print( f"Generate config file, classes = {[inst.__class__ for inst in cls.config_instances]}")
         for inst in cls.config_instances:
             cls.add_trait_values( trait_map, f"c.{inst.__class__.__name__}.", inst )
         result: Dict = {}

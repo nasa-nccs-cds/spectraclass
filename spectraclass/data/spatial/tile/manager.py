@@ -29,10 +29,6 @@ class TileManager(SCSingletonConfigurable):
     block_shape = tl.List(tl.Int ,(250 ,250) ,2 ,2).tag(config=True, sync=True)
     block_dims = tl.List(tl.Int ,(4 ,4) ,2 ,2).tag(config=True, sync=True)
     block_index = tl.List(tl.Int, (0, 0), 2, 2).tag(config=True, sync=True)
-
-    image_name = tl.Unicode("NONE").tag(config=True ,sync=True)
-    data_cache = tl.Unicode("NONE").tag(config=True, sync=True)
-    data_dir = tl.Unicode("NONE").tag(config=True, sync=True)
     image_attrs = {}
 
     def __init__(self):
@@ -40,12 +36,9 @@ class TileManager(SCSingletonConfigurable):
         self._tiles: Dict[List, Tile] = {}
         self.cacheTileData = True
 
-    def tileFileName( self, with_extension = True ) -> str:
-        return self.getTileFileName( DataManager.instance().getImageName(self.image_name), with_extension )
-
     @property
-    def config_mode(self):
-        return DataManager.instance().mode
+    def image_name(self):
+        return DataManager.instance().modal.image_name
 
     @property
     def iy(self):
@@ -73,8 +66,8 @@ class TileManager(SCSingletonConfigurable):
         data.attrs['transform'] = [ tr0[0], tr0[1], x0, tr0[3], tr0[4], y0  ]
         data.attrs['tile_coords'] = self.tile_index
 
-    def getTileFileName(self, image_name: str, with_extension = True ) -> str:
-        tile_file_name = f"{image_name}.{self._fmt(self.tile_shape)}_{self._fmt(self.tile_index)}"
+    def getTileFileName(self, with_extension = True ) -> str:
+        tile_file_name = f"{self.image_name}.{self._fmt(self.tile_shape)}_{self._fmt(self.tile_index)}"
         return tile_file_name + ".tif" if with_extension else tile_file_name
 
     def tileName( self, base_name: str = None ) -> str:

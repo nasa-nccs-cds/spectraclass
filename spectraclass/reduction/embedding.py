@@ -11,7 +11,6 @@ from spectraclass.model.base import SCSingletonConfigurable
 class ReductionManager(SCSingletonConfigurable):
     init = tl.Unicode("random").tag(config=True,sync=True)
     nepochs = tl.Int( 200 ).tag(config=True,sync=True)
-    nneighbors = tl.Int( 8 ).tag(config=True, sync=True)
     alpha = tl.Float( 0.9 ).tag(config=True,sync=True)
     ndim = tl.Int( 3 ).tag(config=True,sync=True)
     target_weight = tl.Float( 0.5 ).tag(config=True,sync=True)

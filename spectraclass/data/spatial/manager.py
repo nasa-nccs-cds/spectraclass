@@ -300,7 +300,7 @@ class SpatialDataManager(ModeDataManager):
         pcm().update_plot( )
 
     def getFilePath(self, use_tile: bool ) -> str:
-        base_dir = self.tiles.data_dir
+        base_dir = dm().modal.data_dir
         base_file = self.tiles.tileName() if use_tile else self.tiles.image_name
         return f"{base_dir}/{base_file}.tif"
 
@@ -316,15 +316,12 @@ class SpatialDataManager(ModeDataManager):
             print(f"Unable to write raster file to {output_file}: {err}")
             return None
 
-    def readGeotiff(self, read_tile: bool ) -> Optional[xa.DataArray]:
+    def readGeotiff(self, read_tile: bool ) -> xa.DataArray:
         input_file_path = self.getFilePath( read_tile )
-        try:
-            input_bands: xa.DataArray = rio.open_rasterio(input_file_path)
-            if 'transform' not in input_bands.attrs.keys():
-                gts = input_bands.spatial_ref.GeoTransform.split()
-                input_bands.attrs['transform'] = [float(gts[i]) for i in [1, 2, 0, 4, 5, 3]]
-            print(f"Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}")
-            return input_bands
-        except Exception as err:
-            print(f"WARNING: can't read input file {input_file_path}: {err}")
-            return None
+        input_bands: xa.DataArray = rio.open_rasterio(input_file_path)
+        if 'transform' not in input_bands.attrs.keys():
+            gts = input_bands.spatial_ref.GeoTransform.split()
+            input_bands.attrs['transform'] = [float(gts[i]) for i in [1, 2, 0, 4, 5, 3]]
+        print(f"Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}")
+        return input_bands
+
