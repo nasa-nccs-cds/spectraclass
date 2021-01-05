@@ -30,6 +30,7 @@ class ModeDataManager(SCSingletonConfigurable):
     model_dims = tl.Int(32).tag(config=True, sync=True)
     subsample = tl.Int(5).tag(config=True, sync=True)
     reduce_method = tl.Unicode("Autoencoder").tag(config=True, sync=True)
+    reduce_scope = tl.Unicode("block").tag(config=True, sync=True)
     reduce_nepochs = tl.Int(1000).tag(config=True, sync=True)
     reduce_sparsity = tl.Float( 10e-5 ).tag(config=True,sync=True)
 
@@ -102,7 +103,7 @@ class ModeDataManager(SCSingletonConfigurable):
         self.set_progress(0.1)
         if self.reduce_method != "None":
             input_data = data_vars['embedding']
-            (reduced_spectra, reproduced_spectra) = ReductionManager.instance().reduce(input_data, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity)
+            (reduced_spectra, reproduced_spectra) = ReductionManager.instance().reduce(input_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity)
             coords = dict(samples=xcoords['samples'], model=np.arange(self.model_dims))
             data_vars['reduction'] = xa.DataArray(reduced_spectra, dims=['samples', 'model'], coords=coords)
             data_vars['reproduction'] = input_data.copy(data=reproduced_spectra)

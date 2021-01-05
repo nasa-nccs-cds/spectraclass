@@ -29,7 +29,7 @@ class Marker:
         except: return False
 
 class SCSingletonConfigurable(tlc.LoggingConfigurable):
-    config_instances = []
+    config_instances: List["SCSingletonConfigurable"] = []
     _instance = None
     _instantiated = None
 
@@ -40,12 +40,10 @@ class SCSingletonConfigurable(tlc.LoggingConfigurable):
 
     @classmethod
     def instance(cls, *args, **kwargs):
-        from spectraclass.data.base import DataManager, dm
         if cls._instance is None:
             inst = cls(*args, **kwargs)
             cls._instance = inst
             cls._instantiated = cls
-            dm().save_config(True)
         assert cls._instantiated == cls, f"Error, conflicting singleton instantiations: {cls} vs {cls._instantiated}"
         return cls._instance
 
@@ -75,12 +73,10 @@ class SCSingletonConfigurable(tlc.LoggingConfigurable):
 #            print( f"    *** add_trait_value[{instance.config_scope()},{pid(instance)}]: {cname+tid} -> {tval}")
             trait_values[cname + tid] = tval
 
-    @classmethod
-    def generate_config_file( cls ) -> Dict[str,str]:
-        trait_map: Dict = {}
+    def generate_config_file( self, trait_map: Dict  ) -> Dict[str,str]:
 #        print( f"Generate config file, classes = {[inst.__class__ for inst in cls.config_instances]}")
-        for inst in cls.config_instances:
-            cls.add_trait_values( trait_map, f"c.{inst.__class__.__name__}.", inst )
+        for inst in self.config_instances:
+            self.add_trait_values( trait_map, f"c.{inst.__class__.__name__}.", inst )
         result: Dict = {}
         for mode, trait_values in trait_map.items():
             lines = ['']

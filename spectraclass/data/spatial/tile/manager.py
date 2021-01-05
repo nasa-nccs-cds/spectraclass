@@ -94,10 +94,20 @@ class TileManager(SCSingletonConfigurable):
         if valid_bands is not None:
             dataslices = [tile_data.isel(band=slice(valid_band[0], valid_band[1])) for valid_band in valid_bands]
             tile_data = xa.concat(dataslices, dim="band")
-            print(
-                f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
+            print( f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
         result = self.rescale(tile_data)
         return result
+
+    def getPointData( self ) -> Tuple[xa.DataArray,xa.DataArray]:
+        from spectraclass.data.spatial.manager import SpatialDataManager
+        tile_data: xa.DataArray = self.getTileData()
+        result: xa.DataArray =  SpatialDataManager.raster2points( tile_data )
+        point_coords: xa.DataArray = result.samples
+        point_data = result.assign_coords( samples = np.arange( 0, point_coords.shape[0] ) )
+#        samples_axis = point_data.coords['samples']
+        point_data.attrs['type'] = 'tile'
+        point_data.attrs['dsid'] = result.attrs['dsid']
+        return ( point_data, point_coords)
 
     def rescale(self, raster: xa.DataArray, **kwargs ) -> xa.DataArray:
         norm_type = kwargs.get( 'norm', 'spectral' )

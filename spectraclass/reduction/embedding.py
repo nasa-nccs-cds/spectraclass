@@ -32,18 +32,10 @@ class ReductionManager(SCSingletonConfigurable):
     def refresh(self):
         self._mapper = {}
 
-    def reduce(self, inputs: np.ndarray, reduction_method: str, ndim: int, nepochs: int = 100, sparsity: float = 0.0 ) -> Tuple[np.ndarray,np.ndarray]:
-        if reduction_method.lower() == "autoencoder": return self.autoencoder_reduction( inputs, ndim, nepochs, sparsity )
-        else: return ( inputs, inputs )
-
-    def xreduce(self, inputs: xa.DataArray, reduction_method: str, ndim: int ) -> Tuple[xa.DataArray,xa.DataArray]:
-        if reduction_method.lower() == "autoencoder":
-            ( encoded_data, reproduced_data ) = self.autoencoder_reduction( inputs.values, ndim )
-            coords = {inputs.dims[0]: inputs.coords[inputs.dims[0]], inputs.dims[1]: np.arange(ndim)}
-            x_encoded_data = xa.DataArray(encoded_data, dims=inputs.dims, coords=coords, attrs=inputs.attrs)
-            x_reproduced_data = inputs.copy( data=reproduced_data )
-            return ( x_encoded_data, x_reproduced_data )
-        return ( inputs, inputs )
+    def reduce(self, train_data: np.ndarray, test_data: List[np.ndarray], reduction_method: str, ndim: int, nepochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, np.ndarray]]:
+        if test_data is None: test_data = [train_data]
+        if reduction_method.lower() == "autoencoder": return self.autoencoder_reduction(train_data, test_data, ndim, nepochs, sparsity)
+        else: return [ (td,td) for td in test_data ]
 
     # def spectral_reduction(data, graph, n_components=3, sparsify=False):
     #     t0 = time.time()
@@ -61,12 +53,12 @@ class ReductionManager(SCSingletonConfigurable):
     #     print(f"Completed spectral_embedding in {(time.time() - t0) / 60.0} min.")
     #     return rv
 
-    def autoencoder_reduction( self, encoder_input: np.ndarray, ndim: int, epochs: int = 100, sparsity: float = 0.0 ) -> Tuple[np.ndarray,np.ndarray]:
+    def autoencoder_reduction(self, train_input: np.ndarray, test_inputs: Optional[List[np.ndarray]], ndim: int, epochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, np.ndarray]]:
         from keras.layers import Input, Dense
         from keras.models import Model
         from keras import losses, regularizers
-        from scipy.stats import entropy
-        input_dims = encoder_input.shape[1]
+        if test_inputs is None: test_inputs = [ train_input ]
+        input_dims = train_input.shape[1]
         reduction_factor = 2
         inputlayer = Input( shape=[input_dims] )
         activation = 'tanh'
@@ -91,15 +83,19 @@ class ReductionManager(SCSingletonConfigurable):
         encoder.summary()
 
         autoencoder.compile(loss=loss, optimizer=optimizer )
-        autoencoder.fit( encoder_input, encoder_input, epochs=epochs, batch_size=256, shuffle=True )
-        encoded_data = encoder.predict( encoder_input )
-        scaled_encoding = encoded_data/encoded_data.std()
-        reproduction = autoencoder.predict( encoder_input )
-        print(f" Autoencoder_reduction with sparsity={sparsity}, result: shape = {encoded_data.shape}")
-        print(f" ----> encoder_input: shape = {encoder_input.shape}, val[5][5] = {encoder_input[:5][:5]} ")
-        print(f" ----> reproduction: shape = {reproduction.shape}, val[5][5] = {reproduction[:5][:5]} ")
-        print(f" ----> encoding: shape = {scaled_encoding.shape}, val[5][5]108 = {scaled_encoding[:5][:5]} ")
-        return (scaled_encoding, reproduction )
+        autoencoder.fit(train_input, train_input, epochs=epochs, batch_size=256, shuffle=True)
+        results = []
+        for iT, test_input in enumerate(test_inputs):
+            encoded_data = encoder.predict(test_input)
+            scaled_encoding = encoded_data/encoded_data.std()
+            reproduction = autoencoder.predict(test_input)
+            results.append( (scaled_encoding, reproduction ) )
+            if iT == 0:
+                print(f" Autoencoder_reduction with sparsity={sparsity}, result: shape = {encoded_data.shape}")
+                print(f" ----> encoder_input: shape = {train_input.shape}, val[5][5] = {train_input[:5][:5]} ")
+                print(f" ----> reproduction: shape = {reproduction.shape}, val[5][5] = {reproduction[:5][:5]} ")
+                print(f" ----> encoding: shape = {scaled_encoding.shape}, val[5][5]108 = {scaled_encoding[:5][:5]} ")
+        return results
 
     def umap_init( self,  point_data: xa.DataArray, **kwargs ) -> Optional[np.ndarray]:
         from .cpu import UMAP
@@ -114,7 +110,7 @@ class ReductionManager(SCSingletonConfigurable):
         else:
             print( f"umap_init: init = {self.init}")
             if self.init == "autoencoder":
-                (reduction, reproduction) = self.autoencoder_reduction( point_data.values, self.ndim, 50 )
+                [(reduction, reproduction)] = self.autoencoder_reduction( point_data.values, None, self.ndim, 50 )
                 mapper.init_embedding(reduction)
             mapper.init = self.init
             kwargs['nepochs'] = 1

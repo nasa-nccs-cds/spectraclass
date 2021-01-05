@@ -47,7 +47,6 @@ class DataManager(SCSingletonConfigurable):
         self._mode_data_manager_: ModeDataManager = None
         super(DataManager, self).__init__()
         self._wGui = None
-        self.auto_write = False
 
     def _contingent_configuration_(self):
         pass
@@ -78,16 +77,14 @@ class DataManager(SCSingletonConfigurable):
         else:
             print(f"Configuration error: '{cfg_file}' is not a file.")
 
-    def save_config( self, conditional = False ):
-        if not conditional or (self.auto_write == True):
-            self.auto_write = True
-            conf_dict = self.generate_config_file()
-            for scope, mode_conf_txt in conf_dict.items():
-                cfg_file = os.path.realpath( self.config_file( self.name, scope ) )
-                os.makedirs(os.path.dirname(cfg_file), exist_ok=True)
-                with open(cfg_file, "w") as cfile_handle:
-                    print(f"Writing config file: {cfg_file}")
-                    cfile_handle.write(mode_conf_txt)
+    def save_config( self ):
+        conf_dict = self.generate_config_file( dict(**self._config.items()) )
+        for scope, mode_conf_txt in conf_dict.items():
+            cfg_file = os.path.realpath( self.config_file( self.name, scope ) )
+            os.makedirs(os.path.dirname(cfg_file), exist_ok=True)
+            with open(cfg_file, "w") as cfile_handle:
+                print(f"Writing config file: {cfg_file}")
+                cfile_handle.write(mode_conf_txt)
 
     def refresh_all(self):
         self.save_config()

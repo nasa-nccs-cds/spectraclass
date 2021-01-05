@@ -98,7 +98,7 @@ class SpatialDataManager(ModeDataManager):
         if self.reduce_method != "":
             dave, dmag =  data.values.mean(0), 2.0*data.values.std(0)
             normed_data = ( data.values - dave ) / dmag
-            reduced_spectra, reproduction = ReductionManager.instance().reduce( normed_data, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
+            reduced_spectra, reproduction = ReductionManager.instance().reduce( normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
             coords = dict( samples=data.coords['samples'], band=np.arange( self.model_dims )  )
             return xa.DataArray( reduced_spectra, dims=['samples', 'band'], coords=coords )
         return data
@@ -234,7 +234,7 @@ class SpatialDataManager(ModeDataManager):
         attrs = {**kwargs, 'name': id}
         return xa.DataArray(np_data, dims=dims, coords=coords, name=id, attrs=attrs)
 
-    def prepare_inputs(self, *args, **kwargs ):
+    def prepare_inputs_block(self, *args, **kwargs ):
         from spectraclass.data.spatial.tile.tile import Block
         from spectraclass.data.base import DataType
         block: Block = self.tiles.getBlock( )
@@ -244,7 +244,7 @@ class SpatialDataManager(ModeDataManager):
             model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
             data_vars = dict( raw=point_data )
             if self.reduce_method != "":
-                reduced_spectra, reproduction = ReductionManager.instance().reduce( point_data, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
+                reduced_spectra, reproduction = ReductionManager.instance().reduce( point_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
                 data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
                 data_vars['reproduction'] = point_data.copy( data=reproduction )
             dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
@@ -254,6 +254,31 @@ class SpatialDataManager(ModeDataManager):
             outputDir = os.path.join( self.cache_dir, dm().project_name )
             os.makedirs(outputDir, 0o777, True)
             print(f"Writing output to {output_file}")
+            if os.path.exists(output_file): os.remove(output_file)
+            dataset.to_netcdf(output_file)
+
+    def prepare_inputs(self, *args, **kwargs ):
+        if self.reduce_scope == "tile":
+            ( training_data, tile_point_coords ) = self.tiles.getPointData()
+            blocks_point_data = [ block.getPointData(subsample=self.subsample)[0] for block in self.tiles.tile.getBlocks() ]
+        elif self.reduce_scope == "block":
+            blocks_point_data = [ self.tiles.getPointData()[0] ]
+            training_data  = blocks_point_data[0]
+        else: raise Exception( f"Unrecognized 'reduce_scope' parameter: {self.reduce_scope}" )
+        blocks_reduction = ReductionManager.instance().reduce( training_data, blocks_point_data, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
+        for ((reduced_spectra, reproduction), point_data) in zip(blocks_reduction,blocks_point_data):
+            dsid = point_data.attrs['dsid']
+            model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
+            data_vars = dict( raw=point_data )
+            data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
+            data_vars['reproduction'] = point_data.copy( data=reproduction )
+            dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
+            file_name_base = f"{dsid}-{self.reduce_method}-{self.model_dims}"
+            self.dataset = f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
+            output_file = os.path.join(self.datasetDir, self.dataset + ".nc")
+            outputDir = os.path.join( self.cache_dir, dm().project_name )
+            os.makedirs(outputDir, 0o777, True)
+            print(f" Writing reduced[{self.reduce_scope}] output to {output_file}")
             if os.path.exists(output_file): os.remove(output_file)
             dataset.to_netcdf(output_file)
 
