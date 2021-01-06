@@ -36,9 +36,11 @@ class UnstructuredDataManager(ModeDataManager):
     def execute_task( self, task: str ):
         from spectraclass.gui.points import PointCloudManager
         from spectraclass.gui.unstructured.table import TableManager
+        from spectraclass.reduction.embedding import ReductionManager
         tmgr = TableManager.instance()
         if task == "embed":
-            PointCloudManager.instance().reembed()
+            embedding = ReductionManager.instance().umap_embedding()
+            PointCloudManager.instance().reembed( points = embedding )
         elif task == "mark":
             tmgr.mark_selection()
         elif task == "spread":

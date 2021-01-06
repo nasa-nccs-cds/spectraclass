@@ -109,15 +109,15 @@ class ModeDataManager(SCSingletonConfigurable):
             data_vars['reproduction'] = input_data.copy(data=reproduced_spectra)
             self.set_progress(0.8)
 
-        dataset = xa.Dataset(data_vars, coords=xcoords, attrs={'type': 'spectra'})
-        dataset.attrs["colnames"] = mdata_vars
+        result_dataset = xa.Dataset(data_vars, coords=xcoords, attrs={'type': 'spectra'})
+        result_dataset.attrs["colnames"] = mdata_vars
         if write:
             if os.path.exists(output_file): os.remove(output_file)
             print(f"Writing output to {output_file}")
-            dataset.to_netcdf(output_file, format='NETCDF4', engine='netcdf4')
+            result_dataset.to_netcdf(output_file, format='NETCDF4', engine='netcdf4')
         self.updateDatasetList()
         self.set_progress(1.0)
-        return dataset
+        return result_dataset
 
     def updateDatasetList(self):
         if self._dset_selection is not None:

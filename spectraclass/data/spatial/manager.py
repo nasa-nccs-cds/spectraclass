@@ -274,7 +274,7 @@ class SpatialDataManager(ModeDataManager):
             data_vars = dict( raw=point_data )
             data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
             data_vars['reproduction'] = point_data.copy( data=reproduction )
-            dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
+            result_dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
             file_name_base = f"{dsid}-{self.reduce_method}-{self.model_dims}"
             self.dataset = f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
             output_file = os.path.join(self.datasetDir, self.dataset + ".nc")
@@ -282,13 +282,14 @@ class SpatialDataManager(ModeDataManager):
             os.makedirs(outputDir, 0o777, True)
             print(f" Writing reduced[{self.reduce_scope}] output to {output_file}")
             if os.path.exists(output_file): os.remove(output_file)
-            dataset.to_netcdf(output_file)
+            result_dataset.to_netcdf(output_file)
 
     def execute_task( self, task: str ):
         from spectraclass.gui.points import PointCloudManager
         pcm = PointCloudManager.instance()
         if task == "embed":
-            pcm.reembed()
+            embedding = ReductionManager.instance().umap_embedding()
+            pcm.reembed( embedding )
         elif task == "mark":
             self.mark()
         elif task == "spread":

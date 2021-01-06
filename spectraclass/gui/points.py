@@ -26,7 +26,6 @@ class PointCloudManager(SCSingletonConfigurable):
         self.initialize_points()
 
     def initialize_points(self):
-        self._embedding: np.ndarray = None
         self._binned_points: List[np.ndarray] = [self.empty_pointset for ic in range(self._n_point_bins)]
         self._points: np.ndarray = self.empty_pointset
         self._marker_points: List[np.ndarray] = None
@@ -57,19 +56,19 @@ class PointCloudManager(SCSingletonConfigurable):
         reduced_data: xa.DataArray = project_dataset.reduction
         reduced_data.attrs['dsid'] = project_dataset.attrs['dsid']
         print( f"UMAP init, init data shape = {reduced_data.shape}")
-        self._embedding = ReductionManager.instance().umap_init( reduced_data, **kwargs  )
-        self._points = self._embedding
+        embedding = ReductionManager.instance().umap_init( reduced_data, **kwargs  )
+        self._points = self.normalize( embedding )
         self.initialize_markers()
 
-    def reembed(self, **kwargs ):
-        t0 = time.time()
+    def normalize(self, point_data: np.ndarray ):
+        return ( point_data - point_data.mean() ) / point_data.std()
+
+    def reembed(self, embedding ):
         self.clear_bins()
-        self._embedding = ReductionManager.instance().umap_embedding( **kwargs )
-        self.update_plot()
-        print(f"PointCloudManager: completed embed in {time.time()-t0} sec\n\n\n")
+        self.update_plot( points = embedding )
 
     def update_plot( self, **kwargs ):
-        self._points = kwargs.get( 'points', self._embedding )
+        if 'points' in kwargs: self._points = self.normalize( kwargs['points'] )
         if self._gui is not None:
             print(f"Updating point sets, sizes: {[ps.shape[0] for ps in self.point_sets]}")
             self._gui.point_sets = self.point_sets
@@ -82,39 +81,42 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def update_points(self, new_points: np.ndarray ):
         self.update_markers(points=new_points)
-        self.color_by_value(points=new_points)
+        self.color_by_value()
 
     def update_markers(self, pids: List[int] = None, **kwargs ):
         if pids is None:
             from spectraclass.model.labels import LabelsManager
-            points = kwargs.get('points',self._embedding)
+            if 'points' in kwargs: self._points = self.normalize( kwargs['points'] )
             self.initialize_markers(True)
             for marker in LabelsManager.instance().getMarkers():
-                self._marker_points[ marker.cid ] = np.append( self._marker_points[ marker.cid ], points[ marker.pids, : ], 0 )
+                self._marker_points[ marker.cid ] = np.append( self._marker_points[ marker.cid ], self._points[ marker.pids, : ], 0 )
         else:
-            self._marker_points[0] = self._embedding[ pids, : ]
+            self._marker_points[0] = self._points[ pids, : ]
             print( f"  ***** POINTS- mark_points[0], #pids = {len(pids)}")
 
     def mark_points(self, point_ids: np.ndarray = None, cid: int = -1, update=False):
         from spectraclass.model.labels import LabelsManager
         from spectraclass.gui.control import UserFeedbackManager, ufm
+        print(f" ---------------->> PCM: mark_points -> {point_ids}")
+        ufm().show( f" ---------------->> PCM: mark_points -> {point_ids}" )
         lmgr = LabelsManager.instance()
         icid: int = cid if cid > -1 else lmgr.current_cid
-        if icid == 0: ufm().show( "Must select a class label in order to mark points." )
-        if (lmgr.currentMarker is None) or lmgr.currentMarker.isEmpty:
-            ufm().show( "Must select point(s) to mark." )
-            return
-        if point_ids is None: lmgr.currentMarker.cid = icid
+ #       if icid == 0: ufm().show( "Must select a class label in order to mark points.", "red" )
+        if point_ids is None:
+            if lmgr.currentMarker is None:
+                ufm().show("Must select point(s) to mark.", "red")
+                return
+            lmgr.currentMarker.cid = icid
         else: lmgr.addMarker( Marker( point_ids, icid ) )
         pids = lmgr.currentMarker.pids
         self.initialize_markers()
         self.clear_pids( icid, pids )
         self.clear_points(0)
         self._marker_pids[icid] = np.append( self._marker_pids[icid], pids )
-        if self._embedding is None:
+        if self._points is None:
             print( "WARNING: Can't mark points in PointCloudManager which is not initialized")
         else:
-            marked_points: np.ndarray = self._embedding[ self._marker_pids[icid], : ]
+            marked_points: np.ndarray = self._points[ self._marker_pids[icid], : ]
     #        print( f"  ***** POINTS- mark_points[{icid}], #pids = {len(pids)}, #points = {marked_points.shape[0]}")
             self._marker_points[ icid ] = marked_points # np.concatenate(  [ self._marker_points[ icid ], marked_points ] )
             print(f"PointCloudManager.mark_points: added pids = {pids}, cid = {icid}, cid marked points = [{self._marker_pids[icid]}]")
@@ -133,13 +135,14 @@ class PointCloudManager(SCSingletonConfigurable):
         self.update_plot()
 
     def color_by_value( self, values: np.ndarray = None, **kwargs ):
+        from spectraclass.gui.control import UserFeedbackManager, ufm
         is_distance = kwargs.get( 'distance', False )
         if values is not None:
             self._color_values = ma.masked_invalid(values)
         if self._color_values is not None:
             colors = self._color_values.filled(sys.float_info.max)
             (vmin, vmax), npb = ( ( 0.0, self._color_values.max() ) if is_distance else self.get_color_bounds() ), self._n_point_bins
-            print( f" $$$color_by_value: (vmin, vmax, npb) = {(vmin, vmax, npb)}, points (max, min, shape) = { (self._points.max(), self._points.min(), self._points.shape) }" )
+            ufm().show( f" $$$color_by_value: (vmin, vmax, npb) = {(vmin, vmax, npb)}, points (max, min, shape) = { (self._points.max(), self._points.min(), self._points.shape) }" )
             pts: np.ndarray = ma.masked_invalid( self._points ).filled( sys.float_info.max )
             lspace: np.ndarray = np.linspace( vmin, vmax, npb+1 )
             for iC in range( 0, npb ):
@@ -165,7 +168,7 @@ class PointCloudManager(SCSingletonConfigurable):
                     if len( marker_pids ) > 0:
                         print( f" $$$PCM: clear_pids[{cid}]: {pids.tolist()}" )
                         self._marker_pids[iC] = np.delete( self._marker_pids[iC], dpts(marker_pids) )
-                        self._marker_points[iC] = self._embedding[self._marker_pids[iC], :] if len( self._marker_pids[iC] ) > 0 else self.empty_pointset
+                        self._marker_points[iC] = self._points[self._marker_pids[iC], :] if len( self._marker_pids[iC] ) > 0 else self.empty_pointset
 
     def clear_points(self, icid: int, **kwargs ):
         if self._marker_pids is not None:
@@ -179,7 +182,7 @@ class PointCloudManager(SCSingletonConfigurable):
                 dmask = dpts( self._marker_pids[icid] )
     #            print( f"clear_points.Mask: {self._marker_pids[icid]} -> {dmask}" )
                 self._marker_pids[icid]  = np.delete( self._marker_pids[icid], dmask )
-                self._marker_points[ icid ] = self._embedding[ self._marker_pids[icid], :] if len( self._marker_pids[icid] ) > 0 else self.empty_pointset
+                self._marker_points[ icid ] = self._points[ self._marker_pids[icid], :] if len( self._marker_pids[icid] ) > 0 else self.empty_pointset
     #            print(f"clear_points: reduced marker_pids = {self._marker_pids[icid]} -> points = {self._marker_points[ icid ]}")
 
     @property

@@ -13,6 +13,7 @@ from spectraclass.model.base import SCSingletonConfigurable
 from traitlets.config.loader import load_pyconfig_files
 from .modes import ModeDataManager
 from traitlets.config.loader import Config
+import threading, time
 
 class DataType(Enum):
     Embedding = 1
@@ -38,6 +39,9 @@ def register_modes():
                             globals()[attribute_name] = attribute
                             DataManager.register_mode(attribute)
 
+
+
+
 class DataManager(SCSingletonConfigurable):
     proc_type = tl.Unicode('cpu').tag(config=True)
     _mode_data_managers_: Dict[str,Type[ModeDataManager]] = {}
@@ -50,6 +54,13 @@ class DataManager(SCSingletonConfigurable):
         self._mode_data_manager_: ModeDataManager = None
         super(DataManager, self).__init__()
         self._wGui = None
+        self._auto_save_thread = None
+        self._lock = threading.Lock()
+
+    def auto_save_config(self):
+        while True:
+            self.save_config()
+            time.sleep(30)
 
     def _contingent_configuration_(self):
         pass
@@ -60,14 +71,14 @@ class DataManager(SCSingletonConfigurable):
         return self._config
 
     @classmethod
-    def initialize(cls, name: str, mode: str):
+    def initialize(cls, name: str, mode: str, autosave = True ):
         dataManager = cls.instance()
-        dataManager._configure_( name, mode )
+        dataManager._configure_( name, mode, autosave )
         if mode.lower() not in cls._mode_data_managers_: raise Exception( f"Mode {mode} is not defined, available modes = {cls._mode_data_managers_.keys()}")
         dataManager._mode_data_manager_ = cls._mode_data_managers_[ mode.lower() ].instance()
         return dataManager
 
-    def _configure_(self, name: str, mode: str ):
+    def _configure_(self, name: str, mode: str, autosave = True ):
         self.name = name
         cfg_file = self.config_file( name, mode )
         if os.path.isfile(cfg_file):
@@ -76,6 +87,9 @@ class DataManager(SCSingletonConfigurable):
             print(f"Loading config files: {self.config_files} from dir {dir}")
             self._config = load_pyconfig_files(self.config_files, self.config_dir)
             self.update_config( self._config )
+            if (self._auto_save_thread is None) and autosave:
+                self._auto_save_thread = threading.Thread( target=self.auto_save_config, daemon=True )
+                self._auto_save_thread.start()
         else:
             print(f"Configuration error: '{cfg_file}' is not a file.")
 
@@ -91,12 +105,19 @@ class DataManager(SCSingletonConfigurable):
         for scope, trait_classes in conf_dict.items():
             cfg_file = os.path.realpath( self.config_file( self.name, scope ) )
             os.makedirs(os.path.dirname(cfg_file), exist_ok=True)
-            with open(cfg_file, "w") as cfile_handle:
-                print(f"Writing config file: {cfg_file}")
-                for class_name, trait_map in trait_classes.items():
-                    for trait_name, trait_value in trait_map.items():
-                        tval_str = f'"{trait_value}"' if isinstance(trait_value, str) else f"{trait_value}"
-                        cfile_handle.write(f"c.{class_name}.{trait_name} = {tval_str}\n")
+            lines = []
+
+            for class_name, trait_map in trait_classes.items():
+                for trait_name, trait_value in trait_map.items():
+                    tval_str = f'"{trait_value}"' if isinstance(trait_value, str) else f"{trait_value}"
+                    cfg_str = f"c.{class_name}.{trait_name} = {tval_str}\n"
+                    lines.append( cfg_str )
+
+            print(f"Writing config file: {cfg_file}")
+            with self._lock:
+                cfile_handle = open(cfg_file, "w")
+                cfile_handle.writelines(lines)
+                cfile_handle.close()
 
     def generate_config_file(self) -> Dict:
         #        print( f"Generate config file, classes = {[inst.__class__ for inst in cls.config_instances]}")

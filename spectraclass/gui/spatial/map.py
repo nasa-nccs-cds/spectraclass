@@ -451,6 +451,8 @@ class MapManager(SCSingletonConfigurable):
                         marker = Marker( [pid], cid )
                         self.add_marker( marker, cid == 0, classification=classification )
                         self.dataLims = event.inaxes.dataLim
+                    else:
+                        print(f"Can't add marker, pid = {pid}")
         except Exception as err:
             print( f"MapManager pick error: {err}" )
             traceback.print_exc(50)
@@ -463,7 +465,6 @@ class MapManager(SCSingletonConfigurable):
             else:
                 lm().addMarker(marker)
                 self.plot_markers_image(**kwargs)
-
                 pids = [pid for pid in marker.pids if pid >= 0]
                 classification = kwargs.get( "classification", -1 )
                 otype = kwargs.get( "type", None )
