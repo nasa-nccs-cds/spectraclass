@@ -1,6 +1,7 @@
 import traitlets.config as tlc
 import numpy as np
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type
+from traitlets.config.loader import Config
 
 def pid( instance ): return hex(id(instance))[-4:]
 
@@ -63,24 +64,14 @@ class SCSingletonConfigurable(tlc.LoggingConfigurable):
     def refresh(self): pass
 
     @classmethod
-    def add_trait_values( cls, trait_map: Dict, cname: str, instance: "SCSingletonConfigurable" ):
+    def add_trait_values( cls, trait_map: Dict, instance: "SCSingletonConfigurable" ):
         class_traits = instance.class_traits(config=True)
 #        print(f"  ADDING TRAITS [{instance.__class__}]: {class_traits.keys()}")
         for tid, trait in class_traits.items():
             tval = getattr(instance, tid)
-            if trait.__class__.__name__ == "Unicode":  tval = f'"{tval}"'
-            trait_values = trait_map.setdefault( instance.config_scope(), {} )
+            trait_instance_values = trait_map.setdefault( instance.config_scope(), {} )
+            trait_values = trait_instance_values.setdefault( instance.__class__.__name__, {} )
 #            print( f"    *** add_trait_value[{instance.config_scope()},{pid(instance)}]: {cname+tid} -> {tval}")
-            trait_values[cname + tid] = tval
+            trait_values[tid] = tval
 
-    def generate_config_file( self, trait_map: Dict  ) -> Dict[str,str]:
-#        print( f"Generate config file, classes = {[inst.__class__ for inst in cls.config_instances]}")
-        for inst in self.config_instances:
-            self.add_trait_values( trait_map, f"c.{inst.__class__.__name__}.", inst )
-        result: Dict = {}
-        for mode, trait_values in trait_map.items():
-            lines = ['']
-            for name, value in trait_values.items():
-                lines.append( f"{name} = {value}")
-            result[ mode ] = '\n'.join(lines)
-        return result
+

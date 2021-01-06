@@ -10,6 +10,7 @@ from pkgutil import iter_modules
 from pathlib import Path
 from importlib import import_module
 from spectraclass.model.base import SCSingletonConfigurable
+from traitlets.config.loader import load_pyconfig_files
 from .modes import ModeDataManager
 from traitlets.config.loader import Config
 
@@ -43,6 +44,8 @@ class DataManager(SCSingletonConfigurable):
 
     def __init__(self):
         self._config: Config = None
+        self.config_files = []
+        self.config_dir = None
         self.name = None
         self._mode_data_manager_: ModeDataManager = None
         super(DataManager, self).__init__()
@@ -67,24 +70,40 @@ class DataManager(SCSingletonConfigurable):
     def _configure_(self, name: str, mode: str ):
         self.name = name
         cfg_file = self.config_file( name, mode )
-        from traitlets.config.loader import load_pyconfig_files
         if os.path.isfile(cfg_file):
-            (dir, fname) = os.path.split(cfg_file)
-            config_files = ['global.py', fname]
-            print(f"Loading config files: {config_files} from dir {dir}")
-            self._config = load_pyconfig_files(config_files, dir)
+            (self.config_dir, fname) = os.path.split(cfg_file)
+            self.config_files = ['global.py', fname]
+            print(f"Loading config files: {self.config_files} from dir {dir}")
+            self._config = load_pyconfig_files(self.config_files, self.config_dir)
             self.update_config( self._config )
         else:
             print(f"Configuration error: '{cfg_file}' is not a file.")
 
+    def getCurrentConfig(self):
+        config_dict = {}
+        for cfg_file in self.config_files:
+            scope = cfg_file.split(".")[0]
+            config_dict[ scope ] = load_pyconfig_files( [cfg_file], self.config_dir )
+        return config_dict
+
     def save_config( self ):
-        conf_dict = self.generate_config_file( dict(**self._config.items()) )
-        for scope, mode_conf_txt in conf_dict.items():
+        conf_dict = self.generate_config_file()
+        for scope, trait_classes in conf_dict.items():
             cfg_file = os.path.realpath( self.config_file( self.name, scope ) )
             os.makedirs(os.path.dirname(cfg_file), exist_ok=True)
             with open(cfg_file, "w") as cfile_handle:
                 print(f"Writing config file: {cfg_file}")
-                cfile_handle.write(mode_conf_txt)
+                for class_name, trait_map in trait_classes.items():
+                    for trait_name, trait_value in trait_map.items():
+                        tval_str = f'"{trait_value}"' if isinstance(trait_value, str) else f"{trait_value}"
+                        cfile_handle.write(f"c.{class_name}.{trait_name} = {tval_str}\n")
+
+    def generate_config_file(self) -> Dict:
+        #        print( f"Generate config file, classes = {[inst.__class__ for inst in cls.config_instances]}")
+        trait_map = self.getCurrentConfig()
+        for inst in self.config_instances:
+            self.add_trait_values(trait_map, inst)
+        return trait_map
 
     def refresh_all(self):
         self.save_config()

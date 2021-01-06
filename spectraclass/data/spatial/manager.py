@@ -258,12 +258,14 @@ class SpatialDataManager(ModeDataManager):
             dataset.to_netcdf(output_file)
 
     def prepare_inputs(self, *args, **kwargs ):
+        from spectraclass.data.spatial.tile.tile import Block
         if self.reduce_scope == "tile":
             ( training_data, tile_point_coords ) = self.tiles.getPointData()
             blocks_point_data = [ block.getPointData(subsample=self.subsample)[0] for block in self.tiles.tile.getBlocks() ]
         elif self.reduce_scope == "block":
-            blocks_point_data = [ self.tiles.getPointData()[0] ]
-            training_data  = blocks_point_data[0]
+            block: Block = self.tiles.getBlock()
+            training_data = block.getPointData(subsample=self.subsample)[0]
+            blocks_point_data = [ training_data ]
         else: raise Exception( f"Unrecognized 'reduce_scope' parameter: {self.reduce_scope}" )
         blocks_reduction = ReductionManager.instance().reduce( training_data, blocks_point_data, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
         for ((reduced_spectra, reproduction), point_data) in zip(blocks_reduction,blocks_point_data):
