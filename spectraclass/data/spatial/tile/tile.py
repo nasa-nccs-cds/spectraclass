@@ -81,13 +81,17 @@ class Block:
         return "-".join( [ TileManager.instance().tileName() ] + [ str(i) for i in self.block_coords ] )
 
     def _getData( self ) -> Optional[xa.DataArray]:
-        from spectraclass.data.spatial.tile.manager import TileManager
         if self.tile.data is None: return None
         ybounds, xbounds = self.getBounds()
         block_raster = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
         block_raster.attrs['block_coords'] = self.block_coords
-        block_raster.name = f"{TileManager.instance().tileName()}_b-{self.block_coords[0]}-{self.block_coords[1]}"
+        block_raster.name = self.file_name
         return block_raster
+
+    @property
+    def file_name(self):
+        from spectraclass.data.spatial.tile.manager import TileManager
+        return f"{TileManager.instance().tileName()}_b-{self.block_coords[0]}-{self.block_coords[1]}"
 
     def get_index_array(self) -> xa.DataArray:
         stacked_data: xa.DataArray = self.data.stack( samples=self.data.dims[-2:] )

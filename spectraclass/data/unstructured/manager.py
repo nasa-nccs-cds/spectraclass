@@ -12,10 +12,10 @@ class UnstructuredDataManager(ModeDataManager):
 
     def getInputFileData( self ) -> np.ndarray:
         input_file_path = os.path.expanduser(
-            os.path.join(self.data_dir, self.dm.name, self.config_mode, f"{self.dataset}.pkl"))
+            os.path.join(self.data_dir, self.dm.name, self.config_mode, f"{self.dsid}.pkl"))
         try:
             if os.path.isfile(input_file_path):
-                print(f"Reading unstructured {self.dataset} data from file {input_file_path}, dims = {self.model_dims}")
+                print(f"Reading unstructured {self.dsid} data from file {input_file_path}, dims = {self.model_dims}")
                 with open(input_file_path, 'rb') as f:
                     result = pickle.load(f)
                     if isinstance(result, np.ndarray):
@@ -31,7 +31,7 @@ class UnstructuredDataManager(ModeDataManager):
             else:
                 print(f"Error, the input path '{input_file_path}' is not a file.")
         except Exception as err:
-            print(f" Can't read data[{self.dataset}] file {input_file_path}: {err}")
+            print(f" Can't read data[{self.dsid}] file {input_file_path}: {err}")
 
     def execute_task( self, task: str ):
         from spectraclass.gui.points import PointCloudManager

@@ -22,7 +22,6 @@ class ModeDataManager(SCSingletonConfigurable):
     INPUTS = None
     VALID_BANDS = None
 
-    dataset = tl.Unicode("NONE").tag(config=True,sync=True)
     image_name = tl.Unicode("NONE").tag(config=True ,sync=True)
     cache_dir = tl.Unicode(os.path.expanduser("~/Development/Cache")).tag(config=True)
     data_dir = tl.Unicode(os.path.expanduser("~/Development/Data")).tag(config=True)
@@ -31,7 +30,7 @@ class ModeDataManager(SCSingletonConfigurable):
     subsample = tl.Int(5).tag(config=True, sync=True)
     reduce_method = tl.Unicode("Autoencoder").tag(config=True, sync=True)
     reduce_scope = tl.Unicode("block").tag(config=True, sync=True)
-    reduce_nepochs = tl.Int(1000).tag(config=True, sync=True)
+    reduce_nepochs = tl.Int(25).tag(config=True, sync=True)
     reduce_sparsity = tl.Float( 10e-5 ).tag(config=True,sync=True)
 
     def __init__(self, ):
@@ -82,13 +81,18 @@ class ModeDataManager(SCSingletonConfigurable):
             self.model_dims = self._model_dims_selector.value
             self.subsample = self._subsample_selector.value
 
+    @property
+    def dsid(self) -> str:
+        from spectraclass.data.spatial.tile.manager import TileManager
+        reduction_method = f"raw" if self.reduce_method == "None" else f"{self.reduce_method}-{self.model_dims}"
+        file_name_base = "-".join( [TileManager.instance().getBlock().file_name, reduction_method] )
+        return f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
+
     def prepare_inputs(self, *args, **kwargs):
         self.update_gui_parameters()
         self.set_progress(0.02)
         write = kwargs.get('write', True)
-        file_name_base = f"raw" if self.reduce_method == "None" else f"{self.reduce_method}-{self.model_dims}"
-        self.dataset = f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
-        output_file = os.path.join(self.datasetDir, self.dataset + ".nc")
+        output_file = os.path.join(self.datasetDir, self.dsid + ".nc")
         assert (self.INPUTS is not None), f"INPUTS undefined for mode {self.mode}"
 
         np_embedding: np.ndarray = self.getInputFileData()
@@ -107,6 +111,7 @@ class ModeDataManager(SCSingletonConfigurable):
             coords = dict(samples=xcoords['samples'], model=np.arange(self.model_dims))
             data_vars['reduction'] = xa.DataArray(reduced_spectra, dims=['samples', 'model'], coords=coords)
             data_vars['reproduction'] = input_data.copy(data=reproduced_spectra)
+            data_vars['plot-y'] = input_data
             self.set_progress(0.8)
 
         result_dataset = xa.Dataset(data_vars, coords=xcoords, attrs={'type': 'spectra'})
@@ -125,10 +130,10 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def select_dataset(self, *args):
         self.dm.select_current_mode()
-        if self.dm.dataset != self._dset_selection.value:
-            print( f"Loading dataset '{self._dset_selection.value}', current dataset = '{self.dm.dataset}', "
+        if self.dm.dsid != self._dset_selection.value:
+            print( f"Loading dataset '{self._dset_selection.value}', current dataset = '{self.dm.dsid}', "
                    f"current mode = '{self._mode}', current mode index = {self.dm.mode_index}, mdmgr id = {id(self)}")
-            self.dm.dataset = self._dset_selection.value
+            self.dm.dsid = self._dset_selection.value
             self.dm.select_dataset(self._dset_selection.value)
         self.dm.refresh_all()
 
@@ -212,21 +217,20 @@ class ModeDataManager(SCSingletonConfigurable):
         raise NotImplementedError()
 
     def loadDataset(self, *args, **kwargs) -> xa.Dataset:
-        print(f"Load dataset {self.dataset}, current datasets = {self.datasets.keys()}")
-        if self.dataset not in self.datasets:
-            data_file = os.path.join(self.datasetDir, self.dataset + ".nc")
+        print(f"Load dataset {self.dsid}, current datasets = {self.datasets.keys()}")
+        if self.dsid not in self.datasets:
+            data_file = os.path.join(self.datasetDir, self.dsid + ".nc")
             dataset: xa.Dataset = xa.open_dataset(data_file)
             vnames = dataset.variables.keys()
             vshapes = [f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
-            print(f" ---> Opened Dataset {self.dataset} from file {data_file}\n\t -> variables: {' '.join(vshapes)}")
+            print(f" ---> Opened Dataset {self.dsid} from file {data_file}\n\t -> variables: {' '.join(vshapes)}")
             if 'plot-x' not in vnames:
                 raw_data: xa.DataArray = dataset['raw']
-                dataset['plot-y'] = raw_data
                 dataset['plot-x'] = np.arange(0,raw_data.shape[1])
-            dataset.attrs['dsid'] = self.dataset
+            dataset.attrs['dsid'] = self.dsid
             dataset.attrs['type'] = 'spectra'
-            self.datasets[self.dataset] = dataset
-        return self.datasets[self.dataset]
+            self.datasets[self.dsid] = dataset
+        return self.datasets[self.dsid]
 
     def getDatasetList(self):
         dset_glob = os.path.expanduser(f"{self.datasetDir}/*.nc")

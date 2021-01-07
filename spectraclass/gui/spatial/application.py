@@ -22,7 +22,7 @@ class Spectraclass(SCSingletonConfigurable):
             display(HTML('<style type="text/css">%s</style>Customized changes loaded.' % css))
 
     def gui( self, embed: bool = False ):
-        from spectraclass.gui.graph import GraphManager, gm
+        from spectraclass.gui.plot import PlotManager, gm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.gui.control import ActionsManager, am, ControlsManager, cm, UserFeedbackManager, ufm

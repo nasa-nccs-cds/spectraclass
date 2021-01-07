@@ -1,5 +1,5 @@
 import traitlets.config as tlc
-import numpy as np
+import logging, numpy as np
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type
 from traitlets.config.loader import Config
 
@@ -29,7 +29,7 @@ class Marker:
             return True
         except: return False
 
-class SCSingletonConfigurable(tlc.LoggingConfigurable):
+class SCSingletonConfigurable(tlc.Configurable):
     config_instances: List["SCSingletonConfigurable"] = []
     _instance = None
     _instantiated = None
@@ -38,6 +38,15 @@ class SCSingletonConfigurable(tlc.LoggingConfigurable):
         super(SCSingletonConfigurable, self).__init__()
         self._contingent_configuration_()
         self.config_instances.append( self )
+
+    def setLogLevel(self, level):
+        logger = logging.getLogger('spectraclass')
+        logger.setLevel( level )
+
+    @property
+    def log(self) -> logging.Logger:
+        logger = logging.getLogger('spectraclass')
+        return logger
 
     @classmethod
     def instance(cls, *args, **kwargs):
@@ -71,7 +80,7 @@ class SCSingletonConfigurable(tlc.LoggingConfigurable):
             tval = getattr(instance, tid)
             trait_instance_values = trait_map.setdefault( instance.config_scope(), {} )
             trait_values = trait_instance_values.setdefault( instance.__class__.__name__, {} )
-#            print( f"    *** add_trait_value[{instance.config_scope()},{pid(instance)}]: {cname+tid} -> {tval}")
+#            print( f"    *** add_trait_value[{instance.config_scope()},{instance.__class__.__name__}]: {tid} -> {tval}")
             trait_values[tid] = tval
 
 

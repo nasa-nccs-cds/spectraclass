@@ -23,7 +23,7 @@ class Spectraclass(SCSingletonConfigurable):
             display(HTML('<style type="text/css">%s</style>Customized changes loaded.' % css))
 
     def gui( self, embed: bool = False ):
-        from spectraclass.gui.graph import GraphManager
+        from spectraclass.gui.plot import PlotManager
         from spectraclass.gui.points import PointCloudManager
         from spectraclass.gui.unstructured.table import TableManager
         from spectraclass.gui.control import ActionsManager
@@ -34,7 +34,7 @@ class Spectraclass(SCSingletonConfigurable):
         css_border = '1px solid blue'
 
         tableManager = TableManager.instance()
-        graphManager = GraphManager.instance()
+        graphManager = PlotManager.instance()
         pointCloudManager = PointCloudManager.instance()
 
         table = tableManager.gui()

@@ -10,7 +10,7 @@ from matplotlib.colors import Normalize
 from matplotlib.backend_bases import PickEvent, MouseButton, NavigationToolbar2
 from spectraclass.reduction.embedding import ReductionManager, rm
 from collections import OrderedDict
-from spectraclass.gui.graph import GraphManager, gm
+from spectraclass.gui.plot import PlotManager, gm
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.gui.points import PointCloudManager, pcm
 from spectraclass.model.base import SCSingletonConfigurable, Marker
@@ -418,7 +418,7 @@ class MapManager(SCSingletonConfigurable):
             drange = dms().get_color_bounds( frame_data )
             self.image.set_norm( Normalize( **drange ) )
             self.image.set_extent( self.block.extent() )
-            plot_name = os.path.basename( dm.dataset )
+            plot_name = os.path.basename(dm.dsid)
             print( f" #### Update Map: data shape = {frame_data.shape}, range = {drange}, extent = {self.block.extent()}")
             self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
             self.plot_axes.title.set_fontsize( 8 )
@@ -469,11 +469,11 @@ class MapManager(SCSingletonConfigurable):
                 classification = kwargs.get( "classification", -1 )
                 otype = kwargs.get( "type", None )
                 PointCloudManager.instance().mark_points( pids, classification, update=True )
-                GraphManager.instance().plot_graph(pids)
+                PlotManager.instance().plot_graph(pids)
 
                 # if len(pids) > 0:
                 #     event = dict( event="pick", type="directory", otype=otype, pids=pids, transient=transient, mark=True, classification=classification )
-                #     GraphManager.instance().on_selection(event)
+                #     PlotManager.instance().on_selection(event)
         self._adding_marker = False
 
     # def undo_marker_selection(self, **kwargs ):

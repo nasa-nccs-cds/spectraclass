@@ -13,7 +13,7 @@ from spectraclass.model.base import SCSingletonConfigurable
 from traitlets.config.loader import load_pyconfig_files
 from .modes import ModeDataManager
 from traitlets.config.loader import Config
-import threading, time
+import threading, time, logging, sys
 
 class DataType(Enum):
     Embedding = 1
@@ -39,9 +39,6 @@ def register_modes():
                             globals()[attribute_name] = attribute
                             DataManager.register_mode(attribute)
 
-
-
-
 class DataManager(SCSingletonConfigurable):
     proc_type = tl.Unicode('cpu').tag(config=True)
     _mode_data_managers_: Dict[str,Type[ModeDataManager]] = {}
@@ -54,13 +51,7 @@ class DataManager(SCSingletonConfigurable):
         self._mode_data_manager_: ModeDataManager = None
         super(DataManager, self).__init__()
         self._wGui = None
-        self._auto_save_thread = None
         self._lock = threading.Lock()
-
-    def auto_save_config(self):
-        while True:
-            self.save_config()
-            time.sleep(30)
 
     def _contingent_configuration_(self):
         pass
@@ -71,25 +62,33 @@ class DataManager(SCSingletonConfigurable):
         return self._config
 
     @classmethod
-    def initialize(cls, name: str, mode: str, autosave = True ):
+    def initialize(cls, name: str, mode: str ):
         dataManager = cls.instance()
-        dataManager._configure_( name, mode, autosave )
+        dataManager._configure_( name, mode )
         if mode.lower() not in cls._mode_data_managers_: raise Exception( f"Mode {mode} is not defined, available modes = {cls._mode_data_managers_.keys()}")
         dataManager._mode_data_manager_ = cls._mode_data_managers_[ mode.lower() ].instance()
+        dataManager.log.info("Logging configured")
         return dataManager
 
-    def _configure_(self, name: str, mode: str, autosave = True ):
+    def init_logging(self):
+        os.environ["NUMBA_DEBUG"] = "0"
+        log_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "logging" )
+        os.makedirs( log_dir, exist_ok=True )
+        console = logging.FileHandler(f'{log_dir}/{self.name}.log', 'w' )
+        console.setLevel(logging.INFO)
+        console.setFormatter( logging.Formatter( '%(asctime)s %(name)-12s %(levelname)-8s %(message)s', '%m-%d %H:%M' ) )
+        logging.getLogger('spectraclass').addHandler(console)
+
+    def _configure_(self, name: str, mode: str ):
         self.name = name
+        self.init_logging()
         cfg_file = self.config_file( name, mode )
         if os.path.isfile(cfg_file):
             (self.config_dir, fname) = os.path.split(cfg_file)
             self.config_files = ['global.py', fname]
-            print(f"Loading config files: {self.config_files} from dir {dir}")
+            print(f"Loading config files: {self.config_files} from dir {self.config_dir}")
             self._config = load_pyconfig_files(self.config_files, self.config_dir)
             self.update_config( self._config )
-            if (self._auto_save_thread is None) and autosave:
-                self._auto_save_thread = threading.Thread( target=self.auto_save_config, daemon=True )
-                self._auto_save_thread.start()
         else:
             print(f"Configuration error: '{cfg_file}' is not a file.")
 
@@ -127,7 +126,6 @@ class DataManager(SCSingletonConfigurable):
         return trait_map
 
     def refresh_all(self):
-        self.save_config()
         for inst in self.config_instances: inst.refresh()
         print( "Refreshed Configuration")
 
@@ -139,7 +137,7 @@ class DataManager(SCSingletonConfigurable):
     @classmethod
     def config_file( cls, name: str, scope:str ) -> str :
         config_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "config",  name )
-        os.makedirs( config_dir, mode = 0o777, exist_ok = True )
+        if not os.path.isdir( config_dir ): os.makedirs( config_dir, mode = 0o777 )
         return os.path.join( config_dir, scope + ".py" )
 
     @property
@@ -155,8 +153,8 @@ class DataManager(SCSingletonConfigurable):
         return os.path.join( self.modal.cache_dir, self.name, self.modal.MODE )
 
     @property
-    def dataset(self) -> str:
-        return self._mode_data_manager_.dataset
+    def dsid(self) -> str:
+        return self._mode_data_manager_.dsid
 
     @property
     def project_name(self) -> str:
@@ -204,8 +202,5 @@ class DataManager(SCSingletonConfigurable):
         model_data: xa.DataArray = project_dataset['reduction']
         model_data.attrs['dsid'] = project_dataset.attrs['dsid']
         return model_data
-
-    def __delete__(self, instance):
-        self.save_config()
 
 register_modes()

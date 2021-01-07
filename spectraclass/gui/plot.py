@@ -16,7 +16,7 @@ def rescale( x: np.ndarray ):
     xs= x.squeeze()
     return xs / xs.mean()
 
-class JbkGraph:
+class JbkPlot:
     _x: np.ndarray = None
     _ploty: np.ndarray = None
     _rploty: np.ndarray = None
@@ -55,7 +55,7 @@ class JbkGraph:
             cls._ploty: np.ndarray = project_data["plot-y"].values
             cls._rploty: np.ndarray = project_data["reproduction"].values
             table_cols = DataManager.instance().table_cols
-            print( f"           &&&&   JbkGraph init, using cols {table_cols} from {list(project_data.variables.keys())}, ploty shape = {cls._ploty.shape}, rploty shape = {cls._rploty.shape}" )
+            print( f"           &&&&   JbkPlot init, using cols {table_cols} from {list(project_data.variables.keys())}, ploty shape = {cls._ploty.shape}, rploty shape = {cls._rploty.shape}" )
             cls._mdata: List[np.ndarray] = [ project_data[mdv].values for mdv in table_cols ]
 
     def select_items(self, idxs: List[int] ):
@@ -112,16 +112,16 @@ class JbkGraph:
             t = "multiplot"
         return t
 
-def gm() -> "GraphManager":
-    return GraphManager.instance()
+def gm() -> "PlotManager":
+    return PlotManager.instance()
 
-class GraphManager(SCSingletonConfigurable):
+class PlotManager(SCSingletonConfigurable):
 
     def __init__( self ):
-        super(GraphManager, self).__init__(  )
+        super(PlotManager, self).__init__()
         output_notebook()
         self._wGui: ipw.Tab() = None
-        self._graphs: List[JbkGraph] = []
+        self._graphs: List[JbkPlot] = []
         self._ngraphs = 8
 
     def gui(self, **kwargs ) -> ipw.Tab():
@@ -130,23 +130,23 @@ class GraphManager(SCSingletonConfigurable):
         return self._wGui
 
     def refresh(self):
-        JbkGraph.refresh()
-        print(f"           &&&&   GraphManager refresh ")
+        JbkPlot.refresh()
+        print(f"           &&&&   PlotManager refresh ")
         self._wGui = None
 
-    def current_graph(self) -> JbkGraph:
+    def current_graph(self) -> JbkPlot:
         return self._graphs[ self._wGui.selected_index ]
 
     def plot_graph( self, pids: List[int] ):
         print(f"           &&&&   plot_graph[{self._wGui.selected_index}]: pids = {pids} ")
-        current_graph: JbkGraph = self.current_graph()
+        current_graph: JbkPlot = self.current_graph()
         current_graph.select_items( pids )
         current_graph.plot()
 
     def _createGui( self, **kwargs ) -> ipw.Tab():
         wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 300px' ) )
         for iG in range(self._ngraphs):
-            self._graphs.append( JbkGraph( **kwargs ) )
+            self._graphs.append(JbkPlot(**kwargs))
             wTab.set_title(iG, str(iG))
         wTab.children = [ g.gui() for g in self._graphs ]
         return wTab
