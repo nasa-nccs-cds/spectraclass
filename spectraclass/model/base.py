@@ -1,5 +1,5 @@
 import traitlets.config as tlc
-import logging, numpy as np
+import os, logging, numpy as np
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type
 from traitlets.config.loader import Config
 
@@ -31,6 +31,7 @@ class Marker:
 
 class SCSingletonConfigurable(tlc.Configurable):
     config_instances: List["SCSingletonConfigurable"] = []
+    _log_file = None
     _instance = None
     _instantiated = None
 
@@ -38,15 +39,6 @@ class SCSingletonConfigurable(tlc.Configurable):
         super(SCSingletonConfigurable, self).__init__()
         self._contingent_configuration_()
         self.config_instances.append( self )
-
-    def setLogLevel(self, level):
-        logger = logging.getLogger('spectraclass')
-        logger.setLevel( level )
-
-    @property
-    def log(self) -> logging.Logger:
-        logger = logging.getLogger('spectraclass')
-        return logger
 
     @classmethod
     def instance(cls, *args, **kwargs):
@@ -84,3 +76,6 @@ class SCSingletonConfigurable(tlc.Configurable):
             trait_values[tid] = tval
 
 
+def log() -> logging.Logger:
+    logger = logging.getLogger('spectraclass')
+    return logger

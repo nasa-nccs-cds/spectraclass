@@ -24,6 +24,7 @@ class Spectraclass(SCSingletonConfigurable):
     def gui( self, embed: bool = False ):
         from spectraclass.gui.plot import PlotManager, gm
         from spectraclass.data.base import DataManager, dm
+#        from spectraclass.gui.logging import LogManager, lm
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.gui.control import ActionsManager, am, ControlsManager, cm, UserFeedbackManager, ufm
         from spectraclass.gui.spatial.map import MapManager, mm
@@ -31,8 +32,8 @@ class Spectraclass(SCSingletonConfigurable):
 
         self.set_spectraclass_theme()
         css_border = '1px solid blue'
-        collapsibles = ipw.Accordion( children = [ cm().gui(), pcm().gui(), gpm().gui() ], layout=ipw.Layout( width='100%' ) )
-        for iT, title in enumerate(['controls', 'embedding', 'satellite']): collapsibles.set_title(iT, title)
+        collapsibles = ipw.Accordion( children = [ cm().gui(), pcm().gui(), gpm().gui() ], layout=ipw.Layout( width='100%' ) )  # , lm.gui()
+        for iT, title in enumerate(['controls', 'embedding', 'satellite']): collapsibles.set_title(iT, title)    # , 'logs'
         collapsibles.selected_index = 1
         plot = ipw.VBox([ ufm().gui(), collapsibles ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
         control = ipw.VBox( [ am().gui(), mm().gui(), gm().gui() ], layout=ipw.Layout( flex='0 0 700px'), border=css_border )

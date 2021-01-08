@@ -12,6 +12,7 @@ from importlib import import_module
 from spectraclass.model.base import SCSingletonConfigurable
 from traitlets.config.loader import load_pyconfig_files
 from .modes import ModeDataManager
+from spectraclass.util.logs import LogManager, lm
 from traitlets.config.loader import Config
 import threading, time, logging, sys
 
@@ -65,23 +66,14 @@ class DataManager(SCSingletonConfigurable):
     def initialize(cls, name: str, mode: str ):
         dataManager = cls.instance()
         dataManager._configure_( name, mode )
+        lm().init_logging( name, mode )
         if mode.lower() not in cls._mode_data_managers_: raise Exception( f"Mode {mode} is not defined, available modes = {cls._mode_data_managers_.keys()}")
         dataManager._mode_data_manager_ = cls._mode_data_managers_[ mode.lower() ].instance()
-        dataManager.log.info("Logging configured")
+        lm().log("Logging configured")
         return dataManager
-
-    def init_logging(self):
-        os.environ["NUMBA_DEBUG"] = "0"
-        log_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "logging" )
-        os.makedirs( log_dir, exist_ok=True )
-        console = logging.FileHandler(f'{log_dir}/{self.name}.log', 'w' )
-        console.setLevel(logging.INFO)
-        console.setFormatter( logging.Formatter( '%(asctime)s %(name)-12s %(levelname)-8s %(message)s', '%m-%d %H:%M' ) )
-        logging.getLogger('spectraclass').addHandler(console)
 
     def _configure_(self, name: str, mode: str ):
         self.name = name
-        self.init_logging()
         cfg_file = self.config_file( name, mode )
         if os.path.isfile(cfg_file):
             (self.config_dir, fname) = os.path.split(cfg_file)

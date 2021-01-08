@@ -5,6 +5,7 @@ import xarray as xa
 import numba
 from typing import List, Union, Tuple, Optional, Dict
 from spectraclass.gui.control import UserFeedbackManager, ufm
+from spectraclass.util.logs import LogManager, lm
 import os, time, traceback
 
 @numba.njit(fastmath=True,
@@ -76,11 +77,11 @@ class cpActivationFlow(ActivationFlow):
                 self.getGraph()
                 self.I: np.ndarray = self._knn_graph.neighbor_graph[0]
                 self.D: np.ndarray = self._knn_graph.neighbor_graph[1].astype(np.float32)
-                afm().log.info(f" --->  $$$D: setNodeData D=> {self.D.__class__}:{self.D.dtype}")
+                lm().log(f" --->  $$$D: setNodeData D=> {self.D.__class__}:{self.D.dtype}")
                 dt = (time.time()-t0)
-                afm().log.info( f"Computed NN Graph with {self._knn_graph.n_neighbors} neighbors and {nodes_data.shape[0]} verts in {dt} sec ({dt/60} min)")
+                lm().log( f"Computed NN Graph with {self._knn_graph.n_neighbors} neighbors and {nodes_data.shape[0]} verts in {dt} sec ({dt/60} min)")
             else:
-                afm().log.info( "No data available for this block")
+                lm().log( "No data available for this block")
 
     def getGraph(self):
         if self._knn_graph is None:
@@ -88,7 +89,7 @@ class cpActivationFlow(ActivationFlow):
             n_iters =  max(5, 2 * int(round(np.log2(self.nodes.shape[0]))))
             kwargs = dict( n_trees=n_trees, n_iters=n_iters, n_neighbors=self.nneighbors, max_candidates=60, verbose=True, metric = self.metric )
             if self.metric == "minkowski": kwargs['metric_kwds'] = dict( p=self.p )
-            afm().log.info( f"Computing NN-Graph with parms= {kwargs}" )
+            lm().log( f"Computing NN-Graph with parms= {kwargs}" )
             self._knn_graph = NNDescent( self.nodes.values, **kwargs )
         return self._knn_graph
 
@@ -104,29 +105,28 @@ class cpActivationFlow(ActivationFlow):
             return None
         if (self.P is None) or self.reset:   self.P = np.full( self.C.shape, float('inf'), dtype=np.float32 )
         self.P = np.where( sample_mask, self.P, 0.0 )
-        afm().log.info(f"Beginning graph flow iterations, #C = {label_count}, C[10] = {self.C[:10]}")
+        lm().log(f"Beginning graph flow iterations, #C = {label_count}, C[10] = {self.C[:10]}")
         t0 = time.time()
         converged = False
         for iter in range(nIter):
             try:
-                afm().log.debug( f"iterate_spread_labels: " )
-                for iX, X in enumerate([ self.I, self.D, self.C, self.P ]): afm().log.debug( f" I{iX} -> {X.shape}:{X.dtype}" )
+                lm().log( f"iterate_spread_labels: " )
+                for iX, X in enumerate([ self.I, self.D, self.C, self.P ]): lm().log( f" I{iX} -> {X.shape}:{X.dtype}" )
                 iterate_spread_labels( self.I, self.D, self.C, self.P )
                 new_label_count = np.count_nonzero(self.C)
                 if new_label_count == label_count:
-                    afm().log.info( "Converged!" )
+                    lm().log( "Converged!" )
                     converged = True
                     break
                 else:
                     label_count = new_label_count
-                    afm().log.debug(f"\n -->> Iter{iter + 1}: #C = {label_count}\n")
+                    lm().log(f"\n -->> Iter{iter + 1}: #C = {label_count}\n")
             except Exception as err:
-                afm().log.error(f"Error in graph flow iteration {iter}:")
-                afm().log.error(traceback.format_exc(50))
+                lm().exception(f"Error in graph flow iteration {iter}:")
                 break
 
         t1 = time.time()
-        afm().log.info(f"Completed graph flow {nIter} iterations in {(t1 - t0)} sec, #marked = {np.count_nonzero(self.C)}")
+        lm().log(f"Completed graph flow {nIter} iterations in {(t1 - t0)} sec, #marked = {np.count_nonzero(self.C)}")
         self.reset = False
         return converged
 

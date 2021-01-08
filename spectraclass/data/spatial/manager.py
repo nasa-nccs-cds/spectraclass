@@ -333,9 +333,8 @@ class SpatialDataManager(ModeDataManager):
         return f"{base_dir}/{base_file}.tif"
 
     def writeGeotiff(self, raster_data: xa.DataArray ) -> Optional[str]:
-        output_file = os.path.join( self.tiles.data_cache, self.tiles.tileName() + ".tif" )
+        output_file = self.getFilePath(True)
         try:
-            os.makedirs( self.tiles.data_cache, exist_ok=True )
             if os.path.exists(output_file): os.remove(output_file)
             print(f"Writing (raster) tile file {output_file}")
             raster_data.rio.to_raster(output_file)
@@ -344,12 +343,14 @@ class SpatialDataManager(ModeDataManager):
             print(f"Unable to write raster file to {output_file}: {err}")
             return None
 
-    def readGeotiff(self, read_tile: bool ) -> xa.DataArray:
+    def readGeotiff(self, read_tile: bool ) -> Optional[xa.DataArray]:
+        input_bands: Optional[xa.DataArray] = None
         input_file_path = self.getFilePath( read_tile )
-        input_bands: xa.DataArray = rio.open_rasterio(input_file_path)
-        if 'transform' not in input_bands.attrs.keys():
-            gts = input_bands.spatial_ref.GeoTransform.split()
-            input_bands.attrs['transform'] = [float(gts[i]) for i in [1, 2, 0, 4, 5, 3]]
-        print(f"Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}")
+        if os.path.isfile( input_file_path ):
+            input_bands = rio.open_rasterio(input_file_path)
+            if 'transform' not in input_bands.attrs.keys():
+                gts = input_bands.spatial_ref.GeoTransform.split()
+                input_bands.attrs['transform'] = [float(gts[i]) for i in [1, 2, 0, 4, 5, 3]]
+            print(f"Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}")
         return input_bands
 

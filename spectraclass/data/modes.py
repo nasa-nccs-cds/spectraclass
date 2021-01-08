@@ -111,7 +111,6 @@ class ModeDataManager(SCSingletonConfigurable):
             coords = dict(samples=xcoords['samples'], model=np.arange(self.model_dims))
             data_vars['reduction'] = xa.DataArray(reduced_spectra, dims=['samples', 'model'], coords=coords)
             data_vars['reproduction'] = input_data.copy(data=reproduced_spectra)
-            data_vars['plot-y'] = input_data
             self.set_progress(0.8)
 
         result_dataset = xa.Dataset(data_vars, coords=xcoords, attrs={'type': 'spectra'})
@@ -226,6 +225,7 @@ class ModeDataManager(SCSingletonConfigurable):
             print(f" ---> Opened Dataset {self.dsid} from file {data_file}\n\t -> variables: {' '.join(vshapes)}")
             if 'plot-x' not in vnames:
                 raw_data: xa.DataArray = dataset['raw']
+                dataset['plot-y'] = raw_data
                 dataset['plot-x'] = np.arange(0,raw_data.shape[1])
             dataset.attrs['dsid'] = self.dsid
             dataset.attrs['type'] = 'spectra'

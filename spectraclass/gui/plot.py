@@ -10,7 +10,7 @@ from spectraclass.data.base import DataManager
 from bokeh.models import ColumnDataSource
 import ipywidgets as ipw
 import traitlets.config as tlc
-from spectraclass.model.base import SCSingletonConfigurable
+from spectraclass.model.base import SCSingletonConfigurable, log
 
 def rescale( x: np.ndarray ):
     xs= x.squeeze()
@@ -55,7 +55,7 @@ class JbkPlot:
             cls._ploty: np.ndarray = project_data["plot-y"].values
             cls._rploty: np.ndarray = project_data["reproduction"].values
             table_cols = DataManager.instance().table_cols
-            print( f"           &&&&   JbkPlot init, using cols {table_cols} from {list(project_data.variables.keys())}, ploty shape = {cls._ploty.shape}, rploty shape = {cls._rploty.shape}" )
+            log().info( f"           &&&&   JbkPlot init, using cols {table_cols} from {list(project_data.variables.keys())}, ploty shape = {cls._ploty.shape}, rploty shape = {cls._rploty.shape}" )
             cls._mdata: List[np.ndarray] = [ project_data[mdv].values for mdv in table_cols ]
 
     def select_items(self, idxs: List[int] ):
@@ -95,7 +95,7 @@ class JbkPlot:
     def y2( self ) -> List[ np.ndarray ]:
         idx = self._selected_pids[0]
         rp = rescale( self._rploty[idx] )
-#        print( f"           &&&&   GRAPH:y2-> idx={idx}, val[10] = {rp[:10]} ")
+        log().info( f"           &&&&   GRAPH:y2-> idx={idx}, val[10] = {rp[:10]} ")
         return [ rescale( self._ploty[idx] ), rp ]
 
     @property
@@ -131,14 +131,14 @@ class PlotManager(SCSingletonConfigurable):
 
     def refresh(self):
         JbkPlot.refresh()
-        print(f"           &&&&   PlotManager refresh ")
+        log().info(f"           &&&&   PlotManager refresh ")
         self._wGui = None
 
     def current_graph(self) -> JbkPlot:
         return self._graphs[ self._wGui.selected_index ]
 
     def plot_graph( self, pids: List[int] ):
-        print(f"           &&&&   plot_graph[{self._wGui.selected_index}]: pids = {pids} ")
+        log().info(f"           &&&&   plot_graph[{self._wGui.selected_index}]: pids = {pids} ")
         current_graph: JbkPlot = self.current_graph()
         current_graph.select_items( pids )
         current_graph.plot()
@@ -154,5 +154,5 @@ class PlotManager(SCSingletonConfigurable):
     def on_selection(self, selection_event: Dict ):
         selection = selection_event['pids']
         if len( selection ) > 0:
-    #        print(f"           &&&&   GRAPH.on_selection: nitems = {len(selection)}, pid={selection[0]}")
+            log().info(f"           &&&&   GRAPH.on_selection: nitems = {len(selection)}, pid={selection[0]}")
             self.plot_graph( selection )
