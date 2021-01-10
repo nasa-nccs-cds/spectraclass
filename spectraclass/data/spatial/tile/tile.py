@@ -109,7 +109,7 @@ class Block:
 
     def extent(self, epsg: int = None ) -> List[float]:   # left, right, bottom, top
         if epsg is None:    x, y =  self.xlim, self.ylim
-        else:               x, y =  self.project_extent( self.xlim, self.ylim, 4326 )
+        else:               x, y =  self.project_extent( self.xlim, self.ylim, epsg )
         return x + y
 
     def project_extent(self, xlim, ylim, epsg ):

@@ -4,7 +4,7 @@ from urllib import request
 from io import BytesIO
 from math import log, exp, tan, atan, ceil
 from PIL import Image
-import traitlets as tl
+import os, traitlets as tl
 import requests, traceback
 from spectraclass.model.base import SCSingletonConfigurable
 import traitlets.config as tlc
@@ -25,9 +25,9 @@ class GooglePlotManager(SCSingletonConfigurable):
     def __init__( self ):
         super(GooglePlotManager, self).__init__()
         self.figure = plt.figure(2)
-        self.plot = None
-        self.image = None
-        self.block = None
+        self.plot: AxesImage = None
+        self.image: Image.Image = None
+        self.block: Block = None
         self.axes: Axes = self.figure.add_subplot(111)
         self.axes.get_xaxis().set_visible(False)
         self.axes.get_yaxis().set_visible(False)
@@ -37,8 +37,8 @@ class GooglePlotManager(SCSingletonConfigurable):
 
     def setBlock(self, block: Block = None, type ='satellite'):
         from spectraclass.data.spatial.tile.manager import TileManager
+        tm = TileManager.instance()
         if block is None:
-            tm = TileManager.instance()
             self.block: Block = tm.getBlock()
             print("  @@GPM:  Getting block from TileManager")
         else:
@@ -48,21 +48,36 @@ class GooglePlotManager(SCSingletonConfigurable):
             else:
                 self.block = block
                 print("  @@GPM:  Setting block")
-        self.google = GoogleMaps( block, self.api_key )
+        self.google = GoogleMaps( self.block, self.api_key )
         try:
-            extent = block.extent(4326)
-            print( f"Setting satellite image extent: {extent}, xlim = {block.xlim}, ylim = {block.ylim}")
-            print(f"Google Earth block center coords: {(extent[2]+extent[3])/2},{(extent[1]+extent[0])/2}")
-            self.image = self.google.get_tiled_google_map(type, extent, self.google_maps_zoom_level)
-            self.plot: AxesImage = self.axes.imshow(self.image, extent=extent, alpha=1.0, aspect='auto' )
+            cfile = self.cache_file_path
+            extent = self.block.extent(4326)
+            print(f"Setting satellite image extent: {extent}, xlim = {self.block.xlim}, ylim = {self.block.ylim}")
+            print(f"Google Earth block center coords: {(extent[2] + extent[3]) / 2},{(extent[1] + extent[0]) / 2}")
+
+            if os.path.isfile( cfile ):
+                print( f"Reading cached image {cfile}" )
+                self.image = Image.open(cfile)
+            else:
+                self.image = self.google.get_tiled_google_map(type, extent, self.google_maps_zoom_level)
+                self.image.save( cfile )
+            self.plot = self.axes.imshow(self.image, extent=extent, alpha=1.0, aspect='auto' )
             self.axes.set_xlim(extent[0],extent[1])
             self.axes.set_ylim(extent[2],extent[3])
             self._mousepress = self.plot.figure.canvas.mpl_connect('button_press_event', self.onMouseClick )
             self.figure.canvas.draw_idle()
-        except AttributeError:
-            print( "Cant get spatial bounds for satellite image")
+        except AttributeError as err:
+            print( f"Cant get spatial bounds for satellite image: {err}")
         except Exception:
             traceback.print_exc()
+
+    @property
+    def cache_file_path(self):
+        from spectraclass.data.base import DataManager, dm
+        cache_file_dir = os.path.join( dm().cache_dir, dm().project_name, dm().mode, "google" )
+        os.makedirs( cache_file_dir, exist_ok = True )
+        return os.path.join( cache_file_dir, f"{self.block.file_name}.tiff" )
+
 
     def set_axis_limits( self, xlims, ylims ):
         if self.image is not None:

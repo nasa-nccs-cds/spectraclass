@@ -4,6 +4,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.gridspec import GridSpec
 from matplotlib.lines import Line2D
 from matplotlib.axes import Axes
+import traitlets as tl
 from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
 from matplotlib.colors import Normalize
@@ -108,6 +109,7 @@ def mm() -> "MapManager":
     return MapManager.instance()
 
 class MapManager(SCSingletonConfigurable):
+    init_band = tl.Int(10).tag(config=True, sync=True)
 
     RIGHT_BUTTON = 3
     MIDDLE_BUTTON = 2
@@ -381,9 +383,9 @@ class MapManager(SCSingletonConfigurable):
 
     def create_image(self, **kwargs ) -> Optional[AxesImage]:
         image: Optional[AxesImage] = None
-        z: xa.DataArray =  self.data[ 0, :, : ]
+        z: xa.DataArray =  self.data[ self.init_band, :, : ]
         nValid = np.count_nonzero(~np.isnan(z))
-        print( f"\n ********* Creating Map Image, nValid={nValid}, image shape = {z.shape}")
+        print( f"\n ********* Creating Map Image, nValid={nValid}, data shape = {self.data.shape}, image shape = {z.shape}, band = {self.init_band}, data range = [ {self.data.min().values}, {self.data.max().values} ]")
         if nValid > 0:
             colorbar = kwargs.pop( 'colorbar', False )
             image: AxesImage =  dms().plotRaster( z, ax=self.plot_axes, colorbar=colorbar, alpha=0.5, **kwargs )
