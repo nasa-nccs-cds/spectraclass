@@ -277,5 +277,6 @@ class ModeDataManager(SCSingletonConfigurable):
         flow: ActivationFlow = afm().getActivationFlow()
         if flow.spread( seed_points.data, niters ) is not None:
             pcm().color_by_value( flow.get_distances(), distance=True )
+            flow.reset = True
 
 

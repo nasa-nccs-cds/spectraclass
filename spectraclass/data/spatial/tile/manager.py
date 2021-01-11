@@ -22,12 +22,7 @@ class TileManager(SCSingletonConfigurable):
 
     tile_size = tl.Int(1000).tag(config=True, sync=True)
     tile_index = tl.List(tl.Int, (0, 0), 2, 2).tag(config=True, sync=True)
-    tile_shape = tl.List(tl.Int ,(1000 ,1000) ,2 ,2).tag(config=True, sync=True)
-    tile_dims = tl.List(tl.Int ,(4 ,4) ,2 ,2).tag(config=True, sync=True)
-
     block_size = tl.Int(250).tag(config=True, sync=True)
-    block_shape = tl.List(tl.Int ,(250 ,250) ,2 ,2).tag(config=True, sync=True)
-    block_dims = tl.List(tl.Int ,(4 ,4) ,2 ,2).tag(config=True, sync=True)
     block_index = tl.List(tl.Int, (0, 0), 2, 2).tag(config=True, sync=True)
     image_attrs = {}
 
@@ -35,6 +30,10 @@ class TileManager(SCSingletonConfigurable):
         super(TileManager, self).__init__()
         self._tiles: Dict[List, Tile] = {}
         self.cacheTileData = True
+        self.tile_dims = None
+        self.tile_shape = [ self.tile_size ] * 2
+        self.block_shape = [ self.block_size ] * 2
+        self.block_dims = [ self.tile_size//self.block_size ] * 2
 
     @property
     def image_name(self):

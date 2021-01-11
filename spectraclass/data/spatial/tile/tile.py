@@ -59,6 +59,7 @@ class Block:
         self.init_task = None
         self.config = kwargs
         self.block_coords = (iy,ix)
+        self.validate_parameters()
         self.data: Optional[xa.DataArray] = self._getData()
         self.index_array: xa.DataArray = self.get_index_array()
         self._flow = None
@@ -79,6 +80,10 @@ class Block:
     def dsid( self ):
         from spectraclass.data.spatial.tile.manager import TileManager
         return "-".join( [ TileManager.instance().tileName() ] + [ str(i) for i in self.block_coords ] )
+
+    def validate_parameters(self):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        assert ( self.block_coords[0] < tm().block_dims[0] ) and ( self.block_coords[1] < tm().block_dims[1] ), f"Block coordinates {self.block_coords} out of bounds with block dims = {tm().block_dims}"
 
     def _getData( self ) -> Optional[xa.DataArray]:
         if self.tile.data is None: return None

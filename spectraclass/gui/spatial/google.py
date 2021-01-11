@@ -17,6 +17,8 @@ def gpm() -> "GooglePlotManager":
 
 class GooglePlotManager(SCSingletonConfigurable):
     api_key = tl.Unicode("google/api_key").tag(config=True)
+    zoom_level = tl.Int(17).tag(config=True, sync=True)
+    image_size = tl.Float(8.0).tag(config=True, sync=True)
 
     RIGHT_BUTTON = 3
     MIDDLE_BUTTON = 2
@@ -24,7 +26,7 @@ class GooglePlotManager(SCSingletonConfigurable):
 
     def __init__( self ):
         super(GooglePlotManager, self).__init__()
-        self.figure = plt.figure(2)
+        self.figure: plt.Figure = plt.figure( 2, frameon=False, constrained_layout=True, figsize=[self.image_size]*2 )
         self.plot: AxesImage = None
         self.image: Image.Image = None
         self.block: Block = None
@@ -32,7 +34,6 @@ class GooglePlotManager(SCSingletonConfigurable):
         self.axes.get_xaxis().set_visible(False)
         self.axes.get_yaxis().set_visible(False)
         self.figure.set_constrained_layout_pads( w_pad=0., h_pad=0. )
-        self.google_maps_zoom_level = 17
         self.google = None
 
     def setBlock(self, block: Block = None, type ='satellite'):
@@ -59,7 +60,7 @@ class GooglePlotManager(SCSingletonConfigurable):
                 print( f"Reading cached image {cfile}" )
                 self.image = Image.open(cfile)
             else:
-                self.image = self.google.get_tiled_google_map(type, extent, self.google_maps_zoom_level)
+                self.image = self.google.get_tiled_google_map(type, extent, self.zoom_level)
                 self.image.save( cfile )
             self.plot = self.axes.imshow(self.image, extent=extent, alpha=1.0, aspect='auto' )
             self.axes.set_xlim(extent[0],extent[1])
@@ -88,11 +89,13 @@ class GooglePlotManager(SCSingletonConfigurable):
             self.figure.canvas.draw_idle()
 
     def onMouseClick(self, event):
+        from spectraclass.gui.spatial.map import MapManager, mm
         if event.xdata != None and event.ydata != None:
             if event.inaxes ==  self.axes:
                 rightButton: bool = int(event.button) == self.RIGHT_BUTTON
                 event = dict( event="pick", type="image", lat=event.ydata, lon=event.xdata, button=int(event.button), transient=rightButton )
                 print( f"SatellitePlot Mouse-click: {event}")
+                mm().processEvent( event )
 
     def mpl_update(self):
         self.figure.canvas.draw_idle()
@@ -152,8 +155,6 @@ class GoogleMaps():
             ullat, ullon = NW_lat_long
             lrlat, lrlon = SE_lat_long
 
-            print( f" get_tiled_google_map: extent = lat:{[ullat,lrlat]}, lon:{[ullon,lrlon]}")
-
             # convert all these coordinates to pixels
             ulx, uly = self.latlon2pixels(ullat, ullon, zoom)
             lrx, lry = self.latlon2pixels(lrlat, lrlon, zoom)
@@ -170,6 +171,7 @@ class GoogleMaps():
             heightplus = height + self.LOGO_CUTOFF
 
             # assemble the image from stitched
+            print( f" get_tiled_google_map[{zoom}]: extent = lat:{[ullat,lrlat]}, lon:{[ullon,lrlon]}, dims = {[int(dx), int(dy)]}")
             final: Image.Image = Image.new('RGB', (int(dx), int(dy)))
             for x in range(cols):
                 for y in range(rows):

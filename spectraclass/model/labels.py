@@ -182,16 +182,6 @@ class LabelsManager(SCSingletonConfigurable):
         filtered_distance = distance[selection]
         return filtered_labels, filtered_distance
 
-    def spread(self, optype: str,  n_iters = None ) -> Optional[xa.Dataset]:
-        if self._flow is None:
-            return None
-        resume = ( optype == "neighbors" ) and ( self._optype == "neighbors" )
-        if not resume: self._flow.clear()
-        self._optype = optype
-        labels_data = self.labels_data()
-        niters = self.n_spread_iters if n_iters is None else n_iters
-        return self._flow.spread( labels_data.values, niters )
-
     def clearTransient(self):
         if len(self._markers) > 0 and self._markers[-1].cid == 0:
             self._markers.pop(-1)
