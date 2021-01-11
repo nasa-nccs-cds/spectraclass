@@ -467,11 +467,11 @@ class MapManager(SCSingletonConfigurable):
             else:
                 lm().addMarker(marker)
                 self.plot_markers_image(**kwargs)
-                # pids = [pid for pid in marker.pids if pid >= 0]
-                # classification = kwargs.get( "classification", -1 )
-                # otype = kwargs.get( "type", None )
-                # PointCloudManager.instance().mark_points( pids, classification, update=True )
-                # PlotManager.instance().plot_graph(pids)
+                pids = [pid for pid in marker.pids if pid >= 0]
+                classification = kwargs.get( "classification", -1 )
+                otype = kwargs.get( "type", None )
+                PointCloudManager.instance().mark_points( pids, classification, update=True )
+                PlotManager.instance().plot_graph(pids)
         self._adding_marker = False
 
     # def undo_marker_selection(self, **kwargs ):

@@ -89,13 +89,14 @@ class GooglePlotManager(SCSingletonConfigurable):
             self.figure.canvas.draw_idle()
 
     def onMouseClick(self, event):
+        from spectraclass.gui.control import UserFeedbackManager, ufm
         from spectraclass.gui.spatial.map import MapManager, mm
         if event.xdata != None and event.ydata != None:
             if event.inaxes ==  self.axes:
                 rightButton: bool = int(event.button) == self.RIGHT_BUTTON
                 event = dict( event="pick", type="image", lat=event.ydata, lon=event.xdata, button=int(event.button), transient=rightButton )
-                print( f"SatellitePlot Mouse-click: {event}")
                 mm().processEvent( event )
+     #           ufm().show( "Processed point selection.")
 
     def mpl_update(self):
         self.figure.canvas.draw_idle()
