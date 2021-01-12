@@ -29,6 +29,9 @@ class Marker:
             return True
         except: return False
 
+    def __repr__(self):
+        return f"Marker[{self.cid}]: {self.pids.tolist()} )"
+
 class SCSingletonConfigurable(tlc.Configurable):
     config_instances: List["SCSingletonConfigurable"] = []
     _log_file = None

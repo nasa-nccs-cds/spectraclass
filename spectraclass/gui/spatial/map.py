@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
 from spectraclass.data.spatial.tile.tile import Block
 from .google import GooglePlotManager
+from spectraclass.util.logs import LogManager, lgm
 import pandas as pd
 import xarray as xa
 import numpy as np
@@ -439,7 +440,7 @@ class MapManager(SCSingletonConfigurable):
         #             listener.set_axis_limits( self.plot_axes.get_xlim(), self.plot_axes.get_ylim() )
 
     def onMouseClick(self, event):
-        print(f"MouseClick event = {event}")
+        lgm().log(f"MouseClick event = {event}")
         try:
             if event.xdata != None and event.ydata != None:
                 if not self.toolbarMode and (event.inaxes == self.plot_axes) and (self.key_mode == None):
@@ -447,23 +448,22 @@ class MapManager(SCSingletonConfigurable):
                     pid = self.block.coords2pindex( event.ydata, event.xdata )
                     if pid >= 0:
                         cid = lm().current_cid
-                        print( f"Adding marker for pid = {pid}, cid = {cid}")
+                        lgm().log( f"Adding marker for pid = {pid}, cid = {cid}")
                         ptindices = self.block.pindex2indices(pid)
                         classification = self.label_map.values[ ptindices['iy'], ptindices['ix'] ] if (self.label_map is not None) else -1
                         marker = Marker( [pid], cid )
                         self.add_marker( marker, cid == 0, classification=classification )
                         self.dataLims = event.inaxes.dataLim
                     else:
-                        print(f"Can't add marker, pid = {pid}")
+                        lgm().log(f"Can't add marker, pid = {pid}")
         except Exception as err:
-            print( f"MapManager pick error: {err}" )
-            traceback.print_exc(50)
+            lgm().exception( f"MapManager pick error: {err}" )
 
     def add_marker(self, marker: Marker, transient: bool, **kwargs ):
         if not self._adding_marker:
             self._adding_marker = True
             if marker is None:
-                print( "NULL Marker: point select is probably out of bounds.")
+                lgm().log( "NULL Marker: point select is probably out of bounds.")
             else:
                 lm().addMarker(marker)
                 self.plot_markers_image(**kwargs)
@@ -532,8 +532,10 @@ class MapManager(SCSingletonConfigurable):
     #         self.marker_list = [ marker for marker in self.marker_list if marker['c'] > 0 ]
 
     def get_markers( self, **kwargs ) -> Tuple[ List[float], List[float], List[List[float]] ]:
-        ycoords, xcoords, colors = [], [], []
-        for marker in lm().getMarkers():
+        ycoords, xcoords, colors, markers = [], [], [], lm().getMarkers()
+        lgm().log(f" ** get_markers, #markers = {len(markers)}")
+        for marker in markers:
+            lgm().log(f" ** get_marker: {marker}")
             for pid in marker.pids:
                 coords = self.block.pindex2coords( pid )
                 if (coords is not None) and self.block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
@@ -552,7 +554,7 @@ class MapManager(SCSingletonConfigurable):
     def plot_markers_image(self, **kwargs ):
         if self.marker_plot:
             ycoords, xcoords, colors = self.get_markers( **kwargs )
-            print(f" ** plot markers image, nmarkers = {len(ycoords)}")
+            lgm().log(f" ** plot markers image, nmarkers = {len(ycoords)}")
             if len(ycoords) > 0:
                 self.marker_plot.set_offsets(np.c_[xcoords, ycoords])
                 self.marker_plot.set_facecolor(colors)

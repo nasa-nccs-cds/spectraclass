@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from spectraclass.model.labels import Action
 from spectraclass.model.base import Marker
 from collections import OrderedDict
+from spectraclass.util.logs import LogManager, lgm
 import os, math, pickle
 import rioxarray as rio
 from .modes import *
@@ -318,9 +319,11 @@ class SpatialDataManager(ModeDataManager):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, lm
         action: Action = lm().popAction()
+        lgm().log( f" UNDO action:  {action}" )
         if action is not None:
             if action.type == "mark":
                 m: Marker = lm().popMarker()
+                lgm().log(f" POP marker:  {m}")
                 pcm().clear_pids( m.cid, m.pids )
                 mm().plot_markers_image()
             elif action.type == "color":

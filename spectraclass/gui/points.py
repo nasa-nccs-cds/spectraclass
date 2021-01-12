@@ -7,6 +7,7 @@ from itkwidgets.widget_viewer import Viewer
 import xarray as xa
 import numpy.ma as ma
 import traitlets.config as tlc
+from spectraclass.util.logs import LogManager, lgm
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable, Marker
 from spectraclass.model.labels import LabelsManager
@@ -23,6 +24,8 @@ class PointCloudManager(SCSingletonConfigurable):
         self._gui: Viewer = None
         self._n_point_bins = 27
         self._color_values = None
+        self.reduced_opacity = 0.111111
+        self.standard_opacity = 0.411111
         self.initialize_points()
 
     def initialize_points(self):
@@ -97,8 +100,7 @@ class PointCloudManager(SCSingletonConfigurable):
     def mark_points(self, point_ids: np.ndarray = None, cid: int = -1, update=False):
         from spectraclass.model.labels import LabelsManager
         from spectraclass.gui.control import UserFeedbackManager, ufm
-        print(f" ---------------->> PCM: mark_points -> {point_ids}")
-        ufm().show( f" ---------------->> PCM: mark_points -> {point_ids}" )
+        lgm().log( f" PCM: mark_points -> {point_ids}" )
         lmgr = LabelsManager.instance()
         icid: int = cid if cid > -1 else lmgr.current_cid
  #       if icid == 0: ufm().show( "Must select a class label in order to mark points.", "red" )
@@ -114,12 +116,11 @@ class PointCloudManager(SCSingletonConfigurable):
         self.clear_points(0)
         self._marker_pids[icid] = np.append( self._marker_pids[icid], pids )
         if self._points is None:
-            print( "WARNING: Can't mark points in PointCloudManager which is not initialized")
+            ufm().show( "Can't mark points in PointCloudManager which is not initialized", "red")
         else:
             marked_points: np.ndarray = self._points[ self._marker_pids[icid], : ]
-    #        print( f"  ***** POINTS- mark_points[{icid}], #pids = {len(pids)}, #points = {marked_points.shape[0]}")
             self._marker_points[ icid ] = marked_points # np.concatenate(  [ self._marker_points[ icid ], marked_points ] )
-            print(f"PointCloudManager.mark_points: added pids = {pids}, cid = {icid}, cid marked points = [{self._marker_pids[icid]}]")
+            lgm().log(f"PointCloudManager.mark_points: added pids = {pids}, cid = {icid}, cid marked points = [{self._marker_pids[icid]}]")
         lmgr.addAction( "mark", "points", pids, icid )
         if update: self.update_plot()
         return lmgr.current_cid
@@ -127,7 +128,8 @@ class PointCloudManager(SCSingletonConfigurable):
     def clear_bins(self):
         for iC in range( 0, self._n_point_bins ):
             self._binned_points[iC] = self.empty_pointset
-        self.set_base_points_alpha(1.0)
+            if self._gui.point_set_opacities[0] == self.reduced_opacity:
+                self.set_base_points_alpha( self.standard_opacity )
 
     def clear(self):
         self.clear_bins()
@@ -152,7 +154,7 @@ class PointCloudManager(SCSingletonConfigurable):
                 self._binned_points[iC] = pts[ mask ]
                 print(f" $$$COLOR: BIN-{iC}, [ {lspace[iC]} -> {lspace[iC+1]} ], nvals = {self._binned_points[iC].shape[0]}, #mask-points = {np.count_nonzero(mask)}" )
             LabelsManager.instance().addAction( "color", "points" )
-            self.set_base_points_alpha(0.1)
+            self.set_base_points_alpha( self.reduced_opacity )
             self.update_plot(**kwargs)
 
     def get_color_bounds( self ):
@@ -166,24 +168,25 @@ class PointCloudManager(SCSingletonConfigurable):
             for iC, marker_pids in enumerate( self._marker_pids ):
                 if (cid < 0) or (iC == cid):
                     if len( marker_pids ) > 0:
-                        print( f" $$$PCM: clear_pids[{cid}]: {pids.tolist()}" )
+                        lgm().log(f"PIDS.clear: cid={cid}, #pids={pids.size}")
                         self._marker_pids[iC] = np.delete( self._marker_pids[iC], dpts(marker_pids) )
                         self._marker_points[iC] = self._points[self._marker_pids[iC], :] if len( self._marker_pids[iC] ) > 0 else self.empty_pointset
 
     def clear_points(self, icid: int, **kwargs ):
         if self._marker_pids is not None:
             pids = kwargs.get('pids', None )
-            print( f"POINTS.clear: cid={icid}, pids={pids}")
             if pids is None:
+                lgm().log(f"POINTS.clear[{icid}]: empty_pointset")
                 self._marker_points[icid] = self.empty_pointset
                 self._marker_pids[icid] = self.empty_pids
             else:
+                lgm().log(f"POINTS.clear: cid={icid}, #pids={pids.size}")
                 dpts = np.vectorize( lambda x: x in pids )
                 dmask = dpts( self._marker_pids[icid] )
-    #            print( f"clear_points.Mask: {self._marker_pids[icid]} -> {dmask}" )
+    #            lgm().log( f"clear_points.Mask: {self._marker_pids[icid]} -> {dmask}" )
                 self._marker_pids[icid]  = np.delete( self._marker_pids[icid], dmask )
                 self._marker_points[ icid ] = self._points[ self._marker_pids[icid], :] if len( self._marker_pids[icid] ) > 0 else self.empty_pointset
-    #            print(f"clear_points: reduced marker_pids = {self._marker_pids[icid]} -> points = {self._marker_points[ icid ]}")
+    #            lgm().log(f"clear_points: reduced marker_pids = {self._marker_pids[icid]} -> points = {self._marker_points[ icid ]}")
 
     @property
     def point_sets(self):
@@ -196,7 +199,7 @@ class PointCloudManager(SCSingletonConfigurable):
             invert = False
             bin_colors = [ x[:3] for x in self.get_bin_colors( self.color_map, invert ) ]
             pt_colors =  [ [1.0, 1.0, 1.0], ] + bin_colors + LabelsManager.instance().colors[::-1]
-            pt_alphas = [1.0] * len( pt_colors )
+            pt_alphas = [ self.standard_opacity ] * ( self._n_point_bins + 1 ) + [ 1.0 ] * LabelsManager.instance().nLabels
             ptsizes = [1] + [1]*self._n_point_bins + [8]*LabelsManager.instance().nLabels
             self._gui = view( point_sets = self.point_sets, point_set_sizes=ptsizes, point_set_colors=pt_colors, point_set_opacities=pt_alphas, background=[0,0,0] )
             self._gui.layout = dict( width= '100%', flex= '1 0 1200px' )

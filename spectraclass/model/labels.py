@@ -6,6 +6,7 @@ import ipywidgets as ipw
 import matplotlib.colors as mcolors
 from ..graph.manager import ActivationFlow
 import traitlets.config as tlc
+from spectraclass.util.logs import LogManager, lgm
 from spectraclass.model.base import SCSingletonConfigurable, Marker
 import xarray as xa
 import numpy as np
@@ -197,6 +198,7 @@ class LabelsManager(SCSingletonConfigurable):
         self.clearTransient()
         for pid in marker.pids: self.deletePid( pid )
         self._markers = list(filter( lambda m: not m.isEmpty(),  self._markers ))
+        lgm().log( f"LabelsManager.addMarker: {marker}")
         self._markers.append(marker)
 
     def popMarker(self) -> Marker:

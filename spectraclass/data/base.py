@@ -12,7 +12,7 @@ from importlib import import_module
 from spectraclass.model.base import SCSingletonConfigurable
 from traitlets.config.loader import load_pyconfig_files
 from .modes import ModeDataManager
-from spectraclass.util.logs import LogManager, lm
+from spectraclass.util.logs import LogManager, lgm
 from traitlets.config.loader import Config
 import threading, time, logging, sys
 
@@ -66,10 +66,10 @@ class DataManager(SCSingletonConfigurable):
     def initialize(cls, name: str, mode: str ):
         dataManager = cls.instance()
         dataManager._configure_( name, mode )
-        lm().init_logging( name, mode )
+        lgm().init_logging(name, mode)
         if mode.lower() not in cls._mode_data_managers_: raise Exception( f"Mode {mode} is not defined, available modes = {cls._mode_data_managers_.keys()}")
         dataManager._mode_data_manager_ = cls._mode_data_managers_[ mode.lower() ].instance()
-        lm().log("Logging configured")
+        lgm().log("Logging configured")
         return dataManager
 
     def _configure_(self, name: str, mode: str ):

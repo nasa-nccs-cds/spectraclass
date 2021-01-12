@@ -12,7 +12,7 @@ from importlib import import_module
 from spectraclass.model.base import SCSingletonConfigurable
 import threading, time, logging, sys, traceback
 
-def lm() -> "LogManager":
+def lgm() -> "LogManager":
     return LogManager.instance()
 
 class LogManager(SCSingletonConfigurable):
