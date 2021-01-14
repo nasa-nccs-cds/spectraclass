@@ -304,7 +304,7 @@ class MapManager(SCSingletonConfigurable):
     def initLabels(self):
         nodata_value = -2
         template = self.block.data[0].squeeze( drop=True )
-        self.labels: xa.DataArray = xa.full_like( template, -1, dtype=np.int32 ).where( template.notnull(), nodata_value )
+        self.labels: xa.DataArray = xa.full_like( template, -1, dtype=np.dtype(np.int32) ).where( template.notnull(), nodata_value )
         self.labels.attrs['_FillValue'] = nodata_value
         self.labels.name = f"{self.block.data.name}_labels"
         self.labels.attrs[ 'long_name' ] = [ "labels" ]
@@ -403,33 +403,35 @@ class MapManager(SCSingletonConfigurable):
              (x0, x1) = ax.get_xlim()
              (y0, y1) = ax.get_ylim()
              print(f"ZOOM Event: Updated bounds: ({x0},{x1}), ({y0},{y1})")
-         event = dict(event="gui", type="zoom", xlim=ax.get_xlim(), ylim=ax.get_ylim())
-#         self.submitEvent( event, EventMode.Foreground )
 
     def frame_color_pointcloud( self, **kwargs ):
         pcm = PointCloudManager.instance()
         frame_data: xa.DataArray = self.data[self.currentFrame]
+        lgm().log( f" color_pointcloud: currentFrame = {self.currentFrame}")
         pcm.color_by_value( frame_data.values.flatten(), **kwargs )
         return frame_data
 
     def update_plots(self):
-        if self.image is not None:
-            from spectraclass.data.base import DataManager
-            dm = DataManager.instance()
-            frame_data: xa.DataArray = self.frame_color_pointcloud()
-            self.image.set_data( frame_data.values  )
-            drange = dms().get_color_bounds( frame_data )
-            self.image.set_norm( Normalize( **drange ) )
-            self.image.set_extent( self.block.extent() )
-            plot_name = os.path.basename(dm.dsid)
-            print( f" #### Update Map: data shape = {frame_data.shape}, range = {drange}, extent = {self.block.extent()}")
-            self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
-            self.plot_axes.title.set_fontsize( 8 )
-        if self.labels_image is not None:
-            self.labels_image.set_extent( self.block.extent() )
-            self.labels_image.set_alpha(0.0)
-        event = dict( event="gui", type="update" )
-#        self.submitEvent(event, EventMode.Gui)
+        try:
+            if self.image is not None:
+                from spectraclass.data.base import DataManager
+                dm = DataManager.instance()
+                frame_data: xa.DataArray = self.frame_color_pointcloud()
+                self.image.set_data( frame_data.values  )
+                drange = dms().get_color_bounds( frame_data )
+                self.image.set_norm( Normalize( **drange ) )
+                self.image.set_extent( self.block.extent() )
+                plot_name = os.path.basename(dm.dsid)
+                lgm().log( f" Update Map: data shape = {frame_data.shape}, range = {drange}, extent = {self.block.extent()}")
+                self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
+                self.plot_axes.title.set_fontsize( 8 )
+            if self.labels_image is not None:
+                self.labels_image.set_extent( self.block.extent() )
+                self.labels_image.set_alpha(0.0)
+            self.update_canvas()
+        except:
+            lgm().exception( "update_plots error:" )
+
 
     def onMouseRelease(self, event):
         if event.inaxes ==  self.plot_axes:
@@ -440,7 +442,7 @@ class MapManager(SCSingletonConfigurable):
         #             listener.set_axis_limits( self.plot_axes.get_xlim(), self.plot_axes.get_ylim() )
 
     def onMouseClick(self, event):
-        lgm().log(f"MouseClick event = {event}")
+        lgm().log(f"\nMouseClick event = {event}")
         try:
             if event.xdata != None and event.ydata != None:
                 if not self.toolbarMode and (event.inaxes == self.plot_axes) and (self.key_mode == None):
@@ -496,7 +498,7 @@ class MapManager(SCSingletonConfigurable):
         label_plot = self.label_map.where( self.label_map >= 0, 0 )
         class_alpha = kwargs.get( 'alpha', 0.9 )
         if self.labels_image is None:
-            label_map_colors: List = [ [ ic, label, color[0:3] + [0.0 if (ic == 0) else class_alpha] ] for ic, (label, color) in enumerate( zip( lm().labels, lm().colors ) ) ]
+            label_map_colors: List = [ [ ic, label, list(color[0:3]) + [0.0 if (ic == 0) else class_alpha] ] for ic, (label, color) in enumerate( zip( lm().labels, lm().colors ) ) ]
             self.labels_image = dms().plotRaster( label_plot, colors=label_map_colors, ax=self.plot_axes, colorbar=False )
         else:
             self.labels_image.set_data( label_plot.values )
@@ -571,6 +573,7 @@ class MapManager(SCSingletonConfigurable):
         pcm.update_plot()
 
     def update_canvas(self):
+        lgm().log( "update_canvas" )
         self.figure.canvas.draw_idle()
 
     def mpl_pick_marker( self, event: PickEvent ):
@@ -617,6 +620,7 @@ class MapManager(SCSingletonConfigurable):
         if self.slider is not None:
             tval = self.slider.val
             self.currentFrame = int( tval )
+            lgm().log(f"Slider Update, frame = {self.currentFrame}")
             self.update_plots()
 
     def show(self):

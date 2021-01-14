@@ -8,9 +8,10 @@ import xarray as xa
 import numpy as np
 from spectraclass.data.base import DataManager
 from bokeh.models import ColumnDataSource
+from spectraclass.util.logs import LogManager, lgm
 import ipywidgets as ipw
 import traitlets.config as tlc
-from spectraclass.model.base import SCSingletonConfigurable, log
+from spectraclass.model.base import SCSingletonConfigurable
 
 def rescale( x: np.ndarray ):
     xs= x.squeeze()
@@ -24,17 +25,26 @@ class JbkPlot:
 
     def __init__( self, **kwargs ):
         self.init_data(**kwargs)
-        self._selected_pids: List[int] = [0]
-        self._source = ColumnDataSource(data=dict(
-            xs=self.x,  # x coords for each line (list of lists)
-            ys=self.y,  # y coords for each line (list of lists)
-            cmap=[1]  # data to use for colormapping
-        ))
-        self.fig = figure( title=self.title, height=250, width=750, background_fill_color='#efefef' )
-        self._r = self.fig.multi_line( 'xs', 'ys', source=self._source, line_color=linear_cmap('cmap', "Turbo256", 0, 255), line_width=1.5, alpha=0.8 )
-    #    print(f"Creating BokehModel; x0 shape = {self.x[0].shape},  y0 shape = {self.y[0].shape}")
+        self._selected_pids: List[int] = []
+        self._source = None
+        self._r = None
+        self.init_figure()
+
+    def init_figure(self):
+        self.fig = figure(title=self.title, height=250, width=750, background_fill_color='#efefef')
         self._model = jbk.BokehModel( self.fig, layout = ip.Layout( width= 'auto', height= 'auto' ) )
-    #    print( f"BokehModel: {self._model.keys}" )
+        lgm().log( f"BokehModel: {self._model.keys}" )
+
+    def init_graph(self):
+        if self._r is None:
+            self._source = ColumnDataSource(data=dict(
+                xs=self.x,  # x coords for each line (list of lists)
+                ys=self.y,  # y coords for each line (list of lists)
+                cmap=[1]  # data to use for colormapping
+            ))
+            self._r = self.fig.multi_line( 'xs', 'ys', source=self._source, line_color=linear_cmap('cmap', "Turbo256", 0, 255), line_width=1.5, alpha=0.8 )
+            lgm().log(f"Creating Graph; x0 shape = {self.x[0].shape},  y0 shape = {self.y[0].shape}")
+
 
     def gui(self):
         self.plot()
@@ -55,18 +65,27 @@ class JbkPlot:
             cls._ploty: np.ndarray = project_data["plot-y"].values
             cls._rploty: np.ndarray = project_data["reproduction"].values
             table_cols = DataManager.instance().table_cols
-            log().info( f"           &&&&   JbkPlot init, using cols {table_cols} from {list(project_data.variables.keys())}, ploty shape = {cls._ploty.shape}, rploty shape = {cls._rploty.shape}" )
+            lgm().log( f" JbkPlot init, using cols {table_cols} from {list(project_data.variables.keys())}, ploty shape = {cls._ploty.shape}, rploty shape = {cls._rploty.shape}" )
             cls._mdata: List[np.ndarray] = [ project_data[mdv].values for mdv in table_cols ]
 
     def select_items(self, idxs: List[int] ):
         self._selected_pids = idxs
 
     def plot(self):
+        from spectraclass.model.labels import LabelsManager, lm
         self.fig.title.text = self.title
-        if self.nlines == 1:
-            self._source.data.update( ys=self.y2, xs=self.x2, cmap=[0, 100] )
+        marked_pids = lm().getPids()
+        if lm().current_cid == 0:
+            if len(self._selected_pids) > 0:
+                self.update_graph( self.x2, self.y2, [0, 100] )
         else:
-            self._source.data.update( ys = self.y, xs=self.x, cmap = np.random.randint( 0, 255, self.nlines ) )
+            if len(marked_pids) > 0:
+                self._selected_pids = marked_pids
+                self.update_graph( self.x, self.y, np.random.randint( 0, 255, self.nlines ) )
+
+    def update_graph(self, x, y, cmap ):
+        self.init_graph()
+        self._source.data.update(ys=y, xs=x, cmap=cmap)
         yr = self.yrange
         self.fig.y_range.update( start=yr[0], end=yr[1] )
 
@@ -95,13 +114,15 @@ class JbkPlot:
     def y2( self ) -> List[ np.ndarray ]:
         idx = self._selected_pids[0]
         rp = rescale( self._rploty[idx] )
-        log().info( f"           &&&&   GRAPH:y2-> idx={idx}, val[10] = {rp[:10]} ")
+        lgm().log( f" GRAPH:y2-> idx={idx}, val[10] = {rp[:10]} ")
         return [ rescale( self._ploty[idx] ), rp ]
 
     @property
     def yrange(self):
-        ydata = self._ploty[ self._selected_pids ]
-        ys = ydata / ydata.mean( axis=1 )
+        ydata: np.ndarray = self._ploty[ self._selected_pids ]
+        ymean: np.ndarray = ydata.mean( axis=1 )
+        lgm().log(f" yrange-> ydata shape={ydata.shape}, ymean shape = {ymean.shape} ")
+        ys = ydata / ymean.reshape( ymean.shape[0], 1 )
         return ( ys.min(), ys.max() )
 
     @property
@@ -131,14 +152,14 @@ class PlotManager(SCSingletonConfigurable):
 
     def refresh(self):
         JbkPlot.refresh()
-        log().info(f"           &&&&   PlotManager refresh ")
+        lgm().log(f" PlotManager refresh ")
         self._wGui = None
 
     def current_graph(self) -> JbkPlot:
         return self._graphs[ self._wGui.selected_index ]
 
     def plot_graph( self, pids: List[int] ):
-        log().info(f"           &&&&   plot_graph[{self._wGui.selected_index}]: pids = {pids} ")
+        lgm().log(f" plot_graph[{self._wGui.selected_index}]: pids = {pids} ")
         current_graph: JbkPlot = self.current_graph()
         current_graph.select_items( pids )
         current_graph.plot()
@@ -154,5 +175,5 @@ class PlotManager(SCSingletonConfigurable):
     def on_selection(self, selection_event: Dict ):
         selection = selection_event['pids']
         if len( selection ) > 0:
-            log().info(f"           &&&&   GRAPH.on_selection: nitems = {len(selection)}, pid={selection[0]}")
+            lgm().log(f" RAPH.on_selection: nitems = {len(selection)}, pid={selection[0]}")
             self.plot_graph( selection )

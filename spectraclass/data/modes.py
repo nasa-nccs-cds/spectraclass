@@ -259,10 +259,10 @@ class ModeDataManager(SCSingletonConfigurable):
         mm = MapManager.instance()
         self._flow_class_map: np.ndarray = lm().labels_data().data
         catalog_pids = np.arange(0, self._flow_class_map.shape[0])
+        pcm().clear_bins()
 
         if flow.spread(self._flow_class_map, niters) is not None:
             self._flow_class_map = flow.get_classes()
-            pcm().clear_bins()
             all_classes = ( lm().current_cid == 0 )
             for cid, label in enumerate( lm().labels ):
                 if all_classes or ( lm().current_cid == cid ):
@@ -270,7 +270,9 @@ class ModeDataManager(SCSingletonConfigurable):
                     if new_indices.size > 0:
                         pcm().mark_points( new_indices, cid )
             mm.plot_markers_image()
-            self.display_distance()
+ #       self.set_base_points_alpha(self.reduced_opacity)
+        pcm().update_plot()
+#            self.display_distance()
 
     def display_distance(self, niters=100):
         seed_points: xa.DataArray = lm().getSeedPointMask()

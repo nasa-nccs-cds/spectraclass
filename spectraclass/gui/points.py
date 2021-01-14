@@ -128,8 +128,9 @@ class PointCloudManager(SCSingletonConfigurable):
     def clear_bins(self):
         for iC in range( 0, self._n_point_bins ):
             self._binned_points[iC] = self.empty_pointset
-            if self._gui.point_set_opacities[0] == self.reduced_opacity:
-                self.set_base_points_alpha( self.standard_opacity )
+        if self._gui.point_set_opacities[0] == self.reduced_opacity:
+            self.set_base_points_alpha( self.standard_opacity )
+        self.update_plot()
 
     def clear(self):
         self.clear_bins()

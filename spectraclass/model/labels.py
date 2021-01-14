@@ -219,6 +219,12 @@ class LabelsManager(SCSingletonConfigurable):
     def getMarkers( self ) -> List[Marker]:
         return self._markers
 
+    def getPids( self ) -> List[int]:
+        pids = []
+        for m in self._markers:
+            if m.cid > 0:  pids.extend( m.pids )
+        return pids
+
     @property
     def selectedLabel(self):
         return self._labels[ self.current_cid ]

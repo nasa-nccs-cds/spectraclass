@@ -77,8 +77,3 @@ class SCSingletonConfigurable(tlc.Configurable):
             trait_values = trait_instance_values.setdefault( instance.__class__.__name__, {} )
 #            print( f"    *** add_trait_value[{instance.config_scope()},{instance.__class__.__name__}]: {tid} -> {tval}")
             trait_values[tid] = tval
-
-
-def log() -> logging.Logger:
-    logger = logging.getLogger('spectraclass')
-    return logger
