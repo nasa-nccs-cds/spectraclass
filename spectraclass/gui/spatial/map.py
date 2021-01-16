@@ -462,6 +462,8 @@ class MapManager(SCSingletonConfigurable):
             lgm().exception( f"MapManager pick error: {err}" )
 
     def add_marker(self, marker: Marker, transient: bool, **kwargs ):
+        from spectraclass.gui.plot import PlotManager, gm
+        from spectraclass.gui.points import PointCloudManager, pcm
         if not self._adding_marker:
             self._adding_marker = True
             if marker is None:
@@ -469,11 +471,12 @@ class MapManager(SCSingletonConfigurable):
             else:
                 lm().addMarker(marker)
                 self.plot_markers_image(**kwargs)
-                pids = [pid for pid in marker.pids if pid >= 0]
+                pids = marker.pids[ np.where(  marker.pids >= 0 ) ]
                 classification = kwargs.get( "classification", -1 )
                 otype = kwargs.get( "type", None )
-                PointCloudManager.instance().mark_points( pids, classification, update=True )
-                PlotManager.instance().plot_graph(pids)
+                lm().mark_points( pids, classification )
+                gm().plot_graph( pids )
+                lm().log_markers("post-point-selction")
         self._adding_marker = False
 
     # def undo_marker_selection(self, **kwargs ):
@@ -537,7 +540,6 @@ class MapManager(SCSingletonConfigurable):
         ycoords, xcoords, colors, markers = [], [], [], lm().getMarkers()
         lgm().log(f" ** get_markers, #markers = {len(markers)}")
         for marker in markers:
-            lgm().log(f" ** get_marker: {marker}")
             for pid in marker.pids:
                 coords = self.block.pindex2coords( pid )
                 if (coords is not None) and self.block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
@@ -569,7 +571,7 @@ class MapManager(SCSingletonConfigurable):
         pcm = PointCloudManager.instance()
         class_markers = self.get_class_markers( **kwargs )
         for cid, pids in class_markers.items():
-            pcm.mark_points( pids, cid )
+            lm().mark_points( np.array(pids), cid )
         pcm.update_plot()
 
     def update_canvas(self):

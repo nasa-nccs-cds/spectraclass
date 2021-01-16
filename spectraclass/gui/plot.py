@@ -74,7 +74,7 @@ class JbkPlot:
     def plot(self):
         from spectraclass.model.labels import LabelsManager, lm
         self.fig.title.text = self.title
-        marked_pids = lm().getPids()
+        marked_pids = lm().getPids( current_cid = True )
         if lm().current_cid == 0:
             if len(self._selected_pids) > 0:
                 self.update_graph( self.x2, self.y2, [0, 100] )

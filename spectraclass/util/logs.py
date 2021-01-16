@@ -41,10 +41,10 @@ class LogManager(SCSingletonConfigurable):
 
     def exception(self,  msg, **kwargs ):
         self._log_file.write( msg + "\n" )
-        self._log_file.write( traceback.format_exc() )
+        self._log_file.write( traceback.format_exc(12) )
         self._log_file.flush()
 
     def trace(self,  msg, **kwargs ):
         self._log_file.write( msg + "\n" )
-        self._log_file.write( " ".join( traceback.format_stack() ) )
+        self._log_file.write( " ".join( traceback.format_stack(15) ) )
         self._log_file.flush()

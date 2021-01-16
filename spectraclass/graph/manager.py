@@ -14,11 +14,7 @@ class ActivationFlow():
         self.nneighbors = n_neighbors
         self.metric = kwargs.get( 'metric', 'euclidean' )
         self.p = kwargs.get( 'p', 2 )
-        self.reset = True
         self._knn_graph = None
-
-    def clear(self):
-        self.reset = True
 
     def get_distances(self) -> np.ndarray:
         raise NotImplementedError()

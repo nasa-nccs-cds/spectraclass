@@ -9,28 +9,45 @@ class Marker:
     def __init__(self, pids: Union[List[int],np.ndarray], cid: int ):
         self.cid = cid
         pid_array = pids if isinstance( pids, np.ndarray ) else np.array( pids )
-        self.pids = np.unique( pid_array )
+        self._pids: np.ndarray = np.unique( pid_array )
+
+    @property
+    def pids(self) -> np.ndarray:
+        return self._pids
 
     def isTransient(self):
         return self.cid == 0
 
+    def __eq__(self, m ):
+        return isinstance( m, Marker ) and ( m.cid == self.cid ) and ( m.pids.tolist() == self._pids.tolist() )
+
+    def __ne__(self, m ):
+        return not self.__eq__( m )
+
+    @property
+    def size(self):
+        return self._pids.size
+
     def isEmpty(self):
-        return self.pids.size == 0
+        return self._pids.size == 0
 
     def deletePid( self, pid: int ) -> bool:
         try:
-            self.pids = self.pids[ self.pids != pid ]
+            self._pids = self._pids[ self._pids != pid ]
             return True
         except: return False
 
     def deletePids( self, dpids: np.ndarray ) -> bool:
         try:
-            self.pids = np.setdiff1d( self.pids, dpids )
+            self._pids = np.setdiff1d( self._pids, dpids )
             return True
         except: return False
 
+    def tostr(self):
+        return f"Marker[{self.cid}]: {self._pids.tolist()} )"
+
     def __repr__(self):
-        return f"Marker[{self.cid}]: {self.pids.tolist()} )"
+        return f"Marker[{self.cid}]: {self.size} )"
 
 class SCSingletonConfigurable(tlc.Configurable):
     config_instances: List["SCSingletonConfigurable"] = []

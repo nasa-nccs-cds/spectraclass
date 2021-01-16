@@ -97,33 +97,30 @@ class PointCloudManager(SCSingletonConfigurable):
             self._marker_points[0] = self._points[ pids, : ]
             print( f"  ***** POINTS- mark_points[0], #pids = {len(pids)}")
 
-    def mark_points(self, point_ids: np.ndarray = None, cid: int = -1, update=False):
-        from spectraclass.model.labels import LabelsManager
+    def add_marked_points( self, point_ids: np.ndarray = None, icid: int = -1 ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
-        lgm().log( f" PCM: mark_points -> {point_ids}" )
-        lmgr = LabelsManager.instance()
-        icid: int = cid if cid > -1 else lmgr.current_cid
- #       if icid == 0: ufm().show( "Must select a class label in order to mark points.", "red" )
-        if point_ids is None:
-            if lmgr.currentMarker is None:
-                ufm().show("Must select point(s) to mark.", "red")
-                return
-            lmgr.currentMarker.cid = icid
-        else: lmgr.addMarker( Marker( point_ids, icid ) )
-        pids = lmgr.currentMarker.pids
-        self.initialize_markers()
-        self.clear_pids( icid, pids )
-        self.clear_points(0)
-        self._marker_pids[icid] = np.append( self._marker_pids[icid], pids )
-        if self._points is None:
-            ufm().show( "Can't mark points in PointCloudManager which is not initialized", "red")
-        else:
-            marked_points: np.ndarray = self._points[ self._marker_pids[icid], : ]
-            self._marker_points[ icid ] = marked_points # np.concatenate(  [ self._marker_points[ icid ], marked_points ] )
-            lgm().log(f"PointCloudManager.mark_points: added pids = {pids}, cid = {icid}, cid marked points = [{self._marker_pids[icid]}]")
-        lmgr.addAction( "mark", "points", pids, icid )
-        if update: self.update_plot()
-        return lmgr.current_cid
+        try:
+            self.initialize_markers()
+            self.clear_points(0)
+            lgm().log(f" PCM: add_marked_points -> npts = {point_ids.size}, id range = {[point_ids.min(), point_ids.max()]}")
+            if self._marker_pids[icid].size == 0:
+                new_pids = point_ids
+                self._marker_pids[icid] = new_pids
+            else:
+                shared_values_mask = np.isin( point_ids, self._marker_pids[icid], assume_unique=True )
+                new_pids = point_ids[ np.invert( shared_values_mask ) ]
+                self._marker_pids[icid] = self._marker_pids[icid] + new_pids
+            if self._points is None:
+                ufm().show( "Can't mark points in PointCloudManager which is not initialized", "red")
+            else:
+                marked_points: np.ndarray = self._points[ self._marker_pids[icid], : ]
+                self._marker_points[ icid ] = marked_points # np.concatenate(  [ self._marker_points[ icid ], marked_points ] )
+                lgm().log(f"PointCloudManager.add_marked_points: #added pids = {new_pids.size}, cid = {icid}, #marked-points[cid]: [{self._marker_pids[icid].size}]")
+            self.update_plot()
+            return new_pids
+        except Exception:
+            lgm().exception( f"Error in PCM.add_marked_points")
+            return np.array( [] )
 
     def clear_bins(self):
         for iC in range( 0, self._n_point_bins ):

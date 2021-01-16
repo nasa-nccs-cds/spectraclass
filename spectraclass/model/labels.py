@@ -74,6 +74,7 @@ class LabelsManager(SCSingletonConfigurable):
         self._actions: List[Action] = []
         self._labels_data: xa.DataArray = None
         self._selected_class = 0
+        self._nodata_value = -1
         self._optype = None
         self.template = None
         self.n_spread_iters = 1
@@ -148,13 +149,12 @@ class LabelsManager(SCSingletonConfigurable):
         return self._flow.C
 
     def initLabelsData( self, point_data: xa.DataArray = None ):
-        nodata_value = -1
         if point_data is not None:
             self.template = point_data[:,0].squeeze( drop=True )
             self.template.attrs = point_data.attrs
         if self.template is not None:
-            self._labels_data: xa.DataArray = xa.full_like( self.template, 0, dtype=np.int32 ).where( self.template.notnull(), nodata_value )
-            self._labels_data.attrs['_FillValue'] = nodata_value
+            self._labels_data: xa.DataArray = xa.full_like( self.template, 0, dtype=np.dtype(np.int32) ).where( self.template.notnull(), self._nodata_value )
+            self._labels_data.attrs['_FillValue'] = self._nodata_value
             self._labels_data.name = self.template.attrs['dsid'] + "_labels"
             self._labels_data.attrs[ 'long_name' ] = [ "labels" ]
 
@@ -164,13 +164,20 @@ class LabelsManager(SCSingletonConfigurable):
         return None
 
     def updateLabels(self):
+        self._labels_data = xa.where( self.template.notnull(), 0, self._nodata_value )
         for marker in self._markers:
             for pid in marker.pids:
                 self._labels_data[ pid ] = marker.cid
+        self.log_markers("updateLabels")
+        lgm().log(f" #LABELS: { np.count_nonzero( self._labels_data.data > 0 ) }" )
 
     def labels_data( self ) -> xa.DataArray:
         self.updateLabels()
         return self._labels_data.copy( self._optype == "distance" )
+
+    def log_markers(self, msg: str ):
+        log_strs = [ f"[{m.cid}:{m.size}]" for m in self._markers ]
+        lgm().log( f"\n\n  log_markers[{msg}]: {' '.join(log_strs)}\n\n")
 
     @classmethod
     def getSortedLabels(self, labels_dset: xa.Dataset ) -> Tuple[np.ndarray,np.ndarray]:
@@ -195,11 +202,12 @@ class LabelsManager(SCSingletonConfigurable):
         self.clearMarkers()
 
     def addMarker(self, marker: Marker ):
-        self.clearTransient()
-        for pid in marker.pids: self.deletePid( pid )
-        self._markers = list(filter( lambda m: not m.isEmpty(),  self._markers ))
-        lgm().log( f"LabelsManager.addMarker: {marker}")
-        self._markers.append(marker)
+        top_marker = None if ( len(self._markers) == 0 ) else self._markers[-1]
+        if not marker.isEmpty() and ( marker != top_marker ):
+            self.clearTransient()
+            self.clearMarkerConflicts( marker )
+            lgm().log( f"LabelsManager.addMarker: {marker}")
+            self._markers.append(marker)
 
     def popMarker(self) -> Marker:
         marker = self._markers.pop( -1 ) if len( self._markers ) else None
@@ -211,6 +219,15 @@ class LabelsManager(SCSingletonConfigurable):
             if marker.deletePid( pid ): markers.append( marker )
         return markers
 
+    def clearMarkerConflicts(self, m: Marker):
+        markers = []
+        for marker in self._markers:
+            if marker.cid != m.cid:
+                marker.deletePids( marker.pids )
+            if not marker.isEmpty():
+                markers.append( marker )
+        self._markers = markers
+
     @property
     def currentMarker(self) -> Marker:
         marker = self._markers[ -1 ] if len( self._markers ) else None
@@ -219,10 +236,13 @@ class LabelsManager(SCSingletonConfigurable):
     def getMarkers( self ) -> List[Marker]:
         return self._markers
 
-    def getPids( self ) -> List[int]:
+    def getPids( self, **kwargs ) -> List[int]:
         pids = []
+        current_cid = kwargs.get( 'current_cid', False )
+        cid = self.current_cid if current_cid else kwargs.get('cid',-1)
         for m in self._markers:
-            if m.cid > 0:  pids.extend( m.pids )
+            if (m.cid > 0) and ((cid == -1) or (cid == m.cid)):
+                pids.extend( m.pids )
         return pids
 
     @property
@@ -264,4 +284,25 @@ class LabelsManager(SCSingletonConfigurable):
             seed_points = xa.full_like( model_data[:, 0], 0, np.dtype(np.int32) )
             seed_points[ self.currentMarker.pids ] = 1
             return seed_points
+
+    def mark_points( self, point_ids: np.ndarray = None, cid: int = -1 ):
+        from spectraclass.gui.control import UserFeedbackManager, ufm
+        from spectraclass.gui.points import PointCloudManager, pcm
+        try:
+            icid: int = cid if cid > -1 else self.current_cid
+     #       if icid == 0: ufm().show( "Must select a class label in order to mark points.", "red" )
+            if point_ids is None:
+                if self.currentMarker is None:
+                    ufm().show("Must select point(s) to mark.", "red")
+                    return
+                self.currentMarker.cid = icid
+            else:
+                lgm().log( f" PCM: mark_points -> npts = {point_ids.size}, id range = {[point_ids.min(), point_ids.max()]}")
+                self.addMarker(Marker(point_ids, icid))
+
+            new_pids = pcm().add_marked_points(point_ids,cid)
+            self.addAction("mark", "points", new_pids.tolist(), icid)
+        except Exception:
+            lgm().exception( f"Error in PCM.mark_points")
+        return self.current_cid
 

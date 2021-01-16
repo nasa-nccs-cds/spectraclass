@@ -1028,7 +1028,7 @@ def optimize_layout_euclidean(
         pass
     else:
       print( f" >>> Embed n_epochs={n_epochs}, alpha={alpha} ")
-      plot_update_period = n_epochs//5
+      plot_update_period = n_epochs//3
       for n in range(n_epochs):
         if ( dim == 3 ) and ( (n % plot_update_period) == 0 ): pcm.update_points( head_embedding )
         optimize_fn(

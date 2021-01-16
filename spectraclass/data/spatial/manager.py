@@ -303,9 +303,9 @@ class SpatialDataManager(ModeDataManager):
             self.display_distance()
 
     def mark(self):
-        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.map import MapManager, mm
-        pcm().mark_points(update=True)
+        lm().mark_points()
         mm().plot_markers_image()
 
     def clear(self):
@@ -322,10 +322,12 @@ class SpatialDataManager(ModeDataManager):
         lgm().log( f" UNDO action:  {action}" )
         if action is not None:
             if action.type == "mark":
+                lm().log_markers("pre-undo")
                 m: Marker = lm().popMarker()
                 lgm().log(f" POP marker:  {m}")
                 pcm().clear_pids( m.cid, m.pids )
                 mm().plot_markers_image()
+                lm().log_markers("post-undo")
             elif action.type == "color":
                 pcm().clear_bins()
         pcm().update_plot( )
