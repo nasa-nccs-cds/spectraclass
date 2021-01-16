@@ -122,7 +122,6 @@ class LabelsManager(SCSingletonConfigurable):
         if cid == None: cid = self.current_cid
         new_action = Action(type, source, pids, cid, **kwargs)
         print(f"ADD ACTION: {new_action}")
-        if type == "mark": self.addMarker( Marker(pids,cid) )
         repeat_color = (type == "color") and self.hasActions and (self.topAction.type == "color")
         if not repeat_color:
             self._actions.append( new_action )
@@ -236,13 +235,17 @@ class LabelsManager(SCSingletonConfigurable):
     def getMarkers( self ) -> List[Marker]:
         return self._markers
 
-    def getPids( self, **kwargs ) -> List[int]:
+    def getPids( self, cid = -1 ) -> List[int]:
         pids = []
-        current_cid = kwargs.get( 'current_cid', False )
-        cid = self.current_cid if current_cid else kwargs.get('cid',-1)
+        icid =  self.current_cid if cid < 0 else cid
         for m in self._markers:
-            if (m.cid > 0) and ((cid == -1) or (cid == m.cid)):
-                pids.extend( m.pids )
+            if (icid == m.cid): pids.extend( m.pids )
+        return pids
+
+    def getMarkedPids( self ) -> List[int]:
+        pids = []
+        for m in self._markers:
+            if (m.cid > 0): pids.extend( m.pids )
         return pids
 
     @property
@@ -287,7 +290,6 @@ class LabelsManager(SCSingletonConfigurable):
 
     def mark_points( self, point_ids: np.ndarray = None, cid: int = -1 ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
-        from spectraclass.gui.points import PointCloudManager, pcm
         try:
             icid: int = cid if cid > -1 else self.current_cid
      #       if icid == 0: ufm().show( "Must select a class label in order to mark points.", "red" )
@@ -299,9 +301,22 @@ class LabelsManager(SCSingletonConfigurable):
             else:
                 lgm().log( f" LM: mark_points -> npts = {point_ids.size}, id range = {[point_ids.min(), point_ids.max()]}")
 
-            new_pids = pcm().add_marked_points(point_ids,cid)
+            new_pids: np.ndarray = self.getNewPids( point_ids, icid )
             self.addAction("mark", "points", new_pids.tolist(), icid)
+            self.addMarker( Marker( new_pids, cid ) )
         except Exception:
             lgm().exception( f"Error in PCM.mark_points")
         return self.current_cid
+
+    def getNewPids(self, point_ids: np.ndarray, cid: int ) -> np.ndarray:
+        current_pids: np.ndarray = np.array( self.getPids( cid ) )
+        if len(current_pids) == 0:
+            return point_ids
+        elif point_ids.size == 1:
+            new_pids = [] if point_ids[0] in current_pids else point_ids
+            return np.array( new_pids )
+        else:
+            shared_values_mask = np.isin( point_ids, current_pids, assume_unique=True )
+            return point_ids[ np.invert( shared_values_mask ) ]
+
 

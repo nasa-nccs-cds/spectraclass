@@ -74,7 +74,7 @@ class JbkPlot:
     def plot(self):
         from spectraclass.model.labels import LabelsManager, lm
         self.fig.title.text = self.title
-        marked_pids = lm().getPids( current_cid = True )
+        marked_pids = lm().getPids()
         if lm().current_cid == 0:
             if len(self._selected_pids) > 0:
                 self.update_graph( self.x2, self.y2, [0, 100] )
@@ -158,7 +158,9 @@ class PlotManager(SCSingletonConfigurable):
     def current_graph(self) -> JbkPlot:
         return self._graphs[ self._wGui.selected_index ]
 
-    def plot_graph( self, pids: List[int] ):
+    def plot_graph( self, pids: List[int] = None ):
+        from spectraclass.model.labels import LabelsManager, lm
+        if pids is None: pids = lm().getPids()
         lgm().log(f" plot_graph[{self._wGui.selected_index}]: pids = {pids} ")
         current_graph: JbkPlot = self.current_graph()
         current_graph.select_items( pids )

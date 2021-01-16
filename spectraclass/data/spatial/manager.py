@@ -305,7 +305,9 @@ class SpatialDataManager(ModeDataManager):
     def mark(self):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.gui.points import PointCloudManager, pcm
         lm().mark_points()
+        pcm().update_marked_points()
         mm().plot_markers_image()
 
     def clear(self):

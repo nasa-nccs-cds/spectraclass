@@ -11,7 +11,6 @@ from matplotlib.colors import Normalize
 from matplotlib.backend_bases import PickEvent, MouseButton, NavigationToolbar2
 from spectraclass.reduction.embedding import ReductionManager, rm
 from collections import OrderedDict
-from spectraclass.gui.plot import PlotManager, gm
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.gui.points import PointCloudManager, pcm
 from spectraclass.model.base import SCSingletonConfigurable, Marker
@@ -476,6 +475,7 @@ class MapManager(SCSingletonConfigurable):
                 otype = kwargs.get( "type", None )
                 lm().mark_points( pids, marker.cid )
                 gm().plot_graph( pids )
+                pcm().update_marked_points( marker.cid )
                 lm().log_markers("post-point-selction")
         self._adding_marker = False
 
@@ -571,11 +571,10 @@ class MapManager(SCSingletonConfigurable):
                 lgm().exception("Error in MM.plot_markers_image")
 
     def plot_markers_volume(self, **kwargs):
-        pcm = PointCloudManager.instance()
         class_markers = self.get_class_markers( **kwargs )
         for cid, pids in class_markers.items():
             lm().mark_points( np.array(pids), cid )
-        pcm.update_plot()
+            pcm().update_marked_points( cid )
 
     def update_canvas(self):
         lgm().log( "update_canvas" )

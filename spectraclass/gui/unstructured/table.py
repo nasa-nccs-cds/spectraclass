@@ -47,8 +47,10 @@ class TableManager(SCSingletonConfigurable):
 
     def mark_selection(self):
         from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.gui.points import PointCloudManager, pcm
         selection_table: pd.DataFrame = self._tables[0].df.loc[self._current_selection]
         cid: int = lm().mark_points( selection_table.index.to_numpy(np.int32) )
+        pcm().update_marked_points(cid)
         self._class_map[self._current_selection] = cid
         for table_index, table in enumerate( self._tables ):
             if table_index == 0:

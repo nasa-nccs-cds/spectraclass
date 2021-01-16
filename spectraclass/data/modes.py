@@ -255,10 +255,11 @@ class ModeDataManager(SCSingletonConfigurable):
         return dsdir
 
     def spread_selection(self, niters=1):
+        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.gui.plot import PlotManager, gm
         try:
             flow: ActivationFlow = afm().getActivationFlow()
-            from spectraclass.gui.spatial.map import MapManager
-            mm = MapManager.instance()
             lm().log_markers("pre-spread")
             self._flow_class_map: np.ndarray = lm().labels_data().data
             catalog_pids = np.arange(0, self._flow_class_map.shape[0])
@@ -272,8 +273,9 @@ class ModeDataManager(SCSingletonConfigurable):
                         new_indices: np.ndarray = catalog_pids[ self._flow_class_map == cid ]
                         if new_indices.size > 0:
                             lm().mark_points( new_indices, cid )
-                mm.plot_markers_image()
-#            pcm().update_plot()
+                            pcm().update_marked_points(cid)
+                mm().plot_markers_image()
+                gm().plot_graph()
             lm().log_markers("post-spread")
         except Exception:
             lgm().exception( "Error in 'spread_selection'")
