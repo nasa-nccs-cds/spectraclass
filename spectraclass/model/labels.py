@@ -297,8 +297,7 @@ class LabelsManager(SCSingletonConfigurable):
                     return
                 self.currentMarker.cid = icid
             else:
-                lgm().log( f" PCM: mark_points -> npts = {point_ids.size}, id range = {[point_ids.min(), point_ids.max()]}")
-                self.addMarker(Marker(point_ids, icid))
+                lgm().log( f" LM: mark_points -> npts = {point_ids.size}, id range = {[point_ids.min(), point_ids.max()]}")
 
             new_pids = pcm().add_marked_points(point_ids,cid)
             self.addAction("mark", "points", new_pids.tolist(), icid)

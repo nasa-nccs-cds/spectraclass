@@ -97,24 +97,30 @@ class PointCloudManager(SCSingletonConfigurable):
             self._marker_points[0] = self._points[ pids, : ]
             print( f"  ***** POINTS- mark_points[0], #pids = {len(pids)}")
 
-    def add_marked_points( self, point_ids: np.ndarray = None, icid: int = -1 ):
+    def add_marked_points( self, point_ids: np.ndarray, icid: int ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
         try:
             self.initialize_markers()
             self.clear_points(0)
-            lgm().log(f" PCM: add_marked_points -> npts = {point_ids.size}, id range = {[point_ids.min(), point_ids.max()]}")
+            lgm().log(f" PCM: add_marked_points -> npts = {point_ids.size}, bin size = {self._marker_pids[icid].size}, id range = {[point_ids.min(), point_ids.max()]}")
             if self._marker_pids[icid].size == 0:
-                new_pids = point_ids
+                new_pids = point_ids.copy()
                 self._marker_pids[icid] = new_pids
+            elif point_ids.size == 1:
+                if point_ids[0] in self._marker_pids[icid]: return np.array( [] )
+                new_pids = point_ids.copy()
+                self._marker_pids[icid] = np.append( self._marker_pids[icid], new_pids )
+                lgm().log(f" PCM: add_marked_point [cid={icid}] -> pids = {self._marker_pids[icid]}")
             else:
                 shared_values_mask = np.isin( point_ids, self._marker_pids[icid], assume_unique=True )
                 new_pids = point_ids[ np.invert( shared_values_mask ) ]
-                self._marker_pids[icid] = self._marker_pids[icid] + new_pids
+                self._marker_pids[icid] = np.append( self._marker_pids[icid], new_pids )
+                lgm().log(f" PCM: add_marked_points [cid={icid}] -> pids = {self._marker_pids[icid]}")
             if self._points is None:
                 ufm().show( "Can't mark points in PointCloudManager which is not initialized", "red")
             else:
                 marked_points: np.ndarray = self._points[ self._marker_pids[icid], : ]
-                self._marker_points[ icid ] = marked_points # np.concatenate(  [ self._marker_points[ icid ], marked_points ] )
+                self._marker_points[ icid ] = marked_points
                 lgm().log(f"PointCloudManager.add_marked_points: #added pids = {new_pids.size}, cid = {icid}, #marked-points[cid]: [{self._marker_pids[icid].size}]")
             self.update_plot()
             return new_pids
@@ -162,23 +168,26 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def clear_pids(self, cid: int, pids: np.ndarray, **kwargs):
         if self._marker_pids is not None:
-            dpts = np.vectorize(lambda x: x in pids)
-            for iC, marker_pids in enumerate( self._marker_pids ):
-                if (cid < 0) or (iC == cid):
-                    if len( marker_pids ) > 0:
-                        lgm().log(f"PIDS.clear: cid={cid}, #pids={pids.size}")
-                        self._marker_pids[iC] = np.delete( self._marker_pids[iC], dpts(marker_pids) )
-                        self._marker_points[iC] = self._points[self._marker_pids[iC], :] if len( self._marker_pids[iC] ) > 0 else self.empty_pointset
+            try:
+                dpts = np.vectorize(lambda x: x in pids)
+                for iC, marker_pids in enumerate( self._marker_pids ):
+                    if (cid < 0) or (iC == cid):
+                        if len( marker_pids ) > 0:
+                            self._marker_pids[iC] = np.delete( self._marker_pids[iC], dpts(marker_pids) )
+                            self._marker_points[iC] = self._points[self._marker_pids[iC], :] if len( self._marker_pids[iC] ) > 0 else self.empty_pointset
+                            lgm().log(f"PCM.clear_pids: cid={cid}, # pids cleared = {pids.size}, # remaining markers = {len( self._marker_pids[iC] )}")
+            except:
+                lgm().exception("Error in PCM.clear_pids")
 
     def clear_points(self, icid: int, **kwargs ):
         if self._marker_pids is not None:
             pids = kwargs.get('pids', None )
             if pids is None:
-                lgm().log(f"POINTS.clear[{icid}]: empty_pointset")
+                lgm().log(f"PCM.clear_points[{icid}]: empty_pointset")
                 self._marker_points[icid] = self.empty_pointset
                 self._marker_pids[icid] = self.empty_pids
             else:
-                lgm().log(f"POINTS.clear: cid={icid}, #pids={pids.size}")
+                lgm().log(f"PCM.clear_points: cid={icid}, #pids={pids.size}")
                 dpts = np.vectorize( lambda x: x in pids )
                 dmask = dpts( self._marker_pids[icid] )
     #            lgm().log( f"clear_points.Mask: {self._marker_pids[icid]} -> {dmask}" )

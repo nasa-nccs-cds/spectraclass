@@ -474,7 +474,7 @@ class MapManager(SCSingletonConfigurable):
                 pids = marker.pids[ np.where(  marker.pids >= 0 ) ]
                 classification = kwargs.get( "classification", -1 )
                 otype = kwargs.get( "type", None )
-                lm().mark_points( pids, classification )
+                lm().mark_points( pids, marker.cid )
                 gm().plot_graph( pids )
                 lm().log_markers("post-point-selction")
         self._adding_marker = False
@@ -557,15 +557,18 @@ class MapManager(SCSingletonConfigurable):
 
     def plot_markers_image(self, **kwargs ):
         if self.marker_plot:
-            ycoords, xcoords, colors = self.get_markers( **kwargs )
-            lgm().log(f" ** plot markers image, nmarkers = {len(ycoords)}")
-            if len(ycoords) > 0:
-                self.marker_plot.set_offsets(np.c_[xcoords, ycoords])
-                self.marker_plot.set_facecolor(colors)
-            else:
-                offsets = np.ma.column_stack([[], []])
-                self.marker_plot.set_offsets(offsets)
-            self.update_canvas()
+            try:
+                ycoords, xcoords, colors = self.get_markers( **kwargs )
+                lgm().log(f" ** plot markers image, nmarkers = {len(ycoords)}")
+                if len(ycoords) > 0:
+                    self.marker_plot.set_offsets(np.c_[xcoords, ycoords])
+                    self.marker_plot.set_facecolor(colors)
+                else:
+                    offsets = np.ma.column_stack([[], []])
+                    self.marker_plot.set_offsets(offsets)
+                self.update_canvas()
+            except:
+                lgm().exception("Error in MM.plot_markers_image")
 
     def plot_markers_volume(self, **kwargs):
         pcm = PointCloudManager.instance()

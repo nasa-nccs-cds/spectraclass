@@ -273,10 +273,8 @@ class ModeDataManager(SCSingletonConfigurable):
                         if new_indices.size > 0:
                             lm().mark_points( new_indices, cid )
                 mm.plot_markers_image()
-     #       self.set_base_points_alpha(self.reduced_opacity)
-            pcm().update_plot()
+#            pcm().update_plot()
             lm().log_markers("post-spread")
-    #            self.display_distance()
         except Exception:
             lgm().exception( "Error in 'spread_selection'")
 
