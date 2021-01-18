@@ -311,7 +311,6 @@ class MapManager(SCSingletonConfigurable):
     def clearLabels( self):
         if self.block is not None:
              self.initLabels()
-             lm().clearMarkers()
              self.plot_markers_image()
              if self.labels_image is not None:
                 self.labels_image.set_alpha(0.0)

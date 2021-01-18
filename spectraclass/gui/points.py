@@ -43,6 +43,7 @@ class PointCloudManager(SCSingletonConfigurable):
             nLabels = LabelsManager.instance().nLabels
             self._marker_points: List[np.ndarray] = [ self.empty_pointset for ic in range( nLabels ) ]
             self._marker_pids: List[np.ndarray] = [ self.empty_pids for ic in range( nLabels ) ]
+            lgm().log( f"PCM.initialize_markers, sizes = {[m.size for m in self._marker_points]}")
 
     @property
     def empty_pointset(self) -> np.ndarray:
@@ -119,6 +120,7 @@ class PointCloudManager(SCSingletonConfigurable):
             lgm().exception( f"Error in PCM.add_marked_points")
 
     def clear_bins(self):
+        lgm().log(f"PointCloudManager.clear_bins")
         for iC in range( 0, self._n_point_bins ):
             self._binned_points[iC] = self.empty_pointset
         if self._gui.point_set_opacities[0] == self.reduced_opacity:

@@ -9,8 +9,7 @@ from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from spectraclass.reduction.embedding import ReductionManager
 from spectraclass.data.base import ModeDataManager
 import matplotlib.pyplot as plt
-from spectraclass.model.labels import Action
-from spectraclass.model.base import Marker
+from spectraclass.application.controller import app
 from collections import OrderedDict
 from spectraclass.util.logs import LogManager, lgm
 import os, math, pickle
@@ -286,53 +285,20 @@ class SpatialDataManager(ModeDataManager):
             result_dataset.to_netcdf(output_file)
 
     def execute_task( self, task: str ):
-        from spectraclass.gui.points import PointCloudManager
-        pcm = PointCloudManager.instance()
         if task == "embed":
-            embedding = ReductionManager.instance().umap_embedding()
-            pcm.reembed( embedding )
+            app().embed()
         elif task == "mark":
-            self.mark()
+            app().mark()
         elif task == "spread":
-            self.spread_selection()
+            app().spread_selection()
         elif task == "clear":
-            self.clear()
+            app().clear()
         elif task == "undo":
-            self.undo_action()
+            app().undo_action()
         elif task == "distance":
-            self.display_distance()
+            app().display_distance()
 
-    def mark(self):
-        from spectraclass.model.labels import LabelsManager, lm
-        from spectraclass.gui.spatial.map import MapManager, mm
-        from spectraclass.gui.points import PointCloudManager, pcm
-        lm().mark_points()
-        pcm().update_marked_points()
-        mm().plot_markers_image()
 
-    def clear(self):
-        from spectraclass.gui.points import PointCloudManager, pcm
-        from spectraclass.gui.spatial.map import MapManager, mm
-        mm().clearLabels()
-        pcm().clear()
-
-    def undo_action(self):
-        from spectraclass.gui.spatial.map import MapManager, mm
-        from spectraclass.gui.points import PointCloudManager, pcm
-        from spectraclass.model.labels import LabelsManager, lm
-        action: Action = lm().popAction()
-        lgm().log( f" UNDO action:  {action}" )
-        if action is not None:
-            if action.type == "mark":
-                lm().log_markers("pre-undo")
-                m: Marker = lm().popMarker()
-                lgm().log(f" POP marker:  {m}")
-                pcm().clear_pids( m.cid, m.pids )
-                mm().plot_markers_image()
-                lm().log_markers("post-undo")
-            elif action.type == "color":
-                pcm().clear_bins()
-        pcm().update_plot( )
 
     def getFilePath(self, use_tile: bool ) -> str:
         base_dir = dm().modal.data_dir

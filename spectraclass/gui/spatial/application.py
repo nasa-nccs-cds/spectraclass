@@ -1,30 +1,16 @@
 import os, ipywidgets as ipw
-from spectraclass.model.base import SCSingletonConfigurable
+from spectraclass.util.logs import LogManager, lgm
+from spectraclass.application.controller import SpectraclassController
 
-class Spectraclass(SCSingletonConfigurable):
-
-    HOME = os.path.dirname( os.path.dirname( os.path.dirname(os.path.realpath(__file__)) ) )
-    custom_theme = False
+class Spectraclass(SpectraclassController):
 
     def __init__(self):
         super(Spectraclass, self).__init__()
-
-    def process_menubar_action(self, mname, dname, op, b ):
-        print(f" process_menubar_action.on_value_change: {mname}.{dname} -> {op}")
-
-    @classmethod
-    def set_spectraclass_theme(cls):
-        from IPython.display import display, HTML
-        if cls.custom_theme:
-            theme_file = os.path.join( cls.HOME, "themes", "spectraclass.css" )
-            with open( theme_file ) as f:
-                css = f.read().replace(';', ' !important;')
-            display(HTML('<style type="text/css">%s</style>Customized changes loaded.' % css))
+        self.set_controller_instance()
 
     def gui( self, embed: bool = False ):
         from spectraclass.gui.plot import PlotManager, gm
         from spectraclass.data.base import DataManager, dm
-#        from spectraclass.gui.logging import LogManager, lm
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.gui.control import ActionsManager, am, ControlsManager, cm, UserFeedbackManager, ufm
         from spectraclass.gui.spatial.map import MapManager, mm
@@ -42,9 +28,31 @@ class Spectraclass(SCSingletonConfigurable):
         dm().save_config()
         return gui
 
-    def show_gpu_usage(self):
-        os.system("nvidia-smi")
+    def mark(self):
+        super(Spectraclass, self).mark()
+        from spectraclass.gui.spatial.map import MapManager, mm
+        mm().plot_markers_image()
 
+    def clear(self):
+        super(Spectraclass, self).clear()
+        lgm().log( f"Spatial Spectraclass -> clear ")
+        from spectraclass.gui.spatial.map import MapManager, mm
+        mm().clearLabels()
+
+    def undo_action(self):
+        lgm().log(f"Spatial Spectraclass -> undo_action ")
+        action = super(Spectraclass, self).undo_action()
+        from spectraclass.gui.spatial.map import MapManager, mm
+        if action is not None:
+            if action.type == "mark":
+                mm().plot_markers_image()
+
+    def spread_selection(self, niters=1):
+        from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.gui.plot import PlotManager, gm
+        if super(Spectraclass, self).spread_selection()  is not None:
+            mm().plot_markers_image()
+            gm().plot_graph()
 
 
 

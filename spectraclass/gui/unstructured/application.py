@@ -4,9 +4,6 @@ from spectraclass.model.base import SCSingletonConfigurable
 
 class Spectraclass(SCSingletonConfigurable):
 
-    HOME = os.path.dirname( os.path.dirname( os.path.dirname(os.path.realpath(__file__)) ) )
-    custom_theme = False
-
     def __init__(self):
         super(Spectraclass, self).__init__()
 

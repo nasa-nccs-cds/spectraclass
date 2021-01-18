@@ -66,7 +66,6 @@ class SCSingletonConfigurable(tlc.Configurable):
             inst = cls(*args, **kwargs)
             cls._instance = inst
             cls._instantiated = cls
-        assert cls._instantiated == cls, f"Error, conflicting singleton instantiations: {cls} vs {cls._instantiated}"
         return cls._instance
 
     def config_scope(self):

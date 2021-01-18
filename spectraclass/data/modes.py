@@ -9,10 +9,6 @@ from spectraclass.util.logs import LogManager, lgm
 import xarray as xa
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable, Marker
-from spectraclass.model.labels import LabelsManager, lm
-from ..graph.manager import ActivationFlow, ActivationFlowManager, afm
-from spectraclass.gui.points import PointCloudManager, pcm
-
 
 def invert( X: np.ndarray ) -> np.ndarray:
     return X.max() - X
@@ -254,36 +250,6 @@ class ModeDataManager(SCSingletonConfigurable):
         os.makedirs(dsdir, exist_ok=True)
         return dsdir
 
-    def spread_selection(self, niters=1):
-        from spectraclass.gui.points import PointCloudManager, pcm
-        from spectraclass.gui.spatial.map import MapManager, mm
-        from spectraclass.gui.plot import PlotManager, gm
-        try:
-            flow: ActivationFlow = afm().getActivationFlow()
-            lm().log_markers("pre-spread")
-            self._flow_class_map: np.ndarray = lm().labels_data().data
-            catalog_pids = np.arange(0, self._flow_class_map.shape[0])
-            pcm().clear_bins()
 
-            if flow.spread(self._flow_class_map, niters) is not None:
-                self._flow_class_map = flow.get_classes()
-                all_classes = ( lm().current_cid == 0 )
-                for cid, label in enumerate( lm().labels ):
-                    if all_classes or ( lm().current_cid == cid ):
-                        new_indices: np.ndarray = catalog_pids[ self._flow_class_map == cid ]
-                        if new_indices.size > 0:
-                            lm().mark_points( new_indices, cid )
-                            pcm().update_marked_points(cid)
-                mm().plot_markers_image()
-                gm().plot_graph()
-            lm().log_markers("post-spread")
-        except Exception:
-            lgm().exception( "Error in 'spread_selection'")
-
-    def display_distance(self, niters=100):
-        seed_points: xa.DataArray = lm().getSeedPointMask()
-        flow: ActivationFlow = afm().getActivationFlow()
-        if flow.spread( seed_points.data, niters ) is not None:
-            pcm().color_by_value( flow.get_distances(), distance=True )
 
 
