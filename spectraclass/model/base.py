@@ -68,6 +68,15 @@ class SCSingletonConfigurable(tlc.Configurable):
             cls._instantiated = cls
         return cls._instance
 
+    def set_parent_instances( self, current_class: Type["SCSingletonConfigurable"] = None ):  #
+        if current_class is None: current_class = self.__class__
+        for  base_class in current_class.__bases__:
+            if issubclass( base_class, SCSingletonConfigurable ) and (base_class.__name__ != "SCSingletonConfigurable"):
+                assert base_class._instance is None, f"Error, {base_class} cannot be instantiated"
+                base_class._instance = self
+                base_class._instantiated = self.__class__
+                self.set_parent_instances( base_class )
+
     def config_scope(self):
         return "global"
 

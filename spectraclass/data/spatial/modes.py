@@ -3,19 +3,24 @@ from typing import List, Union, Tuple, Optional, Dict, Callable
 import os, sys
 
 class AvirisDataManager(SpatialDataManager):
+    from spectraclass.gui.spatial.application import Spectraclass
+
     MODE = "aviris"
     METAVARS = []
     INPUTS = dict()
     VALID_BANDS = [ [5, 193], [214, 283], [319, sys.maxsize] ]
+    application = Spectraclass
 
     def __init__(self):
         super(AvirisDataManager, self).__init__()
 
 class DesisDataManager(SpatialDataManager):
+    from spectraclass.gui.spatial.application import Spectraclass
     MODE = "DESIS"
     METAVARS = []
     INPUTS = dict()
     VALID_BANDS = [ [5, sys.maxsize], ]
+    application = Spectraclass
 
     def __init__(self):
         super(DesisDataManager, self).__init__()

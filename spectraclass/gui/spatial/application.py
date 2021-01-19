@@ -1,12 +1,13 @@
 import os, ipywidgets as ipw
 from spectraclass.util.logs import LogManager, lgm
 from spectraclass.application.controller import SpectraclassController
+from spectraclass.model.base import Marker
 
 class Spectraclass(SpectraclassController):
 
     def __init__(self):
         super(Spectraclass, self).__init__()
-        self.set_controller_instance()
+        self.set_parent_instances()
 
     def gui( self, embed: bool = False ):
         from spectraclass.gui.plot import PlotManager, gm
@@ -49,10 +50,16 @@ class Spectraclass(SpectraclassController):
 
     def spread_selection(self, niters=1):
         from spectraclass.gui.spatial.map import MapManager, mm
-        from spectraclass.gui.plot import PlotManager, gm
         if super(Spectraclass, self).spread_selection()  is not None:
             mm().plot_markers_image()
-            gm().plot_graph()
+
+    def add_marker(self, marker: Marker):
+        from spectraclass.gui.spatial.map import MapManager, mm
+        super(Spectraclass, self).add_marker(marker)
+        mm().plot_markers_image()
+
+
+
 
 
 

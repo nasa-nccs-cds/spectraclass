@@ -12,7 +12,6 @@ from matplotlib.backend_bases import PickEvent, MouseButton, NavigationToolbar2
 from spectraclass.reduction.embedding import ReductionManager, rm
 from collections import OrderedDict
 from spectraclass.model.labels import LabelsManager, lm
-from spectraclass.gui.points import PointCloudManager, pcm
 from spectraclass.model.base import SCSingletonConfigurable, Marker
 from functools import partial
 from pyproj import Proj
@@ -20,7 +19,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
 from spectraclass.data.spatial.tile.tile import Block
 from .google import GooglePlotManager
-from spectraclass.util.logs import LogManager, lgm
+from spectraclass.util.logs import LogManager, lgm, error_handled
 import pandas as pd
 import xarray as xa
 import numpy as np
@@ -284,7 +283,8 @@ class MapManager(SCSingletonConfigurable):
             umapManager: ReductionManager = ReductionManager.instance()
             labels: xa.DataArray = self.getExtendedLabelPoints()
             umapManager.umap_embedding( labels=labels, **kwargs )
-            self.plot_markers_volume()
+
+#            self.plot_markers_volume()
 
     def learn_classification( self, **kwargs  ):
         if self.block is None:
@@ -327,6 +327,7 @@ class MapManager(SCSingletonConfigurable):
                     print( f"Skipping out of bounds label at local row/col coords {index['iy']} {index['ix']}")
 
     def getLabeledPointData( self, update = True ) -> xa.DataArray:
+        from spectraclass.data.base import DataManager, dm
         if update: self.updateLabelsFromMarkers()
         sdm: SpatialDataManager = dm().modal
         labeledPointData = sdm.raster2points( self.labels )
@@ -402,33 +403,31 @@ class MapManager(SCSingletonConfigurable):
              (y0, y1) = ax.get_ylim()
              print(f"ZOOM Event: Updated bounds: ({x0},{x1}), ({y0},{y1})")
 
-    def frame_color_pointcloud( self, **kwargs ):
-        pcm = PointCloudManager.instance()
-        frame_data: xa.DataArray = self.data[self.currentFrame]
-        lgm().log( f" color_pointcloud: currentFrame = {self.currentFrame}")
-        pcm.color_by_value( frame_data.values.flatten(), **kwargs )
+    def frame_color_pointcloud( self, **kwargs ) -> xa.DataArray:
+        from spectraclass.application.controller import app
+        frame_data: xa.DataArray = self.data[ self.currentFrame ]
+        lgm().log( f" color_pointcloud: currentFrame = {self.currentFrame}, frame data shape = {frame_data.shape}")
+        app().color_pointcloud( frame_data.values.flatten(), **kwargs )
         return frame_data
 
+    @error_handled
     def update_plots(self):
-        try:
-            if self.image is not None:
-                from spectraclass.data.base import DataManager
-                dm = DataManager.instance()
-                frame_data: xa.DataArray = self.frame_color_pointcloud()
-                self.image.set_data( frame_data.values  )
-                drange = dms().get_color_bounds( frame_data )
-                self.image.set_norm( Normalize( **drange ) )
-                self.image.set_extent( self.block.extent() )
-                plot_name = os.path.basename(dm.dsid)
-                lgm().log( f" Update Map: data shape = {frame_data.shape}, range = {drange}, extent = {self.block.extent()}")
-                self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
-                self.plot_axes.title.set_fontsize( 8 )
-            if self.labels_image is not None:
-                self.labels_image.set_extent( self.block.extent() )
-                self.labels_image.set_alpha(0.0)
-            self.update_canvas()
-        except:
-            lgm().exception( "update_plots error:" )
+        if self.image is not None:
+            from spectraclass.data.base import DataManager
+            dm = DataManager.instance()
+            frame_data: xa.DataArray = self.frame_color_pointcloud()
+            self.image.set_data( frame_data.values  )
+            drange = dms().get_color_bounds( frame_data )
+            self.image.set_norm( Normalize( **drange ) )
+            self.image.set_extent( self.block.extent() )
+            plot_name = os.path.basename(dm.dsid)
+            lgm().log( f" Update Map: data shape = {frame_data.shape}, range = {drange}, extent = {self.block.extent()}")
+            self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
+            self.plot_axes.title.set_fontsize( 8 )
+        if self.labels_image is not None:
+            self.labels_image.set_extent( self.block.extent() )
+            self.labels_image.set_alpha(0.0)
+        self.update_canvas()
 
 
     def onMouseRelease(self, event):
@@ -439,43 +438,33 @@ class MapManager(SCSingletonConfigurable):
         #         for listener in self.navigation_listeners:
         #             listener.set_axis_limits( self.plot_axes.get_xlim(), self.plot_axes.get_ylim() )
 
+    @error_handled
     def onMouseClick(self, event):
         lgm().log(f"\nMouseClick event = {event}")
-        try:
-            if event.xdata != None and event.ydata != None:
-                if not self.toolbarMode and (event.inaxes == self.plot_axes) and (self.key_mode == None):
-                    rightButton: bool = int(event.button) == self.RIGHT_BUTTON
-                    pid = self.block.coords2pindex( event.ydata, event.xdata )
-                    if pid >= 0:
-                        cid = lm().current_cid
-                        lgm().log( f"Adding marker for pid = {pid}, cid = {cid}")
-                        ptindices = self.block.pindex2indices(pid)
-                        classification = self.label_map.values[ ptindices['iy'], ptindices['ix'] ] if (self.label_map is not None) else -1
-                        marker = Marker( [pid], cid )
-                        self.add_marker( marker, cid == 0, classification=classification )
-                        self.dataLims = event.inaxes.dataLim
-                    else:
-                        lgm().log(f"Can't add marker, pid = {pid}")
-        except Exception as err:
-            lgm().exception( f"MapManager pick error: {err}" )
+        if event.xdata != None and event.ydata != None:
+            if not self.toolbarMode and (event.inaxes == self.plot_axes) and (self.key_mode == None):
+                rightButton: bool = int(event.button) == self.RIGHT_BUTTON
+                pid = self.block.coords2pindex( event.ydata, event.xdata )
+                if pid >= 0:
+                    cid = lm().current_cid
+                    lgm().log( f"Adding marker for pid = {pid}, cid = {cid}")
+                    ptindices = self.block.pindex2indices(pid)
+                    classification = self.label_map.values[ ptindices['iy'], ptindices['ix'] ] if (self.label_map is not None) else -1
+                    marker = Marker( [pid], cid )
+                    self.add_marker( marker, cid == 0, classification=classification )
+                    self.dataLims = event.inaxes.dataLim
+                else:
+                    lgm().log(f"Can't add marker, pid = {pid}")
+
 
     def add_marker(self, marker: Marker, transient: bool, **kwargs ):
-        from spectraclass.gui.plot import PlotManager, gm
-        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.application.controller import app
         if not self._adding_marker:
             self._adding_marker = True
             if marker is None:
                 lgm().log( "NULL Marker: point select is probably out of bounds.")
             else:
-                lm().addMarker(marker)
-                self.plot_markers_image(**kwargs)
-                pids = marker.pids[ np.where(  marker.pids >= 0 ) ]
-                classification = kwargs.get( "classification", -1 )
-                otype = kwargs.get( "type", None )
-                lm().mark_points( pids, marker.cid )
-                gm().plot_graph( pids )
-                pcm().update_marked_points( marker.cid )
-                lm().log_markers("post-point-selction")
+                app().add_marker(marker)
         self._adding_marker = False
 
     # def undo_marker_selection(self, **kwargs ):
@@ -535,7 +524,7 @@ class MapManager(SCSingletonConfigurable):
     #     if self.marker_list:
     #         self.marker_list = [ marker for marker in self.marker_list if marker['c'] > 0 ]
 
-    def get_markers( self, **kwargs ) -> Tuple[ List[float], List[float], List[List[float]] ]:
+    def get_markers( self ) -> Tuple[ List[float], List[float], List[List[float]] ]:
         ycoords, xcoords, colors, markers = [], [], [], lm().getMarkers()
         lgm().log(f" ** get_markers, #markers = {len(markers)}")
         for marker in markers:
@@ -547,33 +536,31 @@ class MapManager(SCSingletonConfigurable):
                     colors.append( lm().colors[marker.cid] )
         return ycoords, xcoords, colors
 
-    def get_class_markers( self, **kwargs ) -> Dict[ int, List[int] ]:
-        class_markers = {}
-        for marker in lm().getMarkers():
-            pids = class_markers.setdefault( marker.cid, [] )
-            pids.extend( marker.pids )
-        return class_markers
+    # def get_class_markers( self, **kwargs ) -> Dict[ int, List[int] ]:
+    #     class_markers = {}
+    #     for marker in lm().getMarkers():
+    #         pids = class_markers.setdefault( marker.cid, [] )
+    #         pids.extend( marker.pids )
+    #     return class_markers
 
-    def plot_markers_image(self, **kwargs ):
+    @error_handled
+    def plot_markers_image( self ):
         if self.marker_plot:
-            try:
-                ycoords, xcoords, colors = self.get_markers( **kwargs )
-                lgm().log(f" ** plot markers image, nmarkers = {len(ycoords)}")
-                if len(ycoords) > 0:
-                    self.marker_plot.set_offsets(np.c_[xcoords, ycoords])
-                    self.marker_plot.set_facecolor(colors)
-                else:
-                    offsets = np.ma.column_stack([[], []])
-                    self.marker_plot.set_offsets(offsets)
-                self.update_canvas()
-            except:
-                lgm().exception("Error in MM.plot_markers_image")
+            ycoords, xcoords, colors = self.get_markers()
+            lgm().log(f" ** plot markers image, nmarkers = {len(ycoords)}")
+            if len(ycoords) > 0:
+                self.marker_plot.set_offsets(np.c_[xcoords, ycoords])
+                self.marker_plot.set_facecolor(colors)
+            else:
+                offsets = np.ma.column_stack([[], []])
+                self.marker_plot.set_offsets(offsets)
+            self.update_canvas()
 
-    def plot_markers_volume(self, **kwargs):
-        class_markers = self.get_class_markers( **kwargs )
-        for cid, pids in class_markers.items():
-            lm().mark_points( np.array(pids), cid )
-            pcm().update_marked_points( cid )
+    # def plot_markers_volume(self, **kwargs):
+    #     class_markers = self.get_class_markers( **kwargs )
+    #     for cid, pids in class_markers.items():
+    #         lm().mark_points( np.array(pids), cid )
+    #         pcm().update_marked_points( cid )
 
     def update_canvas(self):
         lgm().log( "update_canvas" )

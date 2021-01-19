@@ -15,6 +15,12 @@ import threading, time, logging, sys, traceback
 def lgm() -> "LogManager":
     return LogManager.instance()
 
+def error_handled(func):
+    def wrapper( *args, **kwargs ):
+        try:        return func( *args, **kwargs )
+        except:     lgm().exception( f" Error in {func}:")
+    return wrapper
+
 class LogManager(SCSingletonConfigurable):
 
     def __init__(self):

@@ -6,7 +6,7 @@ import ipywidgets as ipw
 import matplotlib.colors as mcolors
 from ..graph.manager import ActivationFlow
 import traitlets.config as tlc
-from spectraclass.util.logs import LogManager, lgm
+from spectraclass.util.logs import LogManager, lgm, error_handled
 from spectraclass.model.base import SCSingletonConfigurable, Marker
 import xarray as xa
 import numpy as np
@@ -135,13 +135,11 @@ class LabelsManager(SCSingletonConfigurable):
         try:        return  self._actions[-1]
         except:     return None
 
+    @error_handled
     def popAction(self) -> Optional[Action]:
-        try:
-            action =  self._actions.pop()
-            print( f"POP ACTION: {action}" )
-            return action
-        except:
-            return None
+        action =  self._actions.pop()
+        print( f"POP ACTION: {action}, #Actions remainign = {len(self._actions)}" )
+        return action
 
     @property
     def classification(self) -> np.ndarray:
@@ -207,6 +205,7 @@ class LabelsManager(SCSingletonConfigurable):
             self.clearMarkerConflicts( marker )
             lgm().log( f"LabelsManager.addMarker: {marker}")
             self._markers.append(marker)
+            self.addAction("mark", "points", marker.pids.tolist(), marker.cid )
 
     def popMarker(self) -> Marker:
         marker = self._markers.pop( -1 ) if len( self._markers ) else None
@@ -288,24 +287,21 @@ class LabelsManager(SCSingletonConfigurable):
             seed_points[ self.currentMarker.pids ] = 1
             return seed_points
 
+    @error_handled
     def mark_points( self, point_ids: np.ndarray = None, cid: int = -1 ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
-        try:
-            icid: int = cid if cid > -1 else self.current_cid
-     #       if icid == 0: ufm().show( "Must select a class label in order to mark points.", "red" )
-            if point_ids is None:
-                if self.currentMarker is None:
-                    ufm().show("Must select point(s) to mark.", "red")
-                    return
-                self.currentMarker.cid = icid
-            else:
-                lgm().log( f" LM: mark_points -> npts = {point_ids.size}, id range = {[point_ids.min(), point_ids.max()]}")
+        icid: int = cid if cid > -1 else self.current_cid
+        if point_ids is None:
+            if self.currentMarker is None:
+                ufm().show("Must select point(s) to mark.", "red")
+                return
+            self.currentMarker.cid = icid
+        else:
+            lgm().log( f" LM: mark_points -> npts = {point_ids.size}, id range = {[point_ids.min(), point_ids.max()]}")
 
-            new_pids: np.ndarray = self.getNewPids( point_ids, icid )
-            self.addAction("mark", "points", new_pids.tolist(), icid)
-            self.addMarker( Marker( new_pids, cid ) )
-        except Exception:
-            lgm().exception( f"Error in PCM.mark_points")
+        new_pids: np.ndarray = self.getNewPids( point_ids, icid )
+        self.addAction("mark", "points", new_pids.tolist(), icid)
+        self.addMarker( Marker( new_pids, cid ) )
         return self.current_cid
 
     def getNewPids(self, point_ids: np.ndarray, cid: int ) -> np.ndarray:

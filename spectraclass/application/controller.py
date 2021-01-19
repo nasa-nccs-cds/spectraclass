@@ -1,11 +1,13 @@
 import os, ipywidgets as ipw
 from spectraclass.model.base import SCSingletonConfigurable
-from spectraclass.util.logs import LogManager, lgm
+from spectraclass.util.logs import LogManager, lgm, error_handled
 from spectraclass.model.base import Marker
 import numpy as np
 import xarray as xa
 
-def app(): return SpectraclassController.instance()
+def app():
+    from spectraclass.data.base import DataManager, dm
+    return dm().app()
 
 class SpectraclassController(SCSingletonConfigurable):
 
@@ -15,10 +17,10 @@ class SpectraclassController(SCSingletonConfigurable):
     def __init__(self):
         super(SpectraclassController, self).__init__()
 
-    def set_controller_instance(self):
-        assert SpectraclassController._instance is None, "Error, SpectraclassController cannot be instantiated"
-        SpectraclassController._instance = self
-        SpectraclassController._instantiated = self.__class__
+    # def set_controller_instance(self):  # cls.__bases__
+    #     assert SpectraclassController._instance is None, "Error, SpectraclassController cannot be instantiated"
+    #     SpectraclassController._instance = self
+    #     SpectraclassController._instantiated = self.__class__
 
     def process_menubar_action(self, mname, dname, op, b ):
         print(f" process_menubar_action.on_value_change: {mname}.{dname} -> {op}")
@@ -60,6 +62,7 @@ class SpectraclassController(SCSingletonConfigurable):
     def undo_action(self):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, Action, lm
+        from spectraclass.gui.plot import PlotManager, gm
         lgm().log(f"Controller[{self.__class__.__name__}] -> undo_action ")
         action: Action = lm().popAction()
         lgm().log( f" UNDO action:  {action}" )
@@ -68,36 +71,37 @@ class SpectraclassController(SCSingletonConfigurable):
                 m: Marker = lm().popMarker()
                 lgm().log(f" POP marker:  {m}")
                 pcm().clear_pids( m.cid, m.pids )
+                gm().plot_graph()
             elif action.type == "color":
                 pcm().clear_bins()
         pcm().update_plot( )
         return action
 
+    @error_handled
     def spread_selection(self, niters=1):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, Action, lm
+        from spectraclass.gui.plot import PlotManager, gm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
-        try:
-            flow: ActivationFlow = afm().getActivationFlow()
-            lm().log_markers("pre-spread")
-            self._flow_class_map: np.ndarray = lm().labels_data().data
-            catalog_pids = np.arange(0, self._flow_class_map.shape[0])
-            pcm().clear_bins()
-            converged = flow.spread(self._flow_class_map, niters)
+        flow: ActivationFlow = afm().getActivationFlow()
+        lm().log_markers("pre-spread")
+        self._flow_class_map: np.ndarray = lm().labels_data().data
+        catalog_pids = np.arange(0, self._flow_class_map.shape[0])
+        pcm().clear_bins()
+        converged = flow.spread(self._flow_class_map, niters)
 
-            if converged is not None:
-                self._flow_class_map = flow.get_classes()
-                all_classes = ( lm().current_cid == 0 )
-                for cid, label in enumerate( lm().labels ):
-                    if all_classes or ( lm().current_cid == cid ):
-                        new_indices: np.ndarray = catalog_pids[ self._flow_class_map == cid ]
-                        if new_indices.size > 0:
-                            lm().mark_points( new_indices, cid )
-                            pcm().update_marked_points(cid)
-            lm().log_markers("post-spread")
-            return converged
-        except Exception:
-            lgm().exception( "Error in 'spread_selection'")
+        if converged is not None:
+            self._flow_class_map = flow.get_classes()
+            all_classes = ( lm().current_cid == 0 )
+            for cid, label in enumerate( lm().labels ):
+                if all_classes or ( lm().current_cid == cid ):
+                    new_indices: np.ndarray = catalog_pids[ self._flow_class_map == cid ]
+                    if new_indices.size > 0:
+                        lm().mark_points( new_indices, cid )
+                        pcm().update_marked_points(cid)
+                        gm().plot_graph()
+        lm().log_markers("post-spread")
+        return converged
 
     def display_distance(self, niters=100):
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
@@ -107,6 +111,21 @@ class SpectraclassController(SCSingletonConfigurable):
         flow: ActivationFlow = afm().getActivationFlow()
         if flow.spread( seed_points.data, niters ) is not None:
             pcm().color_by_value( flow.get_distances(), distance=True )
+
+    def add_marker(self, marker: Marker):
+        from spectraclass.model.labels import LabelsManager, Action, lm
+        from spectraclass.gui.plot import PlotManager, gm
+        from spectraclass.gui.points import PointCloudManager, pcm
+        lm().addMarker(marker)
+        pids = marker.pids[np.where(marker.pids >= 0)]
+        gm().plot_graph(pids)
+        pcm().update_marked_points(marker.cid)
+        lm().log_markers("post-add_marker")
+
+    def color_pointcloud( self, color_data: np.ndarray = None, **kwargs ):
+        from spectraclass.gui.points import PointCloudManager, pcm
+        pcm().color_by_value( color_data, **kwargs )
+
 
 
 

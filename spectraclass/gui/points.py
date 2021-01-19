@@ -7,7 +7,7 @@ from itkwidgets.widget_viewer import Viewer
 import xarray as xa
 import numpy.ma as ma
 import traitlets.config as tlc
-from spectraclass.util.logs import LogManager, lgm
+from spectraclass.util.logs import LogManager, lgm, error_handled
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable, Marker
 from spectraclass.model.labels import LabelsManager
@@ -102,22 +102,21 @@ class PointCloudManager(SCSingletonConfigurable):
             self._marker_points[0] = self._points[ pids, : ]
             print( f"  ***** POINTS- mark_points[0], #pids = {len(pids)}")
 
+    @error_handled
     def update_marked_points(self, cid: int = -1, **kwargs ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
         from spectraclass.model.labels import LabelsManager, lm
-        try:
-            if self._points is None:
-                ufm().show( "Can't mark points in PointCloudManager which is not initialized", "red")
-            else:
-                icid = cid if cid >= 0 else lm().current_cid
-                self.initialize_markers()
-                self.clear_points(0)
-                self._marker_pids[icid] = asarray( kwargs.get( 'pids', lm().getPids(icid) ), np.int )
-                self._marker_points[ icid ] = self._points[ self._marker_pids[icid], : ]
-                lgm().log(f"PointCloudManager.add_marked_points: cid = {icid}, #marked-points[cid]: [{self._marker_pids[icid].size}]")
-            self.update_plot()
-        except Exception:
-            lgm().exception( f"Error in PCM.add_marked_points")
+        if self._points is None:
+            ufm().show( "Can't mark points in PointCloudManager which is not initialized", "red")
+        else:
+            icid = cid if cid >= 0 else lm().current_cid
+            self.initialize_markers()
+            self.clear_points(0)
+            self._marker_pids[icid] = asarray( kwargs.get( 'pids', lm().getPids(icid) ), np.int )
+            self._marker_points[ icid ] = self._points[ self._marker_pids[icid], : ]
+            lgm().log(f"PointCloudManager.add_marked_points: cid = {icid}, #marked-points[cid]: [{self._marker_pids[icid].size}]")
+        self.set_base_points_alpha( self.reduced_opacity )
+        self.update_plot()
 
     def clear_bins(self):
         lgm().log(f"PointCloudManager.clear_bins")
@@ -158,18 +157,16 @@ class PointCloudManager(SCSingletonConfigurable):
         (ave, std)= ( self._color_values.mean(),  self._color_values.std() )
         return ( ave - std * SpatialDataManager.colorstretch, ave + std * SpatialDataManager.colorstretch  )
 
+    @error_handled
     def clear_pids(self, cid: int, pids: np.ndarray, **kwargs):
         if self._marker_pids is not None:
-            try:
-                dpts = np.vectorize(lambda x: x in pids)
-                for iC, marker_pids in enumerate( self._marker_pids ):
-                    if (cid < 0) or (iC == cid):
-                        if len( marker_pids ) > 0:
-                            self._marker_pids[iC] = np.delete( self._marker_pids[iC], dpts(marker_pids) )
-                            self._marker_points[iC] = self._points[self._marker_pids[iC], :] if len( self._marker_pids[iC] ) > 0 else self.empty_pointset
-                            lgm().log(f"PCM.clear_pids: cid={cid}, # pids cleared = {pids.size}, # remaining markers = {len( self._marker_pids[iC] )}")
-            except:
-                lgm().exception("Error in PCM.clear_pids")
+            dpts = np.vectorize(lambda x: x in pids)
+            for iC, marker_pids in enumerate( self._marker_pids ):
+                if (cid < 0) or (iC == cid):
+                    if len( marker_pids ) > 0:
+                        self._marker_pids[iC] = np.delete( self._marker_pids[iC], dpts(marker_pids) )
+                        self._marker_points[iC] = self._points[self._marker_pids[iC], :] if len( self._marker_pids[iC] ) > 0 else self.empty_pointset
+                        lgm().log(f"PCM.clear_pids: cid={cid}, # pids cleared = {pids.size}, # remaining markers = {len( self._marker_pids[iC] )}")
 
     def clear_points(self, icid: int, **kwargs ):
         if self._marker_pids is not None:

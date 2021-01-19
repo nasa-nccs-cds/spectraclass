@@ -72,6 +72,9 @@ class DataManager(SCSingletonConfigurable):
         lgm().log("Logging configured")
         return dataManager
 
+    def app(self):
+        return self.modal.application.instance()
+
     def _configure_(self, name: str, mode: str ):
         self.name = name
         cfg_file = self.config_file( name, mode )
@@ -171,7 +174,7 @@ class DataManager(SCSingletonConfigurable):
         return self._mode_data_manager_.getInputFileData( )
 
     def loadCurrentProject(self, caller_id: str ) -> xa.Dataset:
-        print( f" DataManager: loadCurrentProject: {caller_id}" )
+        lgm().log( f" DataManager: loadCurrentProject: {caller_id}" )
         return self._mode_data_manager_.loadCurrentProject()
 
     def prepare_inputs( self, *args, **kwargs ) -> xa.Dataset:

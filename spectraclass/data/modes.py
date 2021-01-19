@@ -5,7 +5,7 @@ import ipywidgets as ip
 from collections import OrderedDict
 from spectraclass.reduction.embedding import ReductionManager
 from pathlib import Path
-from spectraclass.util.logs import LogManager, lgm
+from spectraclass.util.logs import LogManager, lgm, error_handled
 import xarray as xa
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable, Marker
@@ -14,10 +14,13 @@ def invert( X: np.ndarray ) -> np.ndarray:
     return X.max() - X
 
 class ModeDataManager(SCSingletonConfigurable):
+    from spectraclass.application.controller import SpectraclassController
+
     MODE = None
     METAVARS = None
     INPUTS = None
     VALID_BANDS = None
+    application: SpectraclassController = None
 
     image_name = tl.Unicode("NONE").tag(config=True ,sync=True)
     cache_dir = tl.Unicode(os.path.expanduser("~/Development/Cache")).tag(config=True)
@@ -212,14 +215,15 @@ class ModeDataManager(SCSingletonConfigurable):
     def execute_task(self, task: str):
         raise NotImplementedError()
 
-    def loadDataset(self, *args, **kwargs) -> xa.Dataset:
-        print(f"Load dataset {self.dsid}, current datasets = {self.datasets.keys()}")
+    @error_handled
+    def loadDataset(self) -> xa.Dataset:
+        lgm().log(f"Load dataset {self.dsid}, current datasets = {self.datasets.keys()}")
         if self.dsid not in self.datasets:
             data_file = os.path.join(self.datasetDir, self.dsid + ".nc")
             dataset: xa.Dataset = xa.open_dataset(data_file)
             vnames = dataset.variables.keys()
             vshapes = [f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
-            print(f" ---> Opened Dataset {self.dsid} from file {data_file}\n\t -> variables: {' '.join(vshapes)}")
+            lgm().log(f" ---> Opened Dataset {self.dsid} from file {data_file}\n\t -> variables: {' '.join(vshapes)}")
             if 'plot-x' not in vnames:
                 raw_data: xa.DataArray = dataset['raw']
                 dataset['plot-y'] = raw_data
