@@ -175,7 +175,9 @@ class DataManager(SCSingletonConfigurable):
 
     def loadCurrentProject(self, caller_id: str ) -> xa.Dataset:
         lgm().log( f" DataManager: loadCurrentProject: {caller_id}" )
-        return self._mode_data_manager_.loadCurrentProject()
+        project_data = self._mode_data_manager_.loadCurrentProject()
+        lgm().log(f"Loaded project data: vars = {project_data.variables.keys()}")
+        return project_data
 
     def prepare_inputs( self, *args, **kwargs ) -> xa.Dataset:
         return self._mode_data_manager_.prepare_inputs( *args, **kwargs )

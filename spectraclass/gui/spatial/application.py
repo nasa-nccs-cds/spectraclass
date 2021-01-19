@@ -25,7 +25,7 @@ class Spectraclass(SpectraclassController):
         plot = ipw.VBox([ ufm().gui(), collapsibles ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
         control = ipw.VBox( [ am().gui(), mm().gui(), gm().gui() ], layout=ipw.Layout( flex='0 0 700px'), border=css_border )
         gui = ipw.HBox( [control, plot ], layout=ipw.Layout( width='100%' ) )
-        if embed: ActionsManager.instance().embed()
+        if embed: self.embed()
         dm().save_config()
         return gui
 

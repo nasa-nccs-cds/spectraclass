@@ -25,6 +25,9 @@ class SpectraclassController(SCSingletonConfigurable):
     def process_menubar_action(self, mname, dname, op, b ):
         print(f" process_menubar_action.on_value_change: {mname}.{dname} -> {op}")
 
+    def show_gpu_usage(self):
+        os.system("nvidia-smi")
+
     @classmethod
     def set_spectraclass_theme(cls):
         from IPython.display import display, HTML

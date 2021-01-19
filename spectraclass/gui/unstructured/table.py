@@ -14,6 +14,8 @@ from spectraclass.model.labels import LabelsManager
 import traitlets.config as tlc
 from spectraclass.model.base import SCSingletonConfigurable
 
+def tm(): return TableManager.instance()
+
 class TableManager(SCSingletonConfigurable):
 
     def __init__(self):

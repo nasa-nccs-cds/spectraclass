@@ -40,9 +40,6 @@ class ActionsManager(SCSingletonConfigurable):
         gui = ipw.VBox([ classes, buttonBox ], layout = ipw.Layout( width="100%", justify_content="space-between", flex='0 0 70px', border= '2px solid firebrick' )  )
         return gui
 
-    def embed(self):
-        self.on_button_click("embed")
-
 def cm() -> "ControlsManager":
     return ControlsManager.instance()
 
