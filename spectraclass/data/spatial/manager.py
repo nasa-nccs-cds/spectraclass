@@ -6,7 +6,7 @@ import traitlets.config as tlc
 import matplotlib as mpl
 from typing import List, Union, Tuple, Optional, Dict
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
-from spectraclass.reduction.embedding import ReductionManager
+from spectraclass.reduction.embedding import ReductionManager, rm
 from spectraclass.data.base import ModeDataManager
 import matplotlib.pyplot as plt
 from spectraclass.application.controller import app
@@ -94,14 +94,20 @@ class SpatialDataManager(ModeDataManager):
         return result
 
     def reduce(self, data: xa.DataArray):
-        from spectraclass.reduction.embedding import ReductionManager
         if self.reduce_method != "":
             dave, dmag =  data.values.mean(0), 2.0*data.values.std(0)
             normed_data = ( data.values - dave ) / dmag
-            reduced_spectra, reproduction = ReductionManager.instance().reduce( normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
+            reduced_spectra, reproduction = rm().reduce( normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )[0]
             coords = dict( samples=data.coords['samples'], band=np.arange( self.model_dims )  )
             return xa.DataArray( reduced_spectra, dims=['samples', 'band'], coords=coords )
         return data
+
+    @property
+    def dsid(self) -> str:
+        from spectraclass.data.spatial.tile.manager import TileManager
+        reduction_method = f"raw" if self.reduce_method == "None" else f"{self.reduce_method}-{self.model_dims}"
+        file_name_base = "-".join( [TileManager.instance().getBlock().file_name, reduction_method] )
+        return f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
 
     @classmethod
     def getRGB(cls, raster_data: xa.DataArray ) -> xa.DataArray:
@@ -225,7 +231,7 @@ class SpatialDataManager(ModeDataManager):
         return img
 
     def getXarray(self, id: str, xcoords: Dict, subsample: int, xdims: OrderedDict, **kwargs) -> xa.DataArray:
-        np_data: np.ndarray = SpatialDataManager.instance().getInputFileData(id, subsample, tuple(xdims.keys()))
+        np_data: np.ndarray = SpatialDataManager.instance().getInputFileData()
         dims, coords = [], {}
         for iS in np_data.shape:
             coord_name = xdims[iS]
@@ -244,7 +250,7 @@ class SpatialDataManager(ModeDataManager):
             model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
             data_vars = dict( raw=point_data )
             if self.reduce_method != "":
-                reduced_spectra, reproduction = ReductionManager.instance().reduce( point_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
+                reduced_spectra, reproduction = rm().reduce( point_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )[0]
                 data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
                 data_vars['reproduction'] = point_data.copy( data=reproduction )
             dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
@@ -267,7 +273,7 @@ class SpatialDataManager(ModeDataManager):
             training_data = block.getPointData(subsample=self.subsample)[0]
             blocks_point_data = [ training_data ]
         else: raise Exception( f"Unrecognized 'reduce_scope' parameter: {self.reduce_scope}" )
-        blocks_reduction = ReductionManager.instance().reduce( training_data, blocks_point_data, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
+        blocks_reduction = rm().reduce( training_data, blocks_point_data, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
         for ((reduced_spectra, reproduction), point_data) in zip(blocks_reduction,blocks_point_data):
             dsid = point_data.attrs['dsid']
             model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )

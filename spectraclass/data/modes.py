@@ -5,7 +5,7 @@ import ipywidgets as ip
 from collections import OrderedDict
 from spectraclass.reduction.embedding import ReductionManager
 from pathlib import Path
-from spectraclass.util.logs import LogManager, lgm, error_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled
 import xarray as xa
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable, Marker
@@ -63,7 +63,7 @@ class ModeDataManager(SCSingletonConfigurable):
     @classmethod
     def getXarray(cls, id: str, xcoords: Dict, subsample: int, xdims: OrderedDict, **kwargs) -> xa.DataArray:
         from .base import DataManager
-        np_data: np.ndarray = DataManager.instance().getInputFileData(id, subsample, tuple(xdims.keys()))
+        np_data: np.ndarray = DataManager.instance().getInputFileData()
         dims, coords = [], {}
         for iS in np_data.shape:
             coord_name = xdims[iS]
@@ -83,45 +83,10 @@ class ModeDataManager(SCSingletonConfigurable):
 
     @property
     def dsid(self) -> str:
-        from spectraclass.data.spatial.tile.manager import TileManager
-        reduction_method = f"raw" if self.reduce_method == "None" else f"{self.reduce_method}-{self.model_dims}"
-        file_name_base = "-".join( [TileManager.instance().getBlock().file_name, reduction_method] )
-        return f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
+        raise NotImplementedError()
 
     def prepare_inputs(self, *args, **kwargs):
-        self.update_gui_parameters()
-        self.set_progress(0.02)
-        write = kwargs.get('write', True)
-        output_file = os.path.join(self.datasetDir, self.dsid + ".nc")
-        assert (self.INPUTS is not None), f"INPUTS undefined for mode {self.mode}"
-
-        np_embedding: np.ndarray = self.getInputFileData()
-        dims = np_embedding.shape
-        mdata_vars = list(self.INPUTS['directory'])
-        xcoords = OrderedDict(samples=np.arange(dims[0]), bands=np.arange(dims[1]))
-        xdims = OrderedDict({dims[0]: 'samples', dims[1]: 'bands'})
-        data_vars = dict( embedding=xa.DataArray(np_embedding, dims=xcoords.keys(), coords=xcoords, name=self.INPUTS['embedding']))
-        data_vars.update({vid: self.getXarray(vid, xcoords, self.subsample, xdims) for vid in mdata_vars})
-        pspec = self.INPUTS['plot']
-        data_vars.update(  {f'plot-{vid}': self.getXarray(pspec[vid], xcoords, self.subsample, xdims, norm=pspec.get('norm','spectral')) for vid in ['x', 'y'] } )
-        self.set_progress(0.1)
-        if self.reduce_method != "None":
-            input_data = data_vars['embedding']
-            (reduced_spectra, reproduced_spectra) = ReductionManager.instance().reduce(input_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity)
-            coords = dict(samples=xcoords['samples'], model=np.arange(self.model_dims))
-            data_vars['reduction'] = xa.DataArray(reduced_spectra, dims=['samples', 'model'], coords=coords)
-            data_vars['reproduction'] = input_data.copy(data=reproduced_spectra)
-            self.set_progress(0.8)
-
-        result_dataset = xa.Dataset(data_vars, coords=xcoords, attrs={'type': 'spectra'})
-        result_dataset.attrs["colnames"] = mdata_vars
-        if write:
-            if os.path.exists(output_file): os.remove(output_file)
-            print(f"Writing output to {output_file}")
-            result_dataset.to_netcdf(output_file, format='NETCDF4', engine='netcdf4')
-        self.updateDatasetList()
-        self.set_progress(1.0)
-        return result_dataset
+        raise NotImplementedError()
 
     def updateDatasetList(self):
         if self._dset_selection is not None:
@@ -130,7 +95,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def select_dataset(self, *args):
         self.dm.select_current_mode()
         if self.dm.dsid != self._dset_selection.value:
-            print( f"Loading dataset '{self._dset_selection.value}', current dataset = '{self.dm.dsid}', "
+            lgm().log( f"Loading dataset '{self._dset_selection.value}', current dataset = '{self.dm.dsid}', "
                    f"current mode = '{self._mode}', current mode index = {self.dm.mode_index}, mdmgr id = {id(self)}")
             self.dm.dsid = self._dset_selection.value
             self.dm.select_dataset(self._dset_selection.value)
@@ -160,7 +125,6 @@ class ModeDataManager(SCSingletonConfigurable):
                                              layout=ip.Layout(width="auto"))
 
         def apply_handler(*args):
-            from spectraclass.gui.unstructured.application import Spectraclass
             rm.nepochs = nepochs_selector.value
             rm.alpha = alpha_selector.value
             rm.init = init_selector.value
@@ -215,7 +179,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def execute_task(self, task: str):
         raise NotImplementedError()
 
-    @error_handled
+    @exception_handled
     def loadDataset(self) -> xa.Dataset:
         lgm().log(f"Load dataset {self.dsid}, current datasets = {self.datasets.keys()}")
         if self.dsid not in self.datasets:
@@ -235,7 +199,7 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def getDatasetList(self):
         dset_glob = os.path.expanduser(f"{self.datasetDir}/*.nc")
-        print(f"  Listing datasets from glob: '{dset_glob}' ")
+        lgm().log(f"  Listing datasets from glob: '{dset_glob}' ")
         files = list(filter(os.path.isfile, glob.glob(dset_glob)))
         files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
         return [Path(f).stem for f in files]

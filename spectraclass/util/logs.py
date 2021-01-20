@@ -15,7 +15,7 @@ import threading, time, logging, sys, traceback
 def lgm() -> "LogManager":
     return LogManager.instance()
 
-def error_handled(func):
+def exception_handled(func):
     def wrapper( *args, **kwargs ):
         try:        return func( *args, **kwargs )
         except:     lgm().exception( f" Error in {func}:")
@@ -46,11 +46,9 @@ class LogManager(SCSingletonConfigurable):
             self.log( msg,  **kwargs )
 
     def exception(self,  msg, **kwargs ):
-        self._log_file.write( msg + "\n" )
-        self._log_file.write( traceback.format_exc(12) )
+        self._log_file.write( f"\n{msg}\n{traceback.format_exc(12)}\n" )
         self._log_file.flush()
 
     def trace(self,  msg, **kwargs ):
-        self._log_file.write( msg + "\n" )
-        self._log_file.write( " ".join( traceback.format_stack(15) ) )
+        self._log_file.write( f"\n{msg}\n{traceback.format_stack(12)}\n" )
         self._log_file.flush()

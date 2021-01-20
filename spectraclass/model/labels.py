@@ -6,7 +6,7 @@ import ipywidgets as ipw
 import matplotlib.colors as mcolors
 from ..graph.manager import ActivationFlow
 import traitlets.config as tlc
-from spectraclass.util.logs import LogManager, lgm, error_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled
 from spectraclass.model.base import SCSingletonConfigurable, Marker
 import xarray as xa
 import numpy as np
@@ -135,7 +135,7 @@ class LabelsManager(SCSingletonConfigurable):
         try:        return  self._actions[-1]
         except:     return None
 
-    @error_handled
+    @exception_handled
     def popAction(self) -> Optional[Action]:
         action =  self._actions.pop()
         print( f"POP ACTION: {action}, #Actions remainign = {len(self._actions)}" )
@@ -287,7 +287,7 @@ class LabelsManager(SCSingletonConfigurable):
             seed_points[ self.currentMarker.pids ] = 1
             return seed_points
 
-    @error_handled
+    @exception_handled
     def mark_points( self, point_ids: np.ndarray = None, cid: int = -1 ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
         icid: int = cid if cid > -1 else self.current_cid

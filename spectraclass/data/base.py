@@ -12,7 +12,7 @@ from importlib import import_module
 from spectraclass.model.base import SCSingletonConfigurable
 from traitlets.config.loader import load_pyconfig_files
 from .modes import ModeDataManager
-from spectraclass.util.logs import LogManager, lgm
+from spectraclass.util.logs import LogManager, lgm, exception_handled
 from traitlets.config.loader import Config
 import threading, time, logging, sys
 
@@ -179,6 +179,7 @@ class DataManager(SCSingletonConfigurable):
         lgm().log(f"Loaded project data: vars = {project_data.variables.keys()}")
         return project_data
 
+    @exception_handled
     def prepare_inputs( self, *args, **kwargs ) -> xa.Dataset:
         return self._mode_data_manager_.prepare_inputs( *args, **kwargs )
 

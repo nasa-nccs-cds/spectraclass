@@ -7,7 +7,7 @@ from itkwidgets.widget_viewer import Viewer
 import xarray as xa
 import numpy.ma as ma
 import traitlets.config as tlc
-from spectraclass.util.logs import LogManager, lgm, error_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable, Marker
 from spectraclass.model.labels import LabelsManager
@@ -102,7 +102,7 @@ class PointCloudManager(SCSingletonConfigurable):
             self._marker_points[0] = self._points[ pids, : ]
             print( f"  ***** POINTS- mark_points[0], #pids = {len(pids)}")
 
-    @error_handled
+    @exception_handled
     def update_marked_points(self, cid: int = -1, **kwargs ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
         from spectraclass.model.labels import LabelsManager, lm
@@ -157,7 +157,7 @@ class PointCloudManager(SCSingletonConfigurable):
         (ave, std)= ( self._color_values.mean(),  self._color_values.std() )
         return ( ave - std * SpatialDataManager.colorstretch, ave + std * SpatialDataManager.colorstretch  )
 
-    @error_handled
+    @exception_handled
     def clear_pids(self, cid: int, pids: np.ndarray, **kwargs):
         if self._marker_pids is not None:
             dpts = np.vectorize(lambda x: x in pids)

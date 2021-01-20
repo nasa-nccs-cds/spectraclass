@@ -1,6 +1,6 @@
 import os, ipywidgets as ipw
 from spectraclass.model.base import SCSingletonConfigurable
-from spectraclass.util.logs import LogManager, lgm, error_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled
 from spectraclass.model.base import Marker
 import numpy as np
 import xarray as xa
@@ -80,7 +80,7 @@ class SpectraclassController(SCSingletonConfigurable):
         pcm().update_plot( )
         return action
 
-    @error_handled
+    @exception_handled
     def spread_selection(self, niters=1):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, Action, lm

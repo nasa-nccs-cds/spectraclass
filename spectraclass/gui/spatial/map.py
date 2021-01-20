@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
 from spectraclass.data.spatial.tile.tile import Block
 from .google import GooglePlotManager
-from spectraclass.util.logs import LogManager, lgm, error_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled
 import pandas as pd
 import xarray as xa
 import numpy as np
@@ -410,7 +410,7 @@ class MapManager(SCSingletonConfigurable):
         app().color_pointcloud( frame_data.values.flatten(), **kwargs )
         return frame_data
 
-    @error_handled
+    @exception_handled
     def update_plots(self):
         if self.image is not None:
             from spectraclass.data.base import DataManager
@@ -438,7 +438,7 @@ class MapManager(SCSingletonConfigurable):
         #         for listener in self.navigation_listeners:
         #             listener.set_axis_limits( self.plot_axes.get_xlim(), self.plot_axes.get_ylim() )
 
-    @error_handled
+    @exception_handled
     def onMouseClick(self, event):
         lgm().log(f"\nMouseClick event = {event}")
         if event.xdata != None and event.ydata != None:
@@ -543,7 +543,7 @@ class MapManager(SCSingletonConfigurable):
     #         pids.extend( marker.pids )
     #     return class_markers
 
-    @error_handled
+    @exception_handled
     def plot_markers_image( self ):
         if self.marker_plot:
             ycoords, xcoords, colors = self.get_markers()

@@ -1,12 +1,19 @@
 from .manager import UnstructuredDataManager
 from typing import List, Union, Tuple, Optional, Dict, Callable
-from spectraclass.data.base import DataManager
+import traitlets as tl
 
 class SwiftDataManager(UnstructuredDataManager):
     from spectraclass.gui.unstructured.application import Spectraclass
+
+    obsids = tl.Unicode("obsids.pkl").tag(config=True)
+    scaled_specs = tl.Unicode("scaled_specs.pkl").tag(config=True)
+    specs = tl.Unicode("specs.pkl").tag(config=True)
+    spectra_x_axis = tl.Unicode("spectra_x_axis.pkl").tag(config=True)
+    target_names = tl.Unicode("target_names.pkl").tag(config=True)
+
     MODE = "swift"
-    METAVARS = ['tics', "camera", "chip", "dec", 'ra', 'tmag']
-    INPUTS = dict(embedding='scaled_specs', directory=["target_names", "obsids"], plot=dict(y="specs", x='spectra_x_axis'))
+    METAVARS = ["target_names", "obsids"]
+    INPUTS = dict(embedding='scaled_specs', directory=['tics', "camera", "chip", "dec", 'ra', 'tmag'], plot=dict(y="specs", x='spectra_x_axis'))
     application = Spectraclass
 
     def __init__(self):
