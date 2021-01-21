@@ -9,9 +9,7 @@ from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from spectraclass.reduction.embedding import ReductionManager, rm
 from spectraclass.data.base import ModeDataManager
 import matplotlib.pyplot as plt
-from spectraclass.application.controller import app
 from collections import OrderedDict
-from spectraclass.util.logs import LogManager, lgm
 import os, math, pickle
 import rioxarray as rio
 from .modes import *
@@ -231,7 +229,7 @@ class SpatialDataManager(ModeDataManager):
         return img
 
     def getXarray(self, id: str, xcoords: Dict, subsample: int, xdims: OrderedDict, **kwargs) -> xa.DataArray:
-        np_data: np.ndarray = SpatialDataManager.instance().getInputFileData()
+        np_data: np.ndarray = SpatialDataManager.instance().getInputFileData(id)
         dims, coords = [], {}
         for iS in np_data.shape:
             coord_name = xdims[iS]
@@ -290,19 +288,7 @@ class SpatialDataManager(ModeDataManager):
             if os.path.exists(output_file): os.remove(output_file)
             result_dataset.to_netcdf(output_file)
 
-    def execute_task( self, task: str ):
-        if task == "embed":
-            app().embed()
-        elif task == "mark":
-            app().mark()
-        elif task == "spread":
-            app().spread_selection()
-        elif task == "clear":
-            app().clear()
-        elif task == "undo":
-            app().undo_action()
-        elif task == "distance":
-            app().display_distance()
+
 
 
 

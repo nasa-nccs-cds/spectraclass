@@ -22,7 +22,7 @@ class UnstructuredDataManager(ModeDataManager):
         output_file = os.path.join(self.datasetDir, self.dsid + ".nc")
         assert (self.INPUTS is not None), f"INPUTS undefined for mode {self.mode}"
 
-        np_embedding: np.ndarray = self.getInputFileData()
+        np_embedding: np.ndarray = self.getInputFileData( self.INPUTS['embedding'] )
         if np_embedding is not None:
             dims = np_embedding.shape
             mdata_vars = list(self.INPUTS['directory'])
@@ -53,12 +53,11 @@ class UnstructuredDataManager(ModeDataManager):
 
 
     @exception_handled
-    def getInputFileData( self ) -> np.ndarray:
-        input_file_path = os.path.expanduser( os.path.join(self.data_dir, self.mode, f"{self.dsid}.pkl"))
+    def getInputFileData( self, vname: str ) -> np.ndarray:
+        input_file_path = os.path.expanduser( os.path.join(self.data_dir, self.mode, f"{vname}.pkl"))
         if os.path.isfile(input_file_path):
             input_data = self._cached_data.get( input_file_path, None )
             if input_data is None:
-                lgm().log(f"Reading unstructured {self.dsid} data from file {input_file_path}, dims = {self.model_dims}")
                 with open(input_file_path, 'rb') as f:
                     result = pickle.load(f)
                     if isinstance(result, np.ndarray):
@@ -67,6 +66,7 @@ class UnstructuredDataManager(ModeDataManager):
                     elif isinstance(result, list):
                         subsampled = [result[i] for i in range(0, len(result), self.subsample )]
                         input_data = np.vstack(subsampled) if isinstance(result[0], np.ndarray) else np.array(subsampled)
+                lgm().log( f"Reading unstructured {vname} data from file {input_file_path}, shape = {input_data.shape}")
                 self._cached_data[input_file_path] = input_data
             return input_data
         else:
@@ -75,23 +75,4 @@ class UnstructuredDataManager(ModeDataManager):
     @property
     def dsid(self) -> str:
         return self._dsid
-
-    def execute_task( self, task: str ):
-        from spectraclass.gui.points import PointCloudManager
-        from spectraclass.gui.unstructured.table import TableManager
-        from spectraclass.reduction.embedding import ReductionManager
-        tmgr = TableManager.instance()
-        if task == "embed":
-            embedding = ReductionManager.instance().umap_embedding()
-            PointCloudManager.instance().reembed( points = embedding )
-        elif task == "mark":
-            tmgr.mark_selection()
-        elif task == "spread":
-            tmgr.spread_selection()
-        elif task == "clear":
-            tmgr.clear_current_class()
-        elif task == "undo":
-            tmgr.undo_action()
-        elif task == "distance":
-            tmgr.display_distance()
 

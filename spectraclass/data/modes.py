@@ -63,7 +63,7 @@ class ModeDataManager(SCSingletonConfigurable):
     @classmethod
     def getXarray(cls, id: str, xcoords: Dict, subsample: int, xdims: OrderedDict, **kwargs) -> xa.DataArray:
         from .base import DataManager
-        np_data: np.ndarray = DataManager.instance().getInputFileData()
+        np_data: np.ndarray = DataManager.instance().getInputFileData(id)
         dims, coords = [], {}
         for iS in np_data.shape:
             coord_name = xdims[iS]
@@ -173,11 +173,23 @@ class ModeDataManager(SCSingletonConfigurable):
         wTab.set_title(2, "Configure")
         return wTab
 
-    def getInputFileData(self) -> np.ndarray:
+    def getInputFileData( self, vname: str ) -> np.ndarray:
         raise NotImplementedError()
 
-    def execute_task(self, task: str):
-        raise NotImplementedError()
+    def execute_task( self, task: str ):
+        from spectraclass.application.controller import app
+        if task == "embed":
+            app().embed()
+        elif task == "mark":
+            app().mark()
+        elif task == "spread":
+            app().spread_selection()
+        elif task == "clear":
+            app().clear()
+        elif task == "undo":
+            app().undo_action()
+        elif task == "distance":
+            app().display_distance()
 
     @exception_handled
     def loadDataset(self) -> xa.Dataset:

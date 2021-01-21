@@ -40,9 +40,6 @@ class SpectraclassController(SCSingletonConfigurable):
     def gui( self, embed: bool = False ):
         raise NotImplementedError()
 
-    def show_gpu_usage(self):
-        os.system("nvidia-smi")
-
     def mark(self):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.points import PointCloudManager, pcm

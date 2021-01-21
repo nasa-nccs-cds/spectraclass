@@ -23,61 +23,52 @@ class Spectraclass(SpectraclassController):
             display(HTML('<style type="text/css">%s</style>Customized changes loaded.' % css))
 
     def gui( self, embed: bool = False ):
-        from spectraclass.gui.plot import PlotManager
-        from spectraclass.gui.points import PointCloudManager
-        from spectraclass.gui.unstructured.table import TableManager
-        from spectraclass.gui.control import ActionsManager
+        from spectraclass.gui.plot import PlotManager, gm
+        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.unstructured.table import TableManager, tm
+        from spectraclass.gui.control import ActionsManager, am, ControlsManager, cm, UserFeedbackManager, ufm
         from spectraclass.application.controller import app
         from spectraclass.data.base import DataManager, dm
 
         self.set_spectraclass_theme()
         css_border = '1px solid blue'
 
-        tableManager = TableManager.instance()
-        graphManager = PlotManager.instance()
-        pointCloudManager = PointCloudManager.instance()
-
-        table = tableManager.gui()
-        graph = graphManager.gui()
-        points = pointCloudManager.instance().gui()
-
-        tableManager.add_selection_listerner(graphManager.on_selection)
-        tableManager.add_selection_listerner(pointCloudManager.on_selection)
-        actionsPanel = ActionsManager.instance().gui()
-
-        control = ipw.VBox([actionsPanel, table], layout=ipw.Layout( flex='0 0 600px', border=css_border) )
-        plot = ipw.VBox([points, graph], layout=ipw.Layout( flex='1 1 auto', border=css_border) )
-        gui = ipw.HBox([control, plot])
-        if embed: app().embed()
+        collapsibles = ipw.Accordion( children = [ cm().gui(), pcm().gui() ], layout=ipw.Layout( width='100%' ) )
+        for iT, title in enumerate(['controls', 'embedding']): collapsibles.set_title(iT, title)
+        collapsibles.selected_index = 1
+        plot = ipw.VBox([ ufm().gui(), collapsibles ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
+        control = ipw.VBox( [ am().gui(), tm().gui(), gm().gui() ], layout=ipw.Layout( flex='0 0 700px'), border=css_border )
+        gui = ipw.HBox( [control, plot ], layout=ipw.Layout( width='100%' ) )
+        if embed: self.embed()
         dm().save_config()
         return gui
 
     def mark(self):
         from spectraclass.gui.unstructured.table import TableManager, tm
         super(Spectraclass, self).mark()
-        tm().mark_selection()
+        tm().update_selection()
 
     def clear(self):
         from spectraclass.gui.unstructured.table import TableManager, tm
         super(Spectraclass, self).clear()
         lgm().log( f"Spatial Spectraclass -> clear ")
-        tm().clear_current_class()
+        tm().update_selection()
 
     def undo_action(self):
         from spectraclass.gui.unstructured.table import TableManager, tm
+        super(Spectraclass, self).undo_action()
         lgm().log(f"Spatial Spectraclass -> undo_action ")
-        action = super(Spectraclass, self).undo_action()
-        tm().undo_action()
+        tm().update_selection()
 
     def spread_selection(self, niters=1):
         from spectraclass.gui.unstructured.table import TableManager, tm
-        if super(Spectraclass, self).spread_selection()  is not None:
-            tm().spread_selection()
+        super(Spectraclass, self).spread_selection()
+        tm().update_selection()
 
     def add_marker(self, marker: Marker):
         from spectraclass.gui.unstructured.table import TableManager, tm
         super(Spectraclass, self).add_marker(marker)
-        tm().mark_selection()
+        tm().update_selection()
 
 
 

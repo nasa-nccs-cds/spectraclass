@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import List, Union, Dict, Callable, Tuple, Optional, Any
+from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Set
 import collections.abc
 from functools import partial
 import ipywidgets as ipw
@@ -247,6 +247,13 @@ class LabelsManager(SCSingletonConfigurable):
             if (m.cid > 0): pids.extend( m.pids )
         return pids
 
+    def getLabelMap( self ) -> Dict[int,Set[int]]:
+        label_map = {}
+        for m in self._markers:
+            pids = label_map.get( m.cid, set() )
+            label_map[m.cid] = pids.union( set(m.pids) )
+        return label_map
+
     @property
     def selectedLabel(self):
         return self._labels[ self.current_cid ]
@@ -296,6 +303,7 @@ class LabelsManager(SCSingletonConfigurable):
                 ufm().show("Must select point(s) to mark.", "red")
                 return
             self.currentMarker.cid = icid
+            point_ids = self.currentMarker.pids
         else:
             lgm().log( f" LM: mark_points -> npts = {point_ids.size}, id range = {[point_ids.min(), point_ids.max()]}")
 

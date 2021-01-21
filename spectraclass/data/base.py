@@ -170,13 +170,13 @@ class DataManager(SCSingletonConfigurable):
             self._wGui = self._mode_data_manager_.gui()
         return self._wGui
 
-    def getInputFileData(self) -> np.ndarray:
-        return self._mode_data_manager_.getInputFileData( )
+    def getInputFileData(self, vname: str ) -> np.ndarray:
+        return self._mode_data_manager_.getInputFileData( vname )
 
     def loadCurrentProject(self, caller_id: str ) -> xa.Dataset:
         lgm().log( f" DataManager: loadCurrentProject: {caller_id}" )
         project_data = self._mode_data_manager_.loadCurrentProject()
-        lgm().log(f"Loaded project data: vars = {project_data.variables.keys()}")
+        lgm().log(f"Loaded project data:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
         return project_data
 
     @exception_handled
@@ -186,14 +186,9 @@ class DataManager(SCSingletonConfigurable):
     def valid_bands(self) -> Optional[List]:
         return self._mode_data_manager_.valid_bands()
 
+    @exception_handled
     def execute_task(self, task: str ):
         return self._mode_data_manager_.execute_task(task)
-
-    def graph_flow(self, niters: int = 1 ):
-        return self._mode_data_manager_.spread_selection( niters )
-
-    def distance(self, niters: int = 100 ):
-        return self._mode_data_manager_.display_distance( niters )
 
     def getModelData(self) -> xa.DataArray:
         project_dataset: xa.Dataset = self.loadCurrentProject("getModelData")

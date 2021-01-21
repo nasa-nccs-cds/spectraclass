@@ -1,13 +1,13 @@
 import qgrid, logging
-from typing import List, Union, Tuple, Optional, Dict, Callable
-from IPython.core.debugger import set_trace
+from typing import List, Union, Tuple, Optional, Dict, Callable, Set
+from spectraclass.util.logs import LogManager, lgm, exception_handled
 from functools import partial
 import xarray as xa
 import numpy as np
 import pandas as pd
 import ipywidgets as ipw
 from spectraclass.gui.widgets import ToggleButton
-from spectraclass.data.base import DataManager
+from spectraclass.data.base import DataManager, dm
 from spectraclass.gui.points import PointCloudManager
 from traitlets import traitlets
 from spectraclass.model.labels import LabelsManager
@@ -27,7 +27,6 @@ class TableManager(SCSingletonConfigurable):
         self._wTablesWidget: ipw.Tab = None
         self._current_column_index: int = 0
         self._current_selection: List[int] = []
-        self._selection_listeners: List[Callable[[Dict],None]] = [ ]
         self._class_map = None
         self._search_widgets = None
         self._match_options = {}
@@ -35,29 +34,54 @@ class TableManager(SCSingletonConfigurable):
 
     def init(self, **kwargs):
         catalog: Dict[str,np.ndarray] = kwargs.get( 'catalog', None )
-        project_data: xa.Dataset = DataManager.instance().loadCurrentProject("table")
-        table_cols = DataManager.instance().table_cols
-        if catalog is None:  catalog = { tcol: project_data[tcol].values for tcol in table_cols }
-        nrows = catalog[table_cols[0]].shape[0]
+        project_data: xa.Dataset = dm().loadCurrentProject("table")
+        if catalog is None:  catalog = { tcol: project_data[tcol].values for tcol in dm().modal.METAVARS }
+        nrows = catalog[ dm().modal.METAVARS[0] ].shape[0]
+        lgm().log( f"Catalog: nrows = {nrows}, entries: {[ f'{k}:{v.shape}' for (k,v) in catalog.items() ]}" )
         self._dataFrame: pd.DataFrame = pd.DataFrame( catalog, dtype='U', index=pd.Int64Index( range(nrows), name="Index" ) )
         self._cols = list(catalog.keys()) + [ "Class" ]
         self._class_map = np.zeros( nrows, np.int32 )
         self._flow_class_map = np.zeros( nrows, np.int32 )
 
-    def add_selection_listerner( self, listener: Callable[[Dict],None] ):
-        self._selection_listeners.append( listener )
+    def clear_tables(self):
+        nrows = self._dataFrame.shape[0]
+        self._class_map = np.zeros(nrows, np.int32)
+        for cid, table in enumerate(self._tables):
+            if cid == 0:
+                table.df["Class"].values[:] = 0
+            else:
+                table.df = table.df.iloc[0:0]
+
+    def update_selection(self):
+        from spectraclass.model.labels import LabelsManager, lm
+        self.clear_tables()
+        label_map: Dict[int,Set[int]] = lm().getLabelMap()
+        lgm().log(f" update_selection: set label_map = {label_map}")
+        directory_table = self._tables[0]
+        for (cid, pids) in label_map.items():
+            table = self._tables[cid]
+            if cid > 0:
+                for pid in pids:
+                    directory_table.edit_cell( pid, "Class", cid )
+                    self._class_map[pid] = cid
+                    row = directory_table.df.loc[pid]
+                    table.add_row( row )
+
+                index_list: List[int] = selection_table.index.tolist()
+                table.edit_cell( index_list, "Class", cid )
+                lgm().log( f" Edit directory table: set classes for indices {index_list} to {cid}")
+                table.df = pd.concat( [table.df, selection_table] )
+                lgm().log(f" Edit class table[{cid}]: add pids {pids}, append selection_table with shape {selection_table.shape}")
 
     def mark_selection(self):
         from spectraclass.model.labels import LabelsManager, lm
-        from spectraclass.gui.points import PointCloudManager, pcm
         selection_table: pd.DataFrame = self._tables[0].df.loc[self._current_selection]
         cid: int = lm().mark_points( selection_table.index.to_numpy(np.int32) )
-        pcm().update_marked_points(cid)
         self._class_map[self._current_selection] = cid
         for table_index, table in enumerate( self._tables ):
             if table_index == 0:
                 index_list: List[int] = selection_table.index.tolist()
-                print( f" -----> Setting cid[{cid}] for indices[:10]= {index_list[:10]}, current_selection = {self._current_selection}, class map nonzero = {np.count_nonzero(self._class_map)}")
+                lgm().log( f" -----> Setting cid[{cid}] for indices[:10]= {index_list[:10]}, current_selection = {self._current_selection}, class map nonzero = {np.count_nonzero(self._class_map)}")
                 table.edit_cell( index_list, "Class", cid )
             else:
                 if table_index == cid:    table.df = pd.concat( [ table.df, selection_table ] ).drop_duplicates()
@@ -71,58 +95,34 @@ class TableManager(SCSingletonConfigurable):
     def selected_table(self):
         return self._tables[ self.selected_class ]
 
-    @property
-    def pcm(self) -> PointCloudManager:
-        return PointCloudManager.instance()
-
-    def clear_pids(self, cid: int, pids: List[int] ):
-        self._tables[0].change_selection([])
-        self.drop_rows( cid, pids )
-        self._class_map[pids] = 0
-        self.pcm.clear_points( cid, pids=pids )
-        self.pcm.update_plot()
-
     def drop_rows(self, cid: int, pids: List[int]) :
         try: self._tables[cid].remove_rows(pids)
         except: pass
         self._tables[cid].df.drop(index=pids, inplace=True, errors="ignore" )
-        print( f"TABLE[{cid}]: Dropping rows in class map: {pids}")
-
-    def clear_current_class(self):
-        all_classes = (self.selected_class == 0)
-        self._tables[0].change_selection([])
-        if all_classes: self.pcm.clear_bins()
-        for cid, table in enumerate( self._tables[1:], 1 ):
-            if all_classes or (self.selected_class == cid):
-                pids = table.df.index.tolist()
-                if len( pids ) > 0:
-                    self.pcm.clear_points( cid )
-                    self.drop_rows( cid, pids )
-                    self._class_map[pids] = 0
-        self.pcm.update_plot()
+        lgm().log( f"TABLE[{cid}]: Dropping rows in class map: {pids}")
 
     def _handle_table_event(self, event, widget):
         ename = event['name']
         if( ename == 'sort_changed'):
             cname = event['new']['column']
-            print(f"  handle_table_event: {ename}[{cname}]: {self._cols}")
+            lgm().log(f"  handle_table_event: {ename}[{cname}]: {self._cols}")
             self._current_column_index = self._cols.index( cname )
-            print(f"  ... col-sel ---> ci={self._current_column_index}")
+            lgm().log(f"  ... col-sel ---> ci={self._current_column_index}")
             self._clear_selection()
         elif (ename == 'selection_changed'):
             if event['source'] == 'gui':
                 rows = event["new"]
                 if len( rows ) == 1 or self.is_block_selection(event):
-                    print( f" TABLE.row-sel --->  {rows}" )
+                    lgm().log( f" TABLE.row-sel --->  {rows}" )
                     df = self.selected_table.get_changed_df()
-                    print( f" TABLE[{self.selected_class}].row-index[:10] --->  {df.index[:10].to_list()}")
+                    lgm().log( f" TABLE[{self.selected_class}].row-index[:10] --->  {df.index[:10].to_list()}")
                     self._current_selection = df.index[ rows ].to_list()
-                    print( f" TABLE[{self.selected_class}].current_selection[:10] --->  {self._current_selection[:10]}")
+                    lgm().log( f" TABLE[{self.selected_class}].current_selection[:10] --->  {self._current_selection[:10]}")
                     self.broadcast_selection_event( self._current_selection )
 
     def is_block_selection( self, event: Dict ) -> bool:
         old, new = event['old'], event['new']
-        print(   f"  ------->  is_block_selection: old = {old}, new = {new}"  )
+        lgm().log(   f"  ------->  is_block_selection: old = {old}, new = {new}"  )
         if (len(old) == 1) and (new[-1] == old[ 0]) and ( len(new) == (new[-2]-new[-1]+1)): return True
         if (len(old) >  1) and (new[-1] == old[-1]) and ( len(new) == (new[-2]-new[-1]+1)): return True
         return False
@@ -132,11 +132,12 @@ class TableManager(SCSingletonConfigurable):
         return row_list == list( range( row_list[0], row_list[-1]+1 ) )
 
     def broadcast_selection_event(self, pids: List[int] ):
-        selection_event = dict( pids=pids )
+        from spectraclass.application.controller import app
+        from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.model.base import Marker
         item_str = "" if len(pids) > 8 else f",  pids={pids}"
-        print(f"TABLE.gui->selection_changed, nitems={len(pids)}{item_str}")
-        for listener in self._selection_listeners:
-            listener( selection_event )
+        lgm().log(f"TABLE.gui->selection_changed, nitems={len(pids)}{item_str}")
+        app().add_marker( Marker( pids, lm().current_cid ) )
 
     def _createTable( self, tab_index: int ) -> qgrid.QgridWidget:
         assert self._dataFrame is not None, " TableManager has not been initialized "
@@ -152,9 +153,6 @@ class TableManager(SCSingletonConfigurable):
             wTable = qgrid.show_grid( dFrame, column_options=col_opts, grid_options=grid_opts, show_toolbar=False )
         wTable.on( traitlets.All, self._handle_table_event )
         wTable.layout = ipw.Layout( width="auto", height="100%", max_height="1000px" )
-#        events = Event(source=wTable, watched_events=['keyup', 'keydown'])
-#        events.on_dom_event(self._handle_key_event)
-#        self._events.append( events )
         return wTable
 
     def _createGui( self ) -> ipw.VBox:
@@ -197,9 +195,9 @@ class TableManager(SCSingletonConfigurable):
         elif match == "ends-with":   mask = np.char.endswith( np_coldata, match_str )
         elif match == "contains":    mask = ( np.char.find( np_coldata, match_str ) >= 0 )
         else: raise Exception( f"Unrecognized match option: {match}")
-        print( f"process_find[ M:{match} CS:{case_sensitive} col:{self._current_column_index} ], coldata shape = {np_coldata.shape}, match_str={match_str}, coldata[:10]={np_coldata[:10]}" )
+        lgm().log( f"process_find[ M:{match} CS:{case_sensitive} col:{self._current_column_index} ], coldata shape = {np_coldata.shape}, match_str={match_str}, coldata[:10]={np_coldata[:10]}" )
         self._current_selection = df.index[mask].to_list()
-        print(f" --> cname = {cname}, mask shape = {mask.shape}, mask #nonzero = {np.count_nonzero(mask)}, #selected = {len(self._current_selection)}, selection[:8] = {self._current_selection[:8]}")
+        lgm().log(f" --> cname = {cname}, mask shape = {mask.shape}, mask #nonzero = {np.count_nonzero(mask)}, #selected = {len(self._current_selection)}, selection[:8] = {self._current_selection[:8]}")
         self._select_find_results( )
 
     def _clear_selection(self):
@@ -210,12 +208,12 @@ class TableManager(SCSingletonConfigurable):
         if len( self._wFind.value ) > 0:
             find_select = self._match_options['find_select']
             selection = self._current_selection if find_select=="select" else self._current_selection[:1]
-            print(f"apply_selection[ {find_select} ], nitems: {len(selection)}")
+            lgm().log(f"apply_selection[ {find_select} ], nitems: {len(selection)}")
             self.selected_table.change_selection( selection )
             self.broadcast_selection_event( selection )
 
     def _process_find_options(self, name: str, state: str ):
-        print( f"process_find_options[{name}]: {state}" )
+        lgm().log( f"process_find_options[{name}]: {state}" )
         self._match_options[ name ] = state
         self._process_find( dict( new=self._wFind.value ) )
 
@@ -230,20 +228,16 @@ class TableManager(SCSingletonConfigurable):
         return wTab
 
     def refresh(self):
-        print(" $$$$$$$$$$$$$$$$$$$$$ TableManager: refresh ")
         self._wGui = None
         self._tables: List[qgrid.QgridWidget] = []
 
     def _handle_key_event(self, event: Dict ):
-        print( f" ################## handle_key_event: {event}  ################## ################## ##################" )
+        lgm().log( f" ################## handle_key_event: {event}  ################## ################## ##################" )
 
     def gui( self, **kwargs ) -> ipw.VBox:
         if self._wGui is None:
-            print(" $$$$$$$$$$$$$$$$$$$$$ TableManager: creating new GUI")
             self.init( **kwargs )
             self._wGui = self._createGui()
             self._wGui.layout = ipw.Layout(width='auto', flex='1 0 500px')
-        else:
-            print(" $$$$$$$$$$$$$$$$$$$$$ TableManager: reusing existing GUI")
         return self._wGui
 

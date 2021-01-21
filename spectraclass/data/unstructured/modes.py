@@ -13,7 +13,7 @@ class SwiftDataManager(UnstructuredDataManager):
 
     MODE = "swift"
     METAVARS = ["target_names", "obsids"]
-    INPUTS = dict(embedding='scaled_specs', directory=['tics', "camera", "chip", "dec", 'ra', 'tmag'], plot=dict(y="specs", x='spectra_x_axis'))
+    INPUTS = dict(embedding='scaled_specs', directory=METAVARS, plot=dict(y="specs", x='spectra_x_axis'))
     application = Spectraclass
 
     def __init__(self):
@@ -22,8 +22,8 @@ class SwiftDataManager(UnstructuredDataManager):
 class TessDataManager(UnstructuredDataManager):
     from spectraclass.gui.unstructured.application import Spectraclass
     MODE = "tess"
-    METAVARS = ["target_names", "obsids"]
-    INPUTS = dict(embedding='scaled_lcs', directory=['tics', "camera", "chip", "dec", 'ra', 'tmag'], plot=dict(y="lcs", x='times'))
+    METAVARS = ['tics', "camera", "chip", "dec", 'ra', 'tmag']
+    INPUTS = dict(embedding='scaled_lcs', directory=METAVARS, plot=dict(y="lcs", x='times'))
     application = Spectraclass
 
     def __init__(self):
