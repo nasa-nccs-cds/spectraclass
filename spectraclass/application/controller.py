@@ -7,7 +7,9 @@ import xarray as xa
 
 def app():
     from spectraclass.data.base import DataManager, dm
-    return dm().app()
+    rv = dm().app()
+    lgm().log( f" app() -> {rv.__class__}")
+    return rv
 
 class SpectraclassController(SCSingletonConfigurable):
 
@@ -97,9 +99,10 @@ class SpectraclassController(SCSingletonConfigurable):
                 if all_classes or ( lm().current_cid == cid ):
                     new_indices: np.ndarray = catalog_pids[ self._flow_class_map == cid ]
                     if new_indices.size > 0:
+                        lgm().log(f" @@@ spread_selection: cid={cid}, label={label}, new_indices={new_indices}" )
                         lm().mark_points( new_indices, cid )
                         pcm().update_marked_points(cid)
-                        gm().plot_graph()
+            gm().plot_graph()
         lm().log_markers("post-spread")
         return converged
 

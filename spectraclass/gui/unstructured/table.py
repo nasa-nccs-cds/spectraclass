@@ -31,6 +31,7 @@ class TableManager(SCSingletonConfigurable):
         self._search_widgets = None
         self._match_options = {}
         self._events = []
+        self._broadcast_selection_events = True
 
     def init(self, **kwargs):
         catalog: Dict[str,np.ndarray] = kwargs.get( 'catalog', None )
@@ -52,26 +53,56 @@ class TableManager(SCSingletonConfigurable):
             else:
                 table.df = table.df.iloc[0:0]
 
+    def edit_table(self, cid, index, column, value ):
+        table = self._tables[cid]
+        table._df.loc[index, column] = value
+        table._unfiltered_df.loc[index, column] = value
+
+    def update_table(self, cid, fire_event = True):
+        table = self._tables[cid]
+        table._update_table( triggered_by='update_table', fire_data_change_event=fire_event )
+
     def update_selection(self):
         from spectraclass.model.labels import LabelsManager, lm
-        self.clear_tables()
+        self._broadcast_selection_events = False
         label_map: Dict[int,Set[int]] = lm().getLabelMap()
-        lgm().log(f" update_selection: set label_map = {label_map}")
-        directory_table = self._tables[0]
-        for (cid, pids) in label_map.items():
-            table = self._tables[cid]
+        directory = self._tables[0]
+        changed_pids = dict()
+        for (cid,table) in enumerate(self._tables):
             if cid > 0:
-                for pid in pids:
-                    directory_table.edit_cell( pid, "Class", cid )
-                    self._class_map[pid] = cid
-                    row = directory_table.df.loc[pid]
-                    table.add_row( row )
+                current_pids = set( table.get_changed_df().index.tolist() )
+                new_ids: Set[int] = label_map.get( cid, set() )
+                deleted_pids = current_pids - new_ids
+                added_pids = new_ids - current_pids
+                lgm().log(f" tm.update_selection[{cid}] current: {current_pids}, new: {new_ids}, deleted: {deleted_pids}, added: {added_pids} ")
+                for pid in added_pids: changed_pids[pid] = cid
+                for pid in deleted_pids:
+                    if pid not in  changed_pids.keys(): changed_pids[pid] = 0
+                table.remove_rows( deleted_pids )
+                for pid in added_pids:
+                    row = directory.df.loc[pid].to_dict()
+                    row.update( dict( Class=cid, Index=pid ) )
+                    lgm().log(f" TableManager.update_selection[{cid},{pid}]: row = {row}")
+                    table.add_row( row.items() )
+        for (pid,cid) in changed_pids.items():
+            directory.edit_cell( pid, "Class", cid )
+        self._broadcast_selection_events = True
 
-                index_list: List[int] = selection_table.index.tolist()
-                table.edit_cell( index_list, "Class", cid )
-                lgm().log( f" Edit directory table: set classes for indices {index_list} to {cid}")
-                table.df = pd.concat( [table.df, selection_table] )
-                lgm().log(f" Edit class table[{cid}]: add pids {pids}, append selection_table with shape {selection_table.shape}")
+        # directory_table = self._tables[0]
+        # for (cid, pids) in label_map.items():
+        #     table = self._tables[cid]
+        #     if cid > 0:
+        #         for pid in pids:
+        #             directory_table.edit_cell( pid, "Class", cid )
+        #             self._class_map[pid] = cid
+        #             row = directory_table.df.loc[pid]
+        #             table.add_row( row )
+        #
+        #         index_list: List[int] = selection_table.index.tolist()
+        #         table.edit_cell( index_list, "Class", cid )
+        #         lgm().log( f" Edit directory table: set classes for indices {index_list} to {cid}")
+        #         table.df = pd.concat( [table.df, selection_table] )
+        #         lgm().log(f" Edit class table[{cid}]: add pids {pids}, append selection_table with shape {selection_table.shape}")
 
     def mark_selection(self):
         from spectraclass.model.labels import LabelsManager, lm
@@ -110,7 +141,7 @@ class TableManager(SCSingletonConfigurable):
             lgm().log(f"  ... col-sel ---> ci={self._current_column_index}")
             self._clear_selection()
         elif (ename == 'selection_changed'):
-            if event['source'] == 'gui':
+            if (event['source'] == 'gui') and self._broadcast_selection_events:
                 rows = event["new"]
                 if len( rows ) == 1 or self.is_block_selection(event):
                     lgm().log( f" TABLE.row-sel --->  {rows}" )
@@ -151,7 +182,7 @@ class TableManager(SCSingletonConfigurable):
             empty_catalog = {col: np.empty( [0], 'U' ) for col in self._cols}
             dFrame: pd.DataFrame = pd.DataFrame(empty_catalog, dtype='U', index=pd.Int64Index( [], name="Index" ) )
             wTable = qgrid.show_grid( dFrame, column_options=col_opts, grid_options=grid_opts, show_toolbar=False )
-        wTable.on( traitlets.All, self._handle_table_event )
+        wTable.on( 'selection_changed', self._handle_table_event )
         wTable.layout = ipw.Layout( width="auto", height="100%", max_height="1000px" )
         return wTable
 
