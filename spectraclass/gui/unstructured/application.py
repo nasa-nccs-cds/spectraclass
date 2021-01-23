@@ -65,9 +65,9 @@ class Spectraclass(SpectraclassController):
         super(Spectraclass, self).spread_selection()
         tm().update_selection()
 
-    def add_marker(self, marker: Marker):
+    def add_marker(self, source: str, marker: Marker):
         from spectraclass.gui.unstructured.table import TableManager, tm
-        super(Spectraclass, self).add_marker(marker)
+        super(Spectraclass, self).add_marker( source, marker )
         tm().update_selection()
 
 

@@ -457,14 +457,14 @@ class MapManager(SCSingletonConfigurable):
                     lgm().log(f"Can't add marker, pid = {pid}")
 
 
-    def add_marker(self, marker: Marker, transient: bool, **kwargs ):
+    def add_marker(self, source: str, marker: Marker, transient: bool, **kwargs ):
         from spectraclass.application.controller import app
         if not self._adding_marker:
             self._adding_marker = True
             if marker is None:
                 lgm().log( "NULL Marker: point select is probably out of bounds.")
             else:
-                app().add_marker(marker)
+                app().add_marker( "map", marker)
         self._adding_marker = False
 
     # def undo_marker_selection(self, **kwargs ):

@@ -8,10 +8,8 @@ import pandas as pd
 import ipywidgets as ipw
 from spectraclass.gui.widgets import ToggleButton
 from spectraclass.data.base import DataManager, dm
-from spectraclass.gui.points import PointCloudManager
-from traitlets import traitlets
+import traitlets as tl
 from spectraclass.model.labels import LabelsManager
-import traitlets.config as tlc
 from spectraclass.model.base import SCSingletonConfigurable
 
 def tm(): return TableManager.instance()
@@ -68,24 +66,31 @@ class TableManager(SCSingletonConfigurable):
         label_map: Dict[int,Set[int]] = lm().getLabelMap()
         directory = self._tables[0]
         changed_pids = dict()
+        n_changes = 0
         for (cid,table) in enumerate(self._tables):
             if cid > 0:
                 current_pids = set( table.get_changed_df().index.tolist() )
                 new_ids: Set[int] = label_map.get( cid, set() )
                 deleted_pids = current_pids - new_ids
                 added_pids = new_ids - current_pids
-                lgm().log(f" tm.update_selection[{cid}] current: {current_pids}, new: {new_ids}, deleted: {deleted_pids}, added: {added_pids} ")
-                for pid in added_pids: changed_pids[pid] = cid
-                for pid in deleted_pids:
-                    if pid not in  changed_pids.keys(): changed_pids[pid] = 0
-                table.remove_rows( deleted_pids )
-                for pid in added_pids:
-                    row = directory.df.loc[pid].to_dict()
-                    row.update( dict( Class=cid, Index=pid ) )
-                    lgm().log(f" TableManager.update_selection[{cid},{pid}]: row = {row}")
-                    table.add_row( row.items() )
-        for (pid,cid) in changed_pids.items():
-            directory.edit_cell( pid, "Class", cid )
+                nc = len(added_pids) + len(deleted_pids)
+                if nc > 0:
+                    n_changes = n_changes + nc
+                    if n_changes:         lgm().log(f"\n TM----> update_selection[{cid}]" )
+                    if len(deleted_pids): lgm().log(f"    ######## deleted: {deleted_pids} ")
+                    if len(added_pids):   lgm().log(f"    ######## added: {added_pids} ")
+                    for pid in added_pids: changed_pids[pid] = cid
+                    for pid in deleted_pids:
+                        if pid not in  changed_pids.keys(): changed_pids[pid] = 0
+                    table._remove_rows( deleted_pids )
+                    for pid in added_pids:
+                        row = directory.df.loc[pid].to_dict()
+                        row.update( dict( Class=cid, Index=pid ) )
+                        lgm().log(f" TableManager.update_selection[{cid},{pid}]: row = {row}")
+                        table._add_row( row.items() )
+        if n_changes > 0:
+            for (pid,cid) in changed_pids.items():
+                directory.edit_cell( pid, "Class", cid )
         self._broadcast_selection_events = True
 
         # directory_table = self._tables[0]
@@ -104,19 +109,68 @@ class TableManager(SCSingletonConfigurable):
         #         table.df = pd.concat( [table.df, selection_table] )
         #         lgm().log(f" Edit class table[{cid}]: add pids {pids}, append selection_table with shape {selection_table.shape}")
 
-    def mark_selection(self):
-        from spectraclass.model.labels import LabelsManager, lm
-        selection_table: pd.DataFrame = self._tables[0].df.loc[self._current_selection]
-        cid: int = lm().mark_points( selection_table.index.to_numpy(np.int32) )
-        self._class_map[self._current_selection] = cid
-        for table_index, table in enumerate( self._tables ):
-            if table_index == 0:
-                index_list: List[int] = selection_table.index.tolist()
-                lgm().log( f" -----> Setting cid[{cid}] for indices[:10]= {index_list[:10]}, current_selection = {self._current_selection}, class map nonzero = {np.count_nonzero(self._class_map)}")
-                table.edit_cell( index_list, "Class", cid )
-            else:
-                if table_index == cid:    table.df = pd.concat( [ table.df, selection_table ] ).drop_duplicates()
-                else:                     self.drop_rows( table_index, self._current_selection )
+#     def mark_selection(self):
+#         from spectraclass.model.labels import LabelsManager, lm
+# #        self._broadcast_selection_events = False
+#         label_map: Dict[int,Set[int]] = lm().getLabelMap()
+#         directory = self._tables[0]
+#         changed_pids = dict()
+#         n_changes = 0
+#         for (cid,table) in enumerate(self._tables):
+#             if cid > 0:
+#                 current_pids = set( table.get_changed_df().index.tolist() )
+#                 new_ids: Set[int] = label_map.get( cid, set() )
+#                 deleted_pids = current_pids - new_ids
+#                 added_pids = new_ids - current_pids
+#                 nc = len(added_pids) + len(deleted_pids)
+#                 if nc > 0:
+#                     n_changes = n_changes + nc
+#                     if n_changes:         lgm().log(f"\n TM----> update_selection[{cid}]" )
+#                     if len(deleted_pids): lgm().log(f"    ######## deleted: {deleted_pids} ")
+#                     if len(added_pids):   lgm().log(f"    ######## added: {added_pids} ")
+#                     for pid in added_pids: changed_pids[pid] = cid
+#                     for pid in deleted_pids:
+#                         if pid not in  changed_pids.keys(): changed_pids[pid] = 0
+#                     table._remove_rows( deleted_pids )
+#                     for pid in added_pids:
+#                         row = directory.df.loc[pid].to_dict()
+#                         row.update( dict( Class=cid, Index=pid ) )
+# #                        lgm().log(f" TableManager.update_selection[{cid},{pid}]: row = {row}")
+#                         table._add_row( row.items() )
+#         if n_changes > 0:
+#             for (pid,cid) in changed_pids.items():
+#                 directory.edit_cell( pid, "Class", cid )
+# #        self._broadcast_selection_events = True
+#
+#         # directory_table = self._tables[0]
+#         # for (cid, pids) in label_map.items():
+#         #     table = self._tables[cid]
+#         #     if cid > 0:
+#         #         for pid in pids:
+#         #             directory_table.edit_cell( pid, "Class", cid )
+#         #             self._class_map[pid] = cid
+#         #             row = directory_table.df.loc[pid]
+#         #             table.add_row( row )
+#         #
+#         #         index_list: List[int] = selection_table.index.tolist()
+#         #         table.edit_cell( index_list, "Class", cid )
+#         #         lgm().log( f" Edit directory table: set classes for indices {index_list} to {cid}")
+#         #         table.df = pd.concat( [table.df, selection_table] )
+#         #         lgm().log(f" Edit class table[{cid}]: add pids {pids}, append selection_table with shape {selection_table.shape}")
+#
+#     def mark_selection(self):
+#         from spectraclass.model.labels import LabelsManager, lm
+#         selection_table: pd.DataFrame = self._tables[0].df.loc[self._current_selection]
+#         cid: int = lm().mark_points( selection_table.index.to_numpy(np.int32) )
+#         self._class_map[self._current_selection] = cid
+#         for table_index, table in enumerate( self._tables ):
+#             if table_index == 0:
+#                 index_list: List[int] = selection_table.index.tolist()
+#                 lgm().log( f" -----> Setting cid[{cid}] for indices[:10]= {index_list[:10]}, current_selection = {self._current_selection}, class map nonzero = {np.count_nonzero(self._class_map)}")
+#                 table.edit_cell( index_list, "Class", cid )
+#             else:
+#                 if table_index == cid:    table.df = pd.concat( [ table.df, selection_table ] ).drop_duplicates()
+#                 else:                     self.drop_rows( table_index, self._current_selection )
 
     @property
     def selected_class(self):
@@ -133,10 +187,12 @@ class TableManager(SCSingletonConfigurable):
         lgm().log( f"TABLE[{cid}]: Dropping rows in class map: {pids}")
 
     def _handle_table_event(self, event, widget):
+#        lgm().log(f"\n ------------------------------------------------------------------------------------- \n" )
+        lgm().log( f"handle_table_event: {event}" )
         ename = event['name']
         if( ename == 'sort_changed'):
             cname = event['new']['column']
-            lgm().log(f"  handle_table_event: {ename}[{cname}]: {self._cols}")
+            lgm().log(f"  sort_changed: {ename}[{cname}]: {self._cols}")
             self._current_column_index = self._cols.index( cname )
             lgm().log(f"  ... col-sel ---> ci={self._current_column_index}")
             self._clear_selection()
@@ -144,12 +200,11 @@ class TableManager(SCSingletonConfigurable):
             if (event['source'] == 'gui') and self._broadcast_selection_events:
                 rows = event["new"]
                 if len( rows ) == 1 or self.is_block_selection(event):
-                    lgm().log( f" TABLE.row-sel --->  {rows}" )
                     df = self.selected_table.get_changed_df()
-                    lgm().log( f" TABLE[{self.selected_class}].row-index[:10] --->  {df.index[:10].to_list()}")
-                    self._current_selection = df.index[ rows ].to_list()
-                    lgm().log( f" TABLE[{self.selected_class}].current_selection[:10] --->  {self._current_selection[:10]}")
-                    self.broadcast_selection_event( self._current_selection )
+                    new_selection = df.index[ rows ].to_list()
+                    if new_selection != self._current_selection:
+                        self._current_selection = new_selection
+                        self.broadcast_selection_event( self._current_selection )
 
     def is_block_selection( self, event: Dict ) -> bool:
         old, new = event['old'], event['new']
@@ -166,9 +221,10 @@ class TableManager(SCSingletonConfigurable):
         from spectraclass.application.controller import app
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.model.base import Marker
-        item_str = "" if len(pids) > 8 else f",  pids={pids}"
-        lgm().log(f"TABLE.gui->selection_changed, nitems={len(pids)}{item_str}")
-        app().add_marker( Marker( pids, lm().current_cid ) )
+        if self._broadcast_selection_events:
+            item_str = "" if len(pids) > 8 else f",  pids={pids}"
+            lgm().log(f"TABLE.gui->selection_changed, nitems={len(pids)}{item_str}")
+            app().add_marker( "table", Marker( pids, lm().current_cid ) )
 
     def _createTable( self, tab_index: int ) -> qgrid.QgridWidget:
         assert self._dataFrame is not None, " TableManager has not been initialized "
@@ -182,7 +238,7 @@ class TableManager(SCSingletonConfigurable):
             empty_catalog = {col: np.empty( [0], 'U' ) for col in self._cols}
             dFrame: pd.DataFrame = pd.DataFrame(empty_catalog, dtype='U', index=pd.Int64Index( [], name="Index" ) )
             wTable = qgrid.show_grid( dFrame, column_options=col_opts, grid_options=grid_opts, show_toolbar=False )
-        wTable.on( 'selection_changed', self._handle_table_event )
+        wTable.on( tl.All, self._handle_table_event )
         wTable.layout = ipw.Layout( width="auto", height="100%", max_height="1000px" )
         return wTable
 

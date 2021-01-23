@@ -121,7 +121,7 @@ class JbkPlot:
     def yrange(self):
         ydata: np.ndarray = self._ploty[ self._selected_pids ]
         ymean: np.ndarray = ydata.mean( axis=1 )
-        lgm().log(f" yrange-> ydata shape={ydata.shape}, ymean shape = {ymean.shape} ")
+ #       lgm().log(f" yrange-> ydata shape={ydata.shape}, ymean shape = {ymean.shape} ")
         ys = ydata / ymean.reshape( ymean.shape[0], 1 )
         return ( ys.min(), ys.max() )
 

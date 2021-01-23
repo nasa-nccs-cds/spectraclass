@@ -8,7 +8,6 @@ import xarray as xa
 def app():
     from spectraclass.data.base import DataManager, dm
     rv = dm().app()
-    lgm().log( f" app() -> {rv.__class__}")
     return rv
 
 class SpectraclassController(SCSingletonConfigurable):
@@ -77,6 +76,7 @@ class SpectraclassController(SCSingletonConfigurable):
             elif action.type == "color":
                 pcm().clear_bins()
         pcm().update_plot( )
+        lm().log_markers("post-undo")
         return action
 
     @exception_handled
@@ -115,7 +115,7 @@ class SpectraclassController(SCSingletonConfigurable):
         if flow.spread( seed_points.data, niters ) is not None:
             pcm().color_by_value( flow.get_distances(), distance=True )
 
-    def add_marker(self, marker: Marker):
+    def add_marker(self, source: str, marker: Marker):
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.gui.plot import PlotManager, gm
         from spectraclass.gui.points import PointCloudManager, pcm

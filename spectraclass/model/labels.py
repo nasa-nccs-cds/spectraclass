@@ -174,7 +174,7 @@ class LabelsManager(SCSingletonConfigurable):
 
     def log_markers(self, msg: str ):
         log_strs = [ f"[{m.cid}:{m.size}]" for m in self._markers ]
-        lgm().log( f"\n\n  log_markers[{msg}]: {' '.join(log_strs)}\n\n")
+        lgm().log( f"  ----------------------------> log_markers[{msg}]: {' '.join(log_strs)}")
 
     @classmethod
     def getSortedLabels(self, labels_dset: xa.Dataset ) -> Tuple[np.ndarray,np.ndarray]:

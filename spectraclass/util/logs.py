@@ -46,9 +46,10 @@ class LogManager(SCSingletonConfigurable):
             self.log( msg,  **kwargs )
 
     def exception(self,  msg, **kwargs ):
-        self._log_file.write( f"\n{msg}\n{traceback.format_exc(12)}\n" )
+        self._log_file.write( f"\n{msg}\n{traceback.format_exc()}\n" )
         self._log_file.flush()
 
     def trace(self,  msg, **kwargs ):
-        self._log_file.write( f"\n{msg}\n{traceback.format_stack(12)}\n" )
+        strace = "\n".join(traceback.format_stack())
+        self._log_file.write( f"\n{msg}\n{strace}\n" )
         self._log_file.flush()
