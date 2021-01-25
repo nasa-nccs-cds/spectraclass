@@ -30,6 +30,7 @@ class TableManager(SCSingletonConfigurable):
         self._match_options = {}
         self._events = []
         self._broadcast_selection_events = True
+        self.mark_on_selection = False
 
     def init(self, **kwargs):
         catalog: Dict[str,np.ndarray] = kwargs.get( 'catalog', None )
@@ -42,19 +43,10 @@ class TableManager(SCSingletonConfigurable):
         self._class_map = np.zeros( nrows, np.int32 )
         self._flow_class_map = np.zeros( nrows, np.int32 )
 
-    def clear_tables(self):
-        nrows = self._dataFrame.shape[0]
-        self._class_map = np.zeros(nrows, np.int32)
-        for cid, table in enumerate(self._tables):
-            if cid == 0:
-                table.df["Class"].values[:] = 0
-            else:
-                table.df = table.df.iloc[0:0]
-
     def edit_table(self, cid, index, column, value ):
-        table = self._tables[cid]
-        table._df.loc[index, column] = value
-        table._unfiltered_df.loc[index, column] = value
+         table = self._tables[cid]
+         table._df.loc[index, column] = value
+         table._unfiltered_df.loc[index, column] = value
 
     def update_table(self, cid, fire_event = True):
         table = self._tables[cid]
@@ -76,22 +68,24 @@ class TableManager(SCSingletonConfigurable):
                 nc = len(added_pids) + len(deleted_pids)
                 if nc > 0:
                     n_changes = n_changes + nc
-                    if n_changes:         lgm().log(f"\n TM----> update_selection[{cid}]" )
+                    lgm().log(f" TM----> update_selection[{cid}]" )
                     if len(deleted_pids): lgm().log(f"    ######## deleted: {deleted_pids} ")
                     if len(added_pids):   lgm().log(f"    ######## added: {added_pids} ")
-                    for pid in added_pids: changed_pids[pid] = cid
-                    for pid in deleted_pids:
-                        if pid not in  changed_pids.keys(): changed_pids[pid] = 0
-                    table._remove_rows( deleted_pids )
+                    for pid in added_pids:    changed_pids[pid] = cid
+                    for pid in deleted_pids:  changed_pids[pid] = 0
+                    table.remove_rows( deleted_pids ) # table._remove_rows( deleted_pids )
                     for pid in added_pids:
-                        row = directory.df.loc[pid].to_dict()
+                        row = directory.get_changed_df().loc[pid].to_dict()
                         row.update( dict( Class=cid, Index=pid ) )
-                        lgm().log(f" TableManager.update_selection[{cid},{pid}]: row = {row}")
+                        lgm().log(f"  **TABLE-> update_selection[{cid},{pid}]: row = {row}")
                         table._add_row( row.items() )
         if n_changes > 0:
+            lgm().log(f" TM----> edit directory[ {changed_pids} ]")
             for (pid,cid) in changed_pids.items():
-                directory.edit_cell( pid, "Class", cid )
+                directory.edit_cell( pid, "Class", cid ) # self.edit_table( 0, pid, "Class", cid )
         self._broadcast_selection_events = True
+
+#        self.update_table( 0, False )
 
         # directory_table = self._tables[0]
         # for (cid, pids) in label_map.items():
@@ -180,12 +174,6 @@ class TableManager(SCSingletonConfigurable):
     def selected_table(self):
         return self._tables[ self.selected_class ]
 
-    def drop_rows(self, cid: int, pids: List[int]) :
-        try: self._tables[cid].remove_rows(pids)
-        except: pass
-        self._tables[cid].df.drop(index=pids, inplace=True, errors="ignore" )
-        lgm().log( f"TABLE[{cid}]: Dropping rows in class map: {pids}")
-
     def _handle_table_event(self, event, widget):
 #        lgm().log(f"\n ------------------------------------------------------------------------------------- \n" )
         lgm().log( f"handle_table_event: {event}" )
@@ -202,20 +190,17 @@ class TableManager(SCSingletonConfigurable):
                 if len( rows ) == 1 or self.is_block_selection(event):
                     df = self.selected_table.get_changed_df()
                     new_selection = df.index[ rows ].to_list()
+                    lgm().log(f"  **TABLE-> new selection event: rows = {rows}, indices = {new_selection}")
                     if new_selection != self._current_selection:
                         self._current_selection = new_selection
                         self.broadcast_selection_event( self._current_selection )
 
     def is_block_selection( self, event: Dict ) -> bool:
         old, new = event['old'], event['new']
-        lgm().log(   f"  ------->  is_block_selection: old = {old}, new = {new}"  )
+        lgm().log(   f"   **TABLE->  is_block_selection: old = {old}, new = {new}"  )
         if (len(old) == 1) and (new[-1] == old[ 0]) and ( len(new) == (new[-2]-new[-1]+1)): return True
         if (len(old) >  1) and (new[-1] == old[-1]) and ( len(new) == (new[-2]-new[-1]+1)): return True
         return False
-
-    def is_block_selection1( self, event: Dict ) -> bool:
-        row_list = event['new'].sort()
-        return row_list == list( range( row_list[0], row_list[-1]+1 ) )
 
     def broadcast_selection_event(self, pids: List[int] ):
         from spectraclass.application.controller import app
@@ -223,8 +208,9 @@ class TableManager(SCSingletonConfigurable):
         from spectraclass.model.base import Marker
         if self._broadcast_selection_events:
             item_str = "" if len(pids) > 8 else f",  pids={pids}"
-            lgm().log(f"TABLE.gui->selection_changed, nitems={len(pids)}{item_str}")
-            app().add_marker( "table", Marker( pids, lm().current_cid ) )
+            lgm().log(f" **TABLE-> gui.selection_changed, nitems={len(pids)}{item_str}")
+            cid = lm().current_cid if self.mark_on_selection else 0
+            app().add_marker( "table", Marker( pids, cid ) )
 
     def _createTable( self, tab_index: int ) -> qgrid.QgridWidget:
         assert self._dataFrame is not None, " TableManager has not been initialized "
@@ -282,9 +268,9 @@ class TableManager(SCSingletonConfigurable):
         elif match == "ends-with":   mask = np.char.endswith( np_coldata, match_str )
         elif match == "contains":    mask = ( np.char.find( np_coldata, match_str ) >= 0 )
         else: raise Exception( f"Unrecognized match option: {match}")
-        lgm().log( f"process_find[ M:{match} CS:{case_sensitive} col:{self._current_column_index} ], coldata shape = {np_coldata.shape}, match_str={match_str}, coldata[:10]={np_coldata[:10]}" )
+        lgm().log( f" **TABLE-> process_find[ M:{match} CS:{case_sensitive} col:{self._current_column_index} ], coldata shape = {np_coldata.shape}, match_str={match_str}, coldata[:10]={np_coldata[:10]}" )
         self._current_selection = df.index[mask].to_list()
-        lgm().log(f" --> cname = {cname}, mask shape = {mask.shape}, mask #nonzero = {np.count_nonzero(mask)}, #selected = {len(self._current_selection)}, selection[:8] = {self._current_selection[:8]}")
+        lgm().log(f"  **TABLE->  cname = {cname}, mask shape = {mask.shape}, mask #nonzero = {np.count_nonzero(mask)}, #selected = {len(self._current_selection)}, selection[:8] = {self._current_selection[:8]}")
         self._select_find_results( )
 
     def _clear_selection(self):
@@ -295,12 +281,12 @@ class TableManager(SCSingletonConfigurable):
         if len( self._wFind.value ) > 0:
             find_select = self._match_options['find_select']
             selection = self._current_selection if find_select=="select" else self._current_selection[:1]
-            lgm().log(f"apply_selection[ {find_select} ], nitems: {len(selection)}")
+            lgm().log(f" **TABLE-> apply_selection[ {find_select} ], nitems: {len(selection)}")
             self.selected_table.change_selection( selection )
             self.broadcast_selection_event( selection )
 
     def _process_find_options(self, name: str, state: str ):
-        lgm().log( f"process_find_options[{name}]: {state}" )
+        lgm().log( f" **TABLE-> process_find_options[{name}]: {state}" )
         self._match_options[ name ] = state
         self._process_find( dict( new=self._wFind.value ) )
 

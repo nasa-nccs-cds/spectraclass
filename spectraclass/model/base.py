@@ -44,10 +44,13 @@ class Marker:
         except: return False
 
     def tostr(self):
-        return f"Marker[{self.cid}]: {self._pids.tolist()} )"
+        return self.__repr__()
 
     def __repr__(self):
-        return f"Marker[{self.cid}]: {self.size} )"
+        if self.size > 10:
+            return f"Marker[{self.cid}]-{self.size} )"
+        else:
+            return f"Marker[{self.cid}]: {self._pids.tolist()} )"
 
 class SCSingletonConfigurable(tlc.Configurable):
     config_instances: List["SCSingletonConfigurable"] = []

@@ -317,7 +317,7 @@ class MapManager(SCSingletonConfigurable):
 
     def updateLabelsFromMarkers(self):
         lm().clearTransient()
-        for marker in lm().getMarkers():
+        for marker in lm().markers:
             for pid in marker.pids:
                 coords = self.block.pindex2coords(pid)
                 index = self.block.coords2indices( coords['y'], coords['x'] )
@@ -525,7 +525,7 @@ class MapManager(SCSingletonConfigurable):
     #         self.marker_list = [ marker for marker in self.marker_list if marker['c'] > 0 ]
 
     def get_markers( self ) -> Tuple[ List[float], List[float], List[List[float]] ]:
-        ycoords, xcoords, colors, markers = [], [], [], lm().getMarkers()
+        ycoords, xcoords, colors, markers = [], [], [], lm().markers
         lgm().log(f" ** get_markers, #markers = {len(markers)}")
         for marker in markers:
             for pid in marker.pids:
@@ -572,10 +572,9 @@ class MapManager(SCSingletonConfigurable):
             self.delete_marker( event.mouseevent.ydata, event.mouseevent.xdata )
             self.update_plots()
 
-
-    def delete_marker(self, y, x ) -> List[Marker]:
+    def delete_marker(self, y, x ):
         pindex = self.block.coords2pindex( y, x )
-        return lm().deletePid( pindex )
+        lm().deletePid( pindex )
 
     def initPlots(self, **kwargs) -> Optional[AxesImage]:
         if self.image is None:

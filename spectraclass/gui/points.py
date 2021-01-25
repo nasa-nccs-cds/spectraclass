@@ -96,7 +96,7 @@ class PointCloudManager(SCSingletonConfigurable):
             from spectraclass.model.labels import LabelsManager
             if 'points' in kwargs: self._points = self.normalize( kwargs['points'] )
             self.initialize_markers(True)
-            for marker in LabelsManager.instance().getMarkers():
+            for marker in LabelsManager.instance().markers:
                 self._marker_points[ marker.cid ] = np.append( self._marker_points[ marker.cid ], self._points[ marker.pids, : ], 0 )
         else:
             self._marker_points[0] = self._points[ pids, : ]
