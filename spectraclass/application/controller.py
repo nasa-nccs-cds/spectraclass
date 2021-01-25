@@ -70,14 +70,13 @@ class SpectraclassController(SCSingletonConfigurable):
     def undo_action(self):
         from spectraclass.model.labels import LabelsManager, Action, lm
         lgm().log(f"\n\nController[{self.__class__.__name__}] -> UNDO ")
-        action: Optional[Action] = lm().popAction()
-        is_transient = self.process_action( action )
-        if is_transient:
-            action = lm().popAction()
-            self.process_action(action)
+        while True:
+            action: Optional[Action] = lm().popAction()
+            is_transient = self.process_undo( action )
+            if not is_transient: break
         return action
 
-    def process_action( self, action ) -> bool:
+    def process_undo( self, action ) -> bool:
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.gui.plot import PlotManager, gm
