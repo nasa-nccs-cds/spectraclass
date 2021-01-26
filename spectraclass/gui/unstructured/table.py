@@ -54,7 +54,7 @@ class TableManager(SCSingletonConfigurable):
 
     def update_selection(self):
         from spectraclass.model.labels import LabelsManager, lm
-        self._broadcast_selection_events = False
+ #       self._broadcast_selection_events = False
         label_map: Dict[int,Set[int]] = lm().getLabelMap()
         directory = self._tables[0]
         changed_pids = dict()
@@ -83,7 +83,9 @@ class TableManager(SCSingletonConfigurable):
             lgm().log(f" TM----> edit directory[ {changed_pids} ]")
             for (pid,cid) in changed_pids.items():
                 directory.edit_cell( pid, "Class", cid ) # self.edit_table( 0, pid, "Class", cid )
-        self._broadcast_selection_events = True
+#            directory.change_selection([])
+
+#        self._broadcast_selection_events = True
 
 #        self.update_table( 0, False )
 
@@ -175,8 +177,7 @@ class TableManager(SCSingletonConfigurable):
         return self._tables[ self.selected_class ]
 
     def _handle_table_event(self, event, widget):
-#        lgm().log(f"\n ------------------------------------------------------------------------------------- \n" )
-        lgm().log( f"handle_table_event: {event}" )
+        lgm().log( f"\n  TABLE: handle_event: {event}" )
         ename = event['name']
         if( ename == 'sort_changed'):
             cname = event['new']['column']
@@ -185,7 +186,7 @@ class TableManager(SCSingletonConfigurable):
             lgm().log(f"  ... col-sel ---> ci={self._current_column_index}")
             self._clear_selection()
         elif (ename == 'selection_changed'):
-            if (event['source'] == 'gui') and self._broadcast_selection_events:
+            if (event['source'] == 'gui'):   #  and self._broadcast_selection_events:
                 rows = event["new"]
                 if len( rows ) == 1 or self.is_block_selection(event):
                     df = self.selected_table.get_changed_df()
@@ -206,11 +207,11 @@ class TableManager(SCSingletonConfigurable):
         from spectraclass.application.controller import app
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.model.base import Marker
-        if self._broadcast_selection_events:
-            item_str = "" if len(pids) > 8 else f",  pids={pids}"
-            lgm().log(f" **TABLE-> gui.selection_changed, nitems={len(pids)}{item_str}")
-            cid = lm().current_cid if self.mark_on_selection else 0
-            app().add_marker( "table", Marker( pids, cid ) )
+# if self._broadcast_selection_events:
+        item_str = "" if len(pids) > 8 else f",  pids={pids}"
+        lgm().log(f" **TABLE-> gui.selection_changed, nitems={len(pids)}{item_str}")
+        cid = lm().current_cid if self.mark_on_selection else 0
+        app().add_marker( "table", Marker( pids, cid ) )
 
     def _createTable( self, tab_index: int ) -> qgrid.QgridWidget:
         assert self._dataFrame is not None, " TableManager has not been initialized "

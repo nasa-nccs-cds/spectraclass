@@ -178,6 +178,7 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def execute_task( self, task: str ):
         from spectraclass.application.controller import app
+        lgm().log(f"\n\n  APP EXECUTE: {task}" )
         if task == "embed":
             app().embed()
         elif task == "mark":

@@ -63,7 +63,7 @@ class PointCloudManager(SCSingletonConfigurable):
         project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("points")
         reduced_data: xa.DataArray = project_dataset.reduction
         reduced_data.attrs['dsid'] = project_dataset.attrs['dsid']
-        print( f"UMAP init, init data shape = {reduced_data.shape}")
+        lgm().log( f"UMAP init, init data shape = {reduced_data.shape}")
         embedding = ReductionManager.instance().umap_init( reduced_data, **kwargs  )
         self._points = self.normalize( embedding )
         self.initialize_markers()
@@ -78,7 +78,7 @@ class PointCloudManager(SCSingletonConfigurable):
     def update_plot( self, **kwargs ):
         if 'points' in kwargs: self._points = self.normalize( kwargs['points'] )
         if self._gui is not None:
-            print(f"Updating point sets, sizes: {[ps.shape[0] for ps in self.point_sets]}")
+            lgm().log(f"Updating point sets, sizes: {[ps.shape[0] for ps in self.point_sets]}")
             self._gui.point_sets = self.point_sets
             self._gui.update_rendered_image()
 
@@ -97,10 +97,12 @@ class PointCloudManager(SCSingletonConfigurable):
             if 'points' in kwargs: self._points = self.normalize( kwargs['points'] )
             self.initialize_markers(True)
             for marker in LabelsManager.instance().markers:
-                self._marker_points[ marker.cid ] = np.append( self._marker_points[ marker.cid ], self._points[ marker.pids, : ], 0 )
+                self._marker_pids[ marker.cid ] = np.append( self._marker_pids[ marker.cid ], marker.pids, 0 )
+                self._marker_points[ marker.cid ] = self._points[ self._marker_pids[ marker.cid ], : ]
         else:
-            self._marker_points[0] = self._points[ pids, : ]
-            print( f"  ***** POINTS- mark_points[0], #pids = {len(pids)}")
+            self._marker_pids[0] = np.array(pids)
+            self._marker_points[0] = self._points[ self._marker_pids[ 0 ], : ]
+            lgm().log( f"  ***** POINTS- mark_points[0], #pids = {len(pids)}")
 
     @exception_handled
     def update_marked_points(self, cid: int = -1, **kwargs ):
@@ -147,7 +149,7 @@ class PointCloudManager(SCSingletonConfigurable):
                 elif (iC == npb-1):  mask = ( colors > lspace[iC] ) & ( colors < sys.float_info.max )
                 else:                mask = ( colors > lspace[iC] ) & ( colors <= lspace[iC+1] )
                 self._binned_points[iC] = pts[ mask ]
-                print(f" $$$COLOR: BIN-{iC}, [ {lspace[iC]} -> {lspace[iC+1]} ], nvals = {self._binned_points[iC].shape[0]}, #mask-points = {np.count_nonzero(mask)}" )
+                lgm().log(f" $$$COLOR: BIN-{iC}, [ {lspace[iC]} -> {lspace[iC+1]} ], nvals = {self._binned_points[iC].shape[0]}, #mask-points = {np.count_nonzero(mask)}" )
             LabelsManager.instance().addAction( "color", "points" )
             self.set_base_points_alpha( self.reduced_opacity )
             self.update_plot(**kwargs)
@@ -159,6 +161,7 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @exception_handled
     def clear_pids(self, cid: int, pids: np.ndarray, **kwargs):
+        lgm().log(f"PCM.clear_pids: marker_pids = {[ p.tolist() for p in self._marker_pids]}")
         if self._marker_pids is not None:
             dpts = np.vectorize(lambda x: x in pids)
             for iC, marker_pids in enumerate( self._marker_pids ):
@@ -166,7 +169,9 @@ class PointCloudManager(SCSingletonConfigurable):
                     if len( marker_pids ) > 0:
                         self._marker_pids[iC] = np.delete( self._marker_pids[iC], dpts(marker_pids) )
                         self._marker_points[iC] = self._points[self._marker_pids[iC], :] if len( self._marker_pids[iC] ) > 0 else self.empty_pointset
-                        lgm().log(f"PCM.clear_pids: cid={cid}, # pids cleared = {pids.size}, # remaining markers = {len( self._marker_pids[iC] )}")
+                        lgm().log(f"  --> cid={cid}, # pids cleared = {pids.size}, # remaining markers = {len( self._marker_pids[iC] )}")
+                    else:
+                        self._marker_points[iC] = self.empty_pointset
 
     def clear_points(self, icid: int, **kwargs ):
         if self._marker_pids is not None:
@@ -205,7 +210,7 @@ class PointCloudManager(SCSingletonConfigurable):
         alphas = list( self._gui.point_set_opacities )
         alphas[0] = alpha
         self._gui.point_set_opacities = alphas
-        print(f"Set point set opacities: {self._gui.point_set_opacities}")
+        lgm().log(f"Set point set opacities: {self._gui.point_set_opacities}")
         self.update_plot()
 
     def refresh(self):

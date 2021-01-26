@@ -46,7 +46,7 @@ class SpectraclassController(SCSingletonConfigurable):
     def mark(self):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.points import PointCloudManager, pcm
-        lgm().log(f"\n\nController[{self.__class__.__name__}] -> MARK ")
+        lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> MARK ")
         lm().mark_points()
         pcm().update_marked_points()
 
@@ -54,7 +54,7 @@ class SpectraclassController(SCSingletonConfigurable):
     def clear(self):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, lm
-        lgm().log(f"\n\nController[{self.__class__.__name__}] -> CLEAR ")
+        lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> CLEAR ")
         lm().clearMarkers()
         pcm().clear()
 
@@ -62,36 +62,37 @@ class SpectraclassController(SCSingletonConfigurable):
     def embed(self):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.reduction.embedding import ReductionManager, rm
-        lgm().log(f"\n\nController[{self.__class__.__name__}] -> EMBED ")
+        lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> EMBED ")
         embedding = rm().umap_embedding()
         pcm().reembed(embedding)
 
     @exception_handled
     def undo_action(self):
+        from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, Action, lm
-        lgm().log(f"\n\nController[{self.__class__.__name__}] -> UNDO ")
+        from spectraclass.gui.plot import PlotManager, gm
+        lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> UNDO ")
         while True:
             action: Optional[Action] = lm().popAction()
             is_transient = self.process_undo( action )
             if not is_transient: break
+        pcm().update_plot()
+        gm().plot_graph()
         return action
 
     def process_undo( self, action ) -> bool:
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, Action, lm
-        from spectraclass.gui.plot import PlotManager, gm
         is_transient = False
-        lgm().log(f" UNDO action:  {action}")
         if action is not None:
+            lgm().log(f" UNDO action:  {action}")
             if action.type == "mark":
                 m: Marker = action["marker"]
                 if m.cid == 0: is_transient = True
                 lgm().log(f" POP marker:  {m}")
                 pcm().clear_pids(m.cid, m.pids)
-                gm().plot_graph()
             elif action.type == "color":
                 pcm().clear_bins()
-            pcm().update_plot()
             lm().log_markers("post-undo")
         return is_transient
 
@@ -101,7 +102,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.gui.plot import PlotManager, gm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
-        lgm().log(f"\n\nController[{self.__class__.__name__}] -> SPREAD ")
+        lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> SPREAD ")
         flow: ActivationFlow = afm().getActivationFlow()
         lm().log_markers("pre-spread")
         self._flow_class_map: np.ndarray = lm().labels_data().data
@@ -128,7 +129,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.gui.points import PointCloudManager, pcm
-        lgm().log(f"\n\nController[{self.__class__.__name__}] -> DISTANCE ")
+        lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> DISTANCE ")
         seed_points: xa.DataArray = lm().getSeedPointMask()
         flow: ActivationFlow = afm().getActivationFlow()
         if flow.spread( seed_points.data, niters ) is not None:
@@ -139,7 +140,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.gui.plot import PlotManager, gm
         from spectraclass.gui.points import PointCloudManager, pcm
-        lgm().log(f"\n\nController[{self.__class__.__name__}] -> ADD MARKER ")
+        lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> ADD MARKER ")
         lm().addMarkerAction( "app", marker )
         pids = marker.pids[np.where(marker.pids >= 0)]
         gm().plot_graph(pids)
