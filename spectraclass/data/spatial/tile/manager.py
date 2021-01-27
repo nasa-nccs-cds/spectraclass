@@ -4,11 +4,11 @@ import xarray as xa
 from typing import List, Union, Tuple, Optional, Dict
 from pyproj import Proj, transform
 from spectraclass.data.base import DataManager, DataType
-import rioxarray as rio
+from spectraclass.util.logs import LogManager, lgm
 import os, math, pickle
 import traitlets.config as tlc
 import traitlets as tl
-from spectraclass.model.base import SCSingletonConfigurable
+from spectraclass.model.base import SCSingletonConfigurable, Marker
 from .tile import Tile, Block
 
 def get_rounded_dims( master_shape: List[int], subset_shape: List[int] ) -> List[int]:
@@ -50,6 +50,17 @@ class TileManager(SCSingletonConfigurable):
     def getBlock(self) -> Block:
         return self.tile.getBlock( self.block_index[0], self.block_index[1] )
 
+
+    def get_marker(self, lon: float, lat: float, cid: int =-1, **kwargs ) -> Marker:
+        from spectraclass.model.labels import LabelsManager, lm
+        block = self.getBlock()
+        proj = Proj( block.data.spatial_ref.crs_wkt )
+        x, y = proj( lon, lat )
+        pid = block.coords2pindex( y, x )
+        assert pid >= 0, f"Marker selection error, no points for coord: {[y, x]}"
+        ic = cid if (cid >= 0) else lm().current_cid
+        return Marker( [pid], ic, **kwargs )
+
     @property
     def tile(self) -> Tile:
         return self._tiles.setdefault(tuple(self.tile_index), Tile())
@@ -66,14 +77,14 @@ class TileManager(SCSingletonConfigurable):
         data.attrs['tile_coords'] = self.tile_index
 
     def getTileFileName(self, with_extension = True ) -> str:
-        tile_file_name = f"{self.image_name}.{self._fmt(self.tile_shape)}_{self._fmt(self.tile_index)}"
+        tile_file_name = f"{self.image_name}.{self.fmt(self.tile_shape)}_{self.fmt(self.tile_index)}"
         return tile_file_name + ".tif" if with_extension else tile_file_name
 
     def tileName( self, base_name: str = None ) -> str:
         base = self.image_name if base_name is None else base_name
-        return f"{base}.{self._fmt(self.tile_shape)}_{self._fmt(self.tile_index)}"
+        return f"{base}.{self.fmt(self.tile_shape)}_{self.fmt(self.tile_index)}"
 
-    def _fmt(self, value) -> str:
+    def fmt(self, value) -> str:
         return str(value).strip("([])").replace(",", "-").replace(" ", "")
 
     def setTilesPerImage( self, image_specs = None ):

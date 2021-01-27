@@ -75,8 +75,8 @@ class SpatialDataManager(ModeDataManager):
 
     def __init__( self  ):   # Tile shape (y,x) matches image shape (row,col)
         super(SpatialDataManager, self).__init__()
-        from spectraclass.data.spatial.tile.manager import TileManager
-        self.tiles = TileManager.instance()
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        self.tiles: TileManager = tm()
 
     @classmethod
     def extent(cls, image_data: xa.DataArray ) -> List[float]: # left, right, bottom, top

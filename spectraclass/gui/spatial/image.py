@@ -73,7 +73,7 @@
 #     def extent(self):
 #         return self.console.block.extent()
 
-# class GooglePlotManager(SCSingletonConfigurable):
+# class SatellitePlotManager(SCSingletonConfigurable):
 #
 #     def __init__(self):
 #         QObject.__init__(self)
@@ -156,5 +156,5 @@
 #                 labels: xa.Dataset = event.get('labels')
 #                 self.computeClassificationError( labels )
 #
-# satellitePlotManager = GooglePlotManager()
+# satellitePlotManager = SatellitePlotManager()
 #

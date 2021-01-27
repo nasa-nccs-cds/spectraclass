@@ -15,11 +15,11 @@ class Spectraclass(SpectraclassController):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.gui.control import ActionsManager, am, ControlsManager, cm, UserFeedbackManager, ufm
         from spectraclass.gui.spatial.map import MapManager, mm
-        from spectraclass.gui.spatial.google import GooglePlotManager, gpm
+        from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
 
         self.set_spectraclass_theme()
         css_border = '1px solid blue'
-        collapsibles = ipw.Accordion( children = [ cm().gui(), pcm().gui(), gpm().gui() ], layout=ipw.Layout( width='100%' ) )  # , lm.gui()
+        collapsibles = ipw.Accordion(children = [cm().gui(), pcm().gui(), spm().gui()], layout=ipw.Layout(width='100%'))  # , lm.gui()
         for iT, title in enumerate(['controls', 'embedding', 'satellite']): collapsibles.set_title(iT, title)    # , 'logs'
         collapsibles.selected_index = 1
         plot = ipw.VBox([ ufm().gui(), collapsibles ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )

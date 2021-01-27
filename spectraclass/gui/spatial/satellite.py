@@ -7,15 +7,15 @@ from PIL import Image
 import os, traitlets as tl
 import requests, traceback
 from spectraclass.model.base import SCSingletonConfigurable
-import traitlets.config as tlc
+from spectraclass.util.logs import LogManager, lgm, exception_handled
 from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 from matplotlib.image import AxesImage
 
-def gpm() -> "GooglePlotManager":
-    return GooglePlotManager.instance()
+def spm() -> "SatellitePlotManager":
+    return SatellitePlotManager.instance()
 
-class GooglePlotManager(SCSingletonConfigurable):
+class SatellitePlotManager(SCSingletonConfigurable):
     api_key = tl.Unicode("google/api_key").tag(config=True)
     zoom_level = tl.Int(17).tag(config=True, sync=True)
     image_size = tl.Float(8.0).tag(config=True, sync=True)
@@ -25,7 +25,7 @@ class GooglePlotManager(SCSingletonConfigurable):
     LEFT_BUTTON = 1
 
     def __init__( self ):
-        super(GooglePlotManager, self).__init__()
+        super(SatellitePlotManager, self).__init__()
         self.figure: plt.Figure = plt.figure( 2, frameon=False, constrained_layout=True, figsize=[self.image_size]*2 )
         self.plot: AxesImage = None
         self.image: Image.Image = None
@@ -88,15 +88,18 @@ class GooglePlotManager(SCSingletonConfigurable):
             print( f"Setting satellite image bounds: {xlims} {ylims} -> {xlims1} {ylims1}")
             self.figure.canvas.draw_idle()
 
+    @exception_handled
     def onMouseClick(self, event):
-        from spectraclass.gui.control import UserFeedbackManager, ufm
-        from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.application.controller import app
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         if event.xdata != None and event.ydata != None:
             if event.inaxes ==  self.axes:
-                rightButton: bool = int(event.button) == self.RIGHT_BUTTON
-                event = dict( event="pick", type="image", lat=event.ydata, lon=event.xdata, button=int(event.button), transient=rightButton )
-                mm().processEvent( event )
-     #           ufm().show( "Processed point selection.")
+#                rightButton: bool = int(event.button) == self.RIGHT_BUTTON
+                marker = tm().get_marker( event.xdata, event.ydata )
+                app().add_marker( "satellite", marker )
+#                event = dict( event="pick", type="image", lat=event.ydata, lon=event.xdata, button=int(event.button), transient=rightButton )
+#                mm().processEvent( event )
+                lgm().log( "Processed point selection.")
 
     def mpl_update(self):
         self.figure.canvas.draw_idle()

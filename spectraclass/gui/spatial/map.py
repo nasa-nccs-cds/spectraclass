@@ -18,7 +18,7 @@ from pyproj import Proj
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
 from spectraclass.data.spatial.tile.tile import Block
-from .google import GooglePlotManager
+from .satellite import SatellitePlotManager
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import pandas as pd
 import xarray as xa
@@ -161,71 +161,71 @@ class MapManager(SCSingletonConfigurable):
     def transform(self):
         return self.block.transform
 
-    def processEvent( self, event: Dict ):
-#        super().processEvent(event)
-        eid = event['event']
-        etype = event.get('type')
-        if eid == 'pick':
-            transient = event.pop('transient',True)
-            if etype == 'vtkpoint':
-                cid = lm().current_cid
-                for point_index in event['pids']:
-                    self.mark_point( point_index, cid==0 )
-            else:
-                self.add_marker( self.get_image_selection_marker( event ), transient, type = event['type'] )
-        elif eid == 'key':
-            if   etype == "press":   self.key_mode = event['key']
-            elif etype == "release": self.key_mode = None
-        elif eid == 'gui':
-            if etype == "undo":
-                self.plot_markers_image(**event)
-            elif etype == 'spread':
-                labels: xa.Dataset = event.get('labels')
-                self.plot_label_map( labels['C'] )
-            elif etype in [ 'clear', 'reload' ]:
-                self.clearLabels()
-                self.update_plots()
-                if event.get('markers') != "keep":
-                    self.clearMarkersPlot()
-                self.update_canvas()
-        elif eid == 'plot':
-            if etype == "classification":
-                labels = event['labels']
-                self.plot_label_map( labels )
-        elif eid == 'classify':
-            if etype == "learn.prep":   self.learn_classification( **event )
-            elif etype == "apply.prep": self.apply_classification( **event )
-
-    def get_image_selection_marker(self, event) -> Optional[Marker]:
-        pids, x, y = None, 0, 0
-        try:
-            if 'lat' in event:
-                lat, lon = event['lat'], event['lon']
-                proj = Proj(self.data.spatial_ref.crs_wkt)
-                x, y = proj(lon, lat)
-            elif 'pids' in event:
-                pids = event['pids']
-            else:
-                x, y = event['x'], event['y']
-        except Exception as err:
-            print(f"Marker selection error for event: {event}")
-            return None
-
-        if 'label' in event:
-            self.class_selector.set_active(event['label'])
-
-        if pids is None:
-            pid = self.block.coords2pindex(y, x)
-            if pid < 0:
-                print(f"Marker selection error, no pints for coord: {[y, x]}")
-                return None
-            else:
-                pids = [pid]
-
-        cid = event.get('classification',-1)
-        ic = cid if (cid > 0) else lm().current_cid
-        color = lm().colors[ic]
-        return Marker( pids, ic )
+#     def processEvent( self, event: Dict ):
+# #        super().processEvent(event)
+#         eid = event['event']
+#         etype = event.get('type')
+#         if eid == 'pick':
+#             transient = event.pop('transient',True)
+#             if etype == 'vtkpoint':
+#                 cid = lm().current_cid
+#                 for point_index in event['pids']:
+#                     self.mark_point( point_index, cid==0 )
+#             else:
+#                 self.add_marker( self.get_image_selection_marker( event ), transient, type = event['type'] )
+#         elif eid == 'key':
+#             if   etype == "press":   self.key_mode = event['key']
+#             elif etype == "release": self.key_mode = None
+#         elif eid == 'gui':
+#             if etype == "undo":
+#                 self.plot_markers_image(**event)
+#             elif etype == 'spread':
+#                 labels: xa.Dataset = event.get('labels')
+#                 self.plot_label_map( labels['C'] )
+#             elif etype in [ 'clear', 'reload' ]:
+#                 self.clearLabels()
+#                 self.update_plots()
+#                 if event.get('markers') != "keep":
+#                     self.clearMarkersPlot()
+#                 self.update_canvas()
+#         elif eid == 'plot':
+#             if etype == "classification":
+#                 labels = event['labels']
+#                 self.plot_label_map( labels )
+#         elif eid == 'classify':
+#             if etype == "learn.prep":   self.learn_classification( **event )
+#             elif etype == "apply.prep": self.apply_classification( **event )
+#
+#     def get_image_selection_marker(self, event) -> Optional[Marker]:
+#         pids, x, y = None, 0, 0
+#         try:
+#             if 'lat' in event:
+#                 lat, lon = event['lat'], event['lon']
+#                 proj = Proj(self.data.spatial_ref.crs_wkt)
+#                 x, y = proj(lon, lat)
+#             elif 'pids' in event:
+#                 pids = event['pids']
+#             else:
+#                 x, y = event['x'], event['y']
+#         except Exception as err:
+#             print(f"Marker selection error for event: {event}")
+#             return None
+#
+#         if 'label' in event:
+#             self.class_selector.set_active(event['label'])
+#
+#         if pids is None:
+#             pid = self.block.coords2pindex(y, x)
+#             if pid < 0:
+#                 print(f"Marker selection error, no pints for coord: {[y, x]}")
+#                 return None
+#             else:
+#                 pids = [pid]
+#
+#         cid = event.get('classification',-1)
+#         ic = cid if (cid > 0) else lm().current_cid
+#         color = lm().colors[ic]
+#         return Marker( pids, ic )
 
 
     def point_coords( self, point_index: int ) -> Dict:
@@ -235,8 +235,8 @@ class MapManager(SCSingletonConfigurable):
 
     def mark_point( self, pid: int, transient: bool ):
         cid, color = lm().selectedColor( not transient )
-        marker = Marker( [pid], cid )
-        self.add_marker( marker, transient, labeled=False )
+        marker = Marker( [pid], cid, labeled=False )
+        self.add_marker( marker )
 
     def setBlock( self, **kwargs ) -> Block:
         from spectraclass.data.spatial.tile.manager import TileManager
@@ -260,7 +260,7 @@ class MapManager(SCSingletonConfigurable):
                 self.update_plot_axis_bounds()
                 self.plot_markers_image()
                 self.update_plots()
-                GooglePlotManager.instance().setBlock(self.block)
+                SatellitePlotManager.instance().setBlock(self.block)
 
         return self.block
 
@@ -268,7 +268,7 @@ class MapManager(SCSingletonConfigurable):
         if self.plot_axes is not None:
             self.plot_axes.set_xlim( self.block.xlim )
             self.plot_axes.set_ylim( self.block.ylim )
-            GooglePlotManager.instance().set_axis_limits(self.block.xlim, self.block.ylim)
+            SatellitePlotManager.instance().set_axis_limits(self.block.xlim, self.block.ylim)
 
 
     # def computeMixingSpace(self, *args, **kwargs):
@@ -450,21 +450,20 @@ class MapManager(SCSingletonConfigurable):
                     lgm().log( f"Adding marker for pid = {pid}, cid = {cid}")
                     ptindices = self.block.pindex2indices(pid)
                     classification = self.label_map.values[ ptindices['iy'], ptindices['ix'] ] if (self.label_map is not None) else -1
-                    marker = Marker( [pid], cid )
-                    self.add_marker( marker, cid == 0, classification=classification )
+                    self.add_marker( Marker( [pid], cid, classification = classification ) )
                     self.dataLims = event.inaxes.dataLim
                 else:
                     lgm().log(f"Can't add marker, pid = {pid}")
 
 
-    def add_marker(self, source: str, marker: Marker, transient: bool, **kwargs ):
+    def add_marker(self, marker: Marker ):
         from spectraclass.application.controller import app
         if not self._adding_marker:
             self._adding_marker = True
             if marker is None:
                 lgm().log( "NULL Marker: point select is probably out of bounds.")
             else:
-                app().add_marker( "map", marker)
+                app().add_marker( "map", marker  )
         self._adding_marker = False
 
     # def undo_marker_selection(self, **kwargs ):

@@ -134,14 +134,14 @@ class PointCloudManager(SCSingletonConfigurable):
         self.update_plot()
 
     def color_by_value( self, values: np.ndarray = None, **kwargs ):
-        from spectraclass.gui.control import UserFeedbackManager, ufm
         is_distance = kwargs.get( 'distance', False )
         if values is not None:
+            lgm().log(f" $$$color_by_value[distance:{is_distance}]: data shape = {values.shape} ")
             self._color_values = ma.masked_invalid(values)
         if self._color_values is not None:
             colors = self._color_values.filled(sys.float_info.max)
             (vmin, vmax), npb = ( ( 0.0, self._color_values.max() ) if is_distance else self.get_color_bounds() ), self._n_point_bins
-            ufm().show( f" $$$color_by_value: (vmin, vmax, npb) = {(vmin, vmax, npb)}, points (max, min, shape) = { (self._points.max(), self._points.min(), self._points.shape) }" )
+            lgm().log( f" $$$color_by_value(shape:{colors.shape}) (vmin, vmax, npb) = {(vmin, vmax, npb)}, points (max, min, shape) = { (self._points.max(), self._points.min(), self._points.shape) }" )
             pts: np.ndarray = ma.masked_invalid( self._points ).filled( sys.float_info.max )
             lspace: np.ndarray = np.linspace( vmin, vmax, npb+1 )
             for iC in range( 0, npb ):
@@ -149,7 +149,7 @@ class PointCloudManager(SCSingletonConfigurable):
                 elif (iC == npb-1):  mask = ( colors > lspace[iC] ) & ( colors < sys.float_info.max )
                 else:                mask = ( colors > lspace[iC] ) & ( colors <= lspace[iC+1] )
                 self._binned_points[iC] = pts[ mask ]
-                lgm().log(f" $$$COLOR: BIN-{iC}, [ {lspace[iC]} -> {lspace[iC+1]} ], nvals = {self._binned_points[iC].shape[0]}, #mask-points = {np.count_nonzero(mask)}" )
+#                lgm().log(f" $$$COLOR: BIN-{iC}, [ {lspace[iC]} -> {lspace[iC+1]} ], nvals = {self._binned_points[iC].shape[0]}, #mask-points = {np.count_nonzero(mask)}" )
             LabelsManager.instance().addAction( "color", "points" )
             self.set_base_points_alpha( self.reduced_opacity )
             self.update_plot(**kwargs)
@@ -210,7 +210,7 @@ class PointCloudManager(SCSingletonConfigurable):
         alphas = list( self._gui.point_set_opacities )
         alphas[0] = alpha
         self._gui.point_set_opacities = alphas
-        lgm().log(f"Set point set opacities: {self._gui.point_set_opacities}")
+  #      lgm().log(f"Set point set opacities: {self._gui.point_set_opacities}")
         self.update_plot()
 
     def refresh(self):

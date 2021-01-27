@@ -95,8 +95,8 @@ class Block:
 
     @property
     def file_name(self):
-        from spectraclass.data.spatial.tile.manager import TileManager
-        return f"{TileManager.instance().tileName()}_b-{self.block_coords[0]}-{self.block_coords[1]}"
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        return f"{tm().tileName()}_b-{tm().fmt(self.shape)}-{self.block_coords[0]}-{self.block_coords[1]}"
 
     def get_index_array(self) -> xa.DataArray:
         stacked_data: xa.DataArray = self.data.stack( samples=self.data.dims[-2:] )
