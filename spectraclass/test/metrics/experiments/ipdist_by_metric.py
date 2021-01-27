@@ -6,7 +6,7 @@ np.random.seed(19680801)
 #  ‘jensenshannon’, ‘mahalanobis’, ‘minkowski’, ‘seuclidean’
 
 npoints = 1000
-ndim = 32
+ndim = 400
 dim_step = 40
 metrics =   [ ("seuclidean", {}), ("cosine", {}), ("minkowski", dict(p=9)), ("jensenshannon", {}),
               ("braycurtis", {}), ("canberra", {}), ("chebyshev", {}), ("correlation", {}), ("mahalanobis", {}) ]

@@ -20,8 +20,9 @@ class InterpointDistancePlot:
         dmax = distances.max()
         distances = distances / dmax
         self.axs[iy,ix].hist( distances, self.nbins, [0.0, 1.0], True )
-        self.axs[iy,ix].set_title( title, y=1.0, pad=-10, fontsize=10 )
-        print(f"Histogram{[ix, iy]}, mag: {dmax:.2f}, {title}, time = {time.time()-t0}")
+        plot_title = f"{title}, mag: {dmax:.2f}, time: {(time.time()-t0):.2f}"
+        self.axs[iy,ix].set_title( plot_title, y=1.0, pad=-10, fontsize=10 )
+        print(f"Histogram{[ix, iy]}-> {plot_title}")
 
     def show(self):
         plt.show()
