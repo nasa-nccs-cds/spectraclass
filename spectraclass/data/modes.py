@@ -173,7 +173,7 @@ class ModeDataManager(SCSingletonConfigurable):
         wTab.set_title(2, "Configure")
         return wTab
 
-    def getInputFileData( self, vname: str ) -> np.ndarray:
+    def getInputFileData( self, vname: str = None, **kwargs ) -> np.ndarray:
         raise NotImplementedError()
 
     def execute_task( self, task: str ):
@@ -227,8 +227,8 @@ class ModeDataManager(SCSingletonConfigurable):
 
     @property
     def datasetDir(self):
-        dsdir = os.path.join( self.cache_dir, self.dm.name, self.MODE )
-        os.makedirs(dsdir, exist_ok=True)
+        dsdir = os.path.join( self.cache_dir, "spectraclass", self.MODE, self.dm.name )
+        os.makedirs(dsdir, 0o777, exist_ok=True)
         return dsdir
 
 

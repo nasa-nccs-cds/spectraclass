@@ -10,6 +10,7 @@ from spectraclass.reduction.embedding import ReductionManager, rm
 from spectraclass.data.base import ModeDataManager
 import matplotlib.pyplot as plt
 from collections import OrderedDict
+from spectraclass.util.logs import LogManager, lgm
 import os, math, pickle
 import rioxarray as rio
 from .modes import *
@@ -95,7 +96,7 @@ class SpatialDataManager(ModeDataManager):
         if self.reduce_method != "":
             dave, dmag =  data.values.mean(0), 2.0*data.values.std(0)
             normed_data = ( data.values - dave ) / dmag
-            reduced_spectra, reproduction = rm().reduce( normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )[0]
+            reduced_spectra, reproduction, _ = rm().reduce( normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )[0]
             coords = dict( samples=data.coords['samples'], band=np.arange( self.model_dims )  )
             return xa.DataArray( reduced_spectra, dims=['samples', 'band'], coords=coords )
         return data
@@ -162,7 +163,7 @@ class SpatialDataManager(ModeDataManager):
             point_data = stacked_raster.where( stacked_raster != nodata, drop=True ).astype(np.int32)
         else:
             point_data = stacked_raster.dropna(dim='samples', how='any')
-        print(f" raster2points -> [{raster.name}]: Using {point_data.shape[0]} valid samples out of {stacked_raster.shape[0]} pixels")
+        lgm().log(f" raster2points -> [{raster.name}]: Using {point_data.shape[0]} valid samples out of {stacked_raster.shape[0]} pixels")
         point_data.attrs['dsid'] = raster.name
         return point_data
 
@@ -218,7 +219,7 @@ class SpatialDataManager(ModeDataManager):
         else:                               defaults['extent'] = [left, right, top, bottom]
         if rescale is not None:
             raster = cls.scale_to_bounds(raster, rescale)
-        print( f" $$$COLOR: Plotting tile image with parameters: {defaults}")
+        lgm().log( f" $$$COLOR: Plotting tile image with parameters: {defaults}")
         img = ax.imshow( raster.data, zorder=1, **defaults )
         ax.set_title(title)
         if colorbar and (raster.ndim == 2):
@@ -248,16 +249,16 @@ class SpatialDataManager(ModeDataManager):
             model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
             data_vars = dict( raw=point_data )
             if self.reduce_method != "":
-                reduced_spectra, reproduction = rm().reduce( point_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )[0]
+                reduced_spectra, reproduction, usable_point_data = rm().reduce( point_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )[0]
                 data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
-                data_vars['reproduction'] = point_data.copy( data=reproduction )
+                data_vars['reproduction'] = usable_point_data.copy( data=reproduction )
             dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
             file_name_base = dsid if self.reduce_method == "None" else f"{dsid}-{self.reduce_method}-{self.model_dims}"
             self.dataset = f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
             output_file = os.path.join(self.datasetDir, self.dataset + ".nc")
             outputDir = os.path.join( self.cache_dir, dm().project_name )
             os.makedirs(outputDir, 0o777, True)
-            print(f"Writing output to {output_file}")
+            lgm().log(f"Writing output to {output_file}")
             if os.path.exists(output_file): os.remove(output_file)
             dataset.to_netcdf(output_file)
 
@@ -272,7 +273,7 @@ class SpatialDataManager(ModeDataManager):
             blocks_point_data = [ training_data ]
         else: raise Exception( f"Unrecognized 'reduce_scope' parameter: {self.reduce_scope}" )
         blocks_reduction = rm().reduce( training_data, blocks_point_data, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
-        for ((reduced_spectra, reproduction), point_data) in zip(blocks_reduction,blocks_point_data):
+        for ( reduced_spectra, reproduction, point_data ) in blocks_reduction:
             dsid = point_data.attrs['dsid']
             model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
             data_vars = dict( raw=point_data )
@@ -281,16 +282,10 @@ class SpatialDataManager(ModeDataManager):
             result_dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
             file_name_base = f"{dsid}-{self.reduce_method}-{self.model_dims}"
             self.dataset = f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
-            output_file = os.path.join(self.datasetDir, self.dataset + ".nc")
-            outputDir = os.path.join( self.cache_dir, dm().project_name )
-            os.makedirs(outputDir, 0o777, True)
-            print(f" Writing reduced[{self.reduce_scope}] output to {output_file}")
+            output_file = os.path.join( self.datasetDir, self.dataset + ".nc")
+            lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file}")
             if os.path.exists(output_file): os.remove(output_file)
             result_dataset.to_netcdf(output_file)
-
-
-
-
 
     def getFilePath(self, use_tile: bool ) -> str:
         base_dir = dm().modal.data_dir
@@ -301,21 +296,20 @@ class SpatialDataManager(ModeDataManager):
         output_file = self.getFilePath(True)
         try:
             if os.path.exists(output_file): os.remove(output_file)
-            print(f"Writing (raster) tile file {output_file}")
+            lgm().log(f"Writing (raster) tile file {output_file}")
             raster_data.rio.to_raster(output_file)
             return output_file
         except Exception as err:
-            print(f"Unable to write raster file to {output_file}: {err}")
+            lgm().log(f"Unable to write raster file to {output_file}: {err}")
             return None
 
-    def readGeotiff(self, read_tile: bool ) -> Optional[xa.DataArray]:
-        input_bands: Optional[xa.DataArray] = None
+    def readGeotiff(self, read_tile: bool ) -> xa.DataArray:
         input_file_path = self.getFilePath( read_tile )
-        if os.path.isfile( input_file_path ):
-            input_bands = rio.open_rasterio(input_file_path)
-            if 'transform' not in input_bands.attrs.keys():
-                gts = input_bands.spatial_ref.GeoTransform.split()
-                input_bands.attrs['transform'] = [float(gts[i]) for i in [1, 2, 0, 4, 5, 3]]
-            print(f"Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}")
+        assert os.path.isfile( input_file_path ), f"Input file does not exist: {input_file_path}"
+        input_bands = rio.open_rasterio(input_file_path)
+        if 'transform' not in input_bands.attrs.keys():
+            gts = input_bands.spatial_ref.GeoTransform.split()
+            input_bands.attrs['transform'] = [float(gts[i]) for i in [1, 2, 0, 4, 5, 3]]
+        lgm().log(f"Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}")
         return input_bands
 

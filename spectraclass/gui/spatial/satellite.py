@@ -76,7 +76,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
     def cache_file_path(self):
         from spectraclass.data.base import DataManager, dm
         cache_file_dir = os.path.join( dm().cache_dir, dm().project_name, dm().mode, "google" )
-        os.makedirs( cache_file_dir, exist_ok = True )
+        os.makedirs( cache_file_dir, 0o777, exist_ok = True )
         return os.path.join( cache_file_dir, f"{self.block.file_name}.tiff" )
 
 

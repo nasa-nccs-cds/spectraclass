@@ -33,7 +33,7 @@ class SettingsManager:
     @property
     def settings_dir(self) -> str:
         root_dir = os.path.join( os.path.expanduser("~/.spectraclass"), self.project_name )
-        os.makedirs( root_dir, exist_ok=True )
+        os.makedirs( root_dir, 0o777, exist_ok=True )
         return root_dir
 
     @property

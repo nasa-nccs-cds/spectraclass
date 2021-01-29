@@ -34,7 +34,7 @@ class LogManager(SCSingletonConfigurable):
 
     def init_logging(self, name: str, mode: str ):
         log_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "logging", mode )
-        os.makedirs( log_dir, exist_ok=True )
+        os.makedirs( log_dir, 0o777, exist_ok=True )
         self._log_file = open( f'{log_dir}/{name}.log', 'w' )
 
     def log( self,  msg, **kwargs ):

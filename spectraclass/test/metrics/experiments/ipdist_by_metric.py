@@ -8,20 +8,25 @@ np.random.seed(19680801)
 npoints = 1000
 ndim = 400
 dim_step = 40
-metrics =   [ ("seuclidean", {}), ("cosine", {}), ("minkowski", dict(p=9)), ("jensenshannon", {}),
-              ("braycurtis", {}), ("canberra", {}), ("chebyshev", {}), ("correlation", {}), ("mahalanobis", {}) ]
-mparms = dict( )
+metrics =   [   dict( metric = "seuclidean"         ),
+                dict( metric = "cosine"             ),
+                dict( metric = "minkowski", p = 9   ),
+                dict( metric = "jensenshannon"      ),
+                dict( metric = "braycurtis"         ),
+                dict( metric = "canberra"           ),
+                dict( metric = "chebyshev"          ),
+                dict( metric = "correlation"        ),
+                dict( metric = "mahalanobis"        ) ]
+
 nbins = 200
 nx = 3
 ny = 3
+dplot = InterpointDistancePlot( nx, ny, nbins, ndim=ndim )
 
-dplot = InterpointDistancePlot( nx,ny,nbins, f'Distribution of inter-point distances, dimensions = {ndim}' )
-
-data = np.random.rand(npoints, ndim)
 for iy in range(ny):
   for ix in range( nx ):
-    metric, mparms = metrics[ ix + iy*nx ]
-    dplot.histogram( data, ix, iy, metric, f"Metric: {metric} {mparms}", **mparms )
+    mparms = metrics[ ix + iy*nx ]
+    dplot.histogram( ix, iy, **mparms )
 
 print( "Plotting..")
 dplot.show()

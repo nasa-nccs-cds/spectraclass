@@ -6,10 +6,12 @@ import numpy as np, time, traceback
 from ..model.labels import LabelsManager
 import traitlets as tl
 import traitlets.config as tlc
+from spectraclass.util.logs import LogManager, lgm, exception_handled
 from spectraclass.model.base import SCSingletonConfigurable
 
 class ReductionManager(SCSingletonConfigurable):
     init = tl.Unicode("random").tag(config=True,sync=True)
+    loss = tl.Unicode("cosine_similarity").tag(config=True,sync=True)
     nepochs = tl.Int( 200 ).tag(config=True,sync=True)
     alpha = tl.Float( 0.9 ).tag(config=True,sync=True)
     ndim = tl.Int( 3 ).tag(config=True,sync=True)
@@ -32,10 +34,10 @@ class ReductionManager(SCSingletonConfigurable):
     def refresh(self):
         self._mapper = {}
 
-    def reduce(self, train_data: np.ndarray, test_data: List[np.ndarray], reduction_method: str, ndim: int, nepochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, np.ndarray]]:
+    def reduce(self, train_data: np.ndarray, test_data: List[np.ndarray], reduction_method: str, ndim: int, nepochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         if test_data is None: test_data = [train_data]
         if reduction_method.lower() == "autoencoder": return self.autoencoder_reduction(train_data, test_data, ndim, nepochs, sparsity)
-        else: return [ (td,td) for td in test_data ]
+        else: return [ (td,td,td) for td in test_data ]
 
     # def spectral_reduction(data, graph, n_components=3, sparsify=False):
     #     t0 = time.time()
@@ -53,7 +55,7 @@ class ReductionManager(SCSingletonConfigurable):
     #     print(f"Completed spectral_embedding in {(time.time() - t0) / 60.0} min.")
     #     return rv
 
-    def autoencoder_reduction(self, train_input: np.ndarray, test_inputs: Optional[List[np.ndarray]], ndim: int, epochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, np.ndarray]]:
+    def autoencoder_reduction(self, train_input: np.ndarray, test_inputs: Optional[List[np.ndarray]], ndim: int, epochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         from keras.layers import Input, Dense
         from keras.models import Model
         from keras import losses, regularizers
@@ -63,7 +65,6 @@ class ReductionManager(SCSingletonConfigurable):
         inputlayer = Input( shape=[input_dims] )
         activation = 'tanh'
         optimizer = 'rmsprop'
-        loss = "cosine_similarity"
         layer_dims, x = int( round( input_dims / reduction_factor )), inputlayer
         while layer_dims > ndim:
             x = Dense(layer_dims, activation=activation)(x)
@@ -82,19 +83,22 @@ class ReductionManager(SCSingletonConfigurable):
         autoencoder.summary()
         encoder.summary()
 
-        autoencoder.compile(loss=loss, optimizer=optimizer )
+        autoencoder.compile(loss=self.loss, optimizer=optimizer )
         autoencoder.fit(train_input, train_input, epochs=epochs, batch_size=256, shuffle=True)
         results = []
         for iT, test_input in enumerate(test_inputs):
-            encoded_data = encoder.predict(test_input)
-            scaled_encoding = encoded_data/encoded_data.std()
-            reproduction = autoencoder.predict(test_input)
-            results.append( (scaled_encoding, reproduction ) )
-            if iT == 0:
-                print(f" Autoencoder_reduction with sparsity={sparsity}, result: shape = {encoded_data.shape}")
-                print(f" ----> encoder_input: shape = {train_input.shape}, val[5][5] = {train_input[:5][:5]} ")
-                print(f" ----> reproduction: shape = {reproduction.shape}, val[5][5] = {reproduction[:5][:5]} ")
-                print(f" ----> encoding: shape = {scaled_encoding.shape}, val[5][5]108 = {scaled_encoding[:5][:5]} ")
+            try:
+                encoded_data = encoder.predict(test_input)
+                scaled_encoding = encoded_data/encoded_data.std()
+                reproduction = autoencoder.predict(test_input)
+                results.append( (scaled_encoding, reproduction, test_input ) )
+                if iT == 0:
+                    lgm().log(f" Autoencoder_reduction with sparsity={sparsity}, result: shape = {encoded_data.shape}")
+                    lgm().log(f" ----> encoder_input: shape = {train_input.shape}, val[5][5] = {train_input[:5][:5]} ")
+                    lgm().log(f" ----> reproduction: shape = {reproduction.shape}, val[5][5] = {reproduction[:5][:5]} ")
+                    lgm().log(f" ----> encoding: shape = {scaled_encoding.shape}, val[5][5]108 = {scaled_encoding[:5][:5]} ")
+            except Exception as err:
+                lgm().exception( f"Unable to process test input[{iT}], input shape = {test_input.shape}, error = {err}" )
         return results
 
     def umap_init( self,  point_data: xa.DataArray, **kwargs ) -> Optional[np.ndarray]:
@@ -108,9 +112,9 @@ class ReductionManager(SCSingletonConfigurable):
         if point_data.shape[1] <= self.ndim:
             mapper.set_embedding(mapper.input_data)
         else:
-            print( f"umap_init: init = {self.init}")
+            lgm().log( f"umap_init: init = {self.init}")
             if self.init == "autoencoder":
-                [(reduction, reproduction)] = self.autoencoder_reduction( point_data.values, None, self.ndim, 50 )
+                [( reduction, reproduction, _ )] = self.autoencoder_reduction( point_data.values, None, self.ndim, 50 )
                 mapper.init_embedding(reduction)
             mapper.init = self.init
             kwargs['nepochs'] = 1
@@ -125,7 +129,7 @@ class ReductionManager(SCSingletonConfigurable):
         if 'alpha' not in kwargs.keys():   kwargs['alpha'] = self.alpha
         self._state = self.PROCESSED
         labels_data: xa.DataArray = kwargs.get( 'labels', LabelsManager.instance().labels_data() )
-        print( f"Executing UMAP embedding with input data shape = {mapper.input_data.shape}, parms: {kwargs}")
+        lgm().log( f"Executing UMAP embedding with input data shape = {mapper.input_data.shape}, parms: {kwargs}")
         mapper.embed( mapper.input_data, labels_data.values, **kwargs )
         return mapper.embedding
 

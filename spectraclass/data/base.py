@@ -98,7 +98,7 @@ class DataManager(SCSingletonConfigurable):
         conf_dict = self.generate_config_file()
         for scope, trait_classes in conf_dict.items():
             cfg_file = os.path.realpath( self.config_file( self.name, scope ) )
-            os.makedirs(os.path.dirname(cfg_file), exist_ok=True)
+            os.makedirs(os.path.dirname(cfg_file), 0o777, exist_ok=True)
             lines = []
 
             for class_name, trait_map in trait_classes.items():
@@ -107,7 +107,7 @@ class DataManager(SCSingletonConfigurable):
                     cfg_str = f"c.{class_name}.{trait_name} = {tval_str}\n"
                     lines.append( cfg_str )
 
-            print(f"Writing config file: {cfg_file}")
+            lgm().log(f"Writing config file: {cfg_file}")
             with self._lock:
                 cfile_handle = open(cfg_file, "w")
                 cfile_handle.writelines(lines)
@@ -122,7 +122,7 @@ class DataManager(SCSingletonConfigurable):
 
     def refresh_all(self):
         for inst in self.config_instances: inst.refresh()
-        print( "Refreshed Configuration")
+        lgm().log( "Refreshed Configuration")
 
     @classmethod
     def register_mode(cls, manager_type: Type[ModeDataManager] ):
@@ -170,8 +170,8 @@ class DataManager(SCSingletonConfigurable):
             self._wGui = self._mode_data_manager_.gui()
         return self._wGui
 
-    def getInputFileData(self, vname: str ) -> np.ndarray:
-        return self._mode_data_manager_.getInputFileData( vname )
+    def getInputFileData(self, vname: str = None, **kwargs ) -> np.ndarray:
+        return self._mode_data_manager_.getInputFileData( vname, **kwargs )
 
     def loadCurrentProject(self, caller_id: str ) -> xa.Dataset:
         lgm().log( f" DataManager: loadCurrentProject: {caller_id}" )

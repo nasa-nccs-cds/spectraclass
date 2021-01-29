@@ -94,17 +94,16 @@ class TileManager(SCSingletonConfigurable):
         self.block_dims = get_rounded_dims( self.tile_shape, [ self.block_size ]* 2)
         self.block_shape = get_rounded_dims(self.tile_shape, self.block_dims)
 
-    def getTileData(self) -> Optional[xa.DataArray]:
-        tile_data: Optional[xa.DataArray] = self._readTileFile() if self.cacheTileData else None
-        if tile_data is None: tile_data = self._getTileDataFromImage()
-        if tile_data is None: return None
+    def getTileData(self) -> xa.DataArray:
+        try:                    tile_data: xa.DataArray = self._readTileFile()
+        except AssertionError:  tile_data = self._getTileDataFromImage()
         tile_data = self.mask_nodata(tile_data)
         init_shape = [*tile_data.shape]
         valid_bands = DataManager.instance().valid_bands()
         if valid_bands is not None:
             dataslices = [tile_data.isel(band=slice(valid_band[0], valid_band[1])) for valid_band in valid_bands]
             tile_data = xa.concat(dataslices, dim="band")
-            print( f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
+            lgm().log( f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
         result = self.rescale(tile_data)
         return result
 
@@ -142,25 +141,24 @@ class TileManager(SCSingletonConfigurable):
         iy0, ix0 = iy * self.block_shape[0], ix * self.block_shape[1]
         y0, x0 = tr0[5] + iy0 * tr0[4], tr0[2] + ix0 * tr0[0]
         tr1 = [ tr0[0], tr0[1], x0, tr0[3], tr0[4], y0, 0, 0, 1  ]
-        print( f"Tile transform: {tr0}, Block transform: {tr1}, tile indices = [{self.tile_index}], block indices = [ {iy}, {ix} ]" )
+        lgm().log( f"Tile transform: {tr0}, Block transform: {tr1}, tile indices = [{self.tile_index}], block indices = [ {iy}, {ix} ]" )
         return  ProjectiveTransform( np.array(tr1).reshape(3, 3) )
 
     def _computeSpatialNorm(self, tile_raster: xa.DataArray, refresh=False) -> xa.DataArray:
         norm_file = os.path.join(self.data_cache, self.normFileName)
         if not refresh and os.path.isfile(norm_file):
-            print(f"Loading norm from global norm file {norm_file}")
+            lgm().log(f"Loading norm from global norm file {norm_file}")
             return xa.DataArray.from_dict(pickle.load(open(norm_file, 'rb')))
         else:
-            print(f"Computing norm and saving to global norm file {norm_file}")
+            lgm().log(f"Computing norm and saving to global norm file {norm_file}")
             norm: xa.DataArray = tile_raster.mean(dim=['x', 'y'], skipna=True)
             pickle.dump(norm.to_dict(), open(norm_file, 'wb'))
             return norm
 
-    def _getTileDataFromImage(self) -> Optional[xa.DataArray]:
+    def _getTileDataFromImage(self) -> xa.DataArray:
         tm = TileManager.instance()
         tm.setTilesPerImage()
         full_input_bands: xa.DataArray = DataManager.instance().modal.readGeotiff(False)
-        if full_input_bands is None: return None
         ybounds, xbounds = tm.getTileBounds()
         tile_raster = full_input_bands[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1]]
         tile_raster.attrs['tilename'] = tm.tileName()
@@ -171,10 +169,11 @@ class TileManager(SCSingletonConfigurable):
         if self.cacheTileData: DataManager.instance().modal.writeGeotiff( tile_raster )
         return tile_raster
 
-    def _readTileFile(self) -> Optional[xa.DataArray]:
+    def _readTileFile(self) -> xa.DataArray:
+        assert self.cacheTileData, "Tile file not cached."
         image_specs = self.image_attrs.get(self.image_name, None)
         TileManager.instance().setTilesPerImage(image_specs)
-        tile_raster: Optional[xa.DataArray] = DataManager.instance().modal.readGeotiff(True)
+        tile_raster: xa.DataArray = DataManager.instance().modal.readGeotiff(True)
         if tile_raster is not None:
             tile_raster.name = self.tileName()
             tile_raster.attrs['tilename'] = self.tileName()

@@ -22,7 +22,7 @@ class UnstructuredDataManager(ModeDataManager):
         output_file = os.path.join(self.datasetDir, self.dsid + ".nc")
         assert (self.INPUTS is not None), f"INPUTS undefined for mode {self.mode}"
 
-        np_embedding: np.ndarray = self.getInputFileData( self.INPUTS['embedding'] )
+        np_embedding: np.ndarray = self.getInputFileData( )
         if np_embedding is not None:
             dims = np_embedding.shape
             mdata_vars = list(self.INPUTS['directory'])
@@ -35,10 +35,10 @@ class UnstructuredDataManager(ModeDataManager):
             self.set_progress(0.1)
             if self.reduce_method != "None":
                 input_data = data_vars['embedding']
-                (reduced_spectra, reproduced_spectra) = rm().reduce(input_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity)[0]
+                ( reduced_spectra, reproduced_spectra, usable_input_data ) = rm().reduce(input_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity)[0]
                 coords = dict(samples=xcoords['samples'], model=np.arange(self.model_dims))
                 data_vars['reduction'] = xa.DataArray(reduced_spectra, dims=['samples', 'model'], coords=coords)
-                data_vars['reproduction'] = input_data.copy(data=reproduced_spectra)
+                data_vars['reproduction'] = usable_input_data.copy(data=reproduced_spectra)
                 self.set_progress(0.8)
 
             result_dataset = xa.Dataset(data_vars, coords=xcoords, attrs={'type': 'spectra'})
@@ -53,7 +53,9 @@ class UnstructuredDataManager(ModeDataManager):
 
 
     @exception_handled
-    def getInputFileData( self, vname: str ) -> np.ndarray:
+    def getInputFileData( self, vname: str = None, **kwargs ) -> np.ndarray:
+        if vname is None: vname = self.INPUTS['embedding']
+        if 'subsample' in kwargs: self.subsample = kwargs.get('subsample')
         input_file_path = os.path.expanduser( os.path.join(self.data_dir, self.mode, f"{vname}.pkl"))
         if os.path.isfile(input_file_path):
             input_data = self._cached_data.get( input_file_path, None )
