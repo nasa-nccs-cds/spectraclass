@@ -276,29 +276,29 @@ class MapManager(SCSingletonConfigurable):
     #     umapManager.computeMixingSpace( self.block, labels, **kwargs )
     #     self.plot_markers_volume()
 
-    def build_model(self, *args, **kwargs):
-        if self.block is None:
-            print( "Workflow violation: Must load a block before building model" )
-        else:
-            umapManager: ReductionManager = ReductionManager.instance()
-            labels: xa.DataArray = self.getExtendedLabelPoints()
-            umapManager.umap_embedding( labels=labels, **kwargs )
-
-#            self.plot_markers_volume()
-
-    def learn_classification( self, **kwargs  ):
-        if self.block is None:
-            print( "Workflow violation: Must load a block and spread some labels  before learning classification" )
-        else:
-            full_labels: xa.DataArray = self.getExtendedLabelPoints()
-            print( f"Learning Classification, labels shape = {full_labels.shape}, nLabels = {np.count_nonzero( full_labels > 0 )}")
-            event = dict(event="classify", type="learn", data=self.block, labels=full_labels )
-#            self.submitEvent( event, EventMode.Gui )
-
-    def apply_classification( self, **kwargs ):
-        print(f"Applying Classification")
-        event = dict( event="classify", type="apply", data=self.block  )
-#        self.submitEvent(event, EventMode.Gui )
+#     def build_model(self, *args, **kwargs):
+#         if self.block is None:
+#             print( "Workflow violation: Must load a block before building model" )
+#         else:
+#             umapManager: ReductionManager = ReductionManager.instance()
+#             labels: xa.DataArray = self.getExtendedLabelPoints()
+#             umapManager.umap_embedding( labels=labels, **kwargs )
+#
+# #            self.plot_markers_volume()
+#
+#     def learn_classification( self, **kwargs  ):
+#         if self.block is None:
+#             print( "Workflow violation: Must load a block and spread some labels  before learning classification" )
+#         else:
+#             full_labels: xa.DataArray = self.getExtendedLabelPoints()
+#             print( f"Learning Classification, labels shape = {full_labels.shape}, nLabels = {np.count_nonzero( full_labels > 0 )}")
+#             event = dict(event="classify", type="learn", data=self.block, labels=full_labels )
+# #            self.submitEvent( event, EventMode.Gui )
+#
+#     def apply_classification( self, **kwargs ):
+#         print(f"Applying Classification")
+#         event = dict( event="classify", type="apply", data=self.block  )
+# #        self.submitEvent(event, EventMode.Gui )
 
     def initLabels(self):
         nodata_value = -2
@@ -315,27 +315,27 @@ class MapManager(SCSingletonConfigurable):
              if self.labels_image is not None:
                 self.labels_image.set_alpha(0.0)
 
-    def updateLabelsFromMarkers(self):
-        lm().clearTransient()
-        for marker in lm().markers:
-            for pid in marker.pids:
-                coords = self.block.pindex2coords(pid)
-                index = self.block.coords2indices( coords['y'], coords['x'] )
-                try:
-                    self.labels[ index['iy'], index['ix'] ] = marker.cid
-                except:
-                    print( f"Skipping out of bounds label at local row/col coords {index['iy']} {index['ix']}")
+    # def updateLabelsFromMarkers(self):
+    #     lm().clearTransient()
+    #     for marker in lm().markers:
+    #         for pid in marker.pids:
+    #             coords = self.block.pindex2coords(pid)
+    #             index = self.block.coords2indices( coords['y'], coords['x'] )
+    #             try:
+    #                 self.labels[ index['iy'], index['ix'] ] = marker.cid
+    #             except:
+    #                 print( f"Skipping out of bounds label at local row/col coords {index['iy']} {index['ix']}")
 
-    def getLabeledPointData( self, update = True ) -> xa.DataArray:
-        from spectraclass.data.base import DataManager, dm
-        if update: self.updateLabelsFromMarkers()
-        sdm: SpatialDataManager = dm().modal
-        labeledPointData = sdm.raster2points( self.labels )
-        return labeledPointData
-
-    def getExtendedLabelPoints( self ) -> xa.DataArray:
-        if self.label_map is None: return self.getLabeledPointData( True )
-        return SpatialDataManager.raster2points( self.label_map )
+    # def getLabeledPointData( self, update = True ) -> xa.DataArray:
+    #     from spectraclass.data.base import DataManager, dm
+    #     if update: self.updateLabelsFromMarkers()
+    #     sdm: SpatialDataManager = dm().modal
+    #     labeledPointData = sdm.raster2points( self.labels )
+    #     return labeledPointData
+    #
+    # def getExtendedLabelPoints( self ) -> xa.DataArray:
+    #     if self.label_map is None: return self.getLabeledPointData( True )
+    #     return SpatialDataManager.raster2points( self.label_map )
 
     @property
     def data(self):

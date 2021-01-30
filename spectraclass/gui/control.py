@@ -29,7 +29,7 @@ class ActionsManager(SCSingletonConfigurable):
 
     def _createGui( self, **kwargs ) -> ipw.Box:
         from spectraclass.model.labels import LabelsManager
-        for task in [ "embed", "mark", "spread", "distance", "undo", "clear" ]:
+        for task in [ "embed", "mark", "spread", "distance", "classify", "undo", "clear" ]:
             button = ipw.Button( description=task, border= '1px solid gray' )
             button.layout = ipw.Layout( width='auto', flex="1 0 auto" )
             button.on_click( partial( self.on_button_click, task ) )
@@ -40,13 +40,13 @@ class ActionsManager(SCSingletonConfigurable):
         gui = ipw.VBox([ classes, buttonBox ], layout = ipw.Layout( width="100%", justify_content="space-between", flex='0 0 70px', border= '2px solid firebrick' )  )
         return gui
 
-def cm() -> "ControlsManager":
-    return ControlsManager.instance()
+def pm() -> "ParametersManager":
+    return ParametersManager.instance()
 
-class ControlsManager(SCSingletonConfigurable):
+class ParametersManager(SCSingletonConfigurable):
 
     def __init__(self):
-        super(ControlsManager, self).__init__()
+        super(ParametersManager, self).__init__()
         self._wGui: ipw.Tab = None
         self._buttons = {}
 
@@ -57,7 +57,7 @@ class ControlsManager(SCSingletonConfigurable):
 
     def _createGui( self, **kwargs ) -> ipw.Box:
         wTab = ipw.Tab()
-        tabNames = [ "data", "pointcloud", "map", "graph", "google" ]
+        tabNames = [ "data", "pointcloud", "map", "graph", "learning", "google" ]
         children = []
         for iT, title in enumerate( tabNames ):
             wTab.set_title( iT, title )

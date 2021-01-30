@@ -11,7 +11,9 @@ from spectraclass.model.base import SCSingletonConfigurable
 
 class ReductionManager(SCSingletonConfigurable):
     init = tl.Unicode("random").tag(config=True,sync=True)
-    loss = tl.Unicode("cosine_similarity").tag(config=True,sync=True)
+    loss = tl.Unicode("mean_squared_error").tag(config=True,sync=True)
+    # Losses: mean_squared_error, cosine_similarity, mean_absolute_error, mean_absolute_percentage_error, mean_squared_logarithmic_error
+    # See: https://keras.io/api/losses/regression_losses/
     nepochs = tl.Int( 200 ).tag(config=True,sync=True)
     alpha = tl.Float( 0.9 ).tag(config=True,sync=True)
     ndim = tl.Int( 3 ).tag(config=True,sync=True)

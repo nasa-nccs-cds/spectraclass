@@ -97,6 +97,14 @@ class SpectraclassController(SCSingletonConfigurable):
         return is_transient
 
     @exception_handled
+    def classify(self):
+        pass
+
+    @exception_handled
+    def learn(self):
+        pass
+
+    @exception_handled
     def spread_selection(self, niters=1):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, Action, lm

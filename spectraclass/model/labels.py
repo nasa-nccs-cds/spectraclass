@@ -11,7 +11,6 @@ from spectraclass.model.base import SCSingletonConfigurable, Marker
 import xarray as xa
 import numpy as np
 
-
 def c2rgb( color: Union[str,List] ) -> List:
     if isinstance(color, str):  return mcolors.to_rgb(color)
     else:                       return color[:3]

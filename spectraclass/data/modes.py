@@ -189,6 +189,10 @@ class ModeDataManager(SCSingletonConfigurable):
             app().clear()
         elif task == "undo":
             app().undo_action()
+        elif task == "learn":
+            app().learn()
+        elif task == "classify":
+            app().classify()
         elif task == "distance":
             app().display_distance()
 
