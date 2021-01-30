@@ -97,12 +97,26 @@ class SpectraclassController(SCSingletonConfigurable):
         return is_transient
 
     @exception_handled
-    def classify(self):
-        pass
+    def classify(self) -> xa.DataArray:
+        from spectraclass.learn.base import ClassificationManager, cm
+        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.data.base import DataManager, dm
+        embedding: xa.DataArray = dm().getModelData()
+        classification: xa.DataArray = cm().apply_classification( embedding )
+        pcm().color_by_value(classification.data)
+        return classification
 
     @exception_handled
     def learn(self):
-        pass
+        from spectraclass.learn.base import ClassificationManager, cm
+        from spectraclass.data.base import DataManager, dm
+        from spectraclass.model.labels import LabelsManager, Action, lm
+        embedding: xa.DataArray = dm().getModelData()
+        labels_data: xa.DataArray = lm().labels_data()
+        labels_mask = (labels_data > 0)
+        filtered_labels: np.ndarray = labels_data.where(labels_mask, drop=True).astype(np.int32).values
+        filtered_point_data: np.ndarray = embedding.where(labels_mask, drop=True).values
+        cm().learn_classification( filtered_point_data, filtered_labels )
 
     @exception_handled
     def spread_selection(self, niters=1):

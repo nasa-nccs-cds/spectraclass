@@ -100,10 +100,8 @@ class ClassificationManager(SCSingletonConfigurable):
         self.model.learn_classification( embedding, labels, **kwargs  )
 
     @exception_handled
-    def apply_classification( self, embedding: xa.DataArray, **kwargs ):
-        from spectraclass.gui.points import PointCloudManager, pcm
+    def apply_classification( self, embedding: xa.DataArray, **kwargs ) -> xa.DataArray:
         sample_labels: xa.DataArray = self.model.apply_classification( embedding, **kwargs  )
-        pcm().color_by_value( sample_labels.data )
         return sample_labels
 
 class LearningModel:
