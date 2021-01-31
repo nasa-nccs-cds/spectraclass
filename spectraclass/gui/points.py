@@ -139,10 +139,10 @@ class PointCloudManager(SCSingletonConfigurable):
             lgm().log(f" $$$color_by_value[distance:{is_distance}]: data shape = {values.shape} ")
             self._color_values = ma.masked_invalid(values)
         if self._color_values is not None:
-            colors = self._color_values.filled(sys.float_info.max)
+            colors = self._color_values.filled( -1 )
             (vmin, vmax), npb = ( ( 0.0, self._color_values.max() ) if is_distance else self.get_color_bounds() ), self._n_point_bins
             lgm().log( f" $$$color_by_value(shape:{colors.shape}) (vmin, vmax, npb) = {(vmin, vmax, npb)}, points (max, min, shape) = { (self._points.max(), self._points.min(), self._points.shape) }" )
-            pts: np.ndarray = ma.masked_invalid( self._points ).filled( sys.float_info.max )
+            pts: np.ndarray = ma.masked_invalid( self._points ).filled( -1 )
             lspace: np.ndarray = np.linspace( vmin, vmax, npb+1 )
             for iC in range( 0, npb ):
                 if iC == 0:          mask = colors <= lspace[iC+1]

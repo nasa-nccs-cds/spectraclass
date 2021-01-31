@@ -93,12 +93,14 @@ class LabelsManager(SCSingletonConfigurable):
 
     def set_selected_class(self, iclass, *args ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
+        from spectraclass.application.controller import app
         ufm().clear()
         self._selected_class = iclass
         print(f"LabelsManager: set selected class = {iclass}")
         for iB, button in enumerate(self._buttons):
             if iB == self._selected_class:  button.layout = {'border': '3px solid #FFFF00'}
             else:                           button.layout = {'border': '1px solid darkkhaki'}
+        app().update_current_class( iclass )
 
     def gui( self ) -> ipw.DOMWidget:
         if self.wSelectedClass is None:

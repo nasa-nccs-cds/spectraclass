@@ -196,4 +196,9 @@ class DataManager(SCSingletonConfigurable):
         model_data.attrs['dsid'] = project_dataset.attrs['dsid']
         return model_data
 
+    def loadMatlabDataFile(self, file_path: str ):
+        from scipy.io import loadmat
+        data = loadmat( file_path )
+        return data
+
 register_modes()

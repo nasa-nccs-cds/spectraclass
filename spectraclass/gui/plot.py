@@ -160,11 +160,12 @@ class PlotManager(SCSingletonConfigurable):
 
     def plot_graph( self, pids: List[int] = None ):
         from spectraclass.model.labels import LabelsManager, lm
-        if pids is None: pids = lm().getPids()
-        lgm().log(f" plot_graph[{self._wGui.selected_index}]: pids = {pids} ")
-        current_graph: JbkPlot = self.current_graph()
-        current_graph.select_items( pids )
-        current_graph.plot()
+        if self._wGui is not None:
+            if pids is None: pids = lm().getPids()
+            lgm().log(f" plot_graph[{self._wGui.selected_index}]: pids = {pids} ")
+            current_graph: JbkPlot = self.current_graph()
+            current_graph.select_items( pids )
+            current_graph.plot()
 
     def _createGui( self, **kwargs ) -> ipw.Tab():
         wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 300px' ) )

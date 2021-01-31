@@ -176,7 +176,7 @@ class SpatialDataManager(ModeDataManager):
     @classmethod
     def plotRaster(cls, raster: xa.DataArray, **kwargs ):
         from matplotlib.colorbar import Colorbar
-        from spectraclass.gui.points import PointCloudManager
+        from spectraclass.application.controller import app
         ax = kwargs.pop( 'ax', None )
         showplot = ( ax is None )
         if showplot: fig, ax = plt.subplots(1,1)
@@ -198,7 +198,7 @@ class SpatialDataManager(ModeDataManager):
         defaults["alpha"] = kwargs.get( "alpha", 1.0 )
         cbar_kwargs = {}
         if colors is  None:
-            defaults.update( dict( cmap=PointCloudManager.instance().color_map ) )
+            defaults.update( dict( cmap=app().color_map ) )
         else:
             rgbs = [ cval[2] for cval in colors ]
             cmap: ListedColormap = ListedColormap( rgbs )

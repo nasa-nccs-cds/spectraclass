@@ -1,7 +1,7 @@
 import xarray as xa
 import time, traceback, abc
 import numpy as np
-import scipy
+import scipy, sklearn
 from typing import List, Tuple, Optional, Dict
 from ..model.labels import LabelsManager
 import traitlets as tl
@@ -65,7 +65,7 @@ class Cluster:
         return self.metrics["icor"]
 
 class ClassificationManager(SCSingletonConfigurable):
-    model = tl.Unicode("svm").tag(config=True, sync=True)
+    mid = tl.Unicode("svc").tag(config=True, sync=True)
 
     def __init__(self,  **kwargs ):
         super(ClassificationManager, self).__init__(**kwargs)
@@ -92,17 +92,22 @@ class ClassificationManager(SCSingletonConfigurable):
 
     @property
     def model(self) -> "LearningModel":
-        model: LearningModel = self._models[ self.model ]
+        model: LearningModel = self._models[ self.mid ]
         return model
 
     @exception_handled
-    def learn_classification( self, embedding: xa.DataArray, labels: xa.DataArray, **kwargs  ):
-        self.model.learn_classification( embedding, labels, **kwargs  )
+    def learn_classification( self, filtered_point_data: np.ndarray, filtered_labels: np.ndarray, **kwargs  ):
+        self.model.learn_classification( filtered_point_data, filtered_labels, **kwargs  )
+        ufm().show( "Classification Mapping learned" )
 
     @exception_handled
     def apply_classification( self, embedding: xa.DataArray, **kwargs ) -> xa.DataArray:
-        sample_labels: xa.DataArray = self.model.apply_classification( embedding, **kwargs  )
-        return sample_labels
+        try:
+            sample_labels: xa.DataArray = self.model.apply_classification( embedding, **kwargs  )
+            return sample_labels
+        except sklearn.exceptions.NotFittedError:
+            ufm().show( "Must learn a mapping before applying a classification", "red")
+
 
 class LearningModel:
 
@@ -119,16 +124,13 @@ class LearningModel:
     def score(self) -> Optional[np.ndarray]:
         return self._score
 
-    def learn_classification( self, data: xa.DataArray, labels: xa.DataArray, **kwargs  ):
+    def learn_classification( self, point_data: np.ndarray, labels: np.ndarray, **kwargs  ):
         t1 = time.time()
-        labels_mask = (labels > 0)
-        filtered_labels: np.ndarray = labels.where(labels_mask, drop=True).astype(np.int32).values
-        filtered_point_data: np.ndarray = data.where(labels_mask, drop=True).values
-        if np.count_nonzero( filtered_labels > 0 ) == 0:
+        if np.count_nonzero( labels > 0 ) == 0:
             ufm().show( "Must label some points before learning the classification" )
             return None
-        self.fit( filtered_point_data, filtered_labels, **kwargs )
-        print(f"Learned mapping with {filtered_labels.shape[0]} labels in {time.time()-t1} sec.")
+        self.fit( point_data, labels, **kwargs )
+        print(f"Learned mapping with {labels.shape[0]} labels in {time.time()-t1} sec.")
 
     def fit(self, data: np.ndarray, labels: np.ndarray, **kwargs):
         raise Exception( "abstract method LearningModel.fit called")

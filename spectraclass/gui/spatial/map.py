@@ -9,7 +9,7 @@ from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
 from matplotlib.colors import Normalize
 from matplotlib.backend_bases import PickEvent, MouseButton, NavigationToolbar2
-from spectraclass.reduction.embedding import ReductionManager, rm
+from spectraclass.gui.control import UserFeedbackManager, ufm
 from collections import OrderedDict
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.model.base import SCSingletonConfigurable, Marker
@@ -238,6 +238,9 @@ class MapManager(SCSingletonConfigurable):
         marker = Marker( [pid], cid, labeled=False )
         self.add_marker( marker )
 
+    def plot_overlay_image( self, image_data: xa.DataArray ):
+        ufm().show( f" plot_overlay_image, shape = {image_data.shape}" )
+
     def setBlock( self, **kwargs ) -> Block:
         from spectraclass.data.spatial.tile.manager import TileManager
         self.clearLabels()
@@ -397,6 +400,13 @@ class MapManager(SCSingletonConfigurable):
                 overlay.plot( ax=self.plot_axes, color=color, linewidth=2 )
         return image
 
+    def create_overlay_image(self, **kwargs ) -> Optional[AxesImage]:
+        image: Optional[AxesImage] = None
+        z: xa.DataArray = self.data[self.init_band, :, :].copy( True, 0 )
+        if self.image is not None:
+            image: AxesImage =  dms().plotRaster( z, ax=self.plot_axes, alpha=0.0, **kwargs )
+        return image
+
     def on_lims_change(self, ax ):
          if ax == self.plot_axes:
              (x0, x1) = ax.get_xlim()
@@ -413,14 +423,13 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def update_plots(self):
         if self.image is not None:
-            from spectraclass.data.base import DataManager
-            dm = DataManager.instance()
+            from spectraclass.data.base import DataManager, dm
             frame_data: xa.DataArray = self.frame_color_pointcloud()
             self.image.set_data( frame_data.values  )
             drange = dms().get_color_bounds( frame_data )
             self.image.set_norm( Normalize( **drange ) )
             self.image.set_extent( self.block.extent() )
-            plot_name = os.path.basename(dm.dsid)
+            plot_name = os.path.basename( dm().dsid )
             lgm().log( f" Update Map: data shape = {frame_data.shape}, range = {drange}, extent = {self.block.extent()}")
             self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
             self.plot_axes.title.set_fontsize( 8 )
@@ -578,6 +587,7 @@ class MapManager(SCSingletonConfigurable):
     def initPlots(self, **kwargs) -> Optional[AxesImage]:
         if self.image is None:
             self.image = self.create_image(**kwargs)
+            self.overlay_image = self.create_overlay_image(**kwargs)
             if self.image is not None: self.initMarkersPlot()
         return self.image
 

@@ -30,6 +30,17 @@ class SpectraclassController(SCSingletonConfigurable):
     def show_gpu_usage(self):
         os.system("nvidia-smi")
 
+    @property
+    def color_map(self) -> str:
+        from spectraclass.gui.points import PointCloudManager, pcm
+        return pcm().color_map
+
+    def update_current_class(self, iclass: int ):
+        from spectraclass.gui.plot import PlotManager, gm
+        from spectraclass.model.labels import LabelsManager, lm
+        pids = lm().getPids( iclass )
+        gm().plot_graph( pids )
+
     @classmethod
     def set_spectraclass_theme(cls):
         from IPython.display import display, HTML
@@ -101,9 +112,12 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.learn.base import ClassificationManager, cm
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.data.base import DataManager, dm
+        from spectraclass.gui.spatial.map import MapManager, mm
+
         embedding: xa.DataArray = dm().getModelData()
         classification: xa.DataArray = cm().apply_classification( embedding )
         pcm().color_by_value(classification.data)
+        mm().plot_overlay_image( classification )
         return classification
 
     @exception_handled
