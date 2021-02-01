@@ -5,12 +5,13 @@ from matplotlib import cm
 from itkwidgets import view
 from itkwidgets.widget_viewer import Viewer
 import xarray as xa
+from matplotlib import colors
 import numpy.ma as ma
 import traitlets.config as tlc
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable, Marker
-from spectraclass.model.labels import LabelsManager
+from spectraclass.model.labels import LabelsManager, lm
 
 def pcm() -> "PointCloudManager":
     return PointCloudManager.instance()
@@ -40,7 +41,7 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def initialize_markers(self, reset= False ):
         if (self._marker_points is None) or reset:
-            nLabels = LabelsManager.instance().nLabels
+            nLabels = lm().nLabels
             self._marker_points: List[np.ndarray] = [ self.empty_pointset for ic in range( nLabels ) ]
             self._marker_pids: List[np.ndarray] = [ self.empty_pids for ic in range( nLabels ) ]
             lgm().log( f"PCM.initialize_markers, sizes = {[m.size for m in self._marker_points]}")
@@ -93,10 +94,9 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def update_markers(self, pids: List[int] = None, **kwargs ):
         if pids is None:
-            from spectraclass.model.labels import LabelsManager
             if 'points' in kwargs: self._points = self.normalize( kwargs['points'] )
             self.initialize_markers(True)
-            for marker in LabelsManager.instance().markers:
+            for marker in lm().markers:
                 self._marker_pids[ marker.cid ] = np.append( self._marker_pids[ marker.cid ], marker.pids, 0 )
                 self._marker_points[ marker.cid ] = self._points[ self._marker_pids[ marker.cid ], : ]
         else:
@@ -107,7 +107,6 @@ class PointCloudManager(SCSingletonConfigurable):
     @exception_handled
     def update_marked_points(self, cid: int = -1, **kwargs ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
-        from spectraclass.model.labels import LabelsManager, lm
         if self._points is None:
             ufm().show( "Can't mark points in PointCloudManager which is not initialized", "red")
         else:
@@ -133,6 +132,23 @@ class PointCloudManager(SCSingletonConfigurable):
         self.initialize_markers( True )
         self.update_plot()
 
+    def set_bin_colors(self, bin_colors: List[str] ):
+        from matplotlib import colors
+        new_colors = self.standard_colors.copy()
+        for iC, color in enumerate(bin_colors):
+            new_colors[iC+1] = colors.to_rgb( color )
+        self._gui.point_set_colors = new_colors
+
+    def color_by_index(self, indices: np.ndarray, colors: List, **kwargs):
+        pts: np.ndarray = ma.masked_invalid(self._points).filled(-1)
+        imax = indices.max()
+        for iC in range( 0, self._n_point_bins ):
+            self._binned_points[iC] = pts[ (indices == iC) ] if iC <= imax else self.empty_pointset
+        lm().addAction("color", "points")
+        self.set_base_points_alpha(self.reduced_opacity)
+        self.set_bin_colors( colors )
+        self.update_plot(**kwargs)
+
     def color_by_value( self, values: np.ndarray = None, **kwargs ):
         is_distance = kwargs.get( 'distance', False )
         if values is not None:
@@ -150,8 +166,9 @@ class PointCloudManager(SCSingletonConfigurable):
                 else:                mask = ( colors > lspace[iC] ) & ( colors <= lspace[iC+1] )
                 self._binned_points[iC] = pts[ mask ]
 #                lgm().log(f" $$$COLOR: BIN-{iC}, [ {lspace[iC]} -> {lspace[iC+1]} ], nvals = {self._binned_points[iC].shape[0]}, #mask-points = {np.count_nonzero(mask)}" )
-            LabelsManager.instance().addAction( "color", "points" )
+            lm().addAction( "color", "points" )
             self.set_base_points_alpha( self.reduced_opacity )
+            self._gui.point_set_colors = self.standard_colors
             self.update_plot(**kwargs)
 
     def get_color_bounds( self ):
@@ -199,10 +216,11 @@ class PointCloudManager(SCSingletonConfigurable):
             self.init_data()
             invert = False
             bin_colors = [ x[:3] for x in self.get_bin_colors( self.color_map, invert ) ]
-            pt_colors =  [ [1.0, 1.0, 1.0], ] + bin_colors + LabelsManager.instance().colors[::-1]
-            pt_alphas = [ self.standard_opacity ] * ( self._n_point_bins + 1 ) + [ 1.0 ] * LabelsManager.instance().nLabels
-            ptsizes = [1] + [1]*self._n_point_bins + [8]*LabelsManager.instance().nLabels
-            self._gui = view( point_sets = self.point_sets, point_set_sizes=ptsizes, point_set_colors=pt_colors, point_set_opacities=pt_alphas, background=[0,0,0] )
+            label_colors = [ colors.to_rgb(c) for c in lm().colors[::-1] ]
+            self.standard_colors =   [ [1.0, 1.0, 1.0], ] + bin_colors + label_colors
+            pt_alphas = [ self.standard_opacity ] * ( self._n_point_bins + 1 ) + [ 1.0 ] * lm().nLabels
+            ptsizes = [1] + [1]*self._n_point_bins + [8]*lm().nLabels
+            self._gui = view( point_sets = self.point_sets, point_set_sizes=ptsizes, point_set_colors=self.standard_colors, point_set_opacities=pt_alphas, background=[0,0,0] )
             self._gui.layout = dict( width= '100%', flex= '1 0 1200px' )
         return self._gui
 

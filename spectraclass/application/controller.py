@@ -113,11 +113,12 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.model.labels import LabelsManager, Action, lm
 
         embedding: xa.DataArray = dm().getModelData()
         classification: xa.DataArray = cm().apply_classification( embedding )
-        pcm().color_by_value(classification.data)
-        mm().plot_overlay_image( classification )
+        pcm().color_by_index( classification.data, lm().colors )
+        mm().plot_overlay_image( classification.data, lm().colors )
         return classification
 
     @exception_handled

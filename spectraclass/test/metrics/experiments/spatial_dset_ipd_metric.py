@@ -4,8 +4,8 @@ from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.data.base import DataManager, dm
 np.random.seed(19680801)
 
-dataset = 'desis'     #  'desis'      aviris
-experiment = "demo2"   #  "demo2"     demo3
+dataset = 'aviris'     #  'desis'      aviris
+experiment = "demo3"   #  "demo2"     demo3
 subsample = 100        #   100         100
 nx = 3
 ny = 3
@@ -25,7 +25,7 @@ block = tm().getBlock()
 ( xa_point_data, xa_point_coords ) = block.getPointData( subsample=subsample )
 
 print( f"Loaded point data, shape = {xa_point_data.data.shape}")
-dplot = InterpointDistancePlot( nx, ny, data=xa_point_data.data )
+dplot = InterpointDistancePlot( nx, ny, data=xa_point_data.data, title=f"Distribution of inter-point distances for {dataset.upper()} data" )
 
 for iy in range(ny):
   for ix in range( nx ):

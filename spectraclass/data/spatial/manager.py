@@ -219,7 +219,7 @@ class SpatialDataManager(ModeDataManager):
         else:                               defaults['extent'] = [left, right, top, bottom]
         if rescale is not None:
             raster = cls.scale_to_bounds(raster, rescale)
-        lgm().log( f" $$$COLOR: Plotting tile image with parameters: {defaults}")
+        lgm().log( f"\n $$$COLOR: Plotting tile image with parameters: {defaults}\n")
         img = ax.imshow( raster.data, zorder=1, **defaults )
         ax.set_title(title)
         if colorbar and (raster.ndim == 2):
@@ -227,6 +227,15 @@ class SpatialDataManager(ModeDataManager):
             if colors is not None:
                 cbar.set_ticklabels( [ cval[1] for cval in colors ] )
         if showplot: plt.show()
+        return img
+
+    @classmethod
+    def plotOverlayImage(cls, raster: np.ndarray, ax, extent: Tuple[float], **kwargs):
+        defaults = dict( origin= 'upper',  alpha = 0.0, extent=extent )
+        if not hasattr(ax, 'projection'): defaults['aspect'] = 'auto'
+        defaults.update(kwargs)
+        lgm().log( f"\n $$$COLOR: Plotting overlay image with parameters: {defaults}, data range = {[raster.min(),raster.max()]}, raster type = {raster.dtype}, shape = {raster.shape}\n")
+        img = ax.imshow( raster, zorder=2, **defaults )
         return img
 
     def getXarray(self, id: str, xcoords: Dict, subsample: int, xdims: OrderedDict, **kwargs) -> xa.DataArray:

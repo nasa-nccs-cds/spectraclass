@@ -14,7 +14,7 @@ from collections import OrderedDict
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.model.base import SCSingletonConfigurable, Marker
 from functools import partial
-from pyproj import Proj
+from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
 from spectraclass.data.spatial.tile.tile import Block
@@ -121,6 +121,8 @@ class MapManager(SCSingletonConfigurable):
         self.block: Block = None
         self.slider: Optional[PageSlider] = None
         self.image: Optional[AxesImage] = None
+        self.image_template: Optional[xa.DataArray]  = None
+        self.overlay_image: Optional[AxesImage] = None
         self.labels = None
         self.transients = []
         self.plot_axes: Optional[Axes] = None
@@ -161,73 +163,6 @@ class MapManager(SCSingletonConfigurable):
     def transform(self):
         return self.block.transform
 
-#     def processEvent( self, event: Dict ):
-# #        super().processEvent(event)
-#         eid = event['event']
-#         etype = event.get('type')
-#         if eid == 'pick':
-#             transient = event.pop('transient',True)
-#             if etype == 'vtkpoint':
-#                 cid = lm().current_cid
-#                 for point_index in event['pids']:
-#                     self.mark_point( point_index, cid==0 )
-#             else:
-#                 self.add_marker( self.get_image_selection_marker( event ), transient, type = event['type'] )
-#         elif eid == 'key':
-#             if   etype == "press":   self.key_mode = event['key']
-#             elif etype == "release": self.key_mode = None
-#         elif eid == 'gui':
-#             if etype == "undo":
-#                 self.plot_markers_image(**event)
-#             elif etype == 'spread':
-#                 labels: xa.Dataset = event.get('labels')
-#                 self.plot_label_map( labels['C'] )
-#             elif etype in [ 'clear', 'reload' ]:
-#                 self.clearLabels()
-#                 self.update_plots()
-#                 if event.get('markers') != "keep":
-#                     self.clearMarkersPlot()
-#                 self.update_canvas()
-#         elif eid == 'plot':
-#             if etype == "classification":
-#                 labels = event['labels']
-#                 self.plot_label_map( labels )
-#         elif eid == 'classify':
-#             if etype == "learn.prep":   self.learn_classification( **event )
-#             elif etype == "apply.prep": self.apply_classification( **event )
-#
-#     def get_image_selection_marker(self, event) -> Optional[Marker]:
-#         pids, x, y = None, 0, 0
-#         try:
-#             if 'lat' in event:
-#                 lat, lon = event['lat'], event['lon']
-#                 proj = Proj(self.data.spatial_ref.crs_wkt)
-#                 x, y = proj(lon, lat)
-#             elif 'pids' in event:
-#                 pids = event['pids']
-#             else:
-#                 x, y = event['x'], event['y']
-#         except Exception as err:
-#             print(f"Marker selection error for event: {event}")
-#             return None
-#
-#         if 'label' in event:
-#             self.class_selector.set_active(event['label'])
-#
-#         if pids is None:
-#             pid = self.block.coords2pindex(y, x)
-#             if pid < 0:
-#                 print(f"Marker selection error, no pints for coord: {[y, x]}")
-#                 return None
-#             else:
-#                 pids = [pid]
-#
-#         cid = event.get('classification',-1)
-#         ic = cid if (cid > 0) else lm().current_cid
-#         color = lm().colors[ic]
-#         return Marker( pids, ic )
-
-
     def point_coords( self, point_index: int ) -> Dict:
         block_data, point_data = self.block.getPointData()
         selected_sample: np.ndarray = point_data[ point_index ].values
@@ -238,8 +173,14 @@ class MapManager(SCSingletonConfigurable):
         marker = Marker( [pid], cid, labeled=False )
         self.add_marker( marker )
 
-    def plot_overlay_image( self, image_data: xa.DataArray ):
-        ufm().show( f" plot_overlay_image, shape = {image_data.shape}" )
+    @exception_handled
+    def plot_overlay_image( self, image_data: np.ndarray, colors: List ):
+        input_data = image_data.reshape( self.image_template.shape )
+        lgm().log( f" \nplot_overlay_image, shape = {input_data.shape}, vrange = {[ input_data.min(), input_data.max() ]}, dtype = {input_data.dtype}\n" )
+        self.overlay_image.set_data( input_data )
+        self.overlay_image.set_alpha( 0.6 )
+        self.overlay_image.set_cmap( ListedColormap( colors ) )
+        self.update_canvas()
 
     def setBlock( self, **kwargs ) -> Block:
         from spectraclass.data.spatial.tile.manager import TileManager
@@ -386,12 +327,12 @@ class MapManager(SCSingletonConfigurable):
 
     def create_image(self, **kwargs ) -> Optional[AxesImage]:
         image: Optional[AxesImage] = None
-        z: xa.DataArray =  self.data[ self.init_band, :, : ]
-        nValid = np.count_nonzero(~np.isnan(z))
-        print( f"\n ********* Creating Map Image, nValid={nValid}, data shape = {self.data.shape}, image shape = {z.shape}, band = {self.init_band}, data range = [ {self.data.min().values}, {self.data.max().values} ]")
+        self.image_template: xa.DataArray =  self.data[ self.init_band, :, : ]
+        nValid = np.count_nonzero(~np.isnan(self.image_template))
+        print( f"\n ********* Creating Map Image, nValid={nValid}, data shape = {self.data.shape}, image shape = {self.image_template.shape}, band = {self.init_band}, data range = [ {self.data.min().values}, {self.data.max().values} ]")
         if nValid > 0:
             colorbar = kwargs.pop( 'colorbar', False )
-            image: AxesImage =  dms().plotRaster( z, ax=self.plot_axes, colorbar=colorbar, alpha=0.5, **kwargs )
+            image: AxesImage =  dms().plotRaster( self.image_template, ax=self.plot_axes, colorbar=colorbar, alpha=0.5, **kwargs )
             self._cidpress = image.figure.canvas.mpl_connect('button_press_event', self.onMouseClick)
             self._cidrelease = image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
             self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
@@ -400,12 +341,11 @@ class MapManager(SCSingletonConfigurable):
                 overlay.plot( ax=self.plot_axes, color=color, linewidth=2 )
         return image
 
-    def create_overlay_image(self, **kwargs ) -> Optional[AxesImage]:
-        image: Optional[AxesImage] = None
-        z: xa.DataArray = self.data[self.init_band, :, :].copy( True, 0 )
-        if self.image is not None:
-            image: AxesImage =  dms().plotRaster( z, ax=self.plot_axes, alpha=0.0, **kwargs )
-        return image
+    def create_overlay_image(self, **kwargs ) -> AxesImage:
+        assert self.image is not None, "Must create base imege before overlay"
+        z = np.zeros( self.image_template.shape, np.int )
+        overlay_image: AxesImage =  dms().plotOverlayImage(z, self.plot_axes, self.image.get_extent(), **kwargs)
+        return overlay_image
 
     def on_lims_change(self, ax ):
          if ax == self.plot_axes:
@@ -433,9 +373,9 @@ class MapManager(SCSingletonConfigurable):
             lgm().log( f" Update Map: data shape = {frame_data.shape}, range = {drange}, extent = {self.block.extent()}")
             self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
             self.plot_axes.title.set_fontsize( 8 )
-        if self.labels_image is not None:
-            self.labels_image.set_extent( self.block.extent() )
-            self.labels_image.set_alpha(0.0)
+        if self.overlay_image is not None:
+            self.overlay_image.set_extent( self.block.extent() )
+            self.overlay_image.set_alpha(0.0)
         self.update_canvas()
 
 
@@ -490,23 +430,23 @@ class MapManager(SCSingletonConfigurable):
     #         if sample_labels is not None:
     #             self.plot_label_map( sample_labels )
 
-    def plot_label_map( self, sample_labels: xa.DataArray, **kwargs ):
-        self.label_map: xa.DataArray =  sample_labels.unstack(fill_value=-2).astype(np.int32)
-        print( f"plot_label_map, labels shape = {self.label_map.shape}")
-        extent = dms().extent( self.label_map )
-        label_plot = self.label_map.where( self.label_map >= 0, 0 )
-        class_alpha = kwargs.get( 'alpha', 0.9 )
-        if self.labels_image is None:
-            label_map_colors: List = [ [ ic, label, list(color[0:3]) + [0.0 if (ic == 0) else class_alpha] ] for ic, (label, color) in enumerate( zip( lm().labels, lm().colors ) ) ]
-            self.labels_image = dms().plotRaster( label_plot, colors=label_map_colors, ax=self.plot_axes, colorbar=False )
-        else:
-            self.labels_image.set_data( label_plot.values )
-            self.labels_image.set_alpha( class_alpha )
-
-        self.labels_image.set_extent( extent )
-        self.update_canvas()
-#        event = dict( event="gui", type="update" )
-#        self.submitEvent(event, EventMode.Gui)
+#     def plot_label_map( self, sample_labels: xa.DataArray, **kwargs ):
+#         self.label_map: xa.DataArray =  sample_labels.unstack(fill_value=-2).astype(np.int32)
+#         print( f"plot_label_map, labels shape = {self.label_map.shape}")
+#         extent = dms().extent( self.label_map )
+#         label_plot = self.label_map.where( self.label_map >= 0, 0 )
+#         class_alpha = kwargs.get( 'alpha', 0.9 )
+#         if self.labels_image is None:
+#             label_map_colors: List = [ [ ic, label, list(color[0:3]) + [0.0 if (ic == 0) else class_alpha] ] for ic, (label, color) in enumerate( zip( lm().labels, lm().colors ) ) ]
+#             self.labels_image = dms().plotRaster( label_plot, colors=label_map_colors, ax=self.plot_axes, colorbar=False )
+#         else:
+#             self.labels_image.set_data( label_plot.values )
+#             self.labels_image.set_alpha( class_alpha )
+#
+#         self.labels_image.set_extent( extent )
+#         self.update_canvas()
+# #        event = dict( event="gui", type="update" )
+# #        self.submitEvent(event, EventMode.Gui)
 
     def show_labels(self):
         if self.labels_image is not None:
@@ -598,7 +538,7 @@ class MapManager(SCSingletonConfigurable):
 
     def initMarkersPlot(self):
         print( "Init Markers Plot")
-        self.marker_plot: PathCollection = self.plot_axes.scatter([], [], s=50, zorder=2, alpha=1, picker=True)
+        self.marker_plot: PathCollection = self.plot_axes.scatter([], [], s=50, zorder=3, alpha=1, picker=True)
         self.marker_plot.set_edgecolor([0, 0, 0])
         self.marker_plot.set_linewidth(2)
         self.figure.canvas.mpl_connect('pick_event', self.mpl_pick_marker)

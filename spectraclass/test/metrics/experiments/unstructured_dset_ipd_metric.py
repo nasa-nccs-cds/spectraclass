@@ -4,9 +4,9 @@ from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.data.base import DataManager, dm
 np.random.seed(19680801)
 
-dataset =    'swift'   # 'desis'  'aviris'
+dataset =    'tess'   # 'desis'  'aviris'
 experiment = "demo4"   # "demo2"  "demo3"
-subsample = 500    # 500 for swift, 2000 for tess
+subsample = 2000    # 500 for swift, 2000 for tess
 nx = 3
 ny = 3
 
@@ -28,7 +28,7 @@ metrics =   [   dict( metric = "minkowski", p = 4   ),
 dmg: DataManager = DataManager.initialize( experiment, dataset )
 input_data: np.ndarray = dmg.getInputFileData( subsample=subsample )
 print( f"Loaded input data, shape = {input_data.shape}" )
-dplot = InterpointDistancePlot( nx, ny, data=input_data )
+dplot = InterpointDistancePlot( nx, ny, data=input_data, title=f"Distribution of inter-point distances for {dataset.upper()} data" )
 
 for iy in range(ny):
   for ix in range( nx ):

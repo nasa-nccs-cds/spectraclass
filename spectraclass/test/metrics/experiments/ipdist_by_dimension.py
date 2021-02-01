@@ -5,7 +5,7 @@ np.random.seed(19680801)
 npoints = 2000
 min_dim = 3
 dim_step = 40
-metric = "cosine"
+metric = "euclidean"
 mparms = dict( )
 nbins = 200
 nx = 3
