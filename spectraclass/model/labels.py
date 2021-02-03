@@ -282,6 +282,11 @@ class LabelsManager(SCSingletonConfigurable):
     def nLabels(self) -> int:
         return len(self._labels)
 
+    @property
+    def labeledColors(self) -> List[Tuple[int,str,str]]:
+        values = range(len(self._colors))
+        return list(zip(values, self._labels, self._colors))
+
     def setLabels(self, labels: List[Tuple[str, str]], **kwargs):
         unlabeled_color = kwargs.get( 'unlabeled', "yellow" )
         label_list = [ ('Unlabeled', unlabeled_color ) ] + labels

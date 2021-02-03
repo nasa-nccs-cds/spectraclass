@@ -118,7 +118,7 @@ class SpectraclassController(SCSingletonConfigurable):
         embedding: xa.DataArray = dm().getModelData()
         classification: xa.DataArray = cm().apply_classification( embedding )
         pcm().color_by_index( classification.data, lm().colors )
-        mm().plot_overlay_image( classification.data, lm().colors )
+        mm().plot_overlay_image( classification.data )
         return classification
 
     @exception_handled

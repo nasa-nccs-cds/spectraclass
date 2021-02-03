@@ -109,6 +109,7 @@ def mm() -> "MapManager":
 
 class MapManager(SCSingletonConfigurable):
     init_band = tl.Int(10).tag(config=True, sync=True)
+    overlay_alpha = tl.Float(0.5).tag(config=True, sync=True)
 
     RIGHT_BUTTON = 3
     MIDDLE_BUTTON = 2
@@ -174,12 +175,11 @@ class MapManager(SCSingletonConfigurable):
         self.add_marker( marker )
 
     @exception_handled
-    def plot_overlay_image( self, image_data: np.ndarray, colors: List ):
+    def plot_overlay_image( self, image_data: np.ndarray ):
         input_data = image_data.reshape( self.image_template.shape )
         lgm().log( f" \nplot_overlay_image, shape = {input_data.shape}, vrange = {[ input_data.min(), input_data.max() ]}, dtype = {input_data.dtype}\n" )
         self.overlay_image.set_data( input_data )
-        self.overlay_image.set_alpha( 0.6 )
-        self.overlay_image.set_cmap( ListedColormap( colors ) )
+        self.overlay_image.set_alpha( self.overlay_alpha )
         self.update_canvas()
 
     def setBlock( self, **kwargs ) -> Block:
@@ -341,10 +341,11 @@ class MapManager(SCSingletonConfigurable):
                 overlay.plot( ax=self.plot_axes, color=color, linewidth=2 )
         return image
 
-    def create_overlay_image(self, **kwargs ) -> AxesImage:
+    def create_overlay_image( self ) -> AxesImage:
+        from spectraclass.model.labels import LabelsManager, lm
         assert self.image is not None, "Must create base imege before overlay"
-        z = np.zeros( self.image_template.shape, np.int )
-        overlay_image: AxesImage =  dms().plotOverlayImage(z, self.plot_axes, self.image.get_extent(), **kwargs)
+        z = self.image_template.copy( data = np.zeros( self.image_template.shape, np.int ) )
+        overlay_image: AxesImage =  dms().plotRaster( z, colors=lm().labeledColors, colorbar=False, alpha=0.0, ax=self.plot_axes )
         return overlay_image
 
     def on_lims_change(self, ax ):
@@ -527,7 +528,7 @@ class MapManager(SCSingletonConfigurable):
     def initPlots(self, **kwargs) -> Optional[AxesImage]:
         if self.image is None:
             self.image = self.create_image(**kwargs)
-            self.overlay_image = self.create_overlay_image(**kwargs)
+            self.overlay_image = self.create_overlay_image()
             if self.image is not None: self.initMarkersPlot()
         return self.image
 

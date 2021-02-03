@@ -17,7 +17,7 @@ class InterpointDistancePlot:
         self.ndim = kwargs.get('ndim', -1)
         self.metric = kwargs.get('metric', None )
         if (self.data is None) and ( self.ndim > 0):
-            self.data = np.random.rand( self.npoints, self.ndim )
+            self.data = ( np.random.rand( self.npoints, self.ndim ) * 2 ) - 1.0
         self.fig, self.axs = plt.subplots(ny, nx, sharey=True, tight_layout=True)
         self.fig.suptitle( title, fontsize=16 )
 
@@ -34,7 +34,8 @@ class InterpointDistancePlot:
 #        input_stats = ( data.min(), data.max(), data.std() )
         distances = sd.pdist( data, metric, **kwargs )
         dmax = distances.max()
-        distances = distances / dmax
+        origin = min( distances.min(), 0.0 )
+        distances = ( distances - origin) / ( dmax - origin )
         self.axs[iy,ix].hist( distances, self.nbins, [0.0, 1.0], True )
         mpstr = ",".join([ f"{k}={v}" for (k,v) in kwargs.items()])
         plot_title = f"{title} metric: {metric}({mpstr}), ndim: {data.shape[1]}, mag: {dmax:.2f}, time: {(time.time()-t0):.2f}"

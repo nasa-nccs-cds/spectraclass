@@ -231,7 +231,7 @@ class SpatialDataManager(ModeDataManager):
 
     @classmethod
     def plotOverlayImage(cls, raster: np.ndarray, ax, extent: Tuple[float], **kwargs):
-        defaults = dict( origin= 'upper',  alpha = 0.0, extent=extent )
+        defaults = dict( origin= 'upper',  alpha = 0.5, extent=extent )
         if not hasattr(ax, 'projection'): defaults['aspect'] = 'auto'
         defaults.update(kwargs)
         lgm().log( f"\n $$$COLOR: Plotting overlay image with parameters: {defaults}, data range = {[raster.min(),raster.max()]}, raster type = {raster.dtype}, shape = {raster.shape}\n")
