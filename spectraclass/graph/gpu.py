@@ -64,7 +64,7 @@ class gpActivationFlow(ActivationFlow):
         return self.getConnectionMatrix()
 
     def getConnectionMatrix(self) -> csr_matrix:
-        if self._knn_graph == None:
+        if self._knn_graph is None:
             distances = cupy.ravel(cupy.fromDlpack( self.D.to_dlpack()) )
             indices = cupy.ravel(cupy.fromDlpack( self.I.to_dlpack()) )
             n_samples = indices.shape[0]
