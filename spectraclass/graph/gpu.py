@@ -8,6 +8,7 @@ from cupyx.scipy.sparse import csr_matrix
 from cugraph.traversal.sssp import shortest_path
 from cuml.neighbors import NearestNeighbors
 from typing import List, Union, Tuple, Optional, Dict
+from spectraclass.application.controller import app
 import os, time, threading, traceback
 USE_SKLEARN = False
 
@@ -15,6 +16,7 @@ class gpActivationFlow(ActivationFlow):
 
     def __init__(self, nodes_data: xa.DataArray, n_neighbors: int, **kwargs ):
         ActivationFlow.__init__( self,  n_neighbors, **kwargs )
+        app().show_gpu_usage()
         self.I: cudf.DataFrame = None
         self.D: cudf.DataFrame = None
         self.P: cudf.DataFrame = None
@@ -32,8 +34,9 @@ class gpActivationFlow(ActivationFlow):
 
     def setNodeData(self, node_data: xa.DataArray, **kwargs ):
         input_data = node_data.values
+        reset = kwargs.get( 'reset', False )
         print( f"{self.__class__.__name__}[{hex(id(self))}].setNodeData: input shape = {input_data.shape}" )
-        if self.reset or (self.I is None):
+        if reset or (self.I is None):
             if (input_data.size > 0):
                 t0 = time.time()
 
