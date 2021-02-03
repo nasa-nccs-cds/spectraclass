@@ -10,7 +10,7 @@ from spectraclass.reduction.embedding import ReductionManager, rm
 from spectraclass.data.base import ModeDataManager
 import matplotlib.pyplot as plt
 from collections import OrderedDict
-from spectraclass.util.logs import LogManager, lgm
+from spectraclass.util.logs import LogManager, lgm, exception_handled
 import os, math, pickle
 import rioxarray as rio
 from .modes import *
@@ -271,6 +271,7 @@ class SpatialDataManager(ModeDataManager):
             if os.path.exists(output_file): os.remove(output_file)
             dataset.to_netcdf(output_file)
 
+    @exception_handled
     def prepare_inputs(self, *args, **kwargs ):
         from spectraclass.data.spatial.tile.tile import Block
         if self.reduce_scope == "tile":

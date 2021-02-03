@@ -15,6 +15,7 @@ class UnstructuredDataManager(ModeDataManager):
         self._dsid = self.INPUTS['embedding']
         self._cached_data = {}
 
+    @exception_handled
     def prepare_inputs(self, *args, **kwargs):
         self.update_gui_parameters()
         self.set_progress(0.02)

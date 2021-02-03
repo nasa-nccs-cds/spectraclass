@@ -15,14 +15,14 @@ Conda CPU Setup
 Conda GPU Setup
 ---------------
 
-    > conda create -n spectraclass -c rapidsai -c nvidia -c conda-forge  -c defaults rapids python cudatoolkit nodejs jupyterlab jupytext ipywidgets ipycanvas ipyevents itkwidgets qgrid jupyter_bokeh netcdf4 keras tensorflow-gpu
+    > conda create -n spectraclass -c rapidsai -c nvidia -c conda-forge  -c defaults rapids python cudatoolkit nodejs jupyterlab jupytext ipywidgets ipycanvas ipyevents itkwidgets qgrid jupyter_bokeh netcdf4 keras tensorflow-gpu rioxarray
     > conda activate spectraclass
     > jupyter labextension install @jupyter-widgets/jupyterlab-manager itk-jupyter-widgets qgrid2 @bokeh/jupyter_bokeh
     
 OR
 --
 
-    > conda create -n spectraclass-r17 -c rapidsai-nightly -c nvidia -c conda-forge -c defaults python rapids=0.17 cudatoolkit=10.2 nodejs jupyterlab jupytext ipywidgets ipycanvas ipyevents itkwidgets qgrid jupyter_bokeh netcdf4 keras tensorflow-gpu
+    > conda create -n spectraclass-r17 -c rapidsai-nightly -c nvidia -c conda-forge -c defaults python rapids=0.17 cudatoolkit=10.2 nodejs jupyterlab jupytext ipywidgets ipycanvas ipyevents itkwidgets qgrid jupyter_bokeh netcdf4 keras tensorflow-gpu rioxarray
     > conda activate spectraclass-r17
     > jupyter labextension install @jupyter-widgets/jupyterlab-manager itk-jupyter-widgets qgrid2 @bokeh/jupyter_bokeh
 

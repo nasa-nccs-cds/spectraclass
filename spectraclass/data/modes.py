@@ -29,7 +29,7 @@ class ModeDataManager(SCSingletonConfigurable):
     model_dims = tl.Int(32).tag(config=True, sync=True)
     subsample = tl.Int(5).tag(config=True, sync=True)
     reduce_method = tl.Unicode("Autoencoder").tag(config=True, sync=True)
-    reduce_scope = tl.Unicode("block").tag(config=True, sync=True)
+    reduce_scope = tl.Unicode("tile").tag(config=True, sync=True)
     reduce_nepochs = tl.Int(25).tag(config=True, sync=True)
     reduce_sparsity = tl.Float( 10e-5 ).tag(config=True,sync=True)
 
