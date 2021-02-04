@@ -94,6 +94,8 @@ class SpectraclassController(SCSingletonConfigurable):
     def process_undo( self, action ) -> bool:
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, Action, lm
+        from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
+        from spectraclass.gui.spatial.map import MapManager, mm
         is_transient = False
         if action is not None:
             lgm().log(f" UNDO action:  {action}")
@@ -104,6 +106,8 @@ class SpectraclassController(SCSingletonConfigurable):
                 pcm().clear_pids(m.cid, m.pids)
             elif action.type == "color":
                 pcm().clear_bins()
+                mm().clear_overlay_image()
+                spm().clear_overlay_image()
             lm().log_markers("post-undo")
         return is_transient
 
@@ -114,11 +118,15 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.model.labels import LabelsManager, Action, lm
+        from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
 
         embedding: xa.DataArray = dm().getModelData()
         classification: xa.DataArray = cm().apply_classification( embedding )
         pcm().color_by_index( classification.data, lm().colors )
-        mm().plot_overlay_image( classification.data )
+        overlay_image = classification.data.reshape( mm().image_template.shape )
+        mm().plot_overlay_image( overlay_image )
+        spm().plot_overlay_image( overlay_image, mm().overlay_alpha )
+        lm().addAction("color", "points")
         return classification
 
     @exception_handled
@@ -171,6 +179,7 @@ class SpectraclassController(SCSingletonConfigurable):
         flow: ActivationFlow = afm().getActivationFlow()
         if flow.spread( seed_points.data, niters ) is not None:
             pcm().color_by_value( flow.get_distances(), distance=True )
+            lm().addAction("color", "points")
 
     @exception_handled
     def add_marker(self, source: str, marker: Marker):

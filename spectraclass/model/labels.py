@@ -41,6 +41,14 @@ def set_alphas( colors, alpha ):
 def set_alpha( color, alpha ):
     return color[:3] + [alpha]
 
+def get_color_bounds( color_values: List[float] ) -> List[float]:
+    color_bounds = []
+    for iC, cval in enumerate( color_values ):
+        if iC == 0: color_bounds.append( cval - 0.5 )
+        else: color_bounds.append( (cval + color_values[iC-1])/2.0 )
+    color_bounds.append( color_values[-1] + 0.5 )
+    return color_bounds
+
 class Action:
     def __init__(self, type: str, source: str, **kwargs ):
         self.args = kwargs
@@ -113,6 +121,17 @@ class LabelsManager(SCSingletonConfigurable):
             self.wSelectedClass.layout = ipw.Layout( flex='1 1 auto', width = "100%"  )
             self.set_selected_class( 0 )
         return self.wSelectedClass
+
+    def get_labels_colormap(self):
+        from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+        import matplotlib as mpl
+        rgbs = [cval[2] for cval in self.labeledColors]
+        cmap: ListedColormap = ListedColormap(rgbs)
+        color_values = [float(cval[0]) for cval in self.labeledColors]
+        color_bounds = get_color_bounds(color_values)
+        norm = mpl.colors.BoundaryNorm(color_bounds, len(self.labeledColors))
+        result =  dict(cmap=cmap, norm=norm, boundaries=color_bounds, ticks=color_values, spacing='proportional')
+        return result
 
     def flow(self) -> Optional[ActivationFlow]:
         return self._flow

@@ -138,6 +138,10 @@ class Block:
         from spectraclass.data.spatial.tile.manager import TileManager
         return TileManager.instance().block_shape
 
+    @property
+    def zeros(self) -> np.ndarray:
+        return np.zeros( self.shape, np.int)
+
     def getBounds(self ) -> Tuple[ Tuple[int,int], Tuple[int,int] ]:
         y0, x0 = self.block_coords[0]*self.shape[0], self.block_coords[1]*self.shape[1]
         return ( y0, y0+self.shape[0] ), ( x0, x0+self.shape[1] )

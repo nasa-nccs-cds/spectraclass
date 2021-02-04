@@ -105,7 +105,9 @@ class PageSlider(matplotlib.widgets.Slider):
         self._colorize(i)
 
 def mm() -> "MapManager":
-    return MapManager.instance()
+    mgr = MapManager.instance()
+    mgr.observe( mgr.on_overlay_alpha_change, names=["overlay_alpha"] )
+    return mgr
 
 class MapManager(SCSingletonConfigurable):
     init_band = tl.Int(10).tag(config=True, sync=True)
@@ -161,6 +163,10 @@ class MapManager(SCSingletonConfigurable):
         return self.figure.canvas.toolbar
 
     @property
+    def zeros(self):
+        return self.image_template.copy( data = np.zeros( self.image_template.shape, np.int ) )
+
+    @property
     def transform(self):
         return self.block.transform
 
@@ -175,12 +181,16 @@ class MapManager(SCSingletonConfigurable):
         self.add_marker( marker )
 
     @exception_handled
-    def plot_overlay_image( self, image_data: np.ndarray ):
-        input_data = image_data.reshape( self.image_template.shape )
-        lgm().log( f" \nplot_overlay_image, shape = {input_data.shape}, vrange = {[ input_data.min(), input_data.max() ]}, dtype = {input_data.dtype}\n" )
-        self.overlay_image.set_data( input_data )
+    def plot_overlay_image( self, image_data: np.ndarray = None ):
+        lgm().log( f" \nplot_overlay_image, shape = {image_data.shape}, vrange = {[ image_data.min(), image_data.max() ]}, dtype = {image_data.dtype}\n" )
+        self.overlay_image.set_data( image_data )
         self.overlay_image.set_alpha( self.overlay_alpha )
         self.update_canvas()
+
+    def on_overlay_alpha_change(self, *args ):
+        from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
+        self.plot_overlay_image( )
+        spm().plot_overlay_image( alpha = self.overlay_alpha )
 
     def setBlock( self, **kwargs ) -> Block:
         from spectraclass.data.spatial.tile.manager import TileManager
@@ -342,10 +352,8 @@ class MapManager(SCSingletonConfigurable):
         return image
 
     def create_overlay_image( self ) -> AxesImage:
-        from spectraclass.model.labels import LabelsManager, lm
         assert self.image is not None, "Must create base imege before overlay"
-        z = self.image_template.copy( data = np.zeros( self.image_template.shape, np.int ) )
-        overlay_image: AxesImage =  dms().plotRaster( z, colors=lm().labeledColors, colorbar=False, alpha=0.0, ax=self.plot_axes )
+        overlay_image: AxesImage =  dms().plotRaster( self.image_template, itype='overlay', colorbar=False, alpha=0.0, ax=self.plot_axes, zeros=True )
         return overlay_image
 
     def on_lims_change(self, ax ):
@@ -375,10 +383,14 @@ class MapManager(SCSingletonConfigurable):
             self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
             self.plot_axes.title.set_fontsize( 8 )
         if self.overlay_image is not None:
-            self.overlay_image.set_extent( self.block.extent() )
-            self.overlay_image.set_alpha(0.0)
+            from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
+            self.clear_overlay_image()
+            spm().clear_overlay_image()
         self.update_canvas()
 
+    def clear_overlay_image(self):
+        self.overlay_image.set_extent(self.block.extent())
+        self.overlay_image.set_alpha(0.0)
 
     def onMouseRelease(self, event):
         if event.inaxes ==  self.plot_axes:

@@ -7,6 +7,7 @@ import numpy as np
 import ipywidgets as ipw
 import traitlets.config as tlc
 from spectraclass.model.base import SCSingletonConfigurable
+import traitlets as tl
 
 def am() -> "ActionsManager":
     return ActionsManager.instance()
@@ -57,7 +58,7 @@ class ParametersManager(SCSingletonConfigurable):
 
     def _createGui( self, **kwargs ) -> ipw.Box:
         wTab = ipw.Tab()
-        tabNames = [ "data", "pointcloud", "map", "graph", "learning", "google" ]
+        tabNames = [ "classification" ]
         children = []
         for iT, title in enumerate( tabNames ):
             wTab.set_title( iT, title )
@@ -66,7 +67,16 @@ class ParametersManager(SCSingletonConfigurable):
         return wTab
 
     def createPanel(self, title: str ):
-        return ipw.VBox()
+        from spectraclass.gui.spatial.map import MapManager, mm
+        widgets = []
+        if title == "classification":
+            widgets.append( self.getFloatSlider( "Overlay Opacity", (0.0,1.0), mm(), "overlay_alpha" ) )
+        return  ipw.VBox(widgets)
+
+    def getFloatSlider(self, label: str, range: Tuple[float,float], observer: tlc.Configurable, linked_trait: str ):
+        slider = ipw.FloatSlider( getattr(observer,linked_trait), description=label, min=range[0], max=range[1] )
+        tl.link((slider, "value"), (observer, linked_trait) )
+        return slider
 
 
 def ufm() -> "UserFeedbackManager":

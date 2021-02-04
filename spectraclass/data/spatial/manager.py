@@ -11,6 +11,7 @@ from spectraclass.data.base import ModeDataManager
 import matplotlib.pyplot as plt
 from collections import OrderedDict
 from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.model.labels import LabelsManager, lm
 import os, math, pickle
 import rioxarray as rio
 from .modes import *
@@ -20,13 +21,6 @@ def dm():
     from spectraclass.data.base import DataManager
     return DataManager.instance()
 
-def get_color_bounds( color_values: List[float] ) -> List[float]:
-    color_bounds = []
-    for iC, cval in enumerate( color_values ):
-        if iC == 0: color_bounds.append( cval - 0.5 )
-        else: color_bounds.append( (cval + color_values[iC-1])/2.0 )
-    color_bounds.append( color_values[-1] + 0.5 )
-    return color_bounds
 
 # class MarkerManager:
 #
@@ -180,8 +174,9 @@ class SpatialDataManager(ModeDataManager):
         ax = kwargs.pop( 'ax', None )
         showplot = ( ax is None )
         if showplot: fig, ax = plt.subplots(1,1)
-        colors = kwargs.pop('colors', None )
+        itype = kwargs.pop('itype', 'base' )
         title = kwargs.pop( 'title', raster.name )
+        zeros = kwargs.pop('zeros', False)
         rescale = kwargs.pop( 'rescale', None )
         colorbar = kwargs.pop( 'colorbar', True )
         x = raster.coords[ raster.dims[1] ].values
@@ -197,22 +192,18 @@ class SpatialDataManager(ModeDataManager):
         defaults = dict( origin= 'upper', interpolation= 'nearest' )
         defaults["alpha"] = kwargs.get( "alpha", 1.0 )
         cbar_kwargs = {}
-        if colors is  None:
+        if itype ==  'base':
             defaults.update( dict( cmap=app().color_map ) )
         else:
-            rgbs = [ cval[2] for cval in colors ]
-            cmap: ListedColormap = ListedColormap( rgbs )
-            color_values = [ float(cval[0]) for cval in colors]
-            color_bounds = get_color_bounds(color_values)
-            norm = mpl.colors.BoundaryNorm( color_bounds, len( colors )  )
-            cbar_kwargs.update( dict( cmap=cmap, norm=norm, boundaries=color_bounds, ticks=color_values, spacing='proportional' ) )
-            defaults.update( dict( cmap=cmap, norm=norm ) )
+            cspecs = lm().get_labels_colormap()
+            cbar_kwargs.update( cspecs )
+            defaults.update(  cmap=cspecs['cmap'], norm=cspecs['norm'] )
         if not hasattr(ax, 'projection'): defaults['aspect'] = 'auto'
         vrange = kwargs.pop( 'vrange', None )
         if vrange is not None:
             defaults['vmin'] = vrange[0]
             defaults['vmax'] = vrange[1]
-        if (colors is  None) and ("vmax" not in defaults):
+        if (itype ==  'base') and ("vmax" not in defaults):
             defaults.update( cls.get_color_bounds( raster ) )
         defaults.update(kwargs)
         if defaults['origin'] == 'upper':   defaults['extent'] = [left, right, bottom, top]
@@ -220,12 +211,12 @@ class SpatialDataManager(ModeDataManager):
         if rescale is not None:
             raster = cls.scale_to_bounds(raster, rescale)
         lgm().log( f"\n $$$COLOR: Plotting tile image with parameters: {defaults}\n")
-        img = ax.imshow( raster.data, zorder=1, **defaults )
+        img_data = raster.data if not zeros else np.zeros( raster.shape, np.int )
+        img = ax.imshow( img_data, zorder=1, **defaults )
         ax.set_title(title)
-        if colorbar and (raster.ndim == 2):
+        if colorbar:
             cbar: Colorbar = ax.figure.colorbar(img, ax=ax, **cbar_kwargs )
-            if colors is not None:
-                cbar.set_ticklabels( [ cval[1] for cval in colors ] )
+            cbar.set_ticklabels( [ cval[1] for cval in lm().labeledColors ] )
         if showplot: plt.show()
         return img
 

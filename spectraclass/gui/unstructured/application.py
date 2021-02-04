@@ -33,8 +33,8 @@ class Spectraclass(SpectraclassController):
         self.set_spectraclass_theme()
         css_border = '1px solid blue'
 
-        collapsibles = ipw.Accordion(children = [pm().gui(), pcm().gui()], layout=ipw.Layout(width='100%'))
-        for iT, title in enumerate(['controls', 'embedding']): collapsibles.set_title(iT, title)
+        collapsibles = ipw.Accordion(children = [dm().gui(), pcm().gui()], layout=ipw.Layout(width='100%'))
+        for iT, title in enumerate(['data', 'embedding']): collapsibles.set_title(iT, title)
         collapsibles.selected_index = 1
         plot = ipw.VBox([ ufm().gui(), collapsibles ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
         control = ipw.VBox( [ am().gui(), tm().gui(), gm().gui() ], layout=ipw.Layout( flex='0 0 700px'), border=css_border )

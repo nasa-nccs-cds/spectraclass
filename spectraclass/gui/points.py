@@ -144,7 +144,6 @@ class PointCloudManager(SCSingletonConfigurable):
         imax = indices.max()
         for iC in range( 0, self._n_point_bins ):
             self._binned_points[iC] = pts[ (indices == iC) ] if iC <= imax else self.empty_pointset
-        lm().addAction("color", "points")
         self.set_base_points_alpha(self.reduced_opacity)
         self.set_bin_colors( colors )
         self.update_plot(**kwargs)
@@ -166,7 +165,6 @@ class PointCloudManager(SCSingletonConfigurable):
                 else:                mask = ( colors > lspace[iC] ) & ( colors <= lspace[iC+1] )
                 self._binned_points[iC] = pts[ mask ]
 #                lgm().log(f" $$$COLOR: BIN-{iC}, [ {lspace[iC]} -> {lspace[iC+1]} ], nvals = {self._binned_points[iC].shape[0]}, #mask-points = {np.count_nonzero(mask)}" )
-            lm().addAction( "color", "points" )
             self.set_base_points_alpha( self.reduced_opacity )
             self._gui.point_set_colors = self.standard_colors
             self.update_plot(**kwargs)
