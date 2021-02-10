@@ -3,7 +3,6 @@ from typing import List, Optional, Dict
 import os, glob, sys
 import ipywidgets as ip
 from collections import OrderedDict
-from spectraclass.reduction.embedding import ReductionManager
 from pathlib import Path
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import xarray as xa
@@ -81,6 +80,9 @@ class ModeDataManager(SCSingletonConfigurable):
             self.model_dims = self._model_dims_selector.value
             self.subsample = self._subsample_selector.value
 
+    def setDatasetId(self,str):
+        raise NotImplementedError()
+
     @property
     def dsid(self) -> str:
         raise NotImplementedError()
@@ -92,23 +94,22 @@ class ModeDataManager(SCSingletonConfigurable):
         if self._dset_selection is not None:
             self._dset_selection.options = self.getDatasetList()
 
+    @exception_handled
     def select_dataset(self, *args):
-        self.dm.select_current_mode()
-        if self.dm.dsid != self._dset_selection.value:
-            lgm().log( f"Loading dataset '{self._dset_selection.value}', current dataset = '{self.dm.dsid}', "
-                   f"current mode = '{self._mode}', current mode index = {self.dm.mode_index}, mdmgr id = {id(self)}")
-            self.dm.dsid = self._dset_selection.value
-            self.dm.select_dataset(self._dset_selection.value)
-        self.dm.refresh_all()
+        from spectraclass.data.base import DataManager, dm
+        if dm().dsid != self._dset_selection.value:
+            lgm().log( f"Loading dataset '{self._dset_selection.value}', current dataset = '{dm().dsid}', mdmgr id = {id(self)}")
+            dm().dsid = self._dset_selection.value
+            dm().select_dataset(self._dset_selection.value)
+        dm().refresh_all()
 
     def getSelectionPanel(self) -> ip.HBox:
         dsets: List[str] = self.getDatasetList()
-        self._dset_selection: ip.Select = ip.Select(options=dsets, description='Datasets:', disabled=False)
+        self._dset_selection: ip.Select = ip.Select(options=dsets, description='Datasets:', disabled=False, layout=ip.Layout(width="900px"))
         if len(dsets) > 0: self._dset_selection.value = dsets[0]
         load: ip.Button = ip.Button(description="Load", border='1px solid dimgrey')
         load.on_click(self.select_dataset)
-        filePanel: ip.HBox = ip.HBox([self._dset_selection, load], layout=ip.Layout(width="100%", height="100%"),
-                                     border='2px solid firebrick')
+        filePanel: ip.HBox = ip.HBox([self._dset_selection, load], layout=ip.Layout(width="100%", height="100%"), border='2px solid firebrick')
         return filePanel
 
     def getConfigPanel(self):
@@ -221,17 +222,13 @@ class ModeDataManager(SCSingletonConfigurable):
         files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
         return [Path(f).stem for f in files]
 
-    @property
-    def dm(self):
-        from .base import DataManager
-        return DataManager.instance()
-
     def loadCurrentProject(self) -> xa.Dataset:
         return self.loadDataset( )
 
     @property
     def datasetDir(self):
-        dsdir = os.path.join( self.cache_dir, "spectraclass", self.MODE, self.dm.name )
+        from spectraclass.data.base import DataManager, dm
+        dsdir = os.path.join( self.cache_dir, "spectraclass", self.MODE, dm().name )
         os.makedirs(dsdir, 0o777, exist_ok=True)
         return dsdir
 

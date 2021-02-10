@@ -71,7 +71,7 @@ def plotRaster( raster: xa.DataArray, **kwargs):
         defaults['extent'] = [left, right, top, bottom]
     if rescale is not None:
         raster = scale_to_bounds(raster, rescale)
-    print(f"\n $$$COLOR: Plotting tile image with parameters: {defaults}\n")
+    print(f"$$$COLOR: Plotting tile image with parameters: {defaults}")
     img = ax.imshow(raster.data, **defaults)
     ax.set_title(title)
     if colorbar and (raster.ndim == 2):

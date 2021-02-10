@@ -182,14 +182,16 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def plot_overlay_image( self, image_data: np.ndarray = None ):
-        lgm().log( f" \nplot_overlay_image, shape = {image_data.shape}, vrange = {[ image_data.min(), image_data.max() ]}, dtype = {image_data.dtype}\n" )
-        self.overlay_image.set_data( image_data )
+        if image_data is not None:
+            lgm().log( f" plot_overlay_image, shape = {image_data.shape}, vrange = {[ image_data.min(), image_data.max() ]}, dtype = {image_data.dtype}" )
+            self.overlay_image.set_data( image_data )
         self.overlay_image.set_alpha( self.overlay_alpha )
         self.update_canvas()
 
     def on_overlay_alpha_change(self, *args ):
         from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
-        self.plot_overlay_image( )
+        self.overlay_image.set_alpha( self.overlay_alpha )
+        self.update_canvas()
         spm().plot_overlay_image( alpha = self.overlay_alpha )
 
     def setBlock( self, **kwargs ) -> Block:
@@ -382,10 +384,10 @@ class MapManager(SCSingletonConfigurable):
             lgm().log( f" Update Map: data shape = {frame_data.shape}, range = {drange}, extent = {self.block.extent()}")
             self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
             self.plot_axes.title.set_fontsize( 8 )
-        if self.overlay_image is not None:
-            from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
-            self.clear_overlay_image()
-            spm().clear_overlay_image()
+        # if self.overlay_image is not None:
+        #     from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
+        #     self.clear_overlay_image()
+        #     spm().clear_overlay_image()
         self.update_canvas()
 
     def clear_overlay_image(self):

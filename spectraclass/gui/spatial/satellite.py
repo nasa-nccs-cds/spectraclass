@@ -3,8 +3,10 @@ from typing import List
 from urllib import request
 from io import BytesIO
 from math import log, exp, tan, atan, ceil
+from spectraclass.xext.xgeo import XGeo
 from PIL import Image
-import os, traitlets as tl, numpy as np
+import os, traitlets as tl
+import xarray as xa
 import requests, traceback
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.util.logs import LogManager, lgm, exception_handled
@@ -37,47 +39,46 @@ class SatellitePlotManager(SCSingletonConfigurable):
         self.figure.set_constrained_layout_pads( w_pad=0., h_pad=0. )
         self.google = None
 
+    @exception_handled
     def setBlock(self, block: Block = None, type ='satellite'):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.model.labels import LabelsManager, lm
         if block is None:
             self.block: Block = tm().getBlock()
-            print("  @@GPM:  Getting block from TileManager")
+            lgm().log("  @@GPM:  Getting block from TileManager")
         else:
             if block == self.block:
-                print( "  @@GPM:  Using existing block")
+                lgm().log( "  @@GPM:  Using existing block")
                 return
             else:
                 self.block = block
-                print("  @@GPM:  Setting block")
+                lgm().log("  @@GPM:  Setting block")
         self.google = GoogleMaps( self.block, self.api_key )
-        try:
-            cfile = self.cache_file_path
-            extent = self.full_extent = self.block.extent(4326)
-            print(f"Setting satellite image extent: {extent}, xlim = {self.block.xlim}, ylim = {self.block.ylim}")
-            print(f"Google Earth block center coords: {(extent[2] + extent[3]) / 2},{(extent[1] + extent[0]) / 2}")
+        cfile = self.cache_file_path
+        extent = self.full_extent = self.block.extent(4326)
+        lgm().log(f"Setting satellite image extent: {extent}, xlim = {self.block.xlim}, ylim = {self.block.ylim}")
+        lgm().log(f"Google Earth block center coords: {(extent[2] + extent[3]) / 2},{(extent[1] + extent[0]) / 2}")
 
-            if os.path.isfile( cfile ):
-                print( f"Reading cached image {cfile}" )
-                self.image = Image.open(cfile)
-            else:
-                self.image = self.google.get_tiled_google_map(type, extent, self.zoom_level)
-                self.image.save( cfile )
-            self.plot: AxesImage = self.axes.imshow(self.image,  extent=extent, alpha=1.0, aspect='auto' )
-            cspecs = lm().get_labels_colormap()
-            self.overlay: AxesImage = self.axes.imshow( block.zeros, extent=extent, alpha=0.0, aspect='auto', cmap=cspecs['cmap'], norm=cspecs['norm'], origin= 'upper', interpolation= 'nearest' )
-            self.axes.set_xlim(extent[0],extent[1])
-            self.axes.set_ylim(extent[2],extent[3])
-            self._mousepress = self.plot.figure.canvas.mpl_connect('button_press_event', self.onMouseClick )
-            self.figure.canvas.draw_idle()
-        except AttributeError as err:
-            print( f"Cant get spatial bounds for satellite image: {err}")
-        except Exception:
-            traceback.print_exc()
+        if os.path.isfile( cfile ):
+            lgm().log( f"Reading cached image {cfile}" )
+            self.image = Image.open(cfile)
+        else:
+            self.image = self.google.get_tiled_google_map(type, extent, self.zoom_level)
+            self.image.save( cfile )
+        self.plot: AxesImage = self.axes.imshow(self.image,  extent=extent, alpha=1.0, aspect='auto' )
+        cspecs = lm().get_labels_colormap()
+        self.axes.set_xlim(extent[0],extent[1])
+        self.axes.set_ylim(extent[2],extent[3])
+        self._mousepress = self.plot.figure.canvas.mpl_connect('button_press_event', self.onMouseClick )
+        self.figure.canvas.draw_idle()
+        image_data: xa.DataArray = self.block.data.xgeo.reproject( espg=4326 )
+        self.overlay: AxesImage = self.axes.imshow( image_data, extent=extent, alpha=0.0, aspect='auto', cmap=cspecs['cmap'], norm=cspecs['norm'], origin= 'upper', interpolation= 'nearest' )
 
     @exception_handled
-    def plot_overlay_image( self, image_data: np.ndarray = None, alpha: float = 0.0 ):
-        if image_data is not None: self.overlay.set_data( image_data )
+    def plot_overlay_image( self, image_data: xa.DataArray = None, alpha: float = 0.0 ):
+        if image_data is not None:
+            overlay_image = image_data.xgeo.reproject( espg=4326 )
+            self.overlay.set_data( overlay_image.data )
         self.overlay.set_alpha( alpha )
         self.mpl_update()
 
@@ -100,13 +101,14 @@ class SatellitePlotManager(SCSingletonConfigurable):
             xlims1, ylims1 = self.block.project_extent( xlims, ylims, 4326 )
             self.axes.set_xlim(*xlims1 )
             self.axes.set_ylim(*ylims1)
-            print( f"Setting satellite image bounds: {xlims} {ylims} -> {xlims1} {ylims1}")
+            lgm().log( f"Setting satellite image bounds: {xlims} {ylims} -> {xlims1} {ylims1}")
             self.figure.canvas.draw_idle()
 
     @exception_handled
     def onMouseClick(self, event):
         from spectraclass.application.controller import app
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        lgm().log(f"SATELLITE.onMouseClick: {event}, in-axes = {event.inaxes==self.axes}")
         if event.xdata != None and event.ydata != None:
             if event.inaxes ==  self.axes:
 #                rightButton: bool = int(event.button) == self.RIGHT_BUTTON
@@ -143,7 +145,7 @@ class GoogleMaps():
         extent = self.block.extent( 4326 )   # left, right, bottom, top
         center = [ (extent[0]+extent[1])/2, (extent[2]+extent[3])/2 ]
         url = f"http://maps.googleapis.com/maps/api/staticmap?center={center[0]},{center[1]}&size={self.image_size[0]}x{self.image_size[1]}&zoom={zoom}&sensor=false&key={self.api_key}&maptype={type}"
-        print( f"Accessing google map at {center[0]},{center[1]} with dimensions {self.image_size[0]}x{self.image_size[1]}\n  ** url = {url}" )
+        lgm().log( f"Accessing google map at {center[0]},{center[1]} with dimensions {self.image_size[0]}x{self.image_size[1]}\n  ** url = {url}" )
         buffer = BytesIO(request.urlopen(url).read())
         google_image: Image.Image = Image.open(buffer)
         return google_image
@@ -190,7 +192,7 @@ class GoogleMaps():
             heightplus = height + self.LOGO_CUTOFF
 
             # assemble the image from stitched
-            print( f" get_tiled_google_map[{zoom}]: extent = lat:{[ullat,lrlat]}, lon:{[ullon,lrlon]}, dims = {[int(dx), int(dy)]}")
+            lgm().log( f" get_tiled_google_map[{zoom}]: extent = lat:{[ullat,lrlat]}, lon:{[ullon,lrlon]}, dims = {[int(dx), int(dy)]}")
             final: Image.Image = Image.new('RGB', (int(dx), int(dy)))
             for x in range(cols):
                 for y in range(rows):
@@ -213,13 +215,13 @@ class GoogleMaps():
                         response = requests.get(url, params=urlparams)
                         response.raise_for_status()
                     except requests.exceptions.RequestException as e:
-                        print(e)
+                        lgm().log(e)
                         return None
 
                     im = Image.open(BytesIO(response.content))
                     final.paste(im, (int(x * width), int(y * height)))
         except Exception as err:
-            print( f"get_tiled_google_map error: {err}")
+            lgm().log( f"get_tiled_google_map error: {err}")
             traceback.print_exc()
             return  Image.new( 'RGB', (0, 0) )
 

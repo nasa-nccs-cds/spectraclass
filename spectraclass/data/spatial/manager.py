@@ -95,11 +95,19 @@ class SpatialDataManager(ModeDataManager):
             return xa.DataArray( reduced_spectra, dims=['samples', 'band'], coords=coords )
         return data
 
+    def setDatasetId(self, dsid: str):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        toks = dsid.split("_b-")
+        block_toks = toks[1].split("-")
+        tm().block_shape = [ int(block_toks[0]), int(block_toks[1]) ]
+        tm().block_index = [ int(block_toks[2]), int(block_toks[3]) ]
+        lgm().log( f"Setting block index to {tm().block_index}, shape = {tm().block_shape}")
+
     @property
     def dsid(self) -> str:
-        from spectraclass.data.spatial.tile.manager import TileManager
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         reduction_method = f"raw" if self.reduce_method == "None" else f"{self.reduce_method}-{self.model_dims}"
-        file_name_base = "-".join( [TileManager.instance().getBlock().file_name, reduction_method] )
+        file_name_base = "-".join( [tm().getBlock().file_name, reduction_method] )
         return f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
 
     @classmethod
@@ -210,7 +218,7 @@ class SpatialDataManager(ModeDataManager):
         else:                               defaults['extent'] = [left, right, top, bottom]
         if rescale is not None:
             raster = cls.scale_to_bounds(raster, rescale)
-        lgm().log( f"\n $$$COLOR: Plotting tile image with parameters: {defaults}\n")
+        lgm().log( f"$$$COLOR: Plotting tile image with parameters: {defaults}")
         img_data = raster.data if not zeros else np.zeros( raster.shape, np.int )
         img = ax.imshow( img_data, zorder=1, **defaults )
         ax.set_title(title)

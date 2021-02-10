@@ -179,6 +179,12 @@ class DataManager(SCSingletonConfigurable):
         lgm().log(f"Loaded project data:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
         return project_data
 
+    def loadProject(self, dsid: str ) -> xa.Dataset:
+        self._mode_data_manager_.setDatasetId(dsid)
+        project_data = self._mode_data_manager_.loadCurrentProject()
+        lgm().log(f"Loaded project data:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
+        return project_data
+
     @exception_handled
     def prepare_inputs( self, *args, **kwargs ) -> xa.Dataset:
         return self._mode_data_manager_.prepare_inputs( *args, **kwargs )
