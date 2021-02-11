@@ -38,6 +38,7 @@ class PointCloudManager(SCSingletonConfigurable):
         self._points: np.ndarray = self.empty_pointset
         self._marker_points: List[np.ndarray] = None
         self._marker_pids: List[np.ndarray] = None
+        self._color_values = None
 
     def initialize_markers(self, reset= False ):
         if (self._marker_points is None) or reset:
@@ -230,4 +231,8 @@ class PointCloudManager(SCSingletonConfigurable):
         self.update_plot()
 
     def refresh(self):
-        self._gui = None
+        self.clear_bins()
+        self.initialize_points()
+        self.initialize_markers( True )
+        self.init_data()
+        self.update_plot()

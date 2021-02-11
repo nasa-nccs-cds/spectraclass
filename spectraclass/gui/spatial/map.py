@@ -158,6 +158,10 @@ class MapManager(SCSingletonConfigurable):
         self.setBlock()
         return self.figure.canvas
 
+    def refresh(self):
+        self.setBlock()
+        self.update_canvas()
+
     @property
     def toolbar(self)-> NavigationToolbar2:
         return self.figure.canvas.toolbar

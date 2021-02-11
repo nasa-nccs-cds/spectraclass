@@ -99,8 +99,7 @@ class ModeDataManager(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         if dm().dsid != self._dset_selection.value:
             lgm().log( f"Loading dataset '{self._dset_selection.value}', current dataset = '{dm().dsid}', mdmgr id = {id(self)}")
-            dm().dsid = self._dset_selection.value
-            dm().select_dataset(self._dset_selection.value)
+            dm().loadProject( self._dset_selection.value )
         dm().refresh_all()
 
     def getSelectionPanel(self) -> ip.HBox:

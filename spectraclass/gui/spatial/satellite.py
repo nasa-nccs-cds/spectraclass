@@ -63,7 +63,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
             lgm().log( f"Reading cached image {cfile}" )
             self.image = Image.open(cfile)
         else:
-            self.image = self.google.get_tiled_google_map(type, extent, self.zoom_level)
+            self.image = self.google.get_tiled_google_map( type, extent, self.zoom_level )
             self.image.save( cfile )
         self.plot: AxesImage = self.axes.imshow(self.image,  extent=extent, alpha=1.0, aspect='auto' )
         cspecs = lm().get_labels_colormap()
@@ -71,13 +71,15 @@ class SatellitePlotManager(SCSingletonConfigurable):
         self.axes.set_ylim(extent[2],extent[3])
         self._mousepress = self.plot.figure.canvas.mpl_connect('button_press_event', self.onMouseClick )
         self.figure.canvas.draw_idle()
-        image_data: xa.DataArray = self.block.data.xgeo.reproject( espg=4326 )
+        block_data = self.block.data[0]
+        lgm().log(f" *** Creating overlay from block, shape = {block_data.shape}, dims = {block_data.dims}")
+        image_data: xa.DataArray = block_data.xgeo.reproject( espg=4326 )  # .reproject( espg=4326 )   gdal_reproject()
         self.overlay: AxesImage = self.axes.imshow( image_data, extent=extent, alpha=0.0, aspect='auto', cmap=cspecs['cmap'], norm=cspecs['norm'], origin= 'upper', interpolation= 'nearest' )
 
     @exception_handled
     def plot_overlay_image( self, image_data: xa.DataArray = None, alpha: float = 0.0 ):
         if image_data is not None:
-            overlay_image = image_data.xgeo.reproject( espg=4326 )
+            overlay_image = image_data.xgeo.reproject( espg=4326 )  # .reproject( espg=4326 )   gdal_reproject()
             self.overlay.set_data( overlay_image.data )
         self.overlay.set_alpha( alpha )
         self.mpl_update()

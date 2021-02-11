@@ -5,10 +5,12 @@ from typing import Dict, List, Tuple
 from osgeo import osr, gdalconst, gdal
 from pyproj import Proj, transform
 from .grid import GDALGrid
+from spectraclass.util.logs import LogManager, lgm, exception_handled
 from shapely.geometry import Polygon
 import xarray as xr
 from .xextension import XExtension
-import rasterio
+from affine import Affine
+import rasterio, osgeo
 from rasterio.warp import reproject, Resampling, transform, calculate_default_transform
 
 @xr.register_dataarray_accessor('xgeo')
@@ -88,6 +90,7 @@ class XGeo(XExtension):
         return result
 
     def reproject( self, **kwargs ) -> xr.DataArray:
+        from rasterio.crs import CRS
         sref = osr.SpatialReference()
         proj4 = kwargs.get( 'proj4', None )
         espg =  kwargs.get( 'espg',  4326 )
@@ -95,20 +98,32 @@ class XGeo(XExtension):
         else:                  sref.ImportFromEPSG( espg )
         with rasterio.Env():
             src_shape = self._obj.shape
-            src_transform = self._obj.transform
-            src_crs = self._crs
+            src_transform = self._obj.transform[0:6]
+            src_sref: osgeo.osr.SpatialReference = self._crs
             source: np.ndarray = self._obj.data
             xaxis = self._obj.coords[ self._obj.dims[1] ]
             yaxis = self._obj.coords[ self._obj.dims[0] ]
 
-            dst_shape = src_shape
-            dst_crs =  {'init': 'EPSG:4326'}
-            dst_transform = calculate_default_transform( src_crs, dst_crs, dst_shape[1], dst_shape[0],
+            src_crs =  CRS.from_wkt( src_sref.ExportToWkt() )
+            dst_crs =  CRS.from_wkt( sref.ExportToWkt() )
+#            src_crs = CRS.from_proj4( src_sref.ExportToProj4() )
+ #           dst_crs =  CRS.from_proj4( sref.ExportToProj4() )
+            dst_transforms: Tuple[Affine] = calculate_default_transform( src_crs, dst_crs, src_shape[1], src_shape[0],
                                                          left=src_transform[2],
-                                                         bottom=src_transform[5] + src_transform[3]*dst_shape[1] + src_transform[4]*dst_shape[0],
-                                                         right= src_transform[2] + src_transform[0]*dst_shape[1] + src_transform[1]*dst_shape[0],
+                                                         bottom=src_transform[5] + src_transform[3]*src_shape[1] + src_transform[4]*src_shape[0],
+                                                         right= src_transform[2] + src_transform[0]*src_shape[1] + src_transform[1]*src_shape[0],
                                                          top=src_transform[5])
+
+            dst_transform = dst_transforms[0][0:6]
+ #           dst_shape = [ dst_transforms[2], dst_transforms[1] ]
+            dst_shape = src_shape
             destination = np.zeros(dst_shape, np.uint8)
+
+            lgm().log( f" XGEO.reproject-> crs:  {src_crs.__class__} -> {dst_crs.__class__}, transform: {src_transform.__class__} -> {dst_transform.__class__}")
+            lgm().log(f" -->  src crs:  {src_crs}")
+            lgm().log(f" --> dest crs:  {dst_crs}")
+            lgm().log(f" -->  src transform:  {src_transform}")
+            lgm().log(f" --> dest transform:  {dst_transform}")
 
             reproject(
                 source,
@@ -119,7 +134,8 @@ class XGeo(XExtension):
                 dst_crs=dst_crs,
                 resampling=Resampling.nearest)
 
-            lons, lats = transform( src_crs, dst_crs, xaxis, yaxis )
+            lons, _ = transform( src_crs, dst_crs, xaxis, [yaxis[0]]*xaxis.size )
+            _, lats = transform( src_crs, dst_crs, [xaxis[0]]*yaxis.size, yaxis )
 
             result = xr.DataArray( destination, dims=['lat','lon'], coords = dict(lat=lats,lon=lons) )
             result.attrs['transform'] = dst_transform
@@ -155,7 +171,8 @@ class XGeo(XExtension):
 
         dataset: gdal.Dataset = gdal.GetDriverByName('MEM').Create("GdalDataset", x_size, y_size, num_bands, gdal_dtype)
 
-        dataset.SetGeoTransform( self._geotransform )
+        lgm().log( f"  ** XGEO.to_gdal: transform = {self._geotransform}")
+        dataset.SetGeoTransform( self._geotransform[:6] )
         dataset.SetProjection( proj )
 
         if in_array.ndim == 3:
