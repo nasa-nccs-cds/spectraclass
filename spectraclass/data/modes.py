@@ -26,7 +26,7 @@ class ModeDataManager(SCSingletonConfigurable):
     data_dir = tl.Unicode(os.path.expanduser("~/Development/Data")).tag(config=True)
 
     model_dims = tl.Int(32).tag(config=True, sync=True)
-    subsample = tl.Int(5).tag(config=True, sync=True)
+    subsample = tl.Int(1).tag(config=True, sync=True)
     reduce_method = tl.Unicode("Autoencoder").tag(config=True, sync=True)
     reduce_scope = tl.Unicode("tile").tag(config=True, sync=True)
     reduce_nepochs = tl.Int(25).tag(config=True, sync=True)
@@ -162,16 +162,8 @@ class ModeDataManager(SCSingletonConfigurable):
                                          layout=ip.Layout(width="100%", height="100%"), border='2px solid firebrick')
         return creationPanel
 
-    def gui(self, **kwargs) -> ip.Tab():
-        wTab = ip.Tab(layout=ip.Layout(width='auto', height='auto'))
-        selectPanel = self.getSelectionPanel()
-        creationPanel = self.getCreationPanel()
-        configPanel = self.getConfigPanel()
-        wTab.children = [creationPanel, selectPanel, configPanel]
-        wTab.set_title(0, "Create")
-        wTab.set_title(1, "Select")
-        wTab.set_title(2, "Configure")
-        return wTab
+    def gui(self) -> ip.HBox:
+        return self.getSelectionPanel()
 
     def getInputFileData( self, vname: str = None, **kwargs ) -> np.ndarray:
         raise NotImplementedError()

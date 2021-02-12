@@ -87,7 +87,7 @@ class SpatialDataManager(ModeDataManager):
         return result
 
     def reduce(self, data: xa.DataArray):
-        if self.reduce_method != "":
+        if self.reduce_method and (self.reduce_method.lower() != "none"):
             dave, dmag =  data.values.mean(0), 2.0*data.values.std(0)
             normed_data = ( data.values - dave ) / dmag
             reduced_spectra, reproduction, _ = rm().reduce( normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )[0]
@@ -106,7 +106,7 @@ class SpatialDataManager(ModeDataManager):
     @property
     def dsid(self) -> str:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        reduction_method = f"raw" if self.reduce_method == "None" else f"{self.reduce_method}-{self.model_dims}"
+        reduction_method = f"raw" if self.reduce_method.lower() == "none" else f"{self.reduce_method}-{self.model_dims}"
         file_name_base = "-".join( [tm().getBlock().file_name, reduction_method] )
         return f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
 
@@ -256,19 +256,22 @@ class SpatialDataManager(ModeDataManager):
             dsid = point_data.attrs['dsid']
             model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
             data_vars = dict( raw=point_data )
-            if self.reduce_method != "":
+            if self.reduce_method and (self.reduce_method.lower() != "none"):
                 reduced_spectra, reproduction, usable_point_data = rm().reduce( point_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )[0]
                 data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
                 data_vars['reproduction'] = usable_point_data.copy( data=reproduction )
             dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
-            file_name_base = dsid if self.reduce_method == "None" else f"{dsid}-{self.reduce_method}-{self.model_dims}"
-            self.dataset = f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
+            self.dataset = self.reduced_dataset_name( dsid )
             output_file = os.path.join(self.datasetDir, self.dataset + ".nc")
             outputDir = os.path.join( self.cache_dir, dm().project_name )
             os.makedirs(outputDir, 0o777, True)
             lgm().log(f"Writing output to {output_file}")
             if os.path.exists(output_file): os.remove(output_file)
             dataset.to_netcdf(output_file)
+
+    def reduced_dataset_name(self, dsid: str ):
+        file_name_base = f"{dsid}-raw" if self.reduce_method.lower() == "none" else f"{dsid}-{self.reduce_method}-{self.model_dims}"
+        return f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
 
     @exception_handled
     def prepare_inputs(self, *args, **kwargs ):
@@ -282,6 +285,7 @@ class SpatialDataManager(ModeDataManager):
             blocks_point_data = [ training_data ]
         else: raise Exception( f"Unrecognized 'reduce_scope' parameter: {self.reduce_scope}" )
         blocks_reduction = rm().reduce( training_data, blocks_point_data, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
+        self.model_dims = blocks_reduction[0][0].shape[1]
         for ( reduced_spectra, reproduction, point_data ) in blocks_reduction:
             dsid = point_data.attrs['dsid']
             model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
@@ -289,8 +293,7 @@ class SpatialDataManager(ModeDataManager):
             data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
             data_vars['reproduction'] = point_data.copy( data=reproduction )
             result_dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
-            file_name_base = f"{dsid}-{self.reduce_method}-{self.model_dims}"
-            self.dataset = f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
+            self.dataset = self.reduced_dataset_name( dsid )
             output_file = os.path.join( self.datasetDir, self.dataset + ".nc")
             lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file}")
             if os.path.exists(output_file): os.remove(output_file)

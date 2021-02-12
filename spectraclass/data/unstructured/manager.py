@@ -34,7 +34,7 @@ class UnstructuredDataManager(ModeDataManager):
             pspec = self.INPUTS['plot']
             data_vars.update(  {f'plot-{vid}': self.getXarray(pspec[vid], xcoords, self.subsample, xdims, norm=pspec.get('norm','spectral')) for vid in ['x', 'y'] } )
             self.set_progress(0.1)
-            if self.reduce_method != "None":
+            if self.reduce_method and (self.reduce_method.lower() != "none"):
                 input_data = data_vars['embedding']
                 ( reduced_spectra, reproduced_spectra, usable_input_data ) = rm().reduce(input_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity)[0]
                 coords = dict(samples=xcoords['samples'], model=np.arange(self.model_dims))

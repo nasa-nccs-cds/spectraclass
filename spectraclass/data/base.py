@@ -130,10 +130,10 @@ class DataManager(SCSingletonConfigurable):
         cls._mode_data_managers_[ manager_type.MODE.lower() ] = manager_type
 
     @classmethod
-    def config_file( cls, name: str, scope:str ) -> str :
-        config_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "config",  name )
+    def config_file( cls, name: str, mode:str ) -> str :
+        config_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "config",  mode )
         if not os.path.isdir( config_dir ): os.makedirs( config_dir, mode = 0o777 )
-        return os.path.join( config_dir, scope + ".py" )
+        return os.path.join( config_dir, name + ".py" )
 
     @property
     def mode(self) -> str:

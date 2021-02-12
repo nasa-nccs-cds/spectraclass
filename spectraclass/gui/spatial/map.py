@@ -341,24 +341,25 @@ class MapManager(SCSingletonConfigurable):
     def get_coord(self,   iCoord: int ) -> np.ndarray:
         return self.data.coords[  self.data.dims[iCoord] ].values
 
-    def create_image(self, **kwargs ) -> Optional[AxesImage]:
-        image: Optional[AxesImage] = None
+    @exception_handled
+    def create_image(self, **kwargs ) -> AxesImage:
         self.image_template: xa.DataArray =  self.data[ self.init_band, :, : ]
         nValid = np.count_nonzero(~np.isnan(self.image_template))
-        print( f"\n ********* Creating Map Image, nValid={nValid}, data shape = {self.data.shape}, image shape = {self.image_template.shape}, band = {self.init_band}, data range = [ {self.data.min().values}, {self.data.max().values} ]")
-        if nValid > 0:
-            colorbar = kwargs.pop( 'colorbar', False )
-            image: AxesImage =  dms().plotRaster( self.image_template, ax=self.plot_axes, colorbar=colorbar, alpha=0.5, **kwargs )
-            self._cidpress = image.figure.canvas.mpl_connect('button_press_event', self.onMouseClick)
-            self._cidrelease = image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
-            self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
-            overlays = kwargs.get( "overlays", {} )
-            for color, overlay in overlays.items():
-                overlay.plot( ax=self.plot_axes, color=color, linewidth=2 )
+        lgm().log( f"\n ********* Creating Map Image, nValid={nValid}, data shape = {self.data.shape}, image shape = {self.image_template.shape}, band = {self.init_band}, data range = [ {self.data.min().values}, {self.data.max().values} ]")
+        assert nValid > 0, "No valid pixels in image"
+        colorbar = kwargs.pop( 'colorbar', False )
+        image: AxesImage =  dms().plotRaster( self.image_template, ax=self.plot_axes, colorbar=colorbar, alpha=0.5, **kwargs )
+        self._cidpress = image.figure.canvas.mpl_connect('button_press_event', self.onMouseClick)
+        self._cidrelease = image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
+        self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
+        overlays = kwargs.get( "overlays", {} )
+        for color, overlay in overlays.items():
+            overlay.plot( ax=self.plot_axes, color=color, linewidth=2 )
         return image
 
+    @exception_handled
     def create_overlay_image( self ) -> AxesImage:
-        assert self.image is not None, "Must create base imege before overlay"
+        assert self.image is not None, "Must create base image before overlay"
         overlay_image: AxesImage =  dms().plotRaster( self.image_template, itype='overlay', colorbar=False, alpha=0.0, ax=self.plot_axes, zeros=True )
         return overlay_image
 

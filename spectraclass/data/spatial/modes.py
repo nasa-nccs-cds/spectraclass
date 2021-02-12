@@ -14,6 +14,18 @@ class AvirisDataManager(SpatialDataManager):
     def __init__(self):
         super(AvirisDataManager, self).__init__()
 
+class KeelinDataManager(SpatialDataManager):
+    from spectraclass.gui.spatial.application import Spectraclass
+
+    MODE = "keelin"
+    METAVARS = []
+    INPUTS = dict()
+    application = Spectraclass
+
+    def __init__(self):
+        super(KeelinDataManager, self).__init__()
+        self.reduce_method = "NONE"
+
 class DesisDataManager(SpatialDataManager):
     from spectraclass.gui.spatial.application import Spectraclass
     MODE = "DESIS"

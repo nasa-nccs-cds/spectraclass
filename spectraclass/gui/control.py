@@ -58,7 +58,7 @@ class ParametersManager(SCSingletonConfigurable):
 
     def _createGui( self, **kwargs ) -> ipw.Box:
         wTab = ipw.Tab()
-        tabNames = [ "classification" ]
+        tabNames = [ "reduction", "embedding", "classification" ]
         children = []
         for iT, title in enumerate( tabNames ):
             wTab.set_title( iT, title )
@@ -68,9 +68,14 @@ class ParametersManager(SCSingletonConfigurable):
 
     def createPanel(self, title: str ):
         from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.data.base import DataManager, dm
         widgets = []
         if title == "classification":
             widgets.append( self.getFloatSlider( "Overlay Opacity", (0.0,1.0), mm(), "overlay_alpha" ) )
+        elif title == "reduction":
+            widgets.append( dm().modal.getCreationPanel() )
+        elif title == "embedding":
+            widgets.append( dm().modal.getConfigPanel() )
         return  ipw.VBox(widgets)
 
     def getFloatSlider(self, label: str, range: Tuple[float,float], observer: tlc.Configurable, linked_trait: str ):

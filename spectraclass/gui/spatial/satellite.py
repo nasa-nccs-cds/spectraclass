@@ -73,13 +73,14 @@ class SatellitePlotManager(SCSingletonConfigurable):
         self.figure.canvas.draw_idle()
         block_data = self.block.data[0]
         lgm().log(f" *** Creating overlay from block, shape = {block_data.shape}, dims = {block_data.dims}")
-        image_data: xa.DataArray = block_data.xgeo.reproject( espg=4326 )  # .reproject( espg=4326 )   gdal_reproject()
+        image_data: xa.DataArray = block_data.xgeo.gdal_reproject()  # .reproject( espg=4326 )   gdal_reproject()
         self.overlay: AxesImage = self.axes.imshow( image_data, extent=extent, alpha=0.0, aspect='auto', cmap=cspecs['cmap'], norm=cspecs['norm'], origin= 'upper', interpolation= 'nearest' )
 
     @exception_handled
     def plot_overlay_image( self, image_data: xa.DataArray = None, alpha: float = 0.0 ):
         if image_data is not None:
-            overlay_image = image_data.xgeo.reproject( espg=4326 )  # .reproject( espg=4326 )   gdal_reproject()
+            overlay_image = image_data.xgeo.gdal_reproject()  # .reproject( espg=4326 )   gdal_reproject()
+            lgm().log(f" plot_overlay_image: data max = {image_data.max().data}, data shape = {image_data.shape}, projected max = {overlay_image.max().data}, projected shape = {overlay_image.shape}")
             self.overlay.set_data( overlay_image.data )
         self.overlay.set_alpha( alpha )
         self.mpl_update()
