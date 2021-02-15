@@ -295,7 +295,9 @@ class SpatialDataManager(ModeDataManager):
             result_dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
             self.dataset = self.reduced_dataset_name( dsid )
             output_file = os.path.join( self.datasetDir, self.dataset + ".nc")
-            lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file}")
+            lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file}, dset attrs:")
+            for varname, da in result_dataset.data_vars.items():
+                da.attrs['long_name'] = f"{dsid}.{varname}"
             if os.path.exists(output_file): os.remove(output_file)
             result_dataset.to_netcdf(output_file)
 

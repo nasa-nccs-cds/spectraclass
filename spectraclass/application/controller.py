@@ -2,6 +2,7 @@ import os, ipywidgets as ipw
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 from typing import List, Union, Tuple, Optional, Dict, Callable
+from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.model.base import Marker
 import numpy as np
 import xarray as xa
@@ -76,8 +77,10 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.reduction.embedding import ReductionManager, rm
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> EMBED ")
+        ufm().show( "Computing 3D embedding")
         embedding = rm().umap_embedding()
         pcm().reembed(embedding)
+        ufm().clear()
 
     @exception_handled
     def undo_action(self):
@@ -188,9 +191,9 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.gui.plot import PlotManager, gm
         from spectraclass.gui.points import PointCloudManager, pcm
-        lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> ADD MARKER ")
         lm().addMarkerAction( "app", marker )
         pids = marker.pids[np.where(marker.pids >= 0)]
+        lgm().log(f"  ----> Controller[{self.__class__.__name__}] -> ADD MARKER, pids = {pids} ")
         gm().plot_graph(pids)
         pcm().update_marked_points(marker.cid)
         lm().log_markers("post-add_marker")

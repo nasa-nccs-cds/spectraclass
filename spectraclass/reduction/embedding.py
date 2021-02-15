@@ -1,6 +1,7 @@
 from typing import List, Union, Tuple, Dict
 from typing import List, Union, Tuple, Optional, Dict
 from ..graph.manager import ActivationFlowManager
+from sklearn.decomposition import PCA
 import xarray as xa
 import numpy as np, time, traceback
 from ..model.labels import LabelsManager
@@ -33,13 +34,14 @@ class ReductionManager(SCSingletonConfigurable):
         self._state = self.UNDEF
         self._samples_coord = None
 
-    def refresh(self):
-        self._mapper = {}
-
-    def reduce(self, train_data: np.ndarray, test_data: List[np.ndarray], reduction_method: str, ndim: int, nepochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
-        if test_data is None: test_data = [train_data]
-        if reduction_method.lower() == "autoencoder": return self.autoencoder_reduction(train_data, test_data, ndim, nepochs, sparsity)
-        else: return [ (td,td,td) for td in test_data ]
+    def reduce(self, train_data: xa.DataArray, test_data: List[xa.DataArray], reduction_method: str, ndim: int, nepochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
+        with xa.set_options(keep_attrs=True):
+            if test_data is None: test_data = [train_data]
+            if reduction_method.lower() in [ "autoencoder", "aec", "ae" ]:
+                return self.autoencoder_reduction(train_data, test_data, ndim, nepochs, sparsity)
+            elif reduction_method.lower() == "pca":
+                return self.pca_reduction(train_data, test_data, ndim, nepochs, sparsity)
+            else: return [ (td.data,td,td) for td in test_data ]
 
     # def spectral_reduction(data, graph, n_components=3, sparsify=False):
     #     t0 = time.time()
@@ -57,7 +59,23 @@ class ReductionManager(SCSingletonConfigurable):
     #     print(f"Completed spectral_embedding in {(time.time() - t0) / 60.0} min.")
     #     return rv
 
-    def autoencoder_reduction(self, train_input: np.ndarray, test_inputs: Optional[List[np.ndarray]], ndim: int, epochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+    def pca_reduction(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], ndim: int,  epochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
+        pca: PCA = PCA(n_components=ndim)
+        normed_train_input = (train_input - train_input.mean(axis=1)) / train_input.std(axis=1)
+        pca.fit( normed_train_input )
+        lgm().log( f"PCA reduction[{ndim}], Percent variance explained: {pca.explained_variance_ratio_ * 100}" )
+        if test_inputs is None:
+            return [ ( pca.transform(normed_train_input), normed_train_input, normed_train_input ) ]
+        else:
+            results = []
+            for iT, test_input in enumerate(test_inputs):
+                normed_input = (test_input - test_input.mean(axis=1))/test_input.std(axis=1)
+                reduced_features = pca.transform(normed_input)
+                reproduction = normed_input.copy( data = pca.inverse_transform(reduced_features) )
+                results.append( (reduced_features, reproduction, normed_input ) )
+            return results
+
+    def autoencoder_reduction(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], ndim: int, epochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
         from keras.layers import Input, Dense
         from keras.models import Model
         from keras import losses, regularizers
@@ -86,13 +104,13 @@ class ReductionManager(SCSingletonConfigurable):
         encoder.summary()
 
         autoencoder.compile(loss=self.loss, optimizer=optimizer )
-        autoencoder.fit(train_input, train_input, epochs=epochs, batch_size=256, shuffle=True)
+        autoencoder.fit(train_input.data, train_input.data, epochs=epochs, batch_size=256, shuffle=True)
         results = []
         for iT, test_input in enumerate(test_inputs):
             try:
                 encoded_data = encoder.predict(test_input)
                 scaled_encoding = encoded_data/encoded_data.std()
-                reproduction = autoencoder.predict(test_input)
+                reproduction = test_input.copy( data=autoencoder.predict(test_input) )
                 results.append( (scaled_encoding, reproduction, test_input ) )
                 if iT == 0:
                     lgm().log(f" Autoencoder_reduction with sparsity={sparsity}, result: shape = {encoded_data.shape}")

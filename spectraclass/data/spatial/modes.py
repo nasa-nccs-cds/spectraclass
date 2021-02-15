@@ -24,7 +24,6 @@ class KeelinDataManager(SpatialDataManager):
 
     def __init__(self):
         super(KeelinDataManager, self).__init__()
-        self.reduce_method = "NONE"
 
 class DesisDataManager(SpatialDataManager):
     from spectraclass.gui.spatial.application import Spectraclass

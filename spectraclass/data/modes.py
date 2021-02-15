@@ -4,6 +4,7 @@ import os, glob, sys
 import ipywidgets as ip
 from collections import OrderedDict
 from pathlib import Path
+from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import xarray as xa
 import traitlets as tl
@@ -98,8 +99,10 @@ class ModeDataManager(SCSingletonConfigurable):
     def select_dataset(self, *args):
         from spectraclass.data.base import DataManager, dm
         if dm().dsid != self._dset_selection.value:
+            ufm().show( "Loading new data block")
             lgm().log( f"Loading dataset '{self._dset_selection.value}', current dataset = '{dm().dsid}', mdmgr id = {id(self)}")
             dm().loadProject( self._dset_selection.value )
+            ufm().clear()
         dm().refresh_all()
 
     def getSelectionPanel(self) -> ip.HBox:
@@ -168,42 +171,25 @@ class ModeDataManager(SCSingletonConfigurable):
     def getInputFileData( self, vname: str = None, **kwargs ) -> np.ndarray:
         raise NotImplementedError()
 
-    def execute_task( self, task: str ):
-        from spectraclass.application.controller import app
-        lgm().log(f"\n\n  APP EXECUTE: {task}" )
-        if task == "embed":
-            app().embed()
-        elif task == "mark":
-            app().mark()
-        elif task == "spread":
-            app().spread_selection()
-        elif task == "clear":
-            app().clear()
-        elif task == "undo":
-            app().undo_action()
-        elif task == "learn":
-            app().learn()
-        elif task == "classify":
-            app().classify()
-        elif task == "distance":
-            app().display_distance()
-
     @exception_handled
     def loadDataset(self) -> xa.Dataset:
         lgm().log(f"Load dataset {self.dsid}, current datasets = {self.datasets.keys()}")
         if self.dsid not in self.datasets:
             data_file = os.path.join(self.datasetDir, self.dsid + ".nc")
-            dataset: xa.Dataset = xa.open_dataset(data_file)
-            vnames = dataset.variables.keys()
-            vshapes = [f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
-            lgm().log(f" ---> Opened Dataset {self.dsid} from file {data_file}\n\t -> variables: {' '.join(vshapes)}")
-            if 'plot-x' not in vnames:
-                raw_data: xa.DataArray = dataset['raw']
-                dataset['plot-y'] = raw_data
-                dataset['plot-x'] = np.arange(0,raw_data.shape[1])
-            dataset.attrs['dsid'] = self.dsid
-            dataset.attrs['type'] = 'spectra'
-            self.datasets[self.dsid] = dataset
+            try:
+                dataset: xa.Dataset = xa.open_dataset(data_file)
+                vnames = dataset.variables.keys()
+                vshapes = [f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
+                lgm().log(f" ---> Opened Dataset {self.dsid} from file {data_file}\n\t -> variables: {' '.join(vshapes)}")
+                if 'plot-x' not in vnames:
+                    raw_data: xa.DataArray = dataset['raw']
+                    dataset['plot-y'] = raw_data
+                    dataset['plot-x'] = np.arange(0,raw_data.shape[1])
+                dataset.attrs['dsid'] = self.dsid
+                dataset.attrs['type'] = 'spectra'
+                self.datasets[self.dsid] = dataset
+            except FileNotFoundError:
+                lgm().fatal( f"ERROR: input file does not exist: {data_file}" )
         return self.datasets[self.dsid]
 
     def getDatasetList(self):

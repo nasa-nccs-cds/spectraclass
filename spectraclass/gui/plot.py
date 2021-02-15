@@ -53,9 +53,7 @@ class JbkPlot:
     @classmethod
     def refresh(cls):
         cls._x = None
-        cls._ploty = None
-        cls._rploty  = None
-        cls._mdata = None
+        cls.init_data()
 
     @classmethod
     def init_data(cls, **kwargs ):
@@ -153,7 +151,6 @@ class PlotManager(SCSingletonConfigurable):
     def refresh(self):
         JbkPlot.refresh()
         lgm().log(f" PlotManager refresh ")
-        self._wGui = None
 
     def current_graph(self) -> JbkPlot:
         return self._graphs[ self._wGui.selected_index ]
@@ -162,7 +159,7 @@ class PlotManager(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, lm
         if self._wGui is not None:
             if pids is None: pids = lm().getPids()
-            lgm().log(f" plot_graph[{self._wGui.selected_index}]: pids = {pids} ")
+            lgm().log(f" plot spectral graph[{self._wGui.selected_index}]: pids = {pids} ")
             current_graph: JbkPlot = self.current_graph()
             current_graph.select_items( pids )
             current_graph.plot()

@@ -192,10 +192,6 @@ class DataManager(SCSingletonConfigurable):
     def valid_bands(self) -> Optional[List]:
         return self._mode_data_manager_.valid_bands()
 
-    @exception_handled
-    def execute_task(self, task: str ):
-        return self._mode_data_manager_.execute_task(task)
-
     def getModelData(self) -> xa.DataArray:
         project_dataset: xa.Dataset = self.loadCurrentProject("getModelData")
         model_data: xa.DataArray = project_dataset['reduction']

@@ -7,6 +7,7 @@ import numpy as np
 import ipywidgets as ipw
 import traitlets.config as tlc
 from spectraclass.model.base import SCSingletonConfigurable
+from spectraclass.util.logs import LogManager, lgm, exception_handled
 import traitlets as tl
 
 def am() -> "ActionsManager":
@@ -24,9 +25,26 @@ class ActionsManager(SCSingletonConfigurable):
             self._wGui = self._createGui( **kwargs )
         return self._wGui
 
+    @exception_handled
     def on_button_click( self, task, button: ipw.Button = None ):
-        from spectraclass.data.base import DataManager
-        DataManager.instance().execute_task( task )
+        from spectraclass.application.controller import app
+        lgm().log(f"\n\n  APP EXECUTE: {task}" )
+        if task == "embed":
+            app().embed()
+        elif task == "mark":
+            app().mark()
+        elif task == "spread":
+            app().spread_selection()
+        elif task == "clear":
+            app().clear()
+        elif task == "undo":
+            app().undo_action()
+        elif task == "learn":
+            app().learn()
+        elif task == "classify":
+            app().classify()
+        elif task == "distance":
+            app().display_distance()
 
     def _createGui( self, **kwargs ) -> ipw.Box:
         from spectraclass.model.labels import LabelsManager
@@ -97,7 +115,7 @@ class UserFeedbackManager(SCSingletonConfigurable):
         def gui(self, **kwargs) -> ipw.HTML:
             return self._wGui
 
-        def show(self, message: str, color: str = "white" ):
+        def show(self, message: str, color: str = "yellow" ):
             self._wGui.value = f'<p style="color:{color}"><b>{message}</b></p>'
 
         def clear(self):

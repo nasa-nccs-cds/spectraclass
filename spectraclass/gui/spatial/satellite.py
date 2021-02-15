@@ -80,7 +80,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
     def plot_overlay_image( self, image_data: xa.DataArray = None, alpha: float = 0.0 ):
         if image_data is not None:
             overlay_image = image_data.xgeo.gdal_reproject()  # .reproject( espg=4326 )   gdal_reproject()
-            lgm().log(f" plot_overlay_image: data max = {image_data.max().data}, data shape = {image_data.shape}, projected max = {overlay_image.max().data}, projected shape = {overlay_image.shape}")
+            lgm().log(f" plot satellite overlay: data max = {image_data.max().data}, data shape = {image_data.shape}, projected max = {overlay_image.max().data}, projected shape = {overlay_image.shape}")
             self.overlay.set_data( overlay_image.data )
         self.overlay.set_alpha( alpha )
         self.mpl_update()

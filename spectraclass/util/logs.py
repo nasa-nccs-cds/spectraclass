@@ -41,6 +41,12 @@ class LogManager(SCSingletonConfigurable):
         self._log_file.write( msg + "\n" )
         self._log_file.flush()
 
+    def fatal(self, msg: str, status: int = 1 ):
+        print( msg )
+        self._log_file.write( msg + "\n" )
+        self._log_file.flush()
+        sys.exit( status )
+
     def debug(self, msg, **kwargs ):
         if self._level == logging.DEBUG:
             self.log( msg,  **kwargs )
