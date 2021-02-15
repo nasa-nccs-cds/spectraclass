@@ -23,7 +23,7 @@ class Spectraclass(SpectraclassController):
             display(HTML('<style type="text/css">%s</style>Customized changes loaded.' % css))
 
     def gui( self, embed: bool = False ):
-        from spectraclass.gui.plot import PlotManager, gm
+        from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.gui.unstructured.table import TableManager, tm
         from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
@@ -37,7 +37,7 @@ class Spectraclass(SpectraclassController):
         for iT, title in enumerate(['data', 'embedding']): collapsibles.set_title(iT, title)
         collapsibles.selected_index = 1
         plot = ipw.VBox([ ufm().gui(), collapsibles ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
-        control = ipw.VBox( [ am().gui(), tm().gui(), gm().gui() ], layout=ipw.Layout( flex='0 0 700px'), border=css_border )
+        control = ipw.VBox([am().gui(), tm().gui(), gpm().gui()], layout=ipw.Layout(flex='0 0 700px'), border=css_border)
         gui = ipw.HBox( [control, plot ], layout=ipw.Layout( width='100%' ) )
         if embed: self.embed()
         dm().save_config()

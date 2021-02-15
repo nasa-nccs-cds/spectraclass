@@ -37,10 +37,10 @@ class SpectraclassController(SCSingletonConfigurable):
         return pcm().color_map
 
     def update_current_class(self, iclass: int ):
-        from spectraclass.gui.plot import PlotManager, gm
+        from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.model.labels import LabelsManager, lm
         pids = lm().getPids( iclass )
-        gm().plot_graph( pids )
+        gpm().plot_graph(pids)
 
     @classmethod
     def set_spectraclass_theme(cls):
@@ -86,14 +86,14 @@ class SpectraclassController(SCSingletonConfigurable):
     def undo_action(self):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, Action, lm
-        from spectraclass.gui.plot import PlotManager, gm
+        from spectraclass.gui.plot import GraphPlotManager, gpm
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> UNDO ")
         while True:
             action: Optional[Action] = lm().popAction()
             is_transient = self.process_undo( action )
             if not is_transient: break
         pcm().update_plot()
-        gm().plot_graph()
+        gpm().plot_graph()
         return action
 
     def process_undo( self, action ) -> bool:
@@ -150,7 +150,7 @@ class SpectraclassController(SCSingletonConfigurable):
     def spread_selection(self, niters=1):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, Action, lm
-        from spectraclass.gui.plot import PlotManager, gm
+        from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> SPREAD ")
         flow: ActivationFlow = afm().getActivationFlow()
@@ -170,7 +170,7 @@ class SpectraclassController(SCSingletonConfigurable):
                         lgm().log(f" @@@ spread_selection: cid={cid}, label={label}, new_indices={new_indices}" )
                         lm().mark_points( new_indices, cid )
                         pcm().update_marked_points(cid)
-            gm().plot_graph()
+            gpm().plot_graph()
         lm().log_markers("post-spread")
         return converged
 
@@ -189,12 +189,12 @@ class SpectraclassController(SCSingletonConfigurable):
     @exception_handled
     def add_marker(self, source: str, marker: Marker):
         from spectraclass.model.labels import LabelsManager, Action, lm
-        from spectraclass.gui.plot import PlotManager, gm
+        from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.gui.points import PointCloudManager, pcm
         lm().addMarkerAction( "app", marker )
         pids = marker.pids[np.where(marker.pids >= 0)]
         lgm().log(f"  ----> Controller[{self.__class__.__name__}] -> ADD MARKER, pids = {pids} ")
-        gm().plot_graph(pids)
+        gpm().plot_graph(pids)
         pcm().update_marked_points(marker.cid)
         lm().log_markers("post-add_marker")
 

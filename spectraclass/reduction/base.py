@@ -300,7 +300,7 @@ class UMAP(BaseEstimator):
 
     @property
     def embedding( self ) ->  np.ndarray:
-        if self.external_embedding is not None: return self.external_embedding.values
+        if self.external_embedding is not None: return self.external_embedding
         if self._embedding_ is not None: return self._embedding_
         return self._init_embedding_
 

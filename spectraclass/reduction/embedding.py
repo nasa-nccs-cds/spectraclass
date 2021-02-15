@@ -71,7 +71,8 @@ class ReductionManager(SCSingletonConfigurable):
             for iT, test_input in enumerate(test_inputs):
                 normed_input = (test_input - test_input.mean(axis=1))/test_input.std(axis=1)
                 reduced_features = pca.transform(normed_input)
-                reproduction = normed_input.copy( data = pca.inverse_transform(reduced_features) )
+#                reproduction = normed_input.copy( data = pca.inverse_transform(reduced_features) )
+                reproduction = normed_input
                 results.append( (reduced_features, reproduction, normed_input ) )
             return results
 

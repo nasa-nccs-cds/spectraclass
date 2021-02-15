@@ -131,13 +131,13 @@ class JbkPlot:
             t = "multiplot"
         return t
 
-def gm() -> "PlotManager":
-    return PlotManager.instance()
+def gpm() -> "GraphPlotManager":
+    return GraphPlotManager.instance()
 
-class PlotManager(SCSingletonConfigurable):
+class GraphPlotManager(SCSingletonConfigurable):
 
     def __init__( self ):
-        super(PlotManager, self).__init__()
+        super(GraphPlotManager, self).__init__()
         output_notebook()
         self._wGui: ipw.Tab() = None
         self._graphs: List[JbkPlot] = []
@@ -150,7 +150,7 @@ class PlotManager(SCSingletonConfigurable):
 
     def refresh(self):
         JbkPlot.refresh()
-        lgm().log(f" PlotManager refresh ")
+        lgm().log(f" GraphPlotManager refresh ")
 
     def current_graph(self) -> JbkPlot:
         return self._graphs[ self._wGui.selected_index ]

@@ -10,6 +10,7 @@ from matplotlib.image import AxesImage
 from matplotlib.colors import Normalize
 from matplotlib.backend_bases import PickEvent, MouseButton, NavigationToolbar2
 from spectraclass.gui.control import UserFeedbackManager, ufm
+from matplotlib.widgets import Button
 from collections import OrderedDict
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.model.base import SCSingletonConfigurable, Marker
@@ -69,8 +70,8 @@ class PageSlider(matplotlib.widgets.Slider):
         divider = make_axes_locatable(ax)
         bax = divider.append_axes("right", size="5%", pad=0.05)
         fax = divider.append_axes("right", size="5%", pad=0.05)
-        self.button_back = matplotlib.widgets.Button(bax, label='$\u25C1$', color=self.stepcolor, hovercolor=self.activecolor)
-        self.button_forward = matplotlib.widgets.Button(fax, label='$\u25B7$', color=self.stepcolor, hovercolor=self.activecolor)
+        self.button_back = Button(bax, label='$\u25C1$', color=self.stepcolor, hovercolor=self.activecolor)
+        self.button_forward = Button(fax, label='$\u25B7$', color=self.stepcolor, hovercolor=self.activecolor)
         self.button_back.label.set_fontsize(self.fontsize)
         self.button_forward.label.set_fontsize(self.fontsize)
         self.button_back.on_clicked(self.backward)
@@ -127,6 +128,8 @@ class MapManager(SCSingletonConfigurable):
         self.image_template: Optional[xa.DataArray]  = None
         self.overlay_image: Optional[AxesImage] = None
         self.labels = None
+        self.map_sources = [ "raw", "reduced" ]
+        self.map_source_selection_index = 1
         self.transients = []
         self.plot_axes: Optional[Axes] = None
         self.marker_plot: Optional[PathCollection] = None
@@ -299,8 +302,20 @@ class MapManager(SCSingletonConfigurable):
     #     return SpatialDataManager.raster2points( self.label_map )
 
     @property
-    def data(self):
-        return None if self.block is None else self.block.data
+    def data(self) -> Optional[xa.DataArray]:
+        from spectraclass.data.base import DataManager, dm
+        if self.block is None: return None
+        block_data: xa.DataArray = self.block.data
+        if self.map_source_selection_index == 1:
+            return block_data
+        else:
+            reduced_data: xa.DataArray = dm().getModelData().transpose()
+            dims = [reduced_data.dims[0], block_data.dims[1], block_data.dims[2]]
+            coords = [(dims[0], reduced_data[dims[0]]), (dims[1], block_data[dims[1]]), (dims[2], block_data[dims[2]])]
+            shape = [c[1].size for c in coords]
+            raster_data = reduced_data.data.reshape(shape)
+            return xa.DataArray(raster_data, coords, dims, reduced_data.name, reduced_data.attrs)
+
 
     @property
     def frame_data(self) -> np.ndarray:
@@ -321,14 +336,16 @@ class MapManager(SCSingletonConfigurable):
     def setup_plot(self, **kwargs):
         self.plot_grid: GridSpec = self.figure.add_gridspec( 4, 4 )
         self.plot_axes = self.figure.add_subplot( self.plot_grid[:,:] )
-#        self.figure.suptitle(f"Point Labeling Console",fontsize=14)
-        # for iC in range(2):
-        #     y0,y1 = 2*iC, 2*(iC+1)
-        #     self.control_axes[iC] = self.figure.add_subplot( self.plot_grid[y0:y1, -1] )
-        #     self.control_axes[iC].xaxis.set_major_locator(plt.NullLocator())
-        #     self.control_axes[iC].yaxis.set_major_locator(plt.NullLocator())
-        self.slider_axes: Axes = self.figure.add_axes([0.01, 0.01, 0.95, 0.04])  # [left, bottom, width, height]
+        self.slider_axes: Axes = self.figure.add_axes([0.12, 0.01, 0.85, 0.04])  # [left, bottom, width, height]
+        self.button_axes: Axes = self.figure.add_axes([0.01, 0.01, 0.1, 0.04])   # [left, bottom, width, height]
+        self.map_source_button: Button = Button(self.button_axes, self.map_sources[ self.map_source_selection_index], color="yellow" )
         self.plot_grid.update( left = 0.01, bottom = 0.1, top = 0.99, right = 0.99 )
+
+    def toggle_map_source(self):
+        self.map_source_selection_index = ( self.map_source_selection_index + 1 ) % 2
+        self.map_source_button.label = self.map_sources[ self.map_source_selection_index ]
+        lgm().log( f"toggle_map_source: [{self.map_source_selection_index}] -> {self.map_source_button.label} ")
+        self.update_plots()
 
     def invert_yaxis(self):
         self.plot_axes.invert_yaxis()
@@ -424,6 +441,8 @@ class MapManager(SCSingletonConfigurable):
                     self.dataLims = event.inaxes.dataLim
                 else:
                     lgm().log(f"Can't add marker, pid = {pid}")
+            elif not self.toolbarMode and (event.inaxes == self.button_axes):
+                self.toggle_map_source()
 
 
     def add_marker(self, marker: Marker ):

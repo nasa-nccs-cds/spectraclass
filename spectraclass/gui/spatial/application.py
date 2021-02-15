@@ -10,7 +10,7 @@ class Spectraclass(SpectraclassController):
         self.set_parent_instances()
 
     def gui( self, embed: bool = False ):
-        from spectraclass.gui.plot import PlotManager, gm
+        from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
@@ -25,7 +25,7 @@ class Spectraclass(SpectraclassController):
         plot_collapsibles.selected_index = 1
         plot = ipw.VBox([ ufm().gui(), plot_collapsibles ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
 
-        control_collapsibles = ipw.Accordion(children=[ gm().gui(), pm().gui() ], layout=ipw.Layout(width='100%'))  # , lm.gui()
+        control_collapsibles = ipw.Accordion(children=[gpm().gui(), pm().gui()], layout=ipw.Layout(width='100%'))  # , lm.gui()
         for iT, title in enumerate(['graph', 'controls']): control_collapsibles.set_title(iT, title)   # , 'logs'
         control_collapsibles.selected_index = 0
         control = ipw.VBox( [ am().gui(), mm().gui(), control_collapsibles ], layout=ipw.Layout( flex='0 0 700px'), border=css_border )
