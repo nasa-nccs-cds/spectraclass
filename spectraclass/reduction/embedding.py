@@ -1,7 +1,7 @@
 from typing import List, Union, Tuple, Dict
 from typing import List, Union, Tuple, Optional, Dict
 from ..graph.manager import ActivationFlowManager
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, FastICA
 import xarray as xa
 import numpy as np, time, traceback
 from ..model.labels import LabelsManager
@@ -40,7 +40,9 @@ class ReductionManager(SCSingletonConfigurable):
             if reduction_method.lower() in [ "autoencoder", "aec", "ae" ]:
                 return self.autoencoder_reduction(train_data, test_data, ndim, nepochs, sparsity)
             elif reduction_method.lower() == "pca":
-                return self.pca_reduction(train_data, test_data, ndim, nepochs, sparsity)
+                return self.pca_reduction(train_data, test_data, ndim )
+            elif reduction_method.lower() == "ica":
+                return self.pca_reduction(train_data, test_data, ndim)
             else: return [ (td.data,td,td) for td in test_data ]
 
     # def spectral_reduction(data, graph, n_components=3, sparsify=False):
@@ -59,7 +61,7 @@ class ReductionManager(SCSingletonConfigurable):
     #     print(f"Completed spectral_embedding in {(time.time() - t0) / 60.0} min.")
     #     return rv
 
-    def pca_reduction(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], ndim: int,  epochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
+    def pca_reduction(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], ndim: int ) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
         pca: PCA = PCA(n_components=ndim)
         normed_train_input = (train_input - train_input.mean(axis=1)) / train_input.std(axis=1)
         pca.fit( normed_train_input )
@@ -71,9 +73,23 @@ class ReductionManager(SCSingletonConfigurable):
             for iT, test_input in enumerate(test_inputs):
                 normed_input = (test_input - test_input.mean(axis=1))/test_input.std(axis=1)
                 reduced_features = pca.transform(normed_input)
-#                reproduction = normed_input.copy( data = pca.inverse_transform(reduced_features) )
                 reproduction = normed_input
                 results.append( (reduced_features, reproduction, normed_input ) )
+            return results
+
+    def ica_reduction(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], ndim: int ) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
+        ica: FastICA = FastICA(n_components=ndim)
+        normed_train_input = (train_input - train_input.mean(axis=1)) / train_input.std(axis=1)
+        ica.fit(normed_train_input)
+        if test_inputs is None:
+            return [(ica.transform(normed_train_input), normed_train_input, normed_train_input)]
+        else:
+            results = []
+            for iT, test_input in enumerate(test_inputs):
+                normed_input = (test_input - test_input.mean(axis=1)) / test_input.std(axis=1)
+                reduced_features = ica.transform(normed_input)
+                reproduction = np.dot(reduced_features, ica.mixing_.T) + ica.mean_
+                results.append((reduced_features, reproduction, normed_input))
             return results
 
     def autoencoder_reduction(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], ndim: int, epochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:

@@ -10,7 +10,7 @@ from matplotlib.image import AxesImage
 from matplotlib.colors import Normalize
 from matplotlib.backend_bases import PickEvent, MouseButton, NavigationToolbar2
 from spectraclass.gui.control import UserFeedbackManager, ufm
-from matplotlib.widgets import Button
+from matplotlib.widgets import Button, CheckButtons
 from collections import OrderedDict
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.model.base import SCSingletonConfigurable, Marker
@@ -128,8 +128,7 @@ class MapManager(SCSingletonConfigurable):
         self.image_template: Optional[xa.DataArray]  = None
         self.overlay_image: Optional[AxesImage] = None
         self.labels = None
-        self.map_sources = [ "raw", "reduced" ]
-        self.map_source_selection_index = 1
+        self.check_use_model: CheckButtons = None
         self.transients = []
         self.plot_axes: Optional[Axes] = None
         self.marker_plot: Optional[PathCollection] = None
@@ -306,7 +305,7 @@ class MapManager(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         if self.block is None: return None
         block_data: xa.DataArray = self.block.data
-        if self.map_source_selection_index == 1:
+        if not self.use_model_data:
             return block_data
         else:
             reduced_data: xa.DataArray = dm().getModelData().transpose()
@@ -315,7 +314,6 @@ class MapManager(SCSingletonConfigurable):
             shape = [c[1].size for c in coords]
             raster_data = reduced_data.data.reshape(shape)
             return xa.DataArray(raster_data, coords, dims, reduced_data.name, reduced_data.attrs)
-
 
     @property
     def frame_data(self) -> np.ndarray:
@@ -336,16 +334,16 @@ class MapManager(SCSingletonConfigurable):
     def setup_plot(self, **kwargs):
         self.plot_grid: GridSpec = self.figure.add_gridspec( 4, 4 )
         self.plot_axes = self.figure.add_subplot( self.plot_grid[:,:] )
-        self.slider_axes: Axes = self.figure.add_axes([0.12, 0.01, 0.85, 0.04])  # [left, bottom, width, height]
-        self.button_axes: Axes = self.figure.add_axes([0.01, 0.01, 0.1, 0.04])   # [left, bottom, width, height]
-        self.map_source_button: Button = Button(self.button_axes, self.map_sources[ self.map_source_selection_index], color="yellow" )
+        self.slider_axes: Axes = self.figure.add_axes([0.12, 0.01, 0.85, 0.05])  # [left, bottom, width, height]
+        self.button_axes: Axes = self.figure.add_axes([0.01, 0.01, 0.1, 0.05])   # [left, bottom, width, height]
+        self.check_use_model: CheckButtons = CheckButtons(self.button_axes, [ "model" ], [ False ] )
         self.plot_grid.update( left = 0.01, bottom = 0.1, top = 0.99, right = 0.99 )
 
-    def toggle_map_source(self):
-        self.map_source_selection_index = ( self.map_source_selection_index + 1 ) % 2
-        self.map_source_button.label = self.map_sources[ self.map_source_selection_index ]
-        lgm().log( f"toggle_map_source: [{self.map_source_selection_index}] -> {self.map_source_button.label} ")
-        self.update_plots()
+    @property
+    def use_model_data(self) -> bool:
+        if self.check_use_model is None: return False
+        stats = self.check_use_model.get_status()
+        return stats[0]
 
     def invert_yaxis(self):
         self.plot_axes.invert_yaxis()
@@ -442,7 +440,8 @@ class MapManager(SCSingletonConfigurable):
                 else:
                     lgm().log(f"Can't add marker, pid = {pid}")
             elif not self.toolbarMode and (event.inaxes == self.button_axes):
-                self.toggle_map_source()
+                lgm().log( f"Update data source, use_model_data = {self.use_model_data}" )
+                self.update_plots()
 
 
     def add_marker(self, marker: Marker ):
