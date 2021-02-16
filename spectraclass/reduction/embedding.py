@@ -10,6 +10,12 @@ import traitlets.config as tlc
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 from spectraclass.model.base import SCSingletonConfigurable
 
+def norm( x: xa.DataArray, axis = 0 ) -> xa.DataArray:
+    return ( x - x.data.mean(axis=axis) ) / x.data.std(axis=axis)
+
+def scale( x: xa.DataArray, axis = 0 ) -> xa.DataArray:
+    return  x / x.data.mean(axis=axis)
+
 class ReductionManager(SCSingletonConfigurable):
     init = tl.Unicode("random").tag(config=True,sync=True)
     loss = tl.Unicode("mean_squared_error").tag(config=True,sync=True)
@@ -37,12 +43,11 @@ class ReductionManager(SCSingletonConfigurable):
     def reduce(self, train_data: xa.DataArray, test_data: List[xa.DataArray], reduction_method: str, ndim: int, nepochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
         with xa.set_options(keep_attrs=True):
             if test_data is None: test_data = [train_data]
-            if reduction_method.lower() in [ "autoencoder", "aec", "ae" ]:
-                return self.autoencoder_reduction(train_data, test_data, ndim, nepochs, sparsity)
-            elif reduction_method.lower() == "pca":
-                return self.pca_reduction(train_data, test_data, ndim )
-            elif reduction_method.lower() == "ica":
-                return self.pca_reduction(train_data, test_data, ndim)
+            redm = reduction_method.lower()
+            if redm in [ "autoencoder", "aec", "ae" ]:
+                return self.autoencoder_reduction( train_data, test_data, ndim, nepochs, sparsity )
+            elif redm in [ "pca", "ica" ]:
+                return self.ca_reduction( train_data, test_data, ndim, redm )
             else: return [ (td.data,td,td) for td in test_data ]
 
     # def spectral_reduction(data, graph, n_components=3, sparsify=False):
@@ -61,35 +66,27 @@ class ReductionManager(SCSingletonConfigurable):
     #     print(f"Completed spectral_embedding in {(time.time() - t0) / 60.0} min.")
     #     return rv
 
-    def pca_reduction(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], ndim: int ) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
-        pca: PCA = PCA(n_components=ndim)
-        normed_train_input = (train_input - train_input.mean(axis=1)) / train_input.std(axis=1)
-        pca.fit( normed_train_input )
-        lgm().log( f"PCA reduction[{ndim}], Percent variance explained: {pca.explained_variance_ratio_ * 100}" )
+    def ca_reduction(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], ndim: int, method = "pca" ) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
+        if method == "pca":
+            mapper = PCA(n_components=ndim)
+        elif method == "ica":
+            mapper = FastICA(n_components=ndim)
+        else: raise Exception( f"Unknown reduction methos: {method}")
+        normed_train_input: xa.DataArray = norm( train_input  )
+        mapper.fit( normed_train_input.data )
+        if method == "pca":
+            lgm().log( f"PCA reduction[{ndim}], Percent variance explained: {mapper.explained_variance_ratio_ * 100}" )
         if test_inputs is None:
-            return [ ( pca.transform(normed_train_input), normed_train_input, normed_train_input ) ]
+            reduced_features: np.ndarray = mapper.transform( normed_train_input.data )
+            reproduction: xa.DataArray = train_input.copy( data = mapper.inverse_transform(reduced_features) )
+            return [ ( reduced_features, reproduction, normed_train_input ) ]
         else:
             results = []
             for iT, test_input in enumerate(test_inputs):
-                normed_input = (test_input - test_input.mean(axis=1))/test_input.std(axis=1)
-                reduced_features = pca.transform(normed_input)
-                reproduction = normed_input
+                normed_input = norm( test_input )
+                reduced_features: np.ndarray = mapper.transform( normed_input.data )
+                reproduction: xa.DataArray = test_input.copy( data = mapper.inverse_transform(reduced_features) )
                 results.append( (reduced_features, reproduction, normed_input ) )
-            return results
-
-    def ica_reduction(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], ndim: int ) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
-        ica: FastICA = FastICA(n_components=ndim)
-        normed_train_input = (train_input - train_input.mean(axis=1)) / train_input.std(axis=1)
-        ica.fit(normed_train_input)
-        if test_inputs is None:
-            return [(ica.transform(normed_train_input), normed_train_input, normed_train_input)]
-        else:
-            results = []
-            for iT, test_input in enumerate(test_inputs):
-                normed_input = (test_input - test_input.mean(axis=1)) / test_input.std(axis=1)
-                reduced_features = ica.transform(normed_input)
-                reproduction = np.dot(reduced_features, ica.mixing_.T) + ica.mean_
-                results.append((reduced_features, reproduction, normed_input))
             return results
 
     def autoencoder_reduction(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], ndim: int, epochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
@@ -121,19 +118,21 @@ class ReductionManager(SCSingletonConfigurable):
         encoder.summary()
 
         autoencoder.compile(loss=self.loss, optimizer=optimizer )
-        autoencoder.fit(train_input.data, train_input.data, epochs=epochs, batch_size=256, shuffle=True)
+        normed_train_input: xa.DataArray = scale(train_input)
+        autoencoder.fit(normed_train_input.data, normed_train_input.data, epochs=epochs, batch_size=256, shuffle=True)
         results = []
         for iT, test_input in enumerate(test_inputs):
             try:
-                encoded_data = encoder.predict(test_input)
-                scaled_encoding = encoded_data/encoded_data.std()
-                reproduction = test_input.copy( data=autoencoder.predict(test_input) )
-                results.append( (scaled_encoding, reproduction, test_input ) )
+                normed_test_input: xa.DataArray = scale(test_input)
+                encoded_data: np.ndarray = encoder.predict( normed_test_input.data )
+                reproduced_data: np.ndarray = autoencoder.predict( normed_test_input.data )
+                reproduction: xa.DataArray = test_input.copy( data=reproduced_data )
+                results.append( (encoded_data, reproduction, normed_test_input ) )
                 if iT == 0:
                     lgm().log(f" Autoencoder_reduction with sparsity={sparsity}, result: shape = {encoded_data.shape}")
-                    lgm().log(f" ----> encoder_input: shape = {train_input.shape}, val[5][5] = {train_input[:5][:5]} ")
-                    lgm().log(f" ----> reproduction: shape = {reproduction.shape}, val[5][5] = {reproduction[:5][:5]} ")
-                    lgm().log(f" ----> encoding: shape = {scaled_encoding.shape}, val[5][5]108 = {scaled_encoding[:5][:5]} ")
+                    lgm().log(f" ----> encoder_input: shape = {normed_test_input.shape}, val[5][5] = {normed_test_input.data[:5][:5]} ")
+                    lgm().log(f" ----> reproduction: shape = {reproduced_data.shape}, val[5][5] = {reproduced_data[:5][:5]} ")
+                    lgm().log(f" ----> encoding: shape = {encoded_data.shape}, val[5][5]108 = {encoded_data[:5][:5]} ")
             except Exception as err:
                 lgm().exception( f"Unable to process test input[{iT}], input shape = {test_input.shape}, error = {err}" )
         return results

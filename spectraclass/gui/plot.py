@@ -15,6 +15,7 @@ from spectraclass.model.base import SCSingletonConfigurable
 
 def rescale( x: np.ndarray ):
     xs= x.squeeze()
+    if xs.mean() == 0.0: return xs
     return xs / xs.mean()
 
 class JbkPlot:
@@ -83,8 +84,9 @@ class JbkPlot:
 
     def update_graph(self, x, y, cmap ):
         self.init_graph()
-        self._source.data.update(ys=y, xs=x, cmap=cmap)
         yr = self.yrange
+        lgm().log( f" *** update_graph: [ x={x}, y={y} ] -----  range: [ start={yr[0]}, end={yr[1]} ] ")
+        self._source.data.update(ys=y, xs=x, cmap=cmap)
         self.fig.y_range.update( start=yr[0], end=yr[1] )
 
     @property
@@ -112,7 +114,7 @@ class JbkPlot:
     def y2( self ) -> List[ np.ndarray ]:
         idx = self._selected_pids[0]
         rp = rescale( self._rploty[idx] )
-        lgm().log( f" GRAPH:y2-> idx={idx}, val[10] = {rp[:10]} ")
+        lgm().log( f" GRAPH:y2-> idx={idx}, val[10] = {rp[:10]} ({self._rploty[idx][:10]})")
         return [ rescale( self._ploty[idx] ), rp ]
 
     @property

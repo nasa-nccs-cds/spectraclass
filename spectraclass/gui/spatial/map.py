@@ -332,12 +332,10 @@ class MapManager(SCSingletonConfigurable):
         return result
 
     def setup_plot(self, **kwargs):
-        self.plot_grid: GridSpec = self.figure.add_gridspec( 4, 4 )
-        self.plot_axes = self.figure.add_subplot( self.plot_grid[:,:] )
+        self.plot_axes:   Axes = self.figure.add_axes([0.01, 0.06, 0.98, 0.93])  # [left, bottom, width, height]
         self.slider_axes: Axes = self.figure.add_axes([0.12, 0.01, 0.85, 0.05])  # [left, bottom, width, height]
         self.button_axes: Axes = self.figure.add_axes([0.01, 0.01, 0.1, 0.05])   # [left, bottom, width, height]
         self.check_use_model: CheckButtons = CheckButtons(self.button_axes, [ "model" ], [ False ] )
-        self.plot_grid.update( left = 0.01, bottom = 0.1, top = 0.99, right = 0.99 )
 
     @property
     def use_model_data(self) -> bool:
@@ -385,8 +383,9 @@ class MapManager(SCSingletonConfigurable):
              (y0, y1) = ax.get_ylim()
              print(f"ZOOM Event: Updated bounds: ({x0},{x1}), ({y0},{y1})")
 
-    def frame_color_pointcloud( self, **kwargs ) -> xa.DataArray:
+    def frame_color_pointcloud( self, **kwargs ) -> Optional[xa.DataArray]:
         from spectraclass.application.controller import app
+        if self.currentFrame >= self.data.shape[0]: return None
         frame_data: xa.DataArray = self.data[ self.currentFrame ]
         lgm().log( f" color_pointcloud: currentFrame = {self.currentFrame}, frame data shape = {frame_data.shape}")
         app().color_pointcloud( frame_data.values.flatten(), **kwargs )
@@ -397,19 +396,21 @@ class MapManager(SCSingletonConfigurable):
         if self.image is not None:
             from spectraclass.data.base import DataManager, dm
             frame_data: xa.DataArray = self.frame_color_pointcloud()
-            self.image.set_data( frame_data.values  )
-            drange = dms().get_color_bounds( frame_data )
-            self.image.set_norm( Normalize( **drange ) )
-            self.image.set_extent( self.block.extent() )
-            plot_name = os.path.basename( dm().dsid )
-            lgm().log( f" Update Map: data shape = {frame_data.shape}, range = {drange}, extent = {self.block.extent()}")
-            self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
-            self.plot_axes.title.set_fontsize( 8 )
-        if self.overlay_image is not None:
-            from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
-            self.clear_overlay_image()
-            spm().clear_overlay_image()
-        self.update_canvas()
+            if frame_data is not None:
+                self.image.set_data( frame_data.values  )
+                drange = dms().get_color_bounds( frame_data )
+                self.image.set_norm( Normalize( **drange ) )
+                self.image.set_extent( self.block.extent() )
+                plot_name = os.path.basename( dm().dsid )
+                lgm().log( f" Update Map: data shape = {frame_data.shape}, range = {drange}, extent = {self.block.extent()}")
+                self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
+                self.plot_axes.title.set_fontsize( 8 )
+
+                if self.overlay_image is not None:
+                    from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
+                    self.clear_overlay_image()
+                    spm().clear_overlay_image()
+                self.update_canvas()
 
     def clear_overlay_image(self):
         self.overlay_image.set_extent(self.block.extent())
@@ -440,9 +441,11 @@ class MapManager(SCSingletonConfigurable):
                 else:
                     lgm().log(f"Can't add marker, pid = {pid}")
             elif not self.toolbarMode and (event.inaxes == self.button_axes):
-                lgm().log( f"Update data source, use_model_data = {self.use_model_data}" )
+                lgm().log( f"Update data source: use_model_data = {self.use_model_data}" )
+                fmsg = "Updating data source: " + ( "Using (reduced) model data" if self.use_model_data else "Using (raw) band data"  )
+                ufm().show( fmsg, "yellow" )
                 self.update_plots()
-
+                ufm().clear()
 
     def add_marker(self, marker: Marker ):
         from spectraclass.application.controller import app
@@ -598,7 +601,9 @@ class MapManager(SCSingletonConfigurable):
             tval = self.slider.val
             self.currentFrame = int( tval )
             lgm().log(f"Slider Update, frame = {self.currentFrame}")
+            ufm().show( f"Loading frame {self.currentFrame}", "yellow" )
             self.update_plots()
+            ufm().clear()
 
     def show(self):
         plt.show()

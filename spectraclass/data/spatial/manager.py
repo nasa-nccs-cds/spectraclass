@@ -291,7 +291,7 @@ class SpatialDataManager(ModeDataManager):
             model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
             data_vars = dict( raw=point_data )
             data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
-            data_vars['reproduction'] = point_data.copy( data=reproduction )
+            data_vars['reproduction'] = reproduction
             result_dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
             self.dataset = self.reduced_dataset_name( dsid )
             output_file = os.path.join( self.datasetDir, self.dataset + ".nc")
