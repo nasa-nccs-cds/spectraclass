@@ -1,21 +1,17 @@
 import random, numpy as np
-from spectraclass.data.base import DataManager
-from spectraclass.data.spatial.tile.manager import TileManager, tm
+from spectraclass.test.texture.util import load_test_data
 import matplotlib.pyplot as plt
 from skimage.filters import difference_of_gaussians
 from skimage.filters.rank import entropy
 from skimage.morphology import disk
-import time, xarray as xa
 from spectraclass.test.texture.util import scale
 from scipy import ndimage as ndi
 
-t0 = time.time()
-dm: DataManager = DataManager.initialize("demo1",'keelin')
-project_data: xa.Dataset = dm.loadCurrentProject("main")
-block = tm().getBlock()
-reduced: np.ndarray = project_data.reduction.data.transpose().reshape( project_data.model.size, *block.shape )
-t1 = time.time()
-print( f"Loaded data in {t1-t0} sec")
+dataset_type = "chr"
+dsid = "ks"
+data_type = "raw"
+iLayer = 0
+texband: np.ndarray = load_test_data( dataset_type, dsid, data_type, iLayer ).data
 
 nb = 4
 ni = 3
@@ -24,12 +20,11 @@ dset = ( "raw", 3 )
 sigma0: float = 1.0
 sigma1: float = 3.0
 edisk_size: int = 5
-fig = plt.figure()
 
+fig = plt.figure()
 for ib in range(nb):
 
     sigma1 = sigma0 + ( .5 *  (ib+1) )
-    texband: np.ndarray = block.data.data[dset[1]] if dset[0] == "raw" else reduced[dset[1]]
     filtered: np.ndarray =  difference_of_gaussians( texband, sigma0, sigma1, mode=mode )
     nfilt = scale(filtered)
     print( [ nfilt.max(), nfilt.min() ] )
