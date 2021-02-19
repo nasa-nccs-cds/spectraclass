@@ -1,10 +1,12 @@
 import os, time, random, numpy as np
 from typing import List, Union, Tuple, Optional, Dict, Callable, Iterable
 import matplotlib.pyplot as plt
+from sklearn.decomposition import KernelPCA
 import scipy.stats as stats
 from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
 from matplotlib.axes import Axes, BarContainer
+from sklearn.metrics.pairwise import chi2_kernel
 import xarray as xa
 from skimage.feature import texture as sktex
 from skimage.morphology import disk, ball
@@ -35,27 +37,17 @@ lbp: np.ndarray = sktex.local_binary_pattern( texband.data, P, R, method ).astyp
 print( f" calculated LBP, shape = {lbp.shape}, range = [ {lbp.min()}, {lbp.max()} ] ")
 
 hist_array: np.ndarray = windowed_histogram( lbp, disk( hist_disk_radius )  )
-[ys,xs] = hist_array.shape[:2]
+[ys,xs,nbin] = hist_array.shape
 print( f" calculated hist_array, shape = {hist_array.shape}")
+
+t0 = time.time()
+K: np.ndarray = chi2_kernel( hist_array.reshape([ys*xs,nbin]), gamma=.5 )
+dt = time.time() - t0
+print( f"Computed Kernel in {dt} sec ({dt/60} min), K shape = {K.shape}, K range = [ {K.min()}, {K.max()} ]")
+
+transformer = KernelPCA(n_components=8, kernel='precomputed')
+reduced = transformer.fit_transform(K)
 
 plot( 0, texband.data, f"{data_type}-{iBand}" )
 plot( 1, lbp, f"LBP: P={P}, R={R}" )
-
-def get_stats( local_hist: np.ndarray ) -> np.ndarray:
-    dpd: stats.rv_discrete =  stats.rv_discrete( values=( np.arange(local_hist.size), local_hist ) )
-    moments: List[float] = [ xm.tolist() for xm in dpd.stats( moments='mvsk' ) ]
-    moments.append( dpd.entropy().tolist() )
-    return np.array( moments )
-
-t0 = time.time()
-hdata: np.ndarray = hist_array.reshape( [ xs * ys, hist_array.shape[2] ] )
-hdata_stats: np.ndarray = np.apply_along_axis( get_stats, 1, hdata )
-nf = hdata_stats.shape[1]
-hdata_stats = hdata_stats.reshape( [ ys, xs, nf ] )
-dt = time.time() - t0
-
-print( f"Computed tex-stats in {dt} sec ({dt/60} min), stats shape = {hdata_stats.shape}, hdata shape = {hdata.shape}")
-for iT in range( hdata_stats.shape[2] ):
-    plot( iT+2, hdata_stats[:,:,iT], f"TF-{iT}" )
-
 plt.show()
