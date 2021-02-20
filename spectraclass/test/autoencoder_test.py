@@ -1,6 +1,5 @@
 import random, numpy as np
 from spectraclass.data.base import DataManager
-from spectraclass.reduction.embedding import ReductionManager, rm
 import xarray as xa
 
 dm: DataManager = DataManager.initialize("demo1",'keelin')

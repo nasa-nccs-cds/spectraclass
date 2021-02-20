@@ -15,7 +15,7 @@ class gpUMAP(UMAP):
     def embed( self, X, y=None, **kwargs ):
         input = self.trainMapper(X, y, **kwargs)
         t0 = time.time()
-        self._embedding_ = self._mapper.transform( input, knn_graph = self.getNNGraph() )
+        self._embedding_ = self._mapper.transform( input, knn_graph = kwargs.get( 'nngraph', self.getNNGraph()) )
         print(f"Completed umap embed in time {time.time() - t0} sec, embedding shape = {self._embedding_.shape}")
         return self
 
@@ -25,9 +25,8 @@ class gpUMAP(UMAP):
         if self._mapper is None:
             t0 = time.time()
             print(f"Computing embedding, input shape = {X.shape}")
-            self._mapper = cuml.UMAP(init=self.init, n_neighbors=self.n_neighbors, n_components=self.n_components,
-                                n_epochs=self.n_epochs, min_dist=self.min_dist, output_type="numpy")
-            self._mapper.fit(input_data, knn_graph = self.getNNGraph() )
+            self._mapper = cuml.UMAP(init=self.init, n_neighbors=self.n_neighbors, n_components=self.n_components, n_epochs=self.n_epochs, min_dist=self.min_dist, output_type="numpy")
+            self._mapper.fit(input_data, knn_graph = kwargs.get( 'nngraph', self.getNNGraph()) )
             print(f"Completed umap fit in time {time.time() - t0} sec")
         return input_data
 
