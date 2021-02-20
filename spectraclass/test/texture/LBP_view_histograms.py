@@ -14,19 +14,19 @@ from spectraclass.test.texture.util import load_test_data
 dataset_type = "chr"
 dsid = "ks"
 data_type = "raw"
-iBand = 6
+iBand = 0
 texband: xa.DataArray = load_test_data( dataset_type, dsid, data_type, iBand )
 
-R = 2
-P = 8 * R
+R = 1.0
+P = round( 8 * R )
 method = "uniform"  # "var" "ror" "uniform"
-hist_neighborhood = 5
+hist_disk_radius = 3.0
 
 fig: Figure = plt.figure()
 grid = plt.GridSpec(3, 3, wspace=0.1, hspace=0.1)
 
 lbp: np.ndarray = sktex.local_binary_pattern( texband.data, P, R, method ).astype(np.int)
-hist_array: np.ndarray = windowed_histogram( lbp, disk( hist_neighborhood )  )
+hist_array: np.ndarray = windowed_histogram( lbp, disk( hist_disk_radius )  )
 sample_hist = hist_array[ 0, 0 ]
 
 ax0: Axes = plt.subplot( grid[ 0:2, 0:2] )
