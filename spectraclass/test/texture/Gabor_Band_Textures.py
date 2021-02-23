@@ -10,7 +10,7 @@ from skimage.filters import gabor, gaussian
 from scipy import ndimage as ndi
 sr2 = math.sqrt( 2.0 )
 fig: Figure
-block = [2, 1]                  # Set to None to use test data in project
+block = None # [2, 1]                  # Set to None to use test data in project
 
 if block is not None: DataManager.initialize("demo1", 'keelin')
 dataset_type = "chr"
