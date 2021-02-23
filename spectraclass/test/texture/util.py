@@ -3,7 +3,7 @@ from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type
 from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
 from matplotlib.axes import Axes, BarContainer
-from sklearn.preprocessing import StandardScaler
+from spectraclass.data.base import DataManager, dm
 import xarray as xa
 TEST_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 from pynndescent import NNDescent
@@ -21,8 +21,11 @@ def center( x: np.ndarray, axis = 0 ) -> np.ndarray:
 def norm( x: np.ndarray, axis = 0 ) -> np.ndarray:
     return x / x.std(axis=axis)
 
-def load_test_data( dataset_type: str, dsid: str, data_type: str, ilayer: int ) -> xa.DataArray:
-    data_file = os.path.join(TEST_DIR, "data", dataset_type, f"{dsid}_{data_type}_{ilayer}.nc4")
+def load_test_data( dataset_type: str, dsid: str, data_type: str, ilayer: int, block: List[int] = None ) -> xa.DataArray:
+    if block is None:
+        data_file = os.path.join(TEST_DIR, "data", dataset_type, f"{dsid}_{data_type}_{ilayer}.nc4")
+    else:
+        data_file = os.path.join( dm().cache_dir, "test", "data", dataset_type, f"ks_raw_{block[0]}_{block[1]}_{ilayer}.nc4")
     dataset = xa.load_dataset(data_file)
     return dataset['data']
 

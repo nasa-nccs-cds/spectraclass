@@ -13,24 +13,21 @@ data_type = "raw"
 iLayer = 0
 texband: np.ndarray = load_test_data( dataset_type, dsid, data_type, iLayer ).data
 
-nb = 4
-ni = 3
+nb = 5
 mode = "nearest"  # ‘reflect’, ‘constant’, ‘nearest’, ‘mirror’, ‘wrap’
 dset = ( "raw", 3 )
 sigma0: float = 1.0
 sigma1: float = 3.0
-edisk_size: int = 5
+ni = 2
 
 fig = plt.figure()
 for ib in range(nb):
-
-    sigma1 = sigma0 + ( .5 *  (ib+1) )
-    filtered: np.ndarray =  difference_of_gaussians( texband, sigma0, sigma1, mode=mode )
-    nfilt = scale(filtered)
-    print( [ nfilt.max(), nfilt.min() ] )
-    entropy_img: np.ndarray = entropy( nfilt, disk( edisk_size ) )
-    plots = ( texband, filtered, entropy_img )
-    titles = ( f"{dset[0]}-data[{dset[1]}]", f"DoG: S0={sigma0:.2f}, S1={sigma1:.2f}", f"Entropy: D={edisk_size}")
+    edisk_size: int = ib+3
+    scaled_input = scale(texband)
+    print( [ scaled_input.max(), scaled_input.min() ] )
+    entropy_img: np.ndarray = entropy( scaled_input, disk( edisk_size ) )
+    plots =  [ texband, entropy_img ]
+    titles = [ f"{dset[0]}-data[{dset[1]}]", f"Entropy: D={edisk_size}" ]
 
     for ii in range(ni):
         ax = fig.add_subplot( nb, ni, ib*ni + ii+1 )

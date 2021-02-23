@@ -24,7 +24,7 @@ image: np.ndarray = load_test_data( dataset_type, dsid, data_type, iLayer ).data
 (ny,nx) = image.shape
 print( f"Loaded {data_type} image, band = {iLayer}, shape = {image.shape}, range = {[ image.min(), image.max() ]}")
 
-bandwidth = 0.1
+bandwidth = 0.10
 t0 = time.time()
 magnitude_dict = {}
 for iT, theta in enumerate(thetas):

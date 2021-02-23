@@ -3,28 +3,31 @@ import matplotlib.pyplot as plt
 from skimage.filters import gabor_kernel
 from skimage.filters.rank import entropy
 from skimage.morphology import disk
+from sklearn.preprocessing import StandardScaler
 from spectraclass.test.texture.util import *
 from spectraclass.test.texture.util import load_test_data
 from skimage.filters import gabor, gaussian
 from scipy import ndimage as ndi
 sr2 = math.sqrt( 2.0 )
 fig: Figure
+block = [2, 1]                  # Set to None to use test data in project
 
+if block is not None: DataManager.initialize("demo1", 'keelin')
 dataset_type = "chr"
 dsid = "ks"
 data_type = "raw"
 nGaborAngles = 6
 freqs = [ sr2, 1+sr2, 2+sr2, 2*sr2 ]
 thetas = list(np.arange(0, np.pi, np.pi / nGaborAngles))
-nFeatures = 2
-smoothing = 1.0
+nFeatures = 1
+smoothing = 2.0
 nBands = 7
 
 t1 = time.time()
 fig, axs = plt.subplots( nFeatures+1, nBands )
 
 for iB in range(nBands):
-    image: np.ndarray = load_test_data( dataset_type, dsid, data_type, iB ).data
+    image: np.ndarray = load_test_data( dataset_type, dsid, data_type, iB, block ).data
     print( f"\nLoaded {data_type} image, band = {iB}, shape = {image.shape}, range = {[ image.min(), image.max() ]}")
 
     bandwidth = 0.1
