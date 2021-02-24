@@ -1,5 +1,5 @@
 from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, minmax_scale
 from typing import List, Union, Dict, Callable, Tuple, Optional
 from sklearn.svm import LinearSVC
 import xarray as xa
