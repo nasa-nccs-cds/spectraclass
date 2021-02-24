@@ -36,7 +36,7 @@ def register_modes():
                     attribute = getattr(module, attribute_name)
                     if isclass(attribute) and issubclass(attribute, ModeDataManager):
                         if attribute.MODE is not None:
-                            # Add the class to this package's variables
+                            # Add the class to this texture's variables
                             globals()[attribute_name] = attribute
                             DataManager.register_mode(attribute)
 

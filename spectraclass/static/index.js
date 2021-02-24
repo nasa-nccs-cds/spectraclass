@@ -67,7 +67,7 @@ define(["@jupyter-widgets/base"], function(__WEBPACK_EXTERNAL_MODULE_2__) { retu
 /* 0 */
 /***/ (function(module, exports, __webpack_require__) {
 
-// Export widget models and views, and the npm package version number.
+// Export widget models and views, and the npm texture version number.
 module.exports = __webpack_require__(1);
 module.exports['version'] = __webpack_require__(6).version;
 
@@ -12071,7 +12071,7 @@ module.exports = __WEBPACK_EXTERNAL_MODULE_2__;
      * Checks if `value` is a pristine native function.
      *
      * **Note:** This method can't reliably detect native functions in the presence
-     * of the core-js package because core-js circumvents this kind of detection.
+     * of the core-js texture because core-js circumvents this kind of detection.
      * Despite multiple requests, the core-js maintainer has made it clear: any
      * attempt to fix the detection will be obstructed. As a result, we're left
      * with little choice but to throw an error. Unfortunately, this also affects

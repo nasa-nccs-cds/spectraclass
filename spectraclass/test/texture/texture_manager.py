@@ -1,7 +1,7 @@
 import math, random, numpy as np
 import matplotlib.pyplot as plt
 from spectraclass.test.texture.util import *
-from spectraclass.features.texture import TextureManager, texm
+from spectraclass.features.texture.manager import TextureManager, texm
 from spectraclass.data.base import DataManager
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.gui.spatial.application import Spectraclass
