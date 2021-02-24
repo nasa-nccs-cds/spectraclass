@@ -10,7 +10,7 @@ from skimage.filters import gaussian
 from skimage.transform import pyramid_expand
 import math
 
-sr2 = math.sqrt(2.0)
+
 
 def texm(): return TextureManager.instance()
 

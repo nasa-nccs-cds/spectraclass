@@ -68,7 +68,7 @@ def ca_reduction( data: np.ndarray, ndim: int, method: str = "pca"  ) -> Tuple[n
     return  ( reduced_features, reproduction )
 
 
-def apply_standard_pca( array: np.ndarray, n_components: int ):
+def apply_standard_pca( array: np.ndarray, n_components: int ) -> np.ndarray:
     pca = PCA(n_components=n_components)
     pca.fit(array)
     print(f"PCA reduction[{n_components}], Percent variance explained: {pca.explained_variance_ratio_ * 100}")
