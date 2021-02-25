@@ -15,7 +15,7 @@ class GLCM(TextureHandler):
         self.bin_size = kwargs.get('bin_size', 4)
         self.distances = kwargs.get('distances', [1, 2, 3, 4])
         self.angles = kwargs.get('angles', [0, pi4, 2 * pi4, 3 * pi4])
-        self.features = kwargs.get( 'features', ['homogeneity', 'energy'] )
+        self.features = kwargs.get( 'features', ['homogeneity'] )
 
     def _rescale(self, X: np.ndarray) -> np.ndarray:
         Xs = (X - X.min()) / (X.max() - X.min())
@@ -37,7 +37,7 @@ class GLCM(TextureHandler):
             rv[ i0, i1 ] = greycoprops( glcm, feature )[0, 0]
         return rv
 
-    def compute_band_features(self, image: np.ndarray, **kwargs) -> List[np.ndarray]:  # input_data: dims = [ y, x ]
+    def compute_band_features(self, image: np.ndarray ) -> List[np.ndarray]:  # input_data: dims = [ y, x ]
         block_size = [ (s // self.grid_size) * self.grid_size for s in image.shape ]
         padding = [ ( 0, image.shape[i] - block_size[i]) for i in (0,1) ]
         raw_image: np.ndarray = image[ :block_size[0], :block_size[1] ]
