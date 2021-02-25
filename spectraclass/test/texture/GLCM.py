@@ -2,11 +2,12 @@ import matplotlib.pyplot as plt
 from spectraclass.test.texture.util import *
 from spectraclass.features.texture.glcm import GLCM
 
+distances = [2,4]
 band = 3
 band_image: np.ndarray = load_test_data( "chr", "ks", "raw", band ).data
 t0 = time.time()
 
-glcm = GLCM()
+glcm = GLCM( distances=distances )
 features: Tuple[np.ndarray,np.ndarray] = glcm.compute_features( band_image )
 
 print( f"Computed glcm_features in time {time.time()-t0} sec")
