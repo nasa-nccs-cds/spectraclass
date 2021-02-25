@@ -15,7 +15,7 @@ for iB in range(nBands):
     print( f"\nLoaded raw image, band = {iB}, shape = {image.shape}, range = {[ image.min(), image.max() ]}")
 
     t0 = time.time()
-    features = gabor.compute_features( image )
+    features = gabor.compute_band_features(image)
     print(f"Computed {nFeatures} Gabor features in time = {time.time()-t0} sec")
 
     plot2( axs, 0, iB, image, f"Band-{iB}" )

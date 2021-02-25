@@ -8,7 +8,7 @@ band_image: np.ndarray = load_test_data( "chr", "ks", "raw", band ).data
 t0 = time.time()
 
 glcm = GLCM( distances=distances )
-features: Tuple[np.ndarray,np.ndarray] = glcm.compute_features( band_image )
+features: Tuple[np.ndarray,np.ndarray] = glcm.compute_band_features(band_image)
 
 print( f"Computed glcm_features in time {time.time()-t0} sec")
 

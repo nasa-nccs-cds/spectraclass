@@ -1,10 +1,16 @@
 import math, random, numpy as np
 from typing import List, Optional, Dict, Type, Tuple
 
-class TextureBase:
+class TextureHandler:
 
     def __init__( self, **kwargs ):
-        pass
+        self.bands = kwargs.get( 'bands' )
 
-    def compute_features( self, image: np.ndarray ) -> List[np.ndarray]:  # input_data: dims = [ y, x ]
+    def compute_band_features(self, band: np.ndarray) -> List[np.ndarray]:  # band: dims = [ y, x ]
         raise NotImplementedError()
+
+    def compute_features(self, image: np.ndarray) -> List[np.ndarray]:  # image: dims = [ band, y, x ]
+        texture_bands = []
+        for iBand in self.bands:
+            texture_bands.extend( *self.compute_band_features( image[ iBand ] ) )
+        return texture_bands

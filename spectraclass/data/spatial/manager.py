@@ -158,16 +158,22 @@ class SpatialDataManager(ModeDataManager):
         return result
 
     @classmethod
-    def raster2points(cls, raster: xa.DataArray ) -> xa.DataArray:
-        stacked_raster = raster.stack(samples=raster.dims[-2:]).transpose()
-        if np.issubdtype( raster.dtype, np.integer ):
+    def raster2points(cls, base_raster: xa.DataArray ) -> xa.DataArray:   #  base_raster dims: [ band, y, x ]
+        extended_raster = cls.addTextureBands( base_raster  )
+        stacked_raster = extended_raster.stack(samples=extended_raster.dims[-2:]).transpose()
+        if np.issubdtype( extended_raster.dtype, np.integer ):
             nodata = stacked_raster.attrs.get('_FillValue',-2)
             point_data = stacked_raster.where( stacked_raster != nodata, drop=True ).astype(np.int32)
         else:
             point_data = stacked_raster.dropna(dim='samples', how='any')
-        lgm().log(f" raster2points -> [{raster.name}]: Using {point_data.shape[0]} valid samples out of {stacked_raster.shape[0]} pixels")
-        point_data.attrs['dsid'] = raster.name
+        lgm().log(f" raster2points -> [{extended_raster.name}]: Using {point_data.shape[0]} valid samples out of {stacked_raster.shape[0]} pixels")
+        point_data.attrs['dsid'] = extended_raster.name
         return point_data
+
+    @classmethod
+    def addTextureBands(cls, base_raster: xa.DataArray ) -> xa.DataArray:   #  base_raster dims: [ band, y, x ]
+        from spectraclass.features.texture.manager import TextureManager, texm
+        return texm().addTextureBands( base_raster )
 
     @classmethod
     def get_color_bounds( cls, raster: xa.DataArray ):

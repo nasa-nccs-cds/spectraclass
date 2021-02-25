@@ -1,12 +1,12 @@
 import math, random, numpy as np
 from typing import List, Optional, Dict, Type
 from skimage.filters import gabor, gaussian
-from .base import TextureBase
+from .base import TextureHandler
 from sklearn.preprocessing import StandardScaler
 from spectraclass.test.texture.util import get_magnitude, apply_standard_pca
 sr2 = math.sqrt(2.0)
 
-class Gabor(TextureBase):
+class Gabor(TextureHandler):
 
     def __init__(self, **kwargs):
         super(Gabor, self).__init__( **kwargs )
@@ -16,7 +16,7 @@ class Gabor(TextureBase):
         self.bandwidth = kwargs.get('bw', 0.1)
         self.nFeatures = kwargs.get( 'nfeat', 1 )
 
-    def compute_features(self, image_band: np.ndarray ) -> List[np.ndarray]:  # input_data: dims = [ y, x ]
+    def compute_band_features(self, image_band: np.ndarray) -> List[np.ndarray]:  # input_data: dims = [ y, x ]
         thetas = list(np.arange(0, np.pi, np.pi / self.nAngles))
         magnitude_dict = {}
 

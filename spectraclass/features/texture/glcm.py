@@ -2,11 +2,11 @@ import math, random, numpy as np
 from spectraclass.test.texture.util import *
 from skimage.feature import greycomatrix, greycoprops
 from skimage.util import apply_parallel, img_as_ubyte, pad
-from .base import TextureBase
+from .base import TextureHandler
 from skimage.transform import pyramid_expand
 pi4 = math.pi / 4
 
-class GLCM(TextureBase):
+class GLCM(TextureHandler):
 
     def __init__(self, **kwargs):
         super(GLCM, self).__init__( **kwargs )
@@ -19,6 +19,7 @@ class GLCM(TextureBase):
 
     def _rescale(self, X: np.ndarray) -> np.ndarray:
         Xs = (X - X.min()) / (X.max() - X.min())
+
         return img_as_ubyte(Xs) // self.bin_size
 
     def _unpack(self, image: np.ndarray, padding: List[Tuple[int,int]], offset: int ) -> np.ndarray:
@@ -36,7 +37,7 @@ class GLCM(TextureBase):
             rv[ i0, i1 ] = greycoprops( glcm, feature )[0, 0]
         return rv
 
-    def compute_features(self, image: np.ndarray, **kwargs) -> List[np.ndarray]:  # input_data: dims = [ y, x ]
+    def compute_band_features(self, image: np.ndarray, **kwargs) -> List[np.ndarray]:  # input_data: dims = [ y, x ]
         block_size = [ (s // self.grid_size) * self.grid_size for s in image.shape ]
         padding = [ ( 0, image.shape[i] - block_size[i]) for i in (0,1) ]
         raw_image: np.ndarray = image[ :block_size[0], :block_size[1] ]
