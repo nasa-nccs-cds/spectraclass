@@ -14,7 +14,7 @@ tex_features: List[np.ndarray] = glcm.compute_band_features( band_image )
 print( f"Computed glcm_features in time {time.time()-t0} sec")
 
 fig, axs = plt.subplots( 1, 3 )
-plot( axs, 0, band_image,         f"Image" )
+plot( axs, 0, band_image, f"Image" )
 for iF, fName in enumerate( features ):
     plot( axs, iF+1, tex_features[iF],   f"GLCM-{fName}" )
 plt.show()

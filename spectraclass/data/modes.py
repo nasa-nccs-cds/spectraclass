@@ -29,7 +29,7 @@ class ModeDataManager(SCSingletonConfigurable):
     model_dims = tl.Int(32).tag(config=True, sync=True)
     subsample = tl.Int(1).tag(config=True, sync=True)
     reduce_method = tl.Unicode("Autoencoder").tag(config=True, sync=True)
-    reduce_scope = tl.Unicode("tile").tag(config=True, sync=True)
+    reduce_scope = tl.Unicode("block").tag(config=True, sync=True)
     reduce_nepochs = tl.Int(5).tag(config=True, sync=True)
     reduce_sparsity = tl.Float( 0.0 ).tag(config=True,sync=True)
 
@@ -48,7 +48,8 @@ class ModeDataManager(SCSingletonConfigurable):
         return self.MODE.lower()
 
     def config_scope(self):
-        return self.mode.lower()
+        from spectraclass.data.base import DataManager, dm
+        return dm().name
 
     @property
     def metavars(self):

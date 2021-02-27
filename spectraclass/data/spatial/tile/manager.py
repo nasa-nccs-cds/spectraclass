@@ -34,6 +34,7 @@ class TileManager(SCSingletonConfigurable):
         self.tile_shape = [ self.tile_size ] * 2
         self.block_shape = [ self.block_size ] * 2
         self.block_dims = [ self.tile_size//self.block_size ] * 2
+        self._tile_data = None
 
     @property
     def image_name(self):
@@ -94,22 +95,26 @@ class TileManager(SCSingletonConfigurable):
         self.block_dims = get_rounded_dims( self.tile_shape, [ self.block_size ]* 2)
         self.block_shape = get_rounded_dims(self.tile_shape, self.block_dims)
 
-    def getTileData(self) -> xa.DataArray:
-        try:                    tile_data: xa.DataArray = self._readTileFile()
-        except AssertionError:  tile_data = self._getTileDataFromImage()
-        tile_data = self.mask_nodata(tile_data)
-        init_shape = [*tile_data.shape]
-        valid_bands = DataManager.instance().valid_bands()
-        if valid_bands is not None:
-            dataslices = [tile_data.isel(band=slice(valid_band[0], valid_band[1])) for valid_band in valid_bands]
-            tile_data = xa.concat(dataslices, dim="band")
-            lgm().log( f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
-        result = self.rescale(tile_data)
-        return result
+    def getTileData(self, **kwargs ) -> xa.DataArray:
+        from spectraclass.features.texture.manager import TextureManager, texm
+        if self._tile_data == None:
+            try:                    tile_data: xa.DataArray = self._readTileFile()
+            except AssertionError:  tile_data = self._getTileDataFromImage()
+            add_texture = kwargs.get( "texture", False )
+            tile_data = self.mask_nodata(tile_data)
+            init_shape = [*tile_data.shape]
+            valid_bands = DataManager.instance().valid_bands()
+            if valid_bands is not None:
+                dataslices = [tile_data.isel(band=slice(valid_band[0], valid_band[1])) for valid_band in valid_bands]
+                tile_data = xa.concat(dataslices, dim="band")
+                lgm().log( f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
+            result = self.rescale(tile_data)
+            self._tile_data = texm().addTextureBands( result ) if add_texture else result
+        return self._tile_data
 
-    def getPointData( self ) -> Tuple[xa.DataArray,xa.DataArray]:
+    def getPointData( self, **kwargs ) -> Tuple[xa.DataArray,xa.DataArray]:
         from spectraclass.data.spatial.manager import SpatialDataManager
-        tile_data: xa.DataArray = self.getTileData()
+        tile_data: xa.DataArray = self.getTileData( **kwargs )
         result: xa.DataArray =  SpatialDataManager.raster2points( tile_data )
         point_coords: xa.DataArray = result.samples
         point_data = result.assign_coords( samples = np.arange( 0, point_coords.shape[0] ) )

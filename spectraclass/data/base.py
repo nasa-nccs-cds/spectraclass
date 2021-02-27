@@ -97,7 +97,7 @@ class DataManager(SCSingletonConfigurable):
     def save_config( self ):
         conf_dict = self.generate_config_file()
         for scope, trait_classes in conf_dict.items():
-            cfg_file = os.path.realpath( self.config_file( self.name, scope ) )
+            cfg_file = os.path.realpath( self.config_file( scope, self.mode ) )
             os.makedirs(os.path.dirname(cfg_file), 0o777, exist_ok=True)
             lines = []
 

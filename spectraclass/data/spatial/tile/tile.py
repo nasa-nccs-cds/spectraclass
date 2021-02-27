@@ -1,5 +1,6 @@
 from skimage.transform import ProjectiveTransform
 import numpy as np
+from spectraclass.util.logs import LogManager, lgm, exception_handled
 import xarray as xa
 from typing import List, Union, Tuple, Optional, Dict
 from pyproj import Proj, transform
@@ -86,12 +87,16 @@ class Block:
         assert ( self.block_coords[0] < tm().block_dims[0] ) and ( self.block_coords[1] < tm().block_dims[1] ), f"Block coordinates {self.block_coords} out of bounds with block dims = {tm().block_dims}"
 
     def _getData( self ) -> Optional[xa.DataArray]:
+        from spectraclass.features.texture.manager import TextureManager, texm
         if self.tile.data is None: return None
         ybounds, xbounds = self.getBounds()
         block_raster = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
         block_raster.attrs['block_coords'] = self.block_coords
+        block_raster.attrs['dsid'] = self.dsid
+        block_raster.attrs['file_name'] = self.file_name
         block_raster.name = self.file_name
-        return block_raster
+        lgm().log( f"Computing texture bands for block {self.block_coords}, shape = {block_raster.shape}")
+        return texm().addTextureBands( block_raster )
 
     @property
     def file_name(self):
@@ -156,7 +161,7 @@ class Block:
             if ( (self._point_data.size > 0) and (subsample > 1) ):  self._point_data = self._point_data[::subsample]
             self._samples_axis = self._point_data.coords['samples']
             self._point_data.attrs['type'] = 'block'
-            self._point_data.attrs['dsid'] = result.attrs['dsid']
+            self._point_data.attrs['dsid'] = self.dsid
         return (self._point_data, self._point_coords)
 
     @property

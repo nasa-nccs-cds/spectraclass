@@ -159,15 +159,14 @@ class SpatialDataManager(ModeDataManager):
 
     @classmethod
     def raster2points(cls, base_raster: xa.DataArray ) -> xa.DataArray:   #  base_raster dims: [ band, y, x ]
-        extended_raster = cls.addTextureBands( base_raster  )
-        stacked_raster = extended_raster.stack(samples=extended_raster.dims[-2:]).transpose()
-        if np.issubdtype( extended_raster.dtype, np.integer ):
+        stacked_raster = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
+        if np.issubdtype( base_raster.dtype, np.integer ):
             nodata = stacked_raster.attrs.get('_FillValue',-2)
             point_data = stacked_raster.where( stacked_raster != nodata, drop=True ).astype(np.int32)
         else:
             point_data = stacked_raster.dropna(dim='samples', how='any')
-        lgm().log(f" raster2points -> [{extended_raster.name}]: Using {point_data.shape[0]} valid samples out of {stacked_raster.shape[0]} pixels")
-        point_data.attrs['dsid'] = extended_raster.name
+        lgm().log(f" raster2points -> [{base_raster.name}]: Using {point_data.shape[0]} valid samples out of {stacked_raster.shape[0]} pixels")
+        point_data.attrs['dsid'] = base_raster.name
         return point_data
 
     @classmethod
@@ -281,9 +280,11 @@ class SpatialDataManager(ModeDataManager):
 
     @exception_handled
     def prepare_inputs(self, *args, **kwargs ):
+        from spectraclass.features.texture.manager import TextureManager, texm
+        texm().enable()
         from spectraclass.data.spatial.tile.tile import Block
         if self.reduce_scope == "tile":
-            ( training_data, tile_point_coords ) = self.tiles.getPointData()
+            ( training_data, tile_point_coords ) = self.tiles.getPointData( texture=True )
             blocks_point_data = [ block.getPointData(subsample=self.subsample)[0] for block in self.tiles.tile.getBlocks() ]
         elif self.reduce_scope == "block":
             block: Block = self.tiles.getBlock()
@@ -293,18 +294,19 @@ class SpatialDataManager(ModeDataManager):
         blocks_reduction = rm().reduce( training_data, blocks_point_data, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
         self.model_dims = blocks_reduction[0][0].shape[1]
         for ( reduced_spectra, reproduction, point_data ) in blocks_reduction:
-            dsid = point_data.attrs['dsid']
+            file_name = point_data.attrs['file_name']
             model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
             data_vars = dict( raw=point_data )
             data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
             data_vars['reproduction'] = reproduction
             result_dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
-            self.dataset = self.reduced_dataset_name( dsid )
+            self.dataset = self.reduced_dataset_name( file_name )
             output_file = os.path.join( self.datasetDir, self.dataset + ".nc")
             lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file}, dset attrs:")
             for varname, da in result_dataset.data_vars.items():
-                da.attrs['long_name'] = f"{dsid}.{varname}"
+                da.attrs['long_name'] = f"{file_name}.{varname}"
             if os.path.exists(output_file): os.remove(output_file)
+            print( f"Writing output file: '{output_file}'")
             result_dataset.to_netcdf(output_file)
 
     def getFilePath(self, use_tile: bool ) -> str:

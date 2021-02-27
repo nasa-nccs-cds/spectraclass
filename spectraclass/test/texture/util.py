@@ -8,6 +8,7 @@ import xarray as xa
 TEST_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 from pynndescent import NNDescent
 from sklearn.decomposition import PCA, FastICA
+from spectraclass.util.logs import LogManager, lgm, exception_handled
 from pywt import dwt2
 
 def scale(x, out_range=(-1, 1)):
@@ -61,7 +62,7 @@ def ca_reduction( data: np.ndarray, ndim: int, method: str = "pca"  ) -> Tuple[n
     centered_data: np.ndarray = center(data)
     mapper.fit( centered_data )
     if method == "pca":
-       print(f"PCA reduction[{ndim}], Percent variance explained: {mapper.explained_variance_ratio_ * 100}")
+       lgm().log(f"PCA reduction[{ndim}], Percent variance explained: {mapper.explained_variance_ratio_ * 100}")
 
     reduced_features: np.ndarray = mapper.transform( centered_data )
     reproduction: np.ndarray = mapper.inverse_transform( reduced_features )
@@ -71,7 +72,7 @@ def ca_reduction( data: np.ndarray, ndim: int, method: str = "pca"  ) -> Tuple[n
 def apply_standard_pca( array: np.ndarray, n_components: int ) -> np.ndarray:
     pca = PCA(n_components=n_components)
     pca.fit(array)
-    print(f"PCA reduction[{n_components}], Percent variance explained: {pca.explained_variance_ratio_ * 100}")
+    lgm().log(f"PCA reduction[{n_components}], Percent variance explained: {pca.explained_variance_ratio_ * 100}")
     transformed_data = pca.transform(array)
     return transformed_data
 

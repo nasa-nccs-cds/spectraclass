@@ -1,7 +1,7 @@
 import math, random, numpy as np
 from spectraclass.test.texture.util import *
 from skimage.feature import greycomatrix, greycoprops
-from skimage.util import apply_parallel, img_as_ubyte, pad
+from skimage.util import apply_parallel, img_as_ubyte
 from .base import TextureHandler
 from skimage.transform import pyramid_expand
 pi4 = math.pi / 4
@@ -25,7 +25,7 @@ class GLCM(TextureHandler):
     def _unpack(self, image: np.ndarray, padding: List[Tuple[int,int]], offset: int ) -> np.ndarray:
         fdata = image[0::self.grid_size, offset::self.grid_size].reshape([s // self.grid_size for s in image.shape])
         upscaled = pyramid_expand(fdata, upscale=self.grid_size, sigma=None, order=1, mode='reflect', cval=0, multichannel=False, preserve_range=False)
-        return pad( upscaled, padding, mode='edge' )
+        return np.pad( upscaled, padding, mode='edge' )
 
     def _glcm_feature(self, patch: np.ndarray):
         levels = 256 // self.bin_size

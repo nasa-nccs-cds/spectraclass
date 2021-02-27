@@ -10,11 +10,11 @@ class Gabor(TextureHandler):
 
     def __init__(self, **kwargs):
         super(Gabor, self).__init__( **kwargs )
-        self.nAngles = kwargs.get('nang', 6)
-        self.freqs = kwargs.get('freq', [sr2, 1 + sr2, 2 + sr2, 2 * sr2])
+        self.nAngles = kwargs.get('nangles', 6)
+        self.freqs = kwargs.get('frequencies', [sr2, 1 + sr2, 2 + sr2, 2 * sr2])
         self.smoothing = kwargs.get('smooth', 2.0)
-        self.bandwidth = kwargs.get('bw', 0.1)
-        self.nFeatures = kwargs.get( 'nfeat', 1 )
+        self.bandwidth = kwargs.get('bandwidth', 0.1)
+        self.nFeatures = kwargs.get( 'nfeatures', 1 )
 
     def compute_band_features(self, image_band: np.ndarray) -> List[np.ndarray]:  # input_data: dims = [ y, x ]
         thetas = list(np.arange(0, np.pi, np.pi / self.nAngles))
