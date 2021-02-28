@@ -80,7 +80,7 @@ class DataManager(SCSingletonConfigurable):
         cfg_file = self.config_file( name, mode )
         if os.path.isfile(cfg_file):
             (self.config_dir, fname) = os.path.split(cfg_file)
-            self.config_files = ['global.py', fname]
+            self.config_files = [ fname ]
             print(f"Loading config files: {self.config_files} from dir {self.config_dir}")
             self._config = load_pyconfig_files(self.config_files, self.config_dir)
             self.update_config( self._config )
@@ -90,11 +90,20 @@ class DataManager(SCSingletonConfigurable):
     def getCurrentConfig(self):
         config_dict = {}
         for cfg_file in self.config_files:
-            scope = cfg_file.split(".")[0]
+            scope = dm().name # cfg_file.split(".")[0]
             config_dict[ scope ] = load_pyconfig_files( [cfg_file], self.config_dir )
         return config_dict
 
     def save_config( self ):
+        from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.reduction.embedding import ReductionManager, rm
+        from spectraclass.features.texture.manager import TextureManager, texm
+        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
+        from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
+        afm(), lm(), spm(), pcm(), mm(), texm(), rm(), tm()
         conf_dict = self.generate_config_file()
         for scope, trait_classes in conf_dict.items():
             cfg_file = os.path.realpath( self.config_file( scope, self.mode ) )
@@ -156,10 +165,6 @@ class DataManager(SCSingletonConfigurable):
         return ".".join( [ self.name, self.mode ] )
 
     @property
-    def config_mode(self):
-        return "global"
-
-    @property
     def table_cols(self) -> List:
         return self._mode_data_manager_.metavars
 
@@ -176,6 +181,7 @@ class DataManager(SCSingletonConfigurable):
     def loadCurrentProject(self, caller_id: str ) -> xa.Dataset:
         lgm().log( f" DataManager: loadCurrentProject: {caller_id}" )
         project_data = self._mode_data_manager_.loadCurrentProject()
+        assert project_data is not None, "Project initialization failed- check log file for details"
         lgm().log(f"Loaded project data:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
         return project_data
 

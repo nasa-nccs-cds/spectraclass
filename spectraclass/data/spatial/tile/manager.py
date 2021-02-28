@@ -95,12 +95,10 @@ class TileManager(SCSingletonConfigurable):
         self.block_dims = get_rounded_dims( self.tile_shape, [ self.block_size ]* 2)
         self.block_shape = get_rounded_dims(self.tile_shape, self.block_dims)
 
-    def getTileData(self, **kwargs ) -> xa.DataArray:
-        from spectraclass.features.texture.manager import TextureManager, texm
-        if self._tile_data == None:
+    def getTileData(self) -> xa.DataArray:
+        if self._tile_data is None:
             try:                    tile_data: xa.DataArray = self._readTileFile()
             except AssertionError:  tile_data = self._getTileDataFromImage()
-            add_texture = kwargs.get( "texture", False )
             tile_data = self.mask_nodata(tile_data)
             init_shape = [*tile_data.shape]
             valid_bands = DataManager.instance().valid_bands()
@@ -109,16 +107,16 @@ class TileManager(SCSingletonConfigurable):
                 tile_data = xa.concat(dataslices, dim="band")
                 lgm().log( f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
             result = self.rescale(tile_data)
-            self._tile_data = texm().addTextureBands( result ) if add_texture else result
+            self._tile_data = result
         return self._tile_data
 
-    def getPointData( self, **kwargs ) -> Tuple[xa.DataArray,xa.DataArray]:
+    def getPointData( self ) -> Tuple[xa.DataArray,xa.DataArray]:
         from spectraclass.data.spatial.manager import SpatialDataManager
-        tile_data: xa.DataArray = self.getTileData( **kwargs )
+        tile_data: xa.DataArray = self.getTileData()
         result: xa.DataArray =  SpatialDataManager.raster2points( tile_data )
         point_coords: xa.DataArray = result.samples
         point_data = result.assign_coords( samples = np.arange( 0, point_coords.shape[0] ) )
-#        samples_axis = point_data.coords['samples']
+#        samples_axis = spectra.coords['samples']
         point_data.attrs['type'] = 'tile'
         point_data.attrs['dsid'] = result.attrs['dsid']
         return ( point_data, point_coords)

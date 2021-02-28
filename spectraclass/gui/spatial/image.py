@@ -133,8 +133,8 @@
 #         if event.xdata != None and event.ydata != None:
 #             if event.inaxes ==  self.axes:
 #                 coords = { self.xdim: event.xdata, self.ydim: event.ydata  }
-#                 point_data = self.image.sel( **coords, method='nearest' ).values.tolist()
-#                 ic = point_data[0] if isinstance( point_data, collections.abc.Sequence ) else point_data
+#                 spectra = self.image.sel( **coords, method='nearest' ).values.tolist()
+#                 ic = spectra[0] if isinstance( spectra, collections.abc.Sequence ) else spectra
 #                 rightButton: bool = int(event.button) == self.RIGHT_BUTTON
 #                 if rightButton: labelsManager.setClassIndex(ic)
 #                 event = dict( event="pick", type="reference", y=event.ydata, x=event.xdata, button=int(event.button), transient=rightButton )

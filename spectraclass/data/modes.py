@@ -176,22 +176,31 @@ class ModeDataManager(SCSingletonConfigurable):
     def loadDataset(self) -> xa.Dataset:
         lgm().log(f"Load dataset {self.dsid}, current datasets = {self.datasets.keys()}")
         if self.dsid not in self.datasets:
-            data_file = os.path.join(self.datasetDir, self.dsid + ".nc")
-            try:
-                dataset: xa.Dataset = xa.open_dataset(data_file)
-                vnames = dataset.variables.keys()
-                vshapes = [f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
-                lgm().log(f" ---> Opened Dataset {self.dsid} from file {data_file}\n\t -> variables: {' '.join(vshapes)}")
-                if 'plot-x' not in vnames:
-                    raw_data: xa.DataArray = dataset['raw']
-                    dataset['plot-y'] = raw_data
-                    dataset['plot-x'] = np.arange(0,raw_data.shape[1])
-                dataset.attrs['dsid'] = self.dsid
-                dataset.attrs['type'] = 'spectra'
-                self.datasets[self.dsid] = dataset
-            except FileNotFoundError:
-                lgm().fatal( f"ERROR: input file does not exist: {data_file}" )
+            dataset: xa.Dataset = self.loadDataFile()
+            vnames = dataset.variables.keys()
+            vshapes = [f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
+            lgm().log(f" ---> Opened Dataset {self.dsid} from file {dataset.attrs['data_file']}\n\t -> variables: {' '.join(vshapes)}")
+            if 'plot-x' not in vnames:
+                raw_data: xa.DataArray = dataset['raw']
+                dataset['plot-y'] = raw_data
+                dataset['plot-x'] = np.arange(0,raw_data.shape[1])
+            dataset.attrs['dsid'] = self.dsid
+            dataset.attrs['type'] = 'spectra'
+            self.datasets[self.dsid] = dataset
         return self.datasets[self.dsid]
+
+    def loadDataFile( self ) -> xa.Dataset:
+        from spectraclass.data.base import DataManager, dm
+        data_file = os.path.join(self.datasetDir, self.dsid + ".nc")
+        try:
+            dataset: xa.Dataset = xa.open_dataset(data_file)
+        except FileNotFoundError:
+            print( "Preparing input" )
+            dm().prepare_inputs()
+            dm().save_config()
+            dataset: xa.Dataset = xa.open_dataset(data_file)
+        dataset.attrs['data_file'] = data_file
+        return dataset
 
     def getDatasetList(self):
         dset_glob = os.path.expanduser(f"{self.datasetDir}/*.nc")

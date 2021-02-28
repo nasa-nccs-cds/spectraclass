@@ -15,23 +15,18 @@ class TextureManager(SCSingletonConfigurable):
         super(TextureManager, self).__init__()
         self._texture_handlers: List[TextureHandler] = []
         self.configure()
-        self._enabled = False
-
-    def enable(self):
-        self._enabled = True
 
     def addTextureBands( self, base_raster: xa.DataArray ) -> xa.DataArray:   #  base_raster dims: [ band, y, x ]
-        if self._enabled:
-            texture_bands: List[np.ndarray] = []
-            dims = base_raster.dims
-            for tex_handler in self._texture_handlers:
-                texture_bands.extend( tex_handler.compute_features( base_raster.data ) )
-            extended_data: np.ndarray = np.concatenate( [base_raster.data, texture_bands], axis=0 )
-            new_band_coord: np.ndarray = np.array( range(extended_data.shape[0]) )
-            new_coords = { dims[0]: new_band_coord, dims[1]: base_raster.coords[dims[1]], dims[2]: base_raster.coords[dims[2]] }
-            return xa.DataArray( extended_data, dims=dims, coords=new_coords, attrs=base_raster.attrs )
-        else:
-            return base_raster
+        if len( self._texture_handlers ) == 0: return base_raster
+        texture_bands: List[np.ndarray] = []
+        dims = base_raster.dims
+        for tex_handler in self._texture_handlers:
+            texture_bands.extend( tex_handler.compute_features( base_raster.data ) )
+        extended_data: np.ndarray = np.concatenate( [base_raster.data, texture_bands], axis=0 )
+        new_band_coord: np.ndarray = np.array( range(extended_data.shape[0]) )
+        new_coords = { dims[0]: new_band_coord, dims[1]: base_raster.coords[dims[1]], dims[2]: base_raster.coords[dims[2]] }
+        return xa.DataArray( extended_data, dims=dims, coords=new_coords, attrs=base_raster.attrs )
+
 
     def configure(self):
         from .glcm import GLCM

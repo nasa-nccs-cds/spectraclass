@@ -87,7 +87,6 @@ class Block:
         assert ( self.block_coords[0] < tm().block_dims[0] ) and ( self.block_coords[1] < tm().block_dims[1] ), f"Block coordinates {self.block_coords} out of bounds with block dims = {tm().block_dims}"
 
     def _getData( self ) -> Optional[xa.DataArray]:
-        from spectraclass.features.texture.manager import TextureManager, texm
         if self.tile.data is None: return None
         ybounds, xbounds = self.getBounds()
         block_raster = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
@@ -96,7 +95,11 @@ class Block:
         block_raster.attrs['file_name'] = self.file_name
         block_raster.name = self.file_name
         lgm().log( f"Computing texture bands for block {self.block_coords}, shape = {block_raster.shape}")
-        return texm().addTextureBands( block_raster )
+        return block_raster
+
+    def addTextureBands( self ) :
+        from spectraclass.features.texture.manager import TextureManager, texm
+        self.data = texm().addTextureBands( self.data )
 
     @property
     def file_name(self):
@@ -151,10 +154,11 @@ class Block:
         y0, x0 = self.block_coords[0]*self.shape[0], self.block_coords[1]*self.shape[1]
         return ( y0, y0+self.shape[0] ), ( x0, x0+self.shape[1] )
 
-    def getPointData( self, **kwargs ) -> Tuple[xa.DataArray,xa.DataArray]:
+    def getPointData( self ) -> Tuple[xa.DataArray,xa.DataArray]:
+        from spectraclass.data.base import DataManager, dm
         from spectraclass.data.spatial.manager import SpatialDataManager
         if self._point_data is None:
-            subsample = kwargs.get( 'subsample', 1 )
+            subsample = dm().modal.subsample
             result: xa.DataArray =  SpatialDataManager.raster2points( self.data )
             self._point_coords: xa.DataArray = result.samples
             self._point_data = result.assign_coords( samples = np.arange( 0, self._point_coords.shape[0] ) )

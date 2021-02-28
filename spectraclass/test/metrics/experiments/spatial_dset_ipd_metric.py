@@ -22,7 +22,7 @@ metrics =   [   dict( metric = "minkowski", p = 4   ),
 
 dmg: DataManager = DataManager.initialize( experiment, dataset )
 block = tm().getBlock()
-( xa_point_data, xa_point_coords ) = block.getPointData( subsample=subsample )
+( xa_point_data, xa_point_coords ) = block.getPointData()
 
 print( f"Loaded point data, shape = {xa_point_data.data.shape}")
 dplot = InterpointDistancePlot( nx, ny, data=xa_point_data.data, title=f"Distribution of inter-point distances for {dataset.upper()} data" )

@@ -98,11 +98,27 @@ class SCSingletonConfigurable(tlc.Configurable):
 
     @classmethod
     def add_trait_values( cls, trait_map: Dict, instance: "SCSingletonConfigurable" ):
+        from spectraclass.data.base import DataManager, dm
         class_traits = instance.class_traits(config=True)
 #        print(f"  ADDING TRAITS [{instance.__class__}]: {class_traits.keys()}")
         for tid, trait in class_traits.items():
             tval = getattr(instance, tid)
-            trait_instance_values = trait_map.setdefault( instance.config_scope(), {} )
+            trait_scope = dm().name   # instance.config_scope()
+            trait_instance_values = trait_map.setdefault( trait_scope, {} )
             trait_values = trait_instance_values.setdefault( instance.__class__.__name__, {} )
 #            print( f"    *** add_trait_value[{instance.config_scope()},{instance.__class__.__name__}]: {tid} -> {tval}")
             trait_values[tid] = tval
+
+    @classmethod
+    def get_subclass_instances(cls):
+        result = set()
+        path = [cls]
+        while path:
+            parent = path.pop()
+            for child in parent.__subclasses__():
+                if not '.' in str(child):
+                    continue
+                if child not in result:
+                    result.add(child)
+                    path.append(child)
+        return [ s.instance() for s in result ]

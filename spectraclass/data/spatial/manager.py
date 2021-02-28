@@ -252,62 +252,34 @@ class SpatialDataManager(ModeDataManager):
         attrs = {**kwargs, 'name': id}
         return xa.DataArray(np_data, dims=dims, coords=coords, name=id, attrs=attrs)
 
-    def prepare_inputs_block(self, *args, **kwargs ):
-        from spectraclass.data.spatial.tile.tile import Block
-        from spectraclass.data.base import DataType
-        block: Block = self.tiles.getBlock( )
-        if block is not None:
-            ( point_data, point_coords ) = block.getPointData( dstype = DataType.Embedding, subsample = self.subsample )
-            dsid = point_data.attrs['dsid']
-            model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
-            data_vars = dict( raw=point_data )
-            if self.reduce_method and (self.reduce_method.lower() != "none"):
-                reduced_spectra, reproduction, usable_point_data = rm().reduce( point_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )[0]
-                data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
-                data_vars['reproduction'] = usable_point_data.copy( data=reproduction )
-            dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
-            self.dataset = self.reduced_dataset_name( dsid )
-            output_file = os.path.join(self.datasetDir, self.dataset + ".nc")
-            outputDir = os.path.join( self.cache_dir, dm().project_name )
-            os.makedirs(outputDir, 0o777, True)
-            lgm().log(f"Writing output to {output_file}")
-            if os.path.exists(output_file): os.remove(output_file)
-            dataset.to_netcdf(output_file)
-
     def reduced_dataset_name(self, dsid: str ):
         file_name_base = f"{dsid}-raw" if self.reduce_method.lower() == "none" else f"{dsid}-{self.reduce_method}-{self.model_dims}"
         return f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
 
     @exception_handled
     def prepare_inputs(self, *args, **kwargs ):
-        from spectraclass.features.texture.manager import TextureManager, texm
-        texm().enable()
         from spectraclass.data.spatial.tile.tile import Block
-        if self.reduce_scope == "tile":
-            ( training_data, tile_point_coords ) = self.tiles.getPointData( texture=True )
-            blocks_point_data = [ block.getPointData(subsample=self.subsample)[0] for block in self.tiles.tile.getBlocks() ]
-        elif self.reduce_scope == "block":
-            block: Block = self.tiles.getBlock()
-            training_data = block.getPointData(subsample=self.subsample)[0]
-            blocks_point_data = [ training_data ]
-        else: raise Exception( f"Unrecognized 'reduce_scope' parameter: {self.reduce_scope}" )
-        blocks_reduction = rm().reduce( training_data, blocks_point_data, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
-        self.model_dims = blocks_reduction[0][0].shape[1]
-        for ( reduced_spectra, reproduction, point_data ) in blocks_reduction:
-            file_name = point_data.attrs['file_name']
-            model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
-            data_vars = dict( raw=point_data )
-            data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
-            data_vars['reproduction'] = reproduction
-            result_dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
-            self.dataset = self.reduced_dataset_name( file_name )
-            output_file = os.path.join( self.datasetDir, self.dataset + ".nc")
-            lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file}, dset attrs:")
-            for varname, da in result_dataset.data_vars.items():
-                da.attrs['long_name'] = f"{file_name}.{varname}"
-            if os.path.exists(output_file): os.remove(output_file)
-            print( f"Writing output file: '{output_file}'")
-            result_dataset.to_netcdf(output_file)
+        ( training_data, tile_point_coords ) = self.tiles.getPointData()
+        for block in self.tiles.tile.getBlocks():
+            block.addTextureBands()
+            blocks_point_data = block.getPointData()[0]
+            blocks_reduction = rm().reduce( blocks_point_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
+            self.model_dims = blocks_reduction[0][0].shape[1]
+            for ( reduced_spectra, reproduction, point_data ) in blocks_reduction:
+                file_name = point_data.attrs['file_name']
+                model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
+                data_vars = dict( raw=point_data )
+                data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
+                data_vars['reproduction'] = reproduction
+                result_dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
+                self.dataset = self.reduced_dataset_name( file_name )
+                output_file = os.path.join( self.datasetDir, self.dataset + ".nc")
+                lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file}, dset attrs:")
+                for varname, da in result_dataset.data_vars.items():
+                    da.attrs['long_name'] = f"{file_name}.{varname}"
+                if os.path.exists(output_file): os.remove(output_file)
+                print( f"Writing output file: '{output_file}'")
+                result_dataset.to_netcdf(output_file)
 
     def getFilePath(self, use_tile: bool ) -> str:
         base_dir = dm().modal.data_dir
