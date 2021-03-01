@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from collections import OrderedDict
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 from spectraclass.model.labels import LabelsManager, lm
+from spectraclass.data.spatial.tile.tile import Block
 import os, math, pickle
 import rioxarray as rio
 from .modes import *
@@ -103,11 +104,11 @@ class SpatialDataManager(ModeDataManager):
         tm().block_index = [ int(block_toks[2]), int(block_toks[3]) ]
         lgm().log( f"Setting block index to {tm().block_index}, shape = {tm().block_shape}")
 
-    @property
-    def dsid(self) -> str:
+    def dsid(self, **kwargs) -> str:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        block = kwargs.get( 'block', tm().getBlock() )
         reduction_method = f"raw" if self.reduce_method.lower() == "none" else f"{self.reduce_method}-{self.model_dims}"
-        file_name_base = "-".join( [tm().getBlock().file_name, reduction_method] )
+        file_name_base = "-".join( [block.file_name, reduction_method] )
         return f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
 
     @classmethod
@@ -258,17 +259,20 @@ class SpatialDataManager(ModeDataManager):
 
     @exception_handled
     def prepare_inputs(self, *args, **kwargs ):
-        from spectraclass.data.spatial.tile.tile import Block
-        ( training_data, tile_point_coords ) = self.tiles.getPointData()
+        print( " PI ")
+        tile_data = self.tiles.getTileData()
         for block in self.tiles.tile.getBlocks():
-            block.addTextureBands()
+            block.clearBlockCache()
+            block.addTextureBands( )
             blocks_point_data = block.getPointData()[0]
             blocks_reduction = rm().reduce( blocks_point_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
             self.model_dims = blocks_reduction[0][0].shape[1]
             for ( reduced_spectra, reproduction, point_data ) in blocks_reduction:
                 file_name = point_data.attrs['file_name']
                 model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
-                data_vars = dict( raw=point_data )
+                raw_data = block.data
+                raw_data.attrs['wkt'] = tile_data.spatial_ref.crs_wkt
+                data_vars = dict( raw=raw_data, norm=point_data )
                 data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
                 data_vars['reproduction'] = reproduction
                 result_dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
@@ -277,7 +281,6 @@ class SpatialDataManager(ModeDataManager):
                 lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file}, dset attrs:")
                 for varname, da in result_dataset.data_vars.items():
                     da.attrs['long_name'] = f"{file_name}.{varname}"
-                if os.path.exists(output_file): os.remove(output_file)
                 print( f"Writing output file: '{output_file}'")
                 result_dataset.to_netcdf(output_file)
 

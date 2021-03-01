@@ -401,7 +401,7 @@ class MapManager(SCSingletonConfigurable):
                 drange = dms().get_color_bounds( frame_data )
                 self.image.set_norm( Normalize( **drange ) )
                 self.image.set_extent( self.block.extent() )
-                plot_name = os.path.basename( dm().dsid )
+                plot_name = os.path.basename( dm().dsid() )
                 lgm().log( f" Update Map: data shape = {frame_data.shape}, range = {drange}, extent = {self.block.extent()}")
                 self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
                 self.plot_axes.title.set_fontsize( 8 )

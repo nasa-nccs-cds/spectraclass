@@ -20,7 +20,7 @@ class UnstructuredDataManager(ModeDataManager):
         self.update_gui_parameters()
         self.set_progress(0.02)
         write = kwargs.get('write', True)
-        output_file = os.path.join(self.datasetDir, self.dsid + ".nc")
+        output_file = os.path.join(self.datasetDir, self.dsid() + ".nc")
         assert (self.INPUTS is not None), f"INPUTS undefined for mode {self.mode}"
 
         np_embedding: np.ndarray = self.getInputFileData( )
@@ -75,7 +75,6 @@ class UnstructuredDataManager(ModeDataManager):
         else:
             lgm().log(f"Error, the input path '{input_file_path}' is not a file.")
 
-    @property
-    def dsid(self) -> str:
+    def dsid(self, **kwargs) -> str:
         return self._dsid
 

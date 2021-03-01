@@ -15,7 +15,7 @@ k = 5
 kmax = int(3 * k)
 
 t0 = time.time()
-dm: DataManager = DataManager.initialize("demo3",'keelin')
+dm: DataManager = DataManager.initialize("demo4",'keelin')
 dm.loadCurrentProject("main")
 block = tm().getBlock()
 spectra, spatial_coords = block.getPointData()

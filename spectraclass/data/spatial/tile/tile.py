@@ -36,7 +36,7 @@ class Tile:
         return self.data.attrs['tilename']
 
     def getBlock(self, iy: int, ix: int, **kwargs ) -> Optional["Block"]:
-        if self.data is None: return None
+#        if self.data is None: return None
         block = Block( self, iy, ix, **kwargs )
         return block
 
@@ -61,23 +61,41 @@ class Block:
         self.config = kwargs
         self.block_coords = (iy,ix)
         self.validate_parameters()
-        self.data: Optional[xa.DataArray] = self._getData()
-        self.index_array: xa.DataArray = self.get_index_array()
+        self._data: Optional[xa.DataArray] = None
+        self._index_array: xa.DataArray = None
         self._flow = None
         self._samples_axis: Optional[xa.DataArray] = None
-        tr = self.transform.params.flatten()
-        self.data.attrs['transform'] = self.transform.params.flatten().tolist()
-        self._xlim = [ tr[2], tr[2] + tr[0] * (self.data.shape[2]) ]
-        self._ylim = [ tr[5] + tr[4] * (self.data.shape[1]), tr[5] ]
         self._point_data: Optional[xa.DataArray] = None
         self._point_coords: Optional[xa.DataArray] = None
+        self._xlim = None
+        self._ylim = None
+
+    @property
+    def data(self):
+        if self._data is None:
+            self._data = self._getData()
+        return self._data
+
+    @property
+    def index_array(self):
+        if self._index_array is None:
+            self._index_array = self.get_index_array()
+        return self._index_array
 
     @property
     def transform( self ):
         from spectraclass.data.spatial.tile.manager import TileManager
-        return TileManager.instance().get_block_transform( *self.block_coords )
+        tr0 = self.data.attrs.get('transform')
+        if tr0 is None:
+            pt: ProjectiveTransform = TileManager.instance().get_block_transform( *self.block_coords )
+            self._data.attrs['transform'] = pt.params.flatten().tolist()
+            return pt
+        else:
+            tlist: List[float] = tr0.tolist() if isinstance( tr0, np.ndarray ) else tr0
+            if len( tlist ) == 6: tlist = tlist + [ 0, 0, 1 ]
+            projection = np.array( tlist ).reshape(3, 3)
+            return ProjectiveTransform( projection )
 
-    @property
     def dsid( self ):
         from spectraclass.data.spatial.tile.manager import TileManager
         return "-".join( [ TileManager.instance().tileName() ] + [ str(i) for i in self.block_coords ] )
@@ -87,19 +105,43 @@ class Block:
         assert ( self.block_coords[0] < tm().block_dims[0] ) and ( self.block_coords[1] < tm().block_dims[1] ), f"Block coordinates {self.block_coords} out of bounds with block dims = {tm().block_dims}"
 
     def _getData( self ) -> Optional[xa.DataArray]:
-        if self.tile.data is None: return None
-        ybounds, xbounds = self.getBounds()
-        block_raster = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
+        from spectraclass.data.base import DataManager, dm
+        try:
+            dataset = dm().modal.loadDataFile( block=self )
+            block_raster = dataset["raw"]
+        except Exception:
+            if self.tile.data is None: return None
+            ybounds, xbounds = self.getBounds()
+            block_raster = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
         block_raster.attrs['block_coords'] = self.block_coords
-        block_raster.attrs['dsid'] = self.dsid
+        block_raster.attrs['dsid'] = self.dsid()
         block_raster.attrs['file_name'] = self.file_name
         block_raster.name = self.file_name
         lgm().log( f"Computing texture bands for block {self.block_coords}, shape = {block_raster.shape}")
         return block_raster
 
-    def addTextureBands( self ) :
+    def _loadTileData(self):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        ybounds, xbounds = self.getBounds()
+        block_raster = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
+        block_raster.attrs['block_coords'] = self.block_coords
+        block_raster.attrs['dsid'] = self.dsid()
+        block_raster.attrs['file_name'] = self.file_name
+        block_raster.name = self.file_name
+        lgm().log( f"Computing texture bands for block {self.block_coords}, shape = {block_raster.shape}")
+        self._data = block_raster
+
+    def clearBlockCache(self):
+        from spectraclass.data.base import DataManager, dm
+        block_file = dm().modal.blockFilePath( block = self )
+        if os.path.exists(block_file):
+            print( f"Removing block file: {block_file} ")
+            os.remove( block_file )
+        self._loadTileData()
+
+    def addTextureBands( self ):
         from spectraclass.features.texture.manager import TextureManager, texm
-        self.data = texm().addTextureBands( self.data )
+        self._data = texm().addTextureBands( self.data )
 
     @property
     def file_name(self):
@@ -115,10 +157,18 @@ class Block:
         return result.unstack()
 
     @property
-    def xlim(self): return self._xlim
+    def xlim(self):
+        if self._xlim is None:
+            tr = self.transform.params.flatten()
+            self._xlim = [tr[2], tr[2] + tr[0] * (self._data.shape[2])]
+        return self._xlim
 
     @property
-    def ylim(self): return self._ylim
+    def ylim(self):
+        if self._ylim is None:
+            tr = self.transform.params.flatten()
+            self._ylim = [tr[5] + tr[4] * (self._data.shape[1]), tr[5]]
+        return self._ylim
 
     def extent(self, epsg: int = None ) -> List[float]:   # left, right, bottom, top
         if epsg is None:    x, y =  self.xlim, self.ylim
@@ -126,7 +176,7 @@ class Block:
         return x + y
 
     def project_extent(self, xlim, ylim, epsg ):
-        inProj = Proj(self.data.spatial_ref.crs_wkt)
+        inProj = Proj( self.data.attrs['crs'] )
         outProj = Proj(epsg)
         ylim1, xlim1 = transform(inProj, outProj, xlim, ylim)   # Requires result order reversal- error in transform?
         return xlim1, ylim1
@@ -165,7 +215,7 @@ class Block:
             if ( (self._point_data.size > 0) and (subsample > 1) ):  self._point_data = self._point_data[::subsample]
             self._samples_axis = self._point_data.coords['samples']
             self._point_data.attrs['type'] = 'block'
-            self._point_data.attrs['dsid'] = self.dsid
+            self._point_data.attrs['dsid'] = self.dsid()
         return (self._point_data, self._point_coords)
 
     @property

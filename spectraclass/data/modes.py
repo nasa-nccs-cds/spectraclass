@@ -85,8 +85,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def setDatasetId(self,str):
         raise NotImplementedError()
 
-    @property
-    def dsid(self) -> str:
+    def dsid(self, **kwargs) -> str:
         raise NotImplementedError()
 
     def prepare_inputs(self, *args, **kwargs):
@@ -99,9 +98,9 @@ class ModeDataManager(SCSingletonConfigurable):
     @exception_handled
     def select_dataset(self, *args):
         from spectraclass.data.base import DataManager, dm
-        if dm().dsid != self._dset_selection.value:
+        if dm().dsid() != self._dset_selection.value:
             ufm().show( "Loading new data block")
-            lgm().log( f"Loading dataset '{self._dset_selection.value}', current dataset = '{dm().dsid}', mdmgr id = {id(self)}")
+            lgm().log( f"Loading dataset '{self._dset_selection.value}', current dataset = '{dm().dsid()}', mdmgr id = {id(self)}")
             dm().loadProject( self._dset_selection.value )
             ufm().clear()
         dm().refresh_all()
@@ -173,32 +172,35 @@ class ModeDataManager(SCSingletonConfigurable):
         raise NotImplementedError()
 
     @exception_handled
-    def loadDataset(self) -> xa.Dataset:
-        lgm().log(f"Load dataset {self.dsid}, current datasets = {self.datasets.keys()}")
-        if self.dsid not in self.datasets:
-            dataset: xa.Dataset = self.loadDataFile()
+    def loadDataset(self, **kwargs) -> xa.Dataset:
+        lgm().log(f"Load dataset {self.dsid()}, current datasets = {self.datasets.keys()}")
+        if self.dsid() not in self.datasets:
+            dataset: xa.Dataset = self.loadDataFile(**kwargs)
             vnames = dataset.variables.keys()
             vshapes = [f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
-            lgm().log(f" ---> Opened Dataset {self.dsid} from file {dataset.attrs['data_file']}\n\t -> variables: {' '.join(vshapes)}")
+            lgm().log(f" ---> Opened Dataset {self.dsid()} from file {dataset.attrs['data_file']}\n\t -> variables: {' '.join(vshapes)}")
             if 'plot-x' not in vnames:
                 raw_data: xa.DataArray = dataset['raw']
                 dataset['plot-y'] = raw_data
                 dataset['plot-x'] = np.arange(0,raw_data.shape[1])
-            dataset.attrs['dsid'] = self.dsid
+            dataset.attrs['dsid'] = self.dsid()
             dataset.attrs['type'] = 'spectra'
-            self.datasets[self.dsid] = dataset
-        return self.datasets[self.dsid]
+            self.datasets[ self.dsid() ] = dataset
+        return self.datasets[ self.dsid() ]
 
-    def loadDataFile( self ) -> xa.Dataset:
+    def blockFilePath( self, **kwargs ) -> str:
+        return os.path.join(self.datasetDir, self.dsid(**kwargs) + ".nc")
+
+    def loadDataFile( self, **kwargs ) -> xa.Dataset:
         from spectraclass.data.base import DataManager, dm
-        data_file = os.path.join(self.datasetDir, self.dsid + ".nc")
+        data_file = os.path.join( self.datasetDir, self.dsid(**kwargs) + ".nc" )
         try:
-            dataset: xa.Dataset = xa.open_dataset(data_file)
+            dataset: xa.Dataset = xa.open_dataset( data_file )
         except FileNotFoundError:
             print( "Preparing input" )
             dm().prepare_inputs()
             dm().save_config()
-            dataset: xa.Dataset = xa.open_dataset(data_file)
+            dataset: xa.Dataset = xa.open_dataset( data_file )
         dataset.attrs['data_file'] = data_file
         return dataset
 
