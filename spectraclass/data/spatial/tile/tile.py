@@ -117,25 +117,22 @@ class Block:
         block_raster.attrs['dsid'] = self.dsid()
         block_raster.attrs['file_name'] = self.file_name
         block_raster.name = self.file_name
-        lgm().log( f"Computing texture bands for block {self.block_coords}, shape = {block_raster.shape}")
         return block_raster
 
     def _loadTileData(self):
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         ybounds, xbounds = self.getBounds()
         block_raster = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
         block_raster.attrs['block_coords'] = self.block_coords
         block_raster.attrs['dsid'] = self.dsid()
         block_raster.attrs['file_name'] = self.file_name
         block_raster.name = self.file_name
-        lgm().log( f"Computing texture bands for block {self.block_coords}, shape = {block_raster.shape}")
         self._data = block_raster
 
     def clearBlockCache(self):
         from spectraclass.data.base import DataManager, dm
         block_file = dm().modal.blockFilePath( block = self )
         if os.path.exists(block_file):
-            print( f"Removing block file: {block_file} ")
+            lgm().log( f"Removing block file: {block_file} ")
             os.remove( block_file )
         self._loadTileData()
 
@@ -205,22 +202,19 @@ class Block:
         return ( y0, y0+self.shape[0] ), ( x0, x0+self.shape[1] )
 
     def getPointData( self ) -> Tuple[xa.DataArray,xa.DataArray]:
-        from spectraclass.data.base import DataManager, dm
         from spectraclass.data.spatial.manager import SpatialDataManager
         if self._point_data is None:
-            subsample = dm().modal.subsample
             result: xa.DataArray =  SpatialDataManager.raster2points( self.data )
             self._point_coords: xa.DataArray = result.samples
             self._point_data = result.assign_coords( samples = np.arange( 0, self._point_coords.shape[0] ) )
-            if ( (self._point_data.size > 0) and (subsample > 1) ):  self._point_data = self._point_data[::subsample]
             self._samples_axis = self._point_data.coords['samples']
             self._point_data.attrs['type'] = 'block'
             self._point_data.attrs['dsid'] = self.dsid()
         return (self._point_data, self._point_coords)
 
     @property
-    def samples_axis(self) -> xa.DataArray:
-        if self._samples_axis is None: self.getPointData()
+    def point_coords(self) -> xa.DataArray:
+        if self._point_coords is None: self.getPointData()
         return  self._point_coords
 
     def getSelectedPointData( self, cy: List[float], cx: List[float] ) -> np.ndarray:
@@ -264,18 +258,18 @@ class Block:
 
     def pindex2coords(self, point_index: int) -> Dict:
         try:
-            selected_sample: List = self.samples_axis.values[point_index]
+            selected_sample: List = self.point_coords.values[point_index]
             return dict( y = selected_sample[0], x = selected_sample[1] )
         except Exception as err:
-            print( f" --> pindex2coords Error: {err}" )
-            print(f" Samples Axis shape: {self.samples_axis.shape}, pid = {point_index}" )
+            lgm().log( f" --> pindex2coords Error: {err}" )
+            lgm().log(f" Samples Axis shape: {self.point_coords.shape}, pid = {point_index}")
 
     def pindex2indices(self, point_index: int) -> Dict:
         try:
-            selected_sample: List = self.samples_axis.values[point_index]
+            selected_sample: List = self.point_coords.values[point_index]
             return self.coords2indices( selected_sample[0], selected_sample[1] )
         except Exception as err:
-            print( f" --> pindex2coords Error: {err}" )
+            lgm().log( f" --> pindex2coords Error: {err}" )
 
     def indices2pindex( self, iy, ix ) -> int:
         return self.index_array.values[ iy, ix ]
