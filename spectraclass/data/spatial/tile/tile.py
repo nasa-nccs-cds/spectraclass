@@ -176,7 +176,7 @@ class Block:
         return x + y
 
     def project_extent(self, xlim, ylim, epsg ):
-        inProj = Proj( self.data.attrs['crs'] )
+        inProj = Proj( self.data.attrs['wkt'] )
         outProj = Proj(epsg)
         ylim1, xlim1 = transform(inProj, outProj, xlim, ylim)   # Requires result order reversal- error in transform?
         return xlim1, ylim1

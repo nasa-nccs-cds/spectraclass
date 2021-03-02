@@ -180,7 +180,7 @@ class ModeDataManager(SCSingletonConfigurable):
             vshapes = [f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
             lgm().log(f" ---> Opened Dataset {self.dsid()} from file {dataset.attrs['data_file']}\n\t -> variables: {' '.join(vshapes)}")
             if 'plot-x' not in vnames:
-                raw_data: xa.DataArray = dataset['raw']
+                raw_data: xa.DataArray = dataset['norm']      # point data ( shape = [ nsamples, nbands ] )
                 dataset['plot-y'] = raw_data
                 dataset['plot-x'] = np.arange(0,raw_data.shape[1])
             dataset.attrs['dsid'] = self.dsid()
