@@ -385,10 +385,12 @@ class MapManager(SCSingletonConfigurable):
 
     def frame_color_pointcloud( self, **kwargs ) -> Optional[xa.DataArray]:
         from spectraclass.application.controller import app
+        from spectraclass.data.base import DataManager, dm
         if self.currentFrame >= self.data.shape[0]: return None
         frame_data: xa.DataArray = self.data[ self.currentFrame ]
         lgm().log( f" color_pointcloud: currentFrame = {self.currentFrame}, frame data shape = {frame_data.shape}")
-        app().color_pointcloud( frame_data.values.flatten(), **kwargs )
+        subsample = dm().modal.subsample
+        app().color_pointcloud( frame_data.values.flatten()[::subsample], **kwargs )
         return frame_data
 
     @exception_handled

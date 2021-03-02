@@ -182,7 +182,7 @@ class ModeDataManager(SCSingletonConfigurable):
             if 'plot-x' not in vnames:
                 raw_data: xa.DataArray = dataset['raw']
                 dataset['plot-y'] = raw_data
-                dataset['plot-x'] = np.arange(0,raw_data.shape[1])
+                dataset['plot-x'] = np.arange(0,raw_data.shape[0])
             dataset.attrs['dsid'] = self.dsid()
             dataset.attrs['type'] = 'spectra'
             self.datasets[ self.dsid() ] = dataset

@@ -176,7 +176,7 @@ class Block:
         return x + y
 
     def project_extent(self, xlim, ylim, epsg ):
-        inProj = Proj( self.data.attrs['crs'] )
+        inProj = Proj( self.data.attrs['wkt'] )
         outProj = Proj(epsg)
         ylim1, xlim1 = transform(inProj, outProj, xlim, ylim)   # Requires result order reversal- error in transform?
         return xlim1, ylim1
@@ -271,8 +271,9 @@ class Block:
             print(f" Samples Axis shape: {self.samples_axis.shape}, pid = {point_index}" )
 
     def pindex2indices(self, point_index: int) -> Dict:
+        from spectraclass.data.base import DataManager, dm
         try:
-            selected_sample: List = self.samples_axis.values[point_index]
+            selected_sample: List = self.samples_axis.values[ point_index * dm().modal.subsample ]
             return self.coords2indices( selected_sample[0], selected_sample[1] )
         except Exception as err:
             print( f" --> pindex2coords Error: {err}" )
@@ -281,14 +282,17 @@ class Block:
         return self.index_array.values[ iy, ix ]
 
     def coords2pindex( self, cy, cx ) -> int:
+        from spectraclass.data.base import DataManager, dm
         try:
             index = self.coords2indices( cy, cx )
-            return self.index_array.values[ index['iy'], index['ix'] ]
+            dense_index = self.index_array.values[ index['iy'], index['ix'] ]
+            return dense_index // dm().modal.subsample
         except IndexError as err:
             return -1
 
     def multi_coords2pindex(self, ycoords: List[float], xcoords: List[float] ) -> np.ndarray:
+        from spectraclass.data.base import DataManager, dm
         ( yi, xi ) = self.multi_coords2indices( ycoords, xcoords )
-        return self.index_array.values[ yi, xi ]
+        return self.index_array.values[ yi, xi ] / dm().modal.subsample
 
 

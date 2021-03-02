@@ -55,7 +55,7 @@ class TileManager(SCSingletonConfigurable):
     def get_marker(self, lon: float, lat: float, cid: int =-1, **kwargs ) -> Marker:
         from spectraclass.model.labels import LabelsManager, lm
         block = self.getBlock()
-        proj = Proj( block.data.spatial_ref.crs_wkt )
+        proj = Proj( block.data.attrs['wkt'] )
         x, y = proj( lon, lat )
         pid = block.coords2pindex( y, x )
         assert pid >= 0, f"Marker selection error, no points for coord: {[y, x]}"

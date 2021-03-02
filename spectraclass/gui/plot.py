@@ -61,7 +61,9 @@ class JbkPlot:
         if cls._x is None:
             project_data: xa.Dataset = DataManager.instance().loadCurrentProject("graph")
             cls._x: np.ndarray = project_data["plot-x"].values
-            cls._ploty: np.ndarray = project_data["plot-y"].values
+            ploty = project_data["plot-y"].values
+            if ploty.ndim == 3: ploty = ploty.reshape( ploty.shape[0], ploty.shape[1]*ploty.shape[2] )
+            cls._ploty: np.ndarray = ploty.transpose()
             cls._rploty: np.ndarray = project_data["reproduction"].values
             table_cols = DataManager.instance().table_cols
             lgm().log( f" JbkPlot init, using cols {table_cols} from {list(project_data.variables.keys())}, ploty shape = {cls._ploty.shape}, rploty shape = {cls._rploty.shape}" )
@@ -95,11 +97,13 @@ class JbkPlot:
 
     @property
     def x(self) -> List[ np.ndarray ]:
+        lgm().log( f"\nGRAPH:x->  _x shape = {self._x.shape}")
         if self._x.ndim == 1:   return [ self._x ] * self.nlines
         else:                   return [ self._x[ pid ] for pid in self._selected_pids ]
 
     @property
     def y( self ) -> List[ np.ndarray ]:
+        lgm().log( f"\nGRAPH:y2-> idx={self._selected_pids}, _ploty shape = {self._ploty.shape}")
         return [ rescale( self._ploty[idx] ) for idx in self._selected_pids ]
 
     @property
@@ -108,13 +112,14 @@ class JbkPlot:
 
     @property
     def x2( self ) -> List[ np.ndarray ]:
+        lgm().log(f"\nGRAPH:x2->  _x shape = {self._x.shape}")
         return [ self._x ] * 2 if (self._x.ndim == 1) else [ self._x[self._selected_pids[0]] ] * 2
 
     @property
     def y2( self ) -> List[ np.ndarray ]:
         idx = self._selected_pids[0]
         rp = rescale( self._rploty[idx] )
-        lgm().log( f" GRAPH:y2-> idx={idx}, val[10] = {rp[:10]} ({self._rploty[idx][:10]})")
+        lgm().log( f"\nGRAPH:y2-> idx={idx}, val[10] = {rp[:10]} ({self._rploty[idx][:10]}), _ploty shape = {self._ploty.shape}, rp shape = {rp.shape}")
         return [ rescale( self._ploty[idx] ), rp ]
 
     @property
