@@ -528,7 +528,7 @@ class MapManager(SCSingletonConfigurable):
                     lgm().log(f" ** coords[{pid}] out of bounds: {[coords['y'], coords['x']]}, bounds = ( {self.block._ylim}, {self.block._xlim} )")
                     lgm().log(f" ** Point coords range: {[coords['y'], coords['x']]}")
                     lgm().log(f" ** Projection bounds: xlim = {self.block.xlim}, ylim = {self.block.ylim} " )
-                    yc = self.block.point_coords.values[:,0]; xc = self.block.point_coords.values[:,1]
+                    yc = self.block.point_coords['y']; xc = self.block.point_coords['x']
                     lgm().log(f" ** Coordinates bounds: xrange = {[xc.min(),xc.max()]}, yrange = {[yc.min(),yc.max()]} ")
         return ycoords, xcoords, colors
 
