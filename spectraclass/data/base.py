@@ -121,6 +121,7 @@ class DataManager(SCSingletonConfigurable):
                 cfile_handle = open(cfg_file, "w")
                 cfile_handle.writelines(lines)
                 cfile_handle.close()
+            lgm().log(f"Config file written")
 
     def generate_config_file(self) -> Dict:
         #        print( f"Generate config file, classes = {[inst.__class__ for inst in cls.config_instances]}")

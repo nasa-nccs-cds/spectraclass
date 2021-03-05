@@ -46,11 +46,13 @@ class UnstructuredDataManager(ModeDataManager):
             result_dataset.attrs["colnames"] = mdata_vars
             if write:
                 if os.path.exists(output_file): os.remove(output_file)
-                lgm().log(f"Writing output to {output_file}")
+                lgm().log( f"Writing output to {output_file}", print=True )
                 result_dataset.to_netcdf(output_file, format='NETCDF4', engine='netcdf4')
             self.updateDatasetList()
             self.set_progress(1.0)
             return result_dataset
+        else:
+            print( "DATA PRE-PROCESSING FAILED!  See log file for more info.")
 
 
     @exception_handled
@@ -69,11 +71,11 @@ class UnstructuredDataManager(ModeDataManager):
                     elif isinstance(result, list):
                         subsampled = [result[i] for i in range(0, len(result), self.subsample )]
                         input_data = np.vstack(subsampled) if isinstance(result[0], np.ndarray) else np.array(subsampled)
-                lgm().log( f"Reading unstructured {vname} data from file {input_file_path}, shape = {input_data.shape}")
+                lgm().log(  f"Reading unstructured {vname} data from file {input_file_path}, shape = {input_data.shape}", print=True )
                 self._cached_data[input_file_path] = input_data
             return input_data
         else:
-            lgm().log(f"Error, the input path '{input_file_path}' is not a file.")
+            lgm().log( f"Error, the input path '{input_file_path}' is not a file.", print=True )
 
     def dsid(self, **kwargs) -> str:
         return self._dsid

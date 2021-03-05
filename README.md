@@ -3,14 +3,21 @@ spectraclass
 
 Jupyterlab workbench supporting visual exploration and classification of high dimensional sensor data.
 
-Conda CPU Setup
+Conda CPU Versioned Setup
 ---------------
    
     > conda create --name spectraclass
     > conda activate spectraclass
-    > conda install -c conda-forge nodejs jupyterlab jupytext ipywidgets ipycanvas ipyevents itkwidgets qgrid numpy pynndescent xarray jupyter_bokeh rasterio umap-learn scipy scikit-learn toml keras tensorflow rioxarray numba dask netcdf4 matplotlib zarr utm toolz scikit-image
-    > jupyter labextension install @jupyter-widgets/jupyterlab-manager itk-jupyter-widgets qgrid2 @bokeh/jupyter_bokeh
-    > npm i @jupyterlab/apputils
+    > conda install -c conda-forge nodejs jupyterlab=2.2.9 jupytext jupyterlab_server ipywidgets ipycanvas ipyevents itkwidgets qgrid ipympl numpy gdal shapely pynndescent xarray rasterio umap-learn scipy scikit-learn toml keras tensorflow rioxarray numba dask netcdf4 tornado matplotlib utm scikit-image
+    > jupyter labextension install @jupyter-widgets/jupyterlab-manager
+    > jupyter labextension install ipycanvas --no-build  
+    > jupyter labextension install ipyevents --no-build  
+    > jupyter labextension install itkwidgets --no-build
+    > jupyter labextension install itk-jupyter-widgets --no-build 
+    > jupyter labextension install qgrid2 --no-build
+    > jupyter labextension install jupyter-matplotlib --no-build 
+    > jupyter lab build
+
 
 Conda GPU Setup
 ---------------
