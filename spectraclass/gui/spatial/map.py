@@ -1,23 +1,8 @@
-import matplotlib.widgets
-import matplotlib.patches
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.gridspec import GridSpec
-from matplotlib.lines import Line2D
-from matplotlib.axes import Axes
-import traitlets as tl
-from matplotlib.figure import Figure
-from matplotlib.image import AxesImage
-from matplotlib.colors import Normalize
-from matplotlib.backend_bases import PickEvent, MouseButton, NavigationToolbar2
-from spectraclass.gui.control import UserFeedbackManager, ufm
-from matplotlib.widgets import Button, CheckButtons
 from collections import OrderedDict
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.model.base import SCSingletonConfigurable, Marker
 from functools import partial
-from matplotlib.colors import LinearSegmentedColormap, ListedColormap
-import matplotlib.pyplot as plt
-from matplotlib.collections import PathCollection
+import traitlets as tl
 from spectraclass.data.spatial.tile.tile import Block
 from .satellite import SatellitePlotManager
 from spectraclass.util.logs import LogManager, lgm, exception_handled
@@ -27,6 +12,26 @@ import numpy as np
 from typing import List, Dict, Tuple, Optional
 from spectraclass.data.spatial.manager import SpatialDataManager
 import math, atexit, os, traceback
+import pathlib
+
+import matplotlib
+matplotlib.rcParams['toolbar'] = 'toolmanager'
+import matplotlib.pyplot as plt
+from matplotlib.backend_tools import ToolToggleBase
+from matplotlib.collections import PathCollection
+import matplotlib.widgets
+import matplotlib.patches
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.lines import Line2D
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from matplotlib.image import AxesImage
+from matplotlib.colors import Normalize
+from matplotlib.backend_bases import PickEvent, MouseButton, NavigationToolbar2
+from spectraclass.gui.control import UserFeedbackManager, ufm
+from matplotlib.widgets import Button, CheckButtons
+
+ROOT_DIR = pathlib.Path(__file__).parent.parent.parent.parent.absolute()
 
 def get_color_bounds( color_values: List[float] ) -> List[float]:
     color_bounds = []
@@ -39,6 +44,16 @@ def get_color_bounds( color_values: List[float] ) -> List[float]:
 def dms() -> SpatialDataManager:
     from spectraclass.data.base import DataManager, dm
     return dm().modal
+
+class ToggleDataSourceMode(ToolToggleBase):
+    image = os.path.join( ROOT_DIR, "icons", "module.png" )
+    description = "Toggle between input bands and reduced model"
+
+    def enable(self, event=None):
+        mm().set_data_source_mode( True )
+
+    def disable(self, event=None):
+        mm().set_data_source_mode( False )
 
 class PageSlider(matplotlib.widgets.Slider):
 
@@ -106,8 +121,9 @@ class PageSlider(matplotlib.widgets.Slider):
         self._colorize(i)
 
 def mm() -> "MapManager":
+    is_initialized = MapManager.initialized()
     mgr = MapManager.instance()
-    mgr.observe( mgr.on_overlay_alpha_change, names=["overlay_alpha"] )
+    if not is_initialized: mgr.observe( mgr.on_overlay_alpha_change, names=["overlay_alpha"] )
     return mgr
 
 class MapManager(SCSingletonConfigurable):
@@ -127,8 +143,8 @@ class MapManager(SCSingletonConfigurable):
         self.image: Optional[AxesImage] = None
         self.image_template: Optional[xa.DataArray]  = None
         self.overlay_image: Optional[AxesImage] = None
+        self.use_model_data: bool = False
         self.labels = None
-        self.check_use_model: CheckButtons = None
         self.transients = []
         self.plot_axes: Optional[Axes] = None
         self.marker_plot: Optional[PathCollection] = None
@@ -305,15 +321,15 @@ class MapManager(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         if self.block is None: return None
         block_data: xa.DataArray = self.block.data
-        if not self.use_model_data:
-            return block_data
-        else:
+        if self.use_model_data:
             reduced_data: xa.DataArray = dm().getModelData().transpose()
             dims = [reduced_data.dims[0], block_data.dims[1], block_data.dims[2]]
             coords = [(dims[0], reduced_data[dims[0]]), (dims[1], block_data[dims[1]]), (dims[2], block_data[dims[2]])]
             shape = [c[1].size for c in coords]
             raster_data = reduced_data.data.reshape(shape)
             return xa.DataArray(raster_data, coords, dims, reduced_data.name, reduced_data.attrs)
+        else:
+            return block_data
 
     @property
     def frame_data(self) -> np.ndarray:
@@ -333,15 +349,7 @@ class MapManager(SCSingletonConfigurable):
 
     def setup_plot(self, **kwargs):
         self.plot_axes:   Axes = self.figure.add_axes([0.01, 0.06, 0.98, 0.93])  # [left, bottom, width, height]
-        self.slider_axes: Axes = self.figure.add_axes([0.12, 0.01, 0.85, 0.05])  # [left, bottom, width, height]
-        self.button_axes: Axes = self.figure.add_axes([0.01, 0.01, 0.1, 0.05])   # [left, bottom, width, height]
-        self.check_use_model: CheckButtons = CheckButtons(self.button_axes, [ "model" ], [ False ] )
-
-    @property
-    def use_model_data(self) -> bool:
-        if self.check_use_model is None: return False
-        stats = self.check_use_model.get_status()
-        return stats[0]
+        self.slider_axes: Axes = self.figure.add_axes([0.01, 0.01, 0.85, 0.05])  # [left, bottom, width, height]
 
     def invert_yaxis(self):
         self.plot_axes.invert_yaxis()
@@ -365,6 +373,8 @@ class MapManager(SCSingletonConfigurable):
         image: AxesImage =  dms().plotRaster( self.image_template, ax=self.plot_axes, colorbar=colorbar, alpha=0.5, **kwargs )
         self._cidpress = image.figure.canvas.mpl_connect('button_press_event', self.onMouseClick)
         self._cidrelease = image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
+        image.figure.canvas.toolmanager.add_tool("ToggleSource", ToggleDataSourceMode)
+        image.figure.canvas.manager.toolbar.add_tool("ToggleSource", 'navigation', 1)
         self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
         overlays = kwargs.get( "overlays", {} )
         for color, overlay in overlays.items():
@@ -440,12 +450,14 @@ class MapManager(SCSingletonConfigurable):
                     self.dataLims = event.inaxes.dataLim
                 else:
                     lgm().log(f"Can't add marker, pid = {pid}")
-            elif not self.toolbarMode and (event.inaxes == self.button_axes):
-                lgm().log( f"Update data source: use_model_data = {self.use_model_data}" )
-                fmsg = "Updating data source: " + ( "Using (reduced) model data" if self.use_model_data else "Using (raw) band data"  )
-                ufm().show( fmsg, "yellow" )
-                self.update_plots()
-                ufm().clear()
+
+    def set_data_source_mode(self, use_model_data: bool):
+        self.use_model_data = bool
+        lgm().log( f"Update data source: use_model_data = {self.use_model_data}" )
+        fmsg = "Updating data source: " + ( "Using (reduced) model data" if self.use_model_data else "Using (raw) band data"  )
+        ufm().show( fmsg, "yellow" )
+        self.update_plots()
+        ufm().clear()
 
     def add_marker(self, marker: Marker ):
         from spectraclass.application.controller import app

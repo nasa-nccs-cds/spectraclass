@@ -27,7 +27,6 @@ class Spectraclass(SpectraclassController):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.gui.unstructured.table import TableManager, tm
         from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
-        from spectraclass.application.controller import app
         from spectraclass.data.base import DataManager, dm
 
         self.set_spectraclass_theme()

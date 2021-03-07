@@ -70,17 +70,19 @@ class mplGraphPlot:
         from spectraclass.model.labels import LabelsManager, lm
         self.ax.title.text = self.title
         marked_pids = lm().getPids()
+        lgm().log(f"Plotting lines, cid={lm().current_cid}, nselected={len(self._selected_pids)}, nmarked={len(marked_pids)}")
         if lm().current_cid == 0:
             if len(self._selected_pids) > 0:
-                self.update_graph( self.x2, self.y2, [0, 100] )
+                self.update_graph( self.x2, self.y2 )
         else:
             if len(marked_pids) > 0:
                 self._selected_pids = marked_pids
-                self.update_graph( self.x, self.y, np.random.randint( 0, 255, self.nlines ) )
+                self.update_graph( self.x, self.y )
 
-    def update_graph(self, xs: List[ np.ndarray ], ys: List[ np.ndarray ], cmap ):
+    def update_graph(self, xs: List[ np.ndarray ], ys: List[ np.ndarray ] ):
         self.clear()
         for x, y in zip(xs,ys):
+            lgm().log( f"Plotting line, xs = {x.shape}, ys = {y.shape}, xrange = {[x.min(),x.max()]}, yrange = {[y.min(),y.max()]}")
             line, = self.ax.plot( x, y )
             self.lines.append(line)
         self.fig.canvas.draw()
@@ -165,7 +167,7 @@ class GraphPlotManager(SCSingletonConfigurable):
             current_graph.plot()
 
     def _createGui( self, **kwargs ) -> ipw.Tab():
-        wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 300px' ) )
+        wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 500px' ) )
         for iG in range(self._ngraphs):
             self._graphs.append(mplGraphPlot(**kwargs))
             wTab.set_title(iG, str(iG))
@@ -175,5 +177,5 @@ class GraphPlotManager(SCSingletonConfigurable):
     def on_selection(self, selection_event: Dict ):
         selection = selection_event['pids']
         if len( selection ) > 0:
-            lgm().log(f" RAPH.on_selection: nitems = {len(selection)}, pid={selection[0]}")
+            lgm().log(f" GRAPH.on_selection: nitems = {len(selection)}, pid={selection[0]}")
             self.plot_graph( selection )
