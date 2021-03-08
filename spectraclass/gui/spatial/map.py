@@ -15,9 +15,9 @@ import math, atexit, os, traceback
 import pathlib
 
 import matplotlib
-matplotlib.rcParams['toolbar'] = 'toolmanager'
+# matplotlib.rcParams['toolbar'] = 'toolmanager'
 import matplotlib.pyplot as plt
-from matplotlib.backend_tools import ToolToggleBase
+# from matplotlib.backend_tools import ToolToggleBase
 from matplotlib.collections import PathCollection
 import matplotlib.widgets
 import matplotlib.patches
@@ -27,7 +27,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
 from matplotlib.colors import Normalize
-from matplotlib.backend_bases import PickEvent, MouseButton, NavigationToolbar2
+from matplotlib.backend_bases import PickEvent, MouseButton  # , NavigationToolbar2
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from matplotlib.widgets import Button, CheckButtons
 
@@ -45,15 +45,15 @@ def dms() -> SpatialDataManager:
     from spectraclass.data.base import DataManager, dm
     return dm().modal
 
-class ToggleDataSourceMode(ToolToggleBase):
-    image = os.path.join( ROOT_DIR, "icons", "module.png" )
-    description = "Toggle between input bands and reduced model"
-
-    def enable(self, event=None):
-        mm().set_data_source_mode( True )
-
-    def disable(self, event=None):
-        mm().set_data_source_mode( False )
+# class ToggleDataSourceMode(ToolToggleBase):
+#     image = os.path.join( ROOT_DIR, "icons", "module.png" )
+#     description = "Toggle between input bands and reduced model"
+#
+#     def enable(self, event=None):
+#         mm().set_data_source_mode( True )
+#
+#     def disable(self, event=None):
+#         mm().set_data_source_mode( False )
 
 class PageSlider(matplotlib.widgets.Slider):
 
@@ -181,7 +181,7 @@ class MapManager(SCSingletonConfigurable):
         self.update_canvas()
 
     @property
-    def toolbar(self)-> NavigationToolbar2:
+    def toolbar(self):   #     -> NavigationToolbar2:
         return self.figure.canvas.toolbar
 
     @property
@@ -373,8 +373,9 @@ class MapManager(SCSingletonConfigurable):
         image: AxesImage =  dms().plotRaster( self.image_template, ax=self.plot_axes, colorbar=colorbar, alpha=0.5, **kwargs )
         self._cidpress = image.figure.canvas.mpl_connect('button_press_event', self.onMouseClick)
         self._cidrelease = image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
-        image.figure.canvas.toolmanager.add_tool("ToggleSource", ToggleDataSourceMode)
-        image.figure.canvas.manager.toolbar.add_tool("ToggleSource", 'navigation', 1)
+#        lgm().log( f"TOOLBAR: {image.figure.canvas.manager.toolbar.__class__}" )
+#        image.figure.canvas.manager.toolmanager.add_tool("ToggleSource", ToggleDataSourceMode)
+#        image.figure.canvas.manager.toolbar.add_tool("ToggleSource", 'navigation', 1)
         self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
         overlays = kwargs.get( "overlays", {} )
         for color, overlay in overlays.items():
