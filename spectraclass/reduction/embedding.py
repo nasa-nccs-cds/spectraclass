@@ -14,7 +14,12 @@ def norm( x: xa.DataArray, axis = 0 ) -> xa.DataArray:
     return ( x - x.data.mean(axis=axis) ) / x.data.std(axis=axis)
 
 def scale( x: xa.DataArray, axis = 0 ) -> xa.DataArray:
-    return  x / x.data.mean(axis=axis)
+    xm = x.data.mean(axis=axis).data
+    if xm == 0.0:
+        lgm().log( " WARNING: Data has mean == 0.0 ")
+        return x
+    else:
+        return  x / xm
 
 class ReductionManager(SCSingletonConfigurable):
     init = tl.Unicode("random").tag(config=True,sync=True)
@@ -40,6 +45,7 @@ class ReductionManager(SCSingletonConfigurable):
         self._state = self.UNDEF
         self._samples_coord = None
 
+    @exception_handled
     def reduce(self, train_data: xa.DataArray, test_data: List[xa.DataArray], reduction_method: str, ndim: int, nepochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
         with xa.set_options(keep_attrs=True):
             if test_data is None: test_data = [train_data]

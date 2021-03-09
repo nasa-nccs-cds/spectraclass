@@ -5,7 +5,7 @@ import traitlets as tl
 import traitlets.config as tlc
 import matplotlib as mpl
 from typing import List, Union, Tuple, Optional, Dict
-from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.reduction.embedding import ReductionManager, rm
 from spectraclass.data.base import ModeDataManager
 import matplotlib.pyplot as plt
@@ -179,6 +179,9 @@ class SpatialDataManager(ModeDataManager):
     def get_color_bounds( cls, raster: xa.DataArray ):
         ave = raster.mean(skipna=True).values
         std = raster.std(skipna=True).values
+        if std == 0.0:
+            msg =  "This block does not appear to contain any data.  Suggest trying a different tile/block."
+            ufm().show( msg, "red" ); lgm().log( "\n" +  msg + "\n"  )
         return dict( vmin= ave - std * cls.colorstretch, vmax= ave + std * cls.colorstretch  )
 
     @classmethod
@@ -265,24 +268,28 @@ class SpatialDataManager(ModeDataManager):
             block.clearBlockCache()
             block.addTextureBands( )
             blocks_point_data = block.getPointData()[0]
-            blocks_reduction = rm().reduce( blocks_point_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
-            self.model_dims = blocks_reduction[0][0].shape[1]
-            for ( reduced_spectra, reproduction, point_data ) in blocks_reduction:
-                file_name = point_data.attrs['file_name']
-                model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
-                raw_data = block.data
-                raw_data.attrs['wkt'] = tile_data.spatial_ref.crs_wkt
-                data_vars = dict( raw=raw_data, norm=point_data )
-                data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
-                data_vars['reproduction'] = reproduction
-                result_dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
-                self.dataset = self.reduced_dataset_name( file_name )
-                output_file = os.path.join( self.datasetDir, self.dataset + ".nc")
-                lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file}, dset attrs:")
-                for varname, da in result_dataset.data_vars.items():
-                    da.attrs['long_name'] = f"{file_name}.{varname}"
-                print( f"Writing output file: '{output_file}'")
-                result_dataset.to_netcdf(output_file)
+            if blocks_point_data.size == 0:
+               lgm().log( f" Warning:  Block {block.block_coords} has no valid samples.", print=True )
+            else:
+                blocks_reduction = rm().reduce( blocks_point_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
+                if blocks_reduction is not None:
+                    self.model_dims = blocks_reduction[0][0].shape[1]
+                    for ( reduced_spectra, reproduction, point_data ) in blocks_reduction:
+                        file_name = point_data.attrs['file_name']
+                        model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
+                        raw_data = block.data
+                        raw_data.attrs['wkt'] = tile_data.spatial_ref.crs_wkt
+                        data_vars = dict( raw=raw_data, norm=point_data )
+                        data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
+                        data_vars['reproduction'] = reproduction
+                        result_dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
+                        self.dataset = self.reduced_dataset_name( file_name )
+                        output_file = os.path.join( self.datasetDir, self.dataset + ".nc")
+                        lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file}, dset attrs:")
+                        for varname, da in result_dataset.data_vars.items():
+                            da.attrs['long_name'] = f"{file_name}.{varname}"
+                        print( f"Writing output file: '{output_file}'")
+                        result_dataset.to_netcdf(output_file)
 
     def getFilePath(self, use_tile: bool ) -> str:
         base_dir = dm().modal.data_dir

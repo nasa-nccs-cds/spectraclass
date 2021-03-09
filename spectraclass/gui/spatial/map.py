@@ -348,7 +348,8 @@ class MapManager(SCSingletonConfigurable):
         return result
 
     def setup_plot(self, **kwargs):
-        self.plot_axes:   Axes = self.figure.add_axes([0.01, 0.06, 0.98, 0.93])  # [left, bottom, width, height]
+        self.plot_axes:   Axes = self.figure.add_axes([0.01, 0.07, 0.98, 0.93])  # [left, bottom, width, height]
+        self.plot_axes.xaxis.set_visible( False ); self.plot_axes.yaxis.set_visible( False )
         self.slider_axes: Axes = self.figure.add_axes([0.01, 0.01, 0.85, 0.05])  # [left, bottom, width, height]
 
     def invert_yaxis(self):

@@ -42,4 +42,4 @@ class DesisDataManager(SpatialDataManager):
             os.makedirs( mode_dir, 0o777, exist_ok=True )
             return f"{mode_dir}/{self.tiles.getTileFileName()}"
         else:
-            return f"{self.data_dir}/{self.MODE}/{self.tiles.image_name}-SPECTRAL_IMAGE.tif"
+            return f"{self.data_dir}/{self.tiles.image_name}-SPECTRAL_IMAGE.tif"
