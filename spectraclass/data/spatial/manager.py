@@ -1,9 +1,5 @@
 import numpy as np
 import xarray as xa
-import pathlib
-import traitlets as tl
-import traitlets.config as tlc
-import matplotlib as mpl
 from typing import List, Union, Tuple, Optional, Dict
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.reduction.embedding import ReductionManager, rm
@@ -262,15 +258,18 @@ class SpatialDataManager(ModeDataManager):
 
     @exception_handled
     def prepare_inputs(self, *args, **kwargs ):
+        from spectraclass.util.norm import scale_to_bounds
         print( " PI ")
         tile_data = self.tiles.getTileData()
         for block in self.tiles.tile.getBlocks():
             block.clearBlockCache()
             block.addTextureBands( )
-            blocks_point_data = block.getPointData()[0]
+            blocks_point_data: xa.DataArray = block.getPointData()[0]
             if blocks_point_data.size == 0:
                lgm().log( f" Warning:  Block {block.block_coords} has no valid samples.", print=True )
             else:
+#                training_data = scale_to_bounds( blocks_point_data, (-1, 1), 1 )
+#                range = [ training_data.min().data, training_data.max().data ]
                 blocks_reduction = rm().reduce( blocks_point_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
                 if blocks_reduction is not None:
                     self.model_dims = blocks_reduction[0][0].shape[1]
@@ -285,10 +284,10 @@ class SpatialDataManager(ModeDataManager):
                         result_dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
                         self.dataset = self.reduced_dataset_name( file_name )
                         output_file = os.path.join( self.datasetDir, self.dataset + ".nc")
-                        lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file}, dset attrs:")
+                        lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file} with {blocks_point_data.size} samples, dset attrs:")
                         for varname, da in result_dataset.data_vars.items():
                             da.attrs['long_name'] = f"{file_name}.{varname}"
-                        print( f"Writing output file: '{output_file}'")
+                        print( f"Writing output file: '{output_file}' with {blocks_point_data.size} samples")
                         result_dataset.to_netcdf(output_file)
 
     def getFilePath(self, use_tile: bool ) -> str:

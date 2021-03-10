@@ -10,12 +10,6 @@ from spectraclass.data.spatial.tile.tile import Block
 import random, matplotlib.pyplot as plt
 colorstretch = 1.0
 
-def scale_to_bounds( raster: xa.DataArray, bounds: Tuple[float, float]) -> xa.DataArray:
-    vmin = raster.min(dim=raster.dims[:2], skipna=True)
-    vmax = raster.max(dim=raster.dims[:2], skipna=True)
-    scale = (bounds[1] - bounds[0]) / (vmax - vmin)
-    return (raster - vmin) * scale + bounds[0]
-
 def get_color_bounds( color_values: List[float] ) -> List[float]:
     color_bounds = []
     for iC, cval in enumerate( color_values ):

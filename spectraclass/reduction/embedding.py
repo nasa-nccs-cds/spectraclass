@@ -14,12 +14,9 @@ def norm( x: xa.DataArray, axis = 0 ) -> xa.DataArray:
     return ( x - x.data.mean(axis=axis) ) / x.data.std(axis=axis)
 
 def scale( x: xa.DataArray, axis = 0 ) -> xa.DataArray:
-    xm = x.data.mean(axis=axis).data
-    if xm == 0.0:
-        lgm().log( " WARNING: Data has mean == 0.0 ")
-        return x
-    else:
-        return  x / xm
+    result = x / x.mean(axis=axis)
+    result.attrs.update( x.attrs )
+    return result
 
 class ReductionManager(SCSingletonConfigurable):
     init = tl.Unicode("random").tag(config=True,sync=True)
