@@ -25,6 +25,14 @@ class TessDataManager(UnstructuredDataManager):
     METAVARS = ['tics', "camera", "chip", "dec", 'ra', 'tmag']
     INPUTS = dict(embedding='scaled_lcs', directory=METAVARS, plot=dict(y="lcs", x='times'))
     application = Spectraclass
+    tics = tl.Unicode("tics.pkl").tag(config=True)
+    camera = tl.Unicode("camera.pkl").tag(config=True)
+    chip = tl.Unicode("chip.pkl").tag(config=True)
+    dec = tl.Unicode("dec.pkl").tag(config=True)
+    ra = tl.Unicode("ra.pkl").tag(config=True)
+    tmag = tl.Unicode("tmag.pkl").tag(config=True)
+    lcs = tl.Unicode("lcs.pkl").tag(config=True)
+    times = tl.Unicode("times.pkl").tag(config=True)
 
     def __init__(self):
         super(TessDataManager, self).__init__()

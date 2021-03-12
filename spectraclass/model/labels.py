@@ -140,7 +140,7 @@ class LabelsManager(SCSingletonConfigurable):
         top_marker = self.topMarker
         if not marker.isEmpty() and ( marker != top_marker ):
             self.clearTransientMarkers(marker)
-            lgm().log( f"LabelsManager.addMarker: {marker}")
+            lgm().log( f"LabelsManager[{source}].addMarker: {marker}")
             self.addAction("mark", source, marker=marker )
 
     def addAction(self, type: str, source: str, **kwargs ):

@@ -1,11 +1,10 @@
 import matplotlib
 matplotlib.rcParams['toolbar'] = 'toolmanager'
 from spectraclass.data.base import DataManager
-from spectraclass.gui.points import PointCloudManager, pcm
-from spectraclass.gui.spatial.map import MapManager, mm
+from spectraclass.gui.plot import GraphPlotManager, gpm
 from spectraclass.model.labels import LabelsManager, lm
 
-dm: DataManager = DataManager.initialize("demo2", 'desis' )
+dm: DataManager = DataManager.initialize( "demo4", 'tess' )
 dm.loadCurrentProject("main")
 
 classes = [ ('Class-1', "cyan"),
@@ -15,4 +14,5 @@ classes = [ ('Class-1', "cyan"),
 
 lm().setLabels( classes )
 
-pcgr = pcm().gui()
+gui = gpm().gui()
+

@@ -29,7 +29,7 @@ class UnstructuredDataManager(ModeDataManager):
             mdata_vars = list(self.INPUTS['directory'])
             xcoords = OrderedDict(samples=np.arange(dims[0]), bands=np.arange(dims[1]))
             xdims = OrderedDict({dims[0]: 'samples', dims[1]: 'bands'})
-            data_vars = dict( embedding=xa.DataArray(np_embedding, dims=xcoords.keys(), coords=xcoords, name=self.INPUTS['embedding']))
+            data_vars = dict( embedding=xa.DataArray(np_embedding, dims=xcoords.keys(), coords=xcoords, name=self.INPUTS['embedding']) )
             data_vars.update({vid: self.getXarray(vid, xcoords, self.subsample, xdims) for vid in mdata_vars})
             pspec = self.INPUTS['plot']
             data_vars.update(  {f'plot-{vid}': self.getXarray(pspec[vid], xcoords, self.subsample, xdims, norm=pspec.get('norm','spectral')) for vid in ['x', 'y'] } )

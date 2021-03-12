@@ -21,7 +21,8 @@ class mplGraphPlot:
     _rploty: np.ndarray = None
     _mdata: List[np.ndarray] = None
 
-    def __init__( self, **kwargs ):
+    def __init__( self, index: int, **kwargs ):
+        self.index = index
         self.init_data(**kwargs)
         self._selected_pids: List[int] = []
         self.ax : plt.Axes = None
@@ -31,12 +32,14 @@ class mplGraphPlot:
         self.init_figure()
 
     def init_figure(self):
-        with self.output:
-            self.fig, self.ax = plt.subplots( constrained_layout=True, figsize=(6, 4) )
-        self.ax.grid(True)
-        self.ax.set_autoscaley_on(True)
-        self.fig.canvas.toolbar_position = 'bottom'
-        self.fig.suptitle('Point Spectra', fontsize=12)
+        if self.fig is None:
+            with self.output:
+                self.fig: plt.Figure = plt.figure( self.index, figsize = (6, 4) )
+                self.ax = self.fig.add_subplot(111)
+            self.ax.grid(True)
+            self.ax.set_autoscaley_on(True)
+            self.fig.canvas.toolbar_position = 'bottom'
+            self.fig.suptitle('Point Spectra', fontsize=12)
 
     def gui(self):
         self.plot()
@@ -169,7 +172,7 @@ class GraphPlotManager(SCSingletonConfigurable):
     def _createGui( self, **kwargs ) -> ipw.Tab():
         wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 500px' ) )
         for iG in range(self._ngraphs):
-            self._graphs.append(mplGraphPlot(**kwargs))
+            self._graphs.append(mplGraphPlot( iG, **kwargs ))
             wTab.set_title(iG, str(iG))
         wTab.children = [ g.gui() for g in self._graphs ]
         return wTab

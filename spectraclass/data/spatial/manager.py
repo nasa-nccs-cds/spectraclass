@@ -258,8 +258,6 @@ class SpatialDataManager(ModeDataManager):
 
     @exception_handled
     def prepare_inputs(self, *args, **kwargs ):
-        from spectraclass.util.norm import scale_to_bounds
-        print( " PI ")
         tile_data = self.tiles.getTileData()
         for block in self.tiles.tile.getBlocks():
             block.clearBlockCache()
@@ -268,8 +266,8 @@ class SpatialDataManager(ModeDataManager):
             if blocks_point_data.size == 0:
                lgm().log( f" Warning:  Block {block.block_coords} has no valid samples.", print=True )
             else:
-#                training_data = scale_to_bounds( blocks_point_data, (-1, 1), 1 )
-#                range = [ training_data.min().data, training_data.max().data ]
+                range = [ blocks_point_data.min().data, blocks_point_data.max().data ]
+                lgm().log(f" Preparing point data with shape {blocks_point_data.shape} and range = {range}", print=True)
                 blocks_reduction = rm().reduce( blocks_point_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
                 if blocks_reduction is not None:
                     self.model_dims = blocks_reduction[0][0].shape[1]

@@ -96,8 +96,13 @@ class ReductionManager(SCSingletonConfigurable):
         from keras.layers import Input, Dense
         from keras.models import Model
         from keras import losses, regularizers
-        if test_inputs is None: test_inputs = [ train_input ]
         input_dims = train_input.shape[1]
+        ispecs: List[np.ndarray] = [train_input.data.max(0), train_input.data.min(0), train_input.data.mean(0), train_input.data.std(0)]
+        lgm().log(f" autoencoder_reduction: train_input shape = {train_input.shape} ")
+        lgm().log(f"   ----> max = {ispecs[0][:64].tolist()} ")
+        lgm().log(f"   ----> min = {ispecs[1][:64].tolist()} ")
+        lgm().log(f"   ----> ave = {ispecs[2][:64].tolist()} ")
+        lgm().log(f"   ----> std = {ispecs[3][:64].tolist()} ")
         reduction_factor = 2
         inputlayer = Input( shape=[input_dims] )
         activation = 'tanh'
@@ -117,25 +122,23 @@ class ReductionManager(SCSingletonConfigurable):
 #        earlystopping = EarlyStopping(monitor='loss', min_delta=0., patience=100, verbose=1, mode='auto')
         autoencoder = Model(inputs=[inputlayer], outputs=[decoded])
         encoder = Model(inputs=[inputlayer], outputs=[encoded])
-        autoencoder.summary()
-        encoder.summary()
-
+#        autoencoder.summary()
+#        encoder.summary()
         autoencoder.compile(loss=self.loss, optimizer=optimizer )
-        normed_train_input: xa.DataArray = scale(train_input)
-        autoencoder.fit(normed_train_input.data, normed_train_input.data, epochs=epochs, batch_size=256, shuffle=True)
+        autoencoder.fit( train_input.data, train_input.data, epochs=epochs, batch_size=256, shuffle=True )
         results = []
+        if test_inputs is None: test_inputs = [ train_input ]
         for iT, test_input in enumerate(test_inputs):
             try:
-                normed_test_input: xa.DataArray = scale(test_input)
-                encoded_data: np.ndarray = encoder.predict( normed_test_input.data )
-                reproduced_data: np.ndarray = autoencoder.predict( normed_test_input.data )
+                encoded_data: np.ndarray = encoder.predict( test_input.data )
+                reproduced_data: np.ndarray = autoencoder.predict( test_input.data )
                 reproduction: xa.DataArray = test_input.copy( data=reproduced_data )
-                results.append( (encoded_data, reproduction, normed_test_input ) )
+                results.append( (encoded_data, reproduction, test_input ) )
                 if iT == 0:
                     lgm().log(f" Autoencoder_reduction with sparsity={sparsity}, result: shape = {encoded_data.shape}")
-                    lgm().log(f" ----> encoder_input: shape = {normed_test_input.shape}, val[5][5] = {normed_test_input.data[:5][:5]} ")
+                    lgm().log(f" ----> encoder_input: shape = {test_input.shape}, val[5][5] = {test_input.data[:5][:5]} ")
                     lgm().log(f" ----> reproduction: shape = {reproduced_data.shape}, val[5][5] = {reproduced_data[:5][:5]} ")
-                    lgm().log(f" ----> encoding: shape = {encoded_data.shape}, val[5][5]108 = {encoded_data[:5][:5]} ")
+                    lgm().log(f" ----> encoding: shape = {encoded_data.shape}, val[5][5]108 = {encoded_data[:5][:5]}, std = {encoded_data.std(0)} ")
             except Exception as err:
                 lgm().exception( f"Unable to process test input[{iT}], input shape = {test_input.shape}, error = {err}" )
         return results
@@ -158,6 +161,7 @@ class ReductionManager(SCSingletonConfigurable):
             mapper.init = self.init
             kwargs['nepochs'] = 1
             labels_data: np.ndarray = LabelsManager.instance().labels_data().values
+            range = [ mapper.input_data.min(), mapper.input_data.max() ]
             mapper.embed( mapper.input_data, labels_data, **kwargs)
         return mapper.embedding
 
