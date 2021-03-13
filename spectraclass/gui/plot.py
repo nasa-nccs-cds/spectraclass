@@ -5,9 +5,7 @@ import numpy as np
 from spectraclass.data.base import DataManager
 from spectraclass.util.logs import LogManager, lgm
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 import ipywidgets as ipw
-import traitlets.config as tlc
 from spectraclass.model.base import SCSingletonConfigurable
 
 def rescale( x: np.ndarray ):
@@ -35,10 +33,10 @@ class mplGraphPlot:
         if self.fig is None:
             with self.output:
                 self.fig: plt.Figure = plt.figure( self.index, figsize = (6, 4) )
-                self.ax = self.fig.add_subplot(111)
+                if len(self.fig.axes) == 0: self.fig.add_subplot(111)
+                self.ax = self.fig.axes[0]
             self.ax.grid(True)
             self.ax.set_autoscaley_on(True)
-            self.fig.canvas.toolbar_position = 'bottom'
             self.fig.suptitle('Point Spectra', fontsize=12)
 
     def gui(self):

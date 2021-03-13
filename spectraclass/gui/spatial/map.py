@@ -13,14 +13,8 @@ from typing import List, Dict, Tuple, Optional
 from spectraclass.data.spatial.manager import SpatialDataManager
 import math, atexit, os, traceback
 import pathlib
-
-import matplotlib
-# matplotlib.rcParams['toolbar'] = 'toolmanager'
 import matplotlib.pyplot as plt
-# from matplotlib.backend_tools import ToolToggleBase
 from matplotlib.collections import PathCollection
-import matplotlib.widgets
-import matplotlib.patches
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.lines import Line2D
 from matplotlib.axes import Axes
@@ -29,7 +23,8 @@ from matplotlib.image import AxesImage
 from matplotlib.colors import Normalize
 from matplotlib.backend_bases import PickEvent, MouseButton  # , NavigationToolbar2
 from spectraclass.gui.control import UserFeedbackManager, ufm
-from matplotlib.widgets import Button, CheckButtons
+from matplotlib.patches import Rectangle
+from matplotlib.widgets import Button, Slider
 
 ROOT_DIR = pathlib.Path(__file__).parent.parent.parent.parent.absolute()
 
@@ -55,7 +50,7 @@ def dms() -> SpatialDataManager:
 #     def disable(self, event=None):
 #         mm().set_data_source_mode( False )
 
-class PageSlider(matplotlib.widgets.Slider):
+class PageSlider(Slider):
 
     def __init__(self, ax: Axes, numpages = 10, valinit=0, valfmt='%1d', **kwargs ):
         self.facecolor=kwargs.get('facecolor',"yellow")
@@ -75,7 +70,7 @@ class PageSlider(matplotlib.widgets.Slider):
         indexMod = math.ceil( self.numpages / self.maxIndexedPages )
         for i in range(numpages):
             facecolor = self.activecolor if i==valinit else self.facecolor
-            r  = matplotlib.patches.Rectangle((float(i)/numpages, 0), 1./numpages, 1, transform=ax.transAxes, facecolor=facecolor)
+            r  = Rectangle((float(i)/numpages, 0), 1./numpages, 1, transform=ax.transAxes, facecolor=facecolor)
             ax.add_artist(r)
             self.pageRects.append(r)
             if i % indexMod == 0:

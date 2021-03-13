@@ -1,10 +1,8 @@
-import matplotlib
-matplotlib.rcParams['toolbar'] = 'toolmanager'
 from spectraclass.data.base import DataManager
 from spectraclass.gui.plot import GraphPlotManager, gpm
 from spectraclass.model.labels import LabelsManager, lm
 
-dm: DataManager = DataManager.initialize( "demo4", 'tess' )
+dm: DataManager = DataManager.initialize( "demo4", 'swift' )
 dm.loadCurrentProject("main")
 
 classes = [ ('Class-1', "cyan"),
