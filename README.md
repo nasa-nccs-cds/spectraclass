@@ -8,16 +8,22 @@ Conda CPU Versioned Setup
    
     > conda create --name spectraclass
     > conda activate spectraclass
-    > conda install -c conda-forge nodejs jupyterlab=2.2.9 jupytext jupyterlab_server ipywidgets ipycanvas ipyevents itkwidgets qgrid ipympl numpy gdal shapely pynndescent xarray rasterio umap-learn scipy scikit-learn toml keras tensorflow rioxarray numba dask netcdf4 tornado matplotlib utm scikit-image
-    > jupyter labextension install @jupyter-widgets/jupyterlab-manager
-    > jupyter labextension install ipycanvas --no-build  
-    > jupyter labextension install ipyevents --no-build  
-    > jupyter labextension install itkwidgets --no-build
-    > jupyter labextension install itk-jupyter-widgets --no-build 
-    > jupyter labextension install qgrid2 --no-build
-    > jupyter labextension install jupyter-matplotlib --no-build 
-    > jupyter lab build
+    > conda install -c conda-forge nodejs jupyterlab jupytext jupyterlab_server ipywidgets qgrid ipympl numpy gdal shapely pynndescent xarray rasterio umap-learn scipy scikit-learn toml keras tensorflow rioxarray numba dask netcdf4 tornado matplotlib utm scikit-image
+    > pip install itkwidgets
+    > jupyter labextension install @jupyter-widgets/jupyterlab-manager jupyter-matplotlib jupyterlab-datawidgets itkwidgets
+    > jupyter labextension install qgrid2
 
+
+    > python3 -m venv <venv_dir>/spectraclass
+    > source <venv_dir>/spectraclass/bin/activate
+    > pip install --upgrade pip
+    > pip install itkwidgets
+    > pip install nodejs jupyterlab jupytext jupyterlab_server ipywidgets
+    > jupyter labextension install @jupyter-widgets/jupyterlab-manager jupyter-matplotlib jupyterlab-datawidgets itkwidgets
+    > pip install ipympl numpy  pynndescent xarray umap-learn scipy scikit-learn toml keras tensorflow numba dask netcdf4 utm scikit-image
+    > gdal rasterio gshapely rioxarray
+    > qgrid...
+    
 
 Conda GPU Setup
 ---------------
