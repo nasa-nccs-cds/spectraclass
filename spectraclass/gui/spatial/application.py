@@ -22,7 +22,7 @@ class Spectraclass(SpectraclassController):
         css_border = '1px solid blue'
         lgm().log(f"Creating app gui using class {str(self.__class__)}")
 
-        plot_collapsibles = ipw.Accordion(children = [dm().gui(), pcm().gui() ], layout=ipw.Layout(width='100%'))     # , spm().gui()
+        plot_collapsibles = ipw.Accordion(children = [dm().gui(), pcm().gui(), spm().gui() ], layout=ipw.Layout(width='100%'))     #
         for iT, title in enumerate(['data', 'embedding', 'satellite']): plot_collapsibles.set_title(iT, title)
         plot_collapsibles.selected_index = 1
         plot = ipw.VBox([ ufm().gui(), plot_collapsibles ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
