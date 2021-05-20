@@ -9,14 +9,7 @@ Conda CPU Versioned Setup
     > conda create --name spectraclass
     > conda activate spectraclass
     > conda install -c conda-forge nodejs jupyterlab=2.2.9 jupytext jupyterlab_server ipywidgets ipycanvas ipyevents itkwidgets qgrid ipympl numpy gdal shapely pynndescent xarray rasterio umap-learn scipy scikit-learn toml keras tensorflow rioxarray numba dask netcdf4 tornado matplotlib utm scikit-image
-    > jupyter labextension install @jupyter-widgets/jupyterlab-manager ipycanvas ipyevents itkwidgets itk-jupyter-widgets qgrid2 jupyter-matplotlib @bokeh/jupyter_bokeh
-
-   
-    > conda create --name spectraclass
-    > conda activate spectraclass
-    > conda install -c conda-forge nodejs jupyterlab jupytext jupyterlab_server ipywidgets ipympl numpy gdal shapely pynndescent xarray rasterio umap-learn scipy scikit-learn toml keras tensorflow rioxarray numba dask netcdf4 tornado matplotlib utm scikit-image
-    > pip install itkwidgets
-    > jupyter labextension install @jupyter-widgets/jupyterlab-manager jupyter-matplotlib jupyterlab-datawidgets itkwidgets
+    > jupyter labextension install @jupyter-widgets/jupyterlab-manager ipycanvas ipyevents jupyterlab-datawidgets itkwidgets qgrid2 jupyter-matplotlib @bokeh/jupyter_bokeh
 
 Conda GPU Setup
 ---------------
