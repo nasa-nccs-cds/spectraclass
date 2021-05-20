@@ -15,7 +15,8 @@ import os, time, traceback
         "labels": numba.int32[:],
         "index_stack": numba.int32[:,:],
     },)
-def getFilteredLabels( labels: np.ndarray ) -> np.ndarray:
+def getFilteredLabels( vlabels: np.ndarray ) -> np.ndarray:
+    labels = np.ascontiguousarray(vlabels)
     indices = np.arange(labels.shape[0], dtype = np.int32 )
     selection = (labels > 0)
     index_stack = np.vstack( (indices, labels) ).transpose()

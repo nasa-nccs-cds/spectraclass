@@ -29,13 +29,17 @@ class LogManager(SCSingletonConfigurable):
         self._level = logging.INFO
         self._log_file = None
 
+    @classmethod
+    def pid(cls):
+        return os.getpid()
+
     def setLevel(self, level ):
         self._level = level
 
     def init_logging(self, name: str, mode: str ):
         log_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "logging", mode )
         os.makedirs( log_dir, 0o777, exist_ok=True )
-        self._log_file = open( f'{log_dir}/{name}.log', 'w' )
+        self._log_file = open( f'{log_dir}/{name}.{os.getpid()}.log', 'w' )
 
     def log( self,  msg, **kwargs ):
         if kwargs.get( 'print', False ): print( msg )
