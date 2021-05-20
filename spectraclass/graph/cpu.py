@@ -16,7 +16,6 @@ import os, time, traceback
         "index_stack": numba.int32[:,:],
     },)
 def getFilteredLabels( vlabels: np.ndarray ) -> np.ndarray:
-    labels = np.ascontiguousarray(vlabels)
     indices = np.arange(labels.shape[0], dtype = np.int32 )
     selection = (labels > 0)
     index_stack = np.vstack( (indices, labels) ).transpose()
@@ -35,7 +34,8 @@ def getFilteredLabels( vlabels: np.ndarray ) -> np.ndarray:
     },)
 def iterate_spread_labels( I: np.ndarray, D: np.ndarray, C: np.ndarray, P: np.ndarray ):
     for iN in np.arange( 1, I.shape[1], dtype=np.int32 ):
-        FC = getFilteredLabels( C[I[:,iN]] )
+        CS = np.ascontiguousarray( C[I[:,iN]] )
+        FC = getFilteredLabels( CS )
         for label_spec in FC:
             pid = label_spec[0]
             pid1 = I[pid, iN]
