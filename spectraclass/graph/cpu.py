@@ -32,7 +32,7 @@ def getFilteredLabels( labels: np.ndarray ) -> np.ndarray:
         "pid": nb.types.int32,
         "pid1": nb.types.int64,
         "I": nb.types.Array(nb.types.int64, 2, 'C'),
-        "label_spec": nb.types.Array(nb.types.int32, 1, 'C'),
+        "label_spec": nb.types.Array(nb.types.int32, 1, 'A'),
         "C": nb.types.Array(nb.types.int32, 1, 'C'),
         "CS": nb.types.Array(nb.types.int32, 1, 'C'),
         "FC": nb.types.Array(nb.types.int32, 2, 'C'),
