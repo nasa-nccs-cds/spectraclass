@@ -8,12 +8,7 @@ from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.util.logs import LogManager, lgm
 import os, time, traceback
 
-
-
-
-
-
-@nb.njit( # fastmath=True,
+@nb.njit( fastmath=True,
     locals={
         "selection": nb.types.Array(nb.types.boolean, 1, 'C'),
         "indices": nb.types.Array(nb.types.int32, 1, 'C'),
@@ -26,7 +21,7 @@ def getFilteredLabels( labels: np.ndarray ) -> np.ndarray:
     index_stack = np.vstack( (indices, labels) ).transpose()
     return np.copy( index_stack[ selection ] )
 
-@nb.njit( # fastmath=True,
+@nb.njit( fastmath=True,
     locals={
         "iN": nb.types.int32,
         "pid": nb.types.int32,
