@@ -10,6 +10,9 @@ import os, time, traceback
 
 
 
+
+
+
 @nb.njit( # fastmath=True,
     locals={
         "selection": nb.types.Array(nb.types.boolean, 1, 'C'),
@@ -31,6 +34,8 @@ def getFilteredLabels( labels: np.ndarray ) -> np.ndarray:
         "I": nb.types.Array(nb.types.int64, 2, 'C'),
         "label_spec": nb.types.Array(nb.types.int32, 1, 'C'),
         "C": nb.types.Array(nb.types.int32, 1, 'C'),
+        "CS": nb.types.Array(nb.types.int32, 1, 'C'),
+        "FC": nb.types.Array(nb.types.int32, 1, 'C'),
         "P": nb.types.Array(nb.types.float32, 1, 'C'),
         "D": nb.types.Array(nb.types.float32, 2, 'C'),
     },)
