@@ -35,7 +35,7 @@ def getFilteredLabels( labels: np.ndarray ) -> np.ndarray:
         "label_spec": nb.types.Array(nb.types.int32, 1, 'C'),
         "C": nb.types.Array(nb.types.int32, 1, 'C'),
         "CS": nb.types.Array(nb.types.int32, 1, 'C'),
-        "FC": nb.types.Array(nb.types.int32, 1, 'C'),
+        "FC": nb.types.Array(nb.types.int32, 2, 'C'),
         "P": nb.types.Array(nb.types.float32, 1, 'C'),
         "D": nb.types.Array(nb.types.float32, 2, 'C'),
     },)
