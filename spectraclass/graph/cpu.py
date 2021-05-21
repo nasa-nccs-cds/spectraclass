@@ -10,12 +10,12 @@ import os, time, traceback
 
 
 
-@nb.njit( nopython=True,
+@nb.njit( # fastmath=True,
     locals={
         "selection": nb.types.Array(nb.types.boolean, 1, 'C'),
         "indices": nb.types.Array(nb.types.int32, 1, 'C'),
         "labels": nb.types.Array(nb.types.int32, 1, 'C'),
-        "index_stack": nb.types.Array(nb.types.int32, 2, 'C'),
+        "index_stack": nb.types.Array(nb.types.int32, 2, 'F'),
     },)
 def getFilteredLabels( labels: np.ndarray ) -> np.ndarray:
     indices = np.arange(labels.shape[0], dtype = np.int32 )
@@ -23,7 +23,7 @@ def getFilteredLabels( labels: np.ndarray ) -> np.ndarray:
     index_stack = np.vstack( (indices, labels) ).transpose()
     return index_stack[ selection ]
 
-@nb.jit( nopython=True,
+@nb.njit( # fastmath=True,
     locals={
         "iN": nb.types.int32,
         "pid": nb.types.int32,
