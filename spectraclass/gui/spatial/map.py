@@ -574,7 +574,6 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def plot_markers_image( self ):
         if self.marker_plot:
-            self.add_tools()
             ycoords, xcoords, colors = self.get_markers()
             lgm().log(f" ** plot markers image, nmarkers = {len(ycoords)}")
             if len(ycoords) > 0:
