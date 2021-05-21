@@ -21,7 +21,7 @@ def getFilteredLabels( labels: np.ndarray ) -> np.ndarray:
     indices = np.arange(labels.shape[0], dtype = np.int32 )
     selection = (labels > 0)
     index_stack = np.vstack( (indices, labels) ).transpose()
-    return index_stack[ selection ]
+    return np.copy( index_stack[ selection ] )
 
 @nb.njit( # fastmath=True,
     locals={
