@@ -149,9 +149,7 @@ class MapManager(SCSingletonConfigurable):
         self.currentClass = 0
         self.nFrames = None
         self._adding_marker = False
-        self.figure: Figure = kwargs.pop( 'figure', None )
-        if self.figure is None:
-            self.figure = plt.figure(1)
+        self.figure: Figure = kwargs.pop( 'figure', plt.figure(1) )
         self.labels_image: Optional[AxesImage] = None
         self.flow_iterations = kwargs.get( 'flow_iterations', 1 )
         self.frame_marker: Optional[Line2D] = None
@@ -343,9 +341,11 @@ class MapManager(SCSingletonConfigurable):
         return result
 
     def setup_plot(self, **kwargs):
+        self.figure.suptitle(None)
         self.plot_axes:   Axes = self.figure.add_axes([0.01, 0.07, 0.98, 0.93])  # [left, bottom, width, height]
         self.plot_axes.xaxis.set_visible( False ); self.plot_axes.yaxis.set_visible( False )
         self.slider_axes: Axes = self.figure.add_axes([0.01, 0.01, 0.85, 0.05])  # [left, bottom, width, height]
+        self.figure.set_tight_layout(True)
 
     def invert_yaxis(self):
         self.plot_axes.invert_yaxis()
