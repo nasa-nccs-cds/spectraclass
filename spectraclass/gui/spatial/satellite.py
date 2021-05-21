@@ -28,7 +28,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
 
     def __init__( self ):
         super(SatellitePlotManager, self).__init__()
-        self.figure: plt.Figure = plt.figure( 2, frameon=False, constrained_layout=True, figsize=[self.image_size]*2 )
+        self.figure: plt.Figure = plt.figure( 101, frameon=False, constrained_layout=True, figsize=[self.image_size]*2 )
         self.plot: AxesImage = None
         self.image: Image.Image = None
         self.block: Block = None

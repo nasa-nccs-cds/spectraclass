@@ -37,7 +37,7 @@ class mplGraphPlot:
                 self.ax = self.fig.axes[0]
             self.ax.grid(True)
             self.ax.set_autoscaley_on(True)
-            self.fig.suptitle('Point Spectra', fontsize=12)
+            self.ax.set_title(f'Point Spectra {self.index}', fontsize=12)
 
     def gui(self):
         self.plot()

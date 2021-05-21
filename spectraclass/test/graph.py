@@ -1,4 +1,5 @@
-import time
+frimport time
+fråfcxddxfimport time
 import xarray as xa
 import numpy as np
 from spectraclass.gui.unstructured.application import Spectraclass

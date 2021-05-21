@@ -116,12 +116,12 @@ class ReductionManager(SCSingletonConfigurable):
         while layer_dims < input_dims:
             x = Dense(layer_dims, activation=activation)(x)
             layer_dims = int( round( layer_dims * reduction_factor ))
-        decoded = Dense( input_dims, activation='sigmoid' )(x)
+        decoded = Dense( input_dims, activation='linear' )(x)
 
 #        modelcheckpoint = ModelCheckpoint('xray_auto.weights', monitor='loss', verbose=1, save_best_only=True, save_weights_only=True, mode='auto', period=1)
 #        earlystopping = EarlyStopping(monitor='loss', min_delta=0., patience=100, verbose=1, mode='auto')
-        autoencoder = Model(inputs=[inputlayer], outputs=[decoded])
-        encoder = Model(inputs=[inputlayer], outputs=[encoded])
+        autoencoder = Model( inputs=[inputlayer], outputs=[decoded] )
+        encoder = Model( inputs=[inputlayer], outputs=[encoded] )
 #        autoencoder.summary()
 #        encoder.summary()
         autoencoder.compile(loss=self.loss, optimizer=optimizer )
