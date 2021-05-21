@@ -149,7 +149,7 @@ class MapManager(SCSingletonConfigurable):
         self.currentClass = 0
         self.nFrames = None
         self._adding_marker = False
-        self.figure: Figure = plt.figure(100)
+        self.figure: Figure = plt.figure(100, figsize = (6, 6))
         self.labels_image: Optional[AxesImage] = None
         self.flow_iterations = kwargs.get( 'flow_iterations', 1 )
         self.frame_marker: Optional[Line2D] = None

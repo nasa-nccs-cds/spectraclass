@@ -34,17 +34,18 @@ def getFilteredLabels( labels: np.ndarray ) -> np.ndarray:
         "P": nb.types.Array(nb.types.float32, 1, 'C'),
         "D": nb.types.Array(nb.types.float32, 2, 'C'),
     },)
-def iterate_spread_labels( I: np.ndarray, D: np.ndarray, C: np.ndarray, P: np.ndarray ):
-    for iN in np.arange( 1, I.shape[1], dtype=np.int32 ):
-        CS = np.copy( C[I[:,iN]] )
-        FC = getFilteredLabels( CS )
-        for label_spec in FC:
-            pid = label_spec[0]
-            pid1 = I[pid, iN]
-            PN = P[pid1] + D[pid1, iN]
-            if (C[pid] == 0) or (PN < P[pid]):
-                C[pid] = label_spec[1]
-                P[pid] = PN
+def iterate_spread_labels( I: np.ndarray, D: np.ndarray, C: np.ndarray, P: np.ndarray, **kwargs ):
+    if kwargs.get('bidirectional',False):
+        for iN in np.arange( 1, I.shape[1], dtype=np.int32 ):
+            CS = np.copy( C[I[:,iN]] )
+            FC = getFilteredLabels( CS )
+            for label_spec in FC:
+                pid = label_spec[0]
+                pid1 = I[pid, iN]
+                PN = P[pid1] + D[pid1, iN]
+                if (C[pid] == 0) or (PN < P[pid]):
+                    C[pid] = label_spec[1]
+                    P[pid] = PN
     FC = getFilteredLabels( C )
     for iN in np.arange( 1, I.shape[1], dtype=np.int32 ):
         for label_spec in FC:
@@ -110,7 +111,7 @@ class cpActivationFlow(ActivationFlow):
         for iter in range(nIter):
             try:
 #                for iX, X in enumerate([ self.I, self.D, self.C, self.P ]): lgm().log(f" I{iX} -> {X.shape}:{X.dtype}")
-                iterate_spread_labels( self.I, self.D, self.C, self.P )
+                iterate_spread_labels( self.I, self.D, self.C, self.P, **kwargs )
                 new_label_count = np.count_nonzero(self.C)
                 if new_label_count == label_count:
                     lgm().log("Converged!")

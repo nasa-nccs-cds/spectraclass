@@ -160,7 +160,7 @@ class SpectraclassController(SCSingletonConfigurable):
         self._flow_class_map: np.ndarray = lm().labels_data().data
         catalog_pids = np.arange(0, self._flow_class_map.shape[0])
         pcm().clear_bins()
-        converged = flow.spread(self._flow_class_map, niters)
+        converged = flow.spread( self._flow_class_map, niters )
 
         if converged is not None:
             self._flow_class_map = flow.get_classes()
@@ -184,7 +184,7 @@ class SpectraclassController(SCSingletonConfigurable):
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> DISTANCE ")
         seed_points: xa.DataArray = lm().getSeedPointMask()
         flow: ActivationFlow = afm().getActivationFlow()
-        if flow.spread( seed_points.data, niters ) is not None:
+        if flow.spread( seed_points.data, niters, bidirectional=True ) is not None:
             pcm().color_by_value( flow.get_distances(), distance=True )
             lm().addAction("color", "points")
 
