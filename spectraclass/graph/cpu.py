@@ -2,39 +2,41 @@ from pynndescent import NNDescent
 import numpy as np
 from .manager import ActivationFlow, afm
 import xarray as xa
-import numba
+import numba as nb
 from typing import List, Union, Tuple, Optional, Dict
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.util.logs import LogManager, lgm
 import os, time, traceback
 
-@numba.njit(fastmath=True,
+
+
+@nb.njit( nopython=True,
     locals={
-        "selection": numba.boolean[:],
-        "indices": numba.int32[:],
-        "labels": numba.int32[:],
-        "index_stack": numba.int32[:,:],
+        "selection": nb.types.Array(nb.types.boolean, 1, 'C'),
+        "indices": nb.types.Array(nb.types.int32, 1, 'C'),
+        "labels": nb.types.Array(nb.types.int32, 1, 'C'),
+        "index_stack": nb.types.Array(nb.types.int32, 2, 'C'),
     },)
-def getFilteredLabels( vlabels: np.ndarray ) -> np.ndarray:
+def getFilteredLabels( labels: np.ndarray ) -> np.ndarray:
     indices = np.arange(labels.shape[0], dtype = np.int32 )
     selection = (labels > 0)
     index_stack = np.vstack( (indices, labels) ).transpose()
     return index_stack[ selection ]
 
-@numba.jit(fastmath=True,
+@nb.jit( nopython=True,
     locals={
-        "iN": numba.int32,
-        "pid": numba.int32,
-        "pid1": numba.int64,
-        "I": numba.int64[:,:],
-        "label_spec": numba.int32[:],
-        "C": numba.int32[:],
-        "P": numba.float32[:],
-        "D": numba.float32[:,:],
+        "iN": nb.types.int32,
+        "pid": nb.types.int32,
+        "pid1": nb.types.int64,
+        "I": nb.types.Array(nb.types.int64, 2, 'C'),
+        "label_spec": nb.types.Array(nb.types.int32, 1, 'C'),
+        "C": nb.types.Array(nb.types.int32, 1, 'C'),
+        "P": nb.types.Array(nb.types.float32, 1, 'C'),
+        "D": nb.types.Array(nb.types.float32, 2, 'C'),
     },)
 def iterate_spread_labels( I: np.ndarray, D: np.ndarray, C: np.ndarray, P: np.ndarray ):
     for iN in np.arange( 1, I.shape[1], dtype=np.int32 ):
-        CS = np.ascontiguousarray( C[I[:,iN]] )
+        CS = np.copy( C[I[:,iN]] )
         FC = getFilteredLabels( CS )
         for label_spec in FC:
             pid = label_spec[0]
