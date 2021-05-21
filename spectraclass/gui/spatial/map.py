@@ -243,6 +243,7 @@ class MapManager(SCSingletonConfigurable):
                 self.update_plot_axis_bounds()
                 self.plot_markers_image()
                 self.update_plots()
+                self.add_tools()
                 SatellitePlotManager.instance().setBlock(self.block)
 
         return self.block
@@ -377,18 +378,20 @@ class MapManager(SCSingletonConfigurable):
         assert nValid > 0, "No valid pixels in image"
         colorbar = kwargs.pop( 'colorbar', False )
         image: AxesImage =  dms().plotRaster( self.image_template, ax=self.plot_axes, colorbar=colorbar, alpha=0.5, **kwargs )
-        self._cidpress = self.figure.canvas.mpl_connect('button_press_event', self.onMouseClick)
-        self._cidrelease = self.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
-#        lgm().log( f"TOOLBAR: {self.figure.canvas.manager.toolbar.__class__}" )
-#        self.figure.canvas.manager.toolmanager.add_tool("ToggleSource", ToggleDataSourceMode)
-#        self.figure.canvas.manager.toolbar.add_tool("ToggleSource", 'navigation', 1)
-        self.figure.canvas.manager.toolmanager.add_tool("ToggleMarkersPlot", ToggleMarkersPlot )
-        self.figure.canvas.manager.toolbar.add_tool( "ToggleMarkersPlot", 'navigation', 1 )
-        self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
         overlays = kwargs.get( "overlays", {} )
         for color, overlay in overlays.items():
             overlay.plot( ax=self.plot_axes, color=color, linewidth=2 )
         return image
+
+    def add_tools(self):
+        self._cidpress = self.figure.canvas.mpl_connect('button_press_event', self.onMouseClick)
+        self._cidrelease = self.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease)
+        #        lgm().log( f"TOOLBAR: {self.figure.canvas.manager.toolbar.__class__}" )
+        #        self.figure.canvas.manager.toolmanager.add_tool("ToggleSource", ToggleDataSourceMode)
+        #        self.figure.canvas.manager.toolbar.add_tool("ToggleSource", 'navigation', 1)
+        self.figure.canvas.manager.toolmanager.add_tool("ToggleMarkersPlot", ToggleMarkersPlot)
+        self.figure.canvas.manager.toolbar.add_tool("ToggleMarkersPlot", 'navigation', 1)
+        self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
 
     @exception_handled
     def create_overlay_image( self ) -> AxesImage:
