@@ -361,7 +361,8 @@ class MapManager(SCSingletonConfigurable):
         self.figure.canvas.header_visible = False
         self.figure.canvas.resizable = True
         lgm().log( f"Canvas class = {self.figure.canvas.__class__}" )
-        items = vars(self.figure.canvas).items()
+        lgm().log( f"Canvas.manager class = {self.figure.canvas.manager.__class__}")
+        items = self.figure.canvas.trait_values().items()
         for k,v in items: lgm().log(f" ** {k}: {v}")
 
     def invert_yaxis(self):
