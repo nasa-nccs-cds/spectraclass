@@ -143,7 +143,6 @@ class MapManager(SCSingletonConfigurable):
     def __init__( self, **kwargs ):   # class_labels: [ [label, RGBA] ... ]
         super(MapManager, self).__init__()
         self._debug = False
-        self._cidpress = None
         self.currentFrame = 0
         self.block: Block = None
         self.slider: Optional[PageSlider] = None
@@ -244,6 +243,7 @@ class MapManager(SCSingletonConfigurable):
                 self.update_plot_axis_bounds()
                 self.plot_markers_image()
                 self.update_plots()
+                self.add_tools()
                 SatellitePlotManager.instance().setBlock(self.block)
 
         return self.block
@@ -383,17 +383,15 @@ class MapManager(SCSingletonConfigurable):
             overlay.plot( ax=self.plot_axes, color=color, linewidth=2 )
         return image
 
-    @exception_handled
     def add_tools(self):
-        if self._cidpress is None:
-            #        lgm().log( f"TOOLBAR: {self.figure.canvas.manager.toolbar.__class__}" )
-            #        self.figure.canvas.manager.toolmanager.add_tool("ToggleSource", ToggleDataSourceMode)
-            #        self.figure.canvas.manager.toolbar.add_tool("ToggleSource", 'navigation', 1)
-            self.figure.canvas.manager.toolmanager.add_tool("ToggleMarkersPlot", ToggleMarkersPlot)
-            self.figure.canvas.manager.toolbar.add_tool("ToggleMarkersPlot", 'navigation', 1)
-            self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
-            self._cidpress = self.figure.canvas.mpl_connect('button_press_event', self.onMouseClick)
-            self._cidrelease = self.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease)
+        self._cidpress = self.figure.canvas.mpl_connect('button_press_event', self.onMouseClick)
+        self._cidrelease = self.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease)
+        #        lgm().log( f"TOOLBAR: {self.figure.canvas.manager.toolbar.__class__}" )
+        #        self.figure.canvas.manager.toolmanager.add_tool("ToggleSource", ToggleDataSourceMode)
+        #        self.figure.canvas.manager.toolbar.add_tool("ToggleSource", 'navigation', 1)
+        self.figure.canvas.manager.toolmanager.add_tool("ToggleMarkersPlot", ToggleMarkersPlot)
+        self.figure.canvas.manager.toolbar.add_tool("ToggleMarkersPlot", 'navigation', 1)
+        self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
 
     @exception_handled
     def create_overlay_image( self ) -> AxesImage:
@@ -574,7 +572,6 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def plot_markers_image( self ):
         if self.marker_plot:
-            self.add_tools()
             ycoords, xcoords, colors = self.get_markers()
             lgm().log(f" ** plot markers image, nmarkers = {len(ycoords)}")
             if len(ycoords) > 0:
