@@ -34,8 +34,8 @@ def getFilteredLabels( labels: np.ndarray ) -> np.ndarray:
         "P": nb.types.Array(nb.types.float32, 1, 'C'),
         "D": nb.types.Array(nb.types.float32, 2, 'C'),
     },)
-def iterate_spread_labels( I: np.ndarray, D: np.ndarray, C: np.ndarray, P: np.ndarray, **kwargs ):
-    if kwargs.get('bidirectional',False):
+def iterate_spread_labels( I: np.ndarray, D: np.ndarray, C: np.ndarray, P: np.ndarray, bidirectional: bool ):
+    if bidirectional:
         for iN in np.arange( 1, I.shape[1], dtype=np.int32 ):
             CS = np.copy( C[I[:,iN]] )
             FC = getFilteredLabels( CS )
@@ -110,8 +110,7 @@ class cpActivationFlow(ActivationFlow):
         converged = False
         for iter in range(nIter):
             try:
-#                for iX, X in enumerate([ self.I, self.D, self.C, self.P ]): lgm().log(f" I{iX} -> {X.shape}:{X.dtype}")
-                iterate_spread_labels( self.I, self.D, self.C, self.P, **kwargs )
+                iterate_spread_labels( self.I, self.D, self.C, self.P, kwargs.get('bidirectional',False) )
                 new_label_count = np.count_nonzero(self.C)
                 if new_label_count == label_count:
                     lgm().log("Converged!")
