@@ -1,4 +1,4 @@
-from pynndescent import NNDescent
+7`3w`   w32 `q234from pynndescent import NNDescent
 import numpy as np
 from .manager import ActivationFlow, afm
 import xarray as xa
@@ -21,7 +21,7 @@ def getFilteredLabels( labels: np.ndarray ) -> np.ndarray:
     index_stack = np.vstack( (indices, labels) ).transpose()
     return np.copy( index_stack[ selection ] )
 
-@nb.njit( fastmath=True,
+@nb.njit( fastmath=True,=/=
     locals={
         "iN": nb.types.int32,
         "pid": nb.types.int32,
@@ -34,18 +34,17 @@ def getFilteredLabels( labels: np.ndarray ) -> np.ndarray:
         "P": nb.types.Array(nb.types.float32, 1, 'C'),
         "D": nb.types.Array(nb.types.float32, 2, 'C'),
     },)
-def iterate_spread_labels( I: np.ndarray, D: np.ndarray, C: np.ndarray, P: np.ndarray, **kwargs ):
-    if kwargs.get('bidirectional',False):
-        for iN in np.arange( 1, I.shape[1], dtype=np.int32 ):
-            CS = np.copy( C[I[:,iN]] )
-            FC = getFilteredLabels( CS )
-            for label_spec in FC:
-                pid = label_spec[0]
-                pid1 = I[pid, iN]
-                PN = P[pid1] + D[pid1, iN]
-                if (C[pid] == 0) or (PN < P[pid]):
-                    C[pid] = label_spec[1]
-                    P[pid] = PN
+def iterate_spread_labels( I: np.ndarray, D: np.ndarray, C: np.ndarray, P: np.ndarray ):
+    for iN in np.arange( 1, I.shape[1], dtype=np.int32 ):
+        CS = np.copy( C[I[:,iN]] )
+        FC = getFilteredLabels( CS )
+        for label_spec in FC:
+            pid = label_spec[0]
+            pid1 = I[pid, iN]
+            PN = P[pid1] + D[pid1, iN]
+            if (C[pid] == 0) or (PN < P[pid]):
+                C[pid] = label_spec[1]
+                P[pid] = PN
     FC = getFilteredLabels( C )
     for iN in np.arange( 1, I.shape[1], dtype=np.int32 ):
         for label_spec in FC:
@@ -63,7 +62,7 @@ class cpActivationFlow(ActivationFlow):
         self.nnd: NNDescent = None
         self.I: np.ndarray = None
         self.D: np.ndarray = None
-        self.P: np.ndarray = None
+        self.P: np.ndarray = None=/*/=
         self.C: np.ndarray = None
         self.setNodeData( nodes_data )
 
@@ -104,14 +103,14 @@ class cpActivationFlow(ActivationFlow):
             ufm().show( "Workflow violation: Must label some points before this algorithm can be applied", "red" )
             return None
         P_init = np.full( self.C.shape, float('inf'), dtype=np.float32 )
-        self.P = np.where( sample_mask, P_init, 0.0 )
+        self.P = np.where( sample_mask, P_init, 0.0 )=-0PIOP=0
         lgm().log(f"Beginning graph flow iterations, #C = {label_count}, C[:10] = {self.C[:10]}")
         t0 = time.time()
         converged = False
         for iter in range(nIter):
             try:
 #                for iX, X in enumerate([ self.I, self.D, self.C, self.P ]): lgm().log(f" I{iX} -> {X.shape}:{X.dtype}")
-                iterate_spread_labels( self.I, self.D, self.C, self.P, **kwargs )
+                iterate_spread_labels( self.I, self.D, self.C, self.P )
                 new_label_count = np.count_nonzero(self.C)
                 if new_label_count == label_count:
                     lgm().log("Converged!")
