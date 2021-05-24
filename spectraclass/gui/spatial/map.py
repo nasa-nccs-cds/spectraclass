@@ -6,13 +6,14 @@ import traitlets as tl
 from spectraclass.data.spatial.tile.tile import Block
 from .satellite import SatellitePlotManager
 from spectraclass.util.logs import LogManager, lgm, exception_handled
-import pandas as pd
+import types, pandas as pd
 import xarray as xa
 import numpy as np
 from typing import List, Dict, Tuple, Optional
 from spectraclass.data.spatial.manager import SpatialDataManager
 import math, atexit, os, traceback
 import pathlib
+from  ipympl.backend_nbagg import Toolbar
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -40,15 +41,8 @@ def dms() -> SpatialDataManager:
     from spectraclass.data.base import DataManager, dm
     return dm().modal
 
-# class ToggleDataSourceMode(ToolToggleBase):
-#     image = os.path.join( ROOT_DIR, "icons", "module.png" )
-#     description = "Toggle between input bands and reduced model"
-#
-#     def enable(self, event=None):
-#         mm().set_data_source_mode( True )
-#
-#     def disable(self, event=None):
-#         mm().set_data_source_mode( False )
+def toggle_markers( map: "MapManager", toolbar: Toolbar ):
+    map.toggleMarkersVisible()
 
 class PageSlider(Slider):
 
@@ -345,6 +339,15 @@ class MapManager(SCSingletonConfigurable):
         self.plot_axes:   Axes = self.figure.add_axes([0.01, 0.07, 0.98, 0.93])  # [left, bottom, width, height]
         self.plot_axes.xaxis.set_visible( False ); self.plot_axes.yaxis.set_visible( False )
         self.slider_axes: Axes = self.figure.add_axes([0.01, 0.01, 0.85, 0.05])  # [left, bottom, width, height]
+        self.figure.canvas.toolbar_visible = True
+        self.figure.canvas.header_visible = False
+        lgm().log( f"Canvas class = {self.figure.canvas.__class__}" )
+        lgm().log( f"Canvas.manager class = {self.figure.canvas.manager.__class__}")
+        items = self.figure.canvas.trait_values().items()
+        for k,v in items: lgm().log(f" ** {k}: {v}")
+        toolbar = self.figure.canvas.toolbar
+        toolbar.toolitems = list(toolbar.toolitems) + ("TM", "Toggle Markers", "map-marker-times", "toggle_markers")
+        toolbar.toggle_markers = types.MethodType( partial( toggle_markers, self ), toolbar )
 
     def invert_yaxis(self):
         self.plot_axes.invert_yaxis()
@@ -503,6 +506,12 @@ class MapManager(SCSingletonConfigurable):
             self.labels_image.set_alpha(1.0)
             self.update_canvas()
 
+    def toggle_labels(self):
+        if self.labels_image is not None:
+            new_alpha = 1.0 if (self.labels_image.get_alpha() == 0.0) else 0.0
+            self.labels_image.set_alpha( new_alpha )
+            self.update_canvas()
+
     def get_layer(self, layer_id: str ):
         if layer_id == "bands": return self.image
         if layer_id == "labels": return self.labels_image
@@ -591,6 +600,12 @@ class MapManager(SCSingletonConfigurable):
         offsets = np.ma.column_stack([[], []])
         self.marker_plot.set_offsets( offsets )
         self.plot_markers_image()
+
+    def toggleMarkersVisible(self ):
+        if self.marker_plot:
+            new_alpha = 1.0 if (self.marker_plot.get_alpha() == 0.0) else 0.0
+            self.marker_plot.set_alpha( new_alpha )
+            self.update_canvas()
 
     def initMarkersPlot(self):
         print( "Init Markers Plot")
