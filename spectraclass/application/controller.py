@@ -69,10 +69,12 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> CLEAR ")
-        lm().clearMarkers()
-        gpm().clear()
-        pcm().clear()
-        spm().clear_overlay_image()
+        if lm().clearMarkers():
+            gpm().clear()
+            pcm().clear()
+        else:
+            spm().clear_overlay_image()
+
 
     @exception_handled
     def embed(self):

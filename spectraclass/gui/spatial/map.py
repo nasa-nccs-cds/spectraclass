@@ -15,7 +15,6 @@ import math, atexit, os, traceback
 import pathlib
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
-from matplotlib.backend_tools import ToolToggleBase
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.lines import Line2D
 from matplotlib.axes import Axes
@@ -50,16 +49,6 @@ def dms() -> SpatialDataManager:
 #
 #     def disable(self, event=None):
 #         mm().set_data_source_mode( False )
-
-class ToggleMarkersPlot(ToolToggleBase):
-    description = "Toggle visibility of markers"
-    image = "M"
-
-    def enable(self, event=None):
-        mm().setMarkersVisible( True )
-
-    def disable(self, event=None):
-        mm().setMarkersVisible( False )
 
 class PageSlider(Slider):
 
@@ -382,7 +371,6 @@ class MapManager(SCSingletonConfigurable):
 #        lgm().log( f"TOOLBAR: {image.figure.canvas.manager.toolbar.__class__}" )
 #        image.figure.canvas.manager.toolmanager.add_tool("ToggleSource", ToggleDataSourceMode)
 #        image.figure.canvas.manager.toolbar.add_tool("ToggleSource", 'navigation', 1)
-        image.figure.canvas.manager.toolmanager.add_tool("ToggleMarkersPlot", ToggleMarkersPlot )
         self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
         overlays = kwargs.get( "overlays", {} )
         for color, overlay in overlays.items():
@@ -515,12 +503,6 @@ class MapManager(SCSingletonConfigurable):
             self.labels_image.set_alpha(1.0)
             self.update_canvas()
 
-    def toggle_labels(self):
-        if self.labels_image is not None:
-            new_alpha = 1.0 if (self.labels_image.get_alpha() == 0.0) else 0.0
-            self.labels_image.set_alpha( new_alpha )
-            self.update_canvas()
-
     def get_layer(self, layer_id: str ):
         if layer_id == "bands": return self.image
         if layer_id == "labels": return self.labels_image
@@ -609,12 +591,6 @@ class MapManager(SCSingletonConfigurable):
         offsets = np.ma.column_stack([[], []])
         self.marker_plot.set_offsets( offsets )
         self.plot_markers_image()
-
-    def setMarkersVisible(self, is_visible: bool ):
-        if self.marker_plot:
-            new_alpha = 1.0 if is_visible else 0.0
-            self.marker_plot.set_alpha( new_alpha )
-            self.update_canvas()
 
     def initMarkersPlot(self):
         print( "Init Markers Plot")
