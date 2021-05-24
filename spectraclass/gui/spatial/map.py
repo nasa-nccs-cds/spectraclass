@@ -346,7 +346,9 @@ class MapManager(SCSingletonConfigurable):
         items = self.figure.canvas.trait_values().items()
         for k,v in items: lgm().log(f" ** {k}: {v}")
         toolbar = self.figure.canvas.toolbar
-        toolbar.toolitems = list(toolbar.toolitems) + ("TM", "Toggle Markers", "map-marker-times", "toggle_markers")
+        tool_items = list(toolbar.toolitems)
+        tool_items.append( ("TM", "Toggle Marker Visibility", "map-marker-alt", "toggle_markers") )                   # icons:  https://fontawesome.com/icons?d=gallery&p=2&m=free
+        toolbar.toolitems = tool_items
         toolbar.toggle_markers = types.MethodType( partial( toggle_markers, self ), toolbar )
 
     def invert_yaxis(self):
