@@ -21,7 +21,7 @@ def asarray( data: Union[np.ndarray,Iterable], dtype  ) -> np.ndarray:
 
 class PointCloudManager(SCSingletonConfigurable):
 
-    color_map = tl.Unicode("jet").tag(config=True)  # "gist_rainbow" "jet"
+    color_map = tl.Unicode("gist_rainbow").tag(config=True)  # "gist_rainbow" "jet"
 
     def __init__(self):
         super(PointCloudManager, self).__init__()

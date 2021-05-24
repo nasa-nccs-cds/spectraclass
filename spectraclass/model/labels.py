@@ -225,11 +225,9 @@ class LabelsManager(SCSingletonConfigurable):
         filtered_distance = distance[selection]
         return filtered_labels, filtered_distance
 
-    def clearMarkers(self) -> bool:
-        has_actions = (len(self._actions) > 0)
+    def clearMarkers(self):
         self._actions = []
         self.initLabelsData()
-        return has_actions
 
     def refresh(self):
         self.clearMarkers()
