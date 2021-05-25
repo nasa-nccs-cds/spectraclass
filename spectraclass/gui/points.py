@@ -82,6 +82,7 @@ class PointCloudManager(SCSingletonConfigurable):
         if self._gui is not None:
             lgm().log(f"Updating point sets, sizes: {[ps.shape[0] for ps in self.point_sets]}")
             self._gui.point_sets = self.point_sets
+            if 'alphas' in kwargs: self._gui.point_set_opacities = kwargs['alphas']
             self._gui.update_rendered_image()
 
     def on_selection(self, selection_event: Dict ):
@@ -228,15 +229,14 @@ class PointCloudManager(SCSingletonConfigurable):
         alphas[0] = alpha
         self._gui.point_set_opacities = alphas
         lgm().log(f"Set point set opacities: {self._gui.point_set_opacities}")
-        self.update_plot()
+        self.update_plot( alphas = alphas )
 
     def toggle_marker_visibility(self):
-        alpha0 = self._gui.point_set_opacities[1]
-        alpha1 = 0.0 if (alpha0 > 0.0) else 1.0
-        for idx in range( 1, len(self._gui.point_set_opacities) ):
-            self._gui.point_set_opacities[idx] = alpha1
+        midx = len( self._binned_points ) + 1
+        alphas = np.array( list( self._gui.point_set_opacities ) )
+        alphas[midx:] =  0.0 if ( alphas[ midx ] > 0.0 ) else 1.0
         lgm().log(f"Set point set opacities: {self._gui.point_set_opacities}")
-        self.update_plot()
+        self.update_plot( alphas = alphas.tolist() )
 
     def refresh(self):
         self.clear_bins()
