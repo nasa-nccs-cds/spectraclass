@@ -207,7 +207,7 @@ class MapManager(SCSingletonConfigurable):
             os.makedirs( output_dir, exist_ok=True )
             output_file = os.path.join( output_dir, f"{dm().dsid()}-{cid}.nc")
             mask_array.to_netcdf( output_file, format='NETCDF4', engine='netcdf4' )
-            lgm().log(f"\n\n ###### create mask: {mask_array} \n Saved to file: {output_file}" )
+            lgm().log( f"\n\n ###### create mask: {mask_array} \n Saved to file: {output_file}" )
 
     @exception_handled
     def plot_overlay_image( self, image_data: np.ndarray = None ):
