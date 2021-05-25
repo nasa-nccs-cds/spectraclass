@@ -42,7 +42,9 @@ def dms() -> SpatialDataManager:
     return dm().modal
 
 def toggle_markers( map: "MapManager", toolbar: Toolbar ):
+    from spectraclass.gui.points import PointCloudManager, pcm
     map.toggleMarkersVisible()
+    pcm().toggle_marker_visibility()
 
 class PageSlider(Slider):
 

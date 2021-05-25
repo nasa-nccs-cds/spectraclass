@@ -227,7 +227,15 @@ class PointCloudManager(SCSingletonConfigurable):
         alphas = list( self._gui.point_set_opacities )
         alphas[0] = alpha
         self._gui.point_set_opacities = alphas
-  #      lgm().log(f"Set point set opacities: {self._gui.point_set_opacities}")
+        lgm().log(f"Set point set opacities: {self._gui.point_set_opacities}")
+        self.update_plot()
+
+    def toggle_marker_visibility(self):
+        alpha0 = self._gui.point_set_opacities[1]
+        alpha1 = 0.0 if (alpha0 > 0.0) else 1.0
+        for idx in range( 1, len(self._gui.point_set_opacities) ):
+            self._gui.point_set_opacities[idx] = alpha1
+        lgm().log(f"Set point set opacities: {self._gui.point_set_opacities}")
         self.update_plot()
 
     def refresh(self):
