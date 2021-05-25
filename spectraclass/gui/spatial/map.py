@@ -194,15 +194,20 @@ class MapManager(SCSingletonConfigurable):
         self.add_marker( marker )
 
     def create_mask( self, cid: int ):
+        from spectraclass.data.base import DataManager, dm
         if self._classification_data is None:
-            ufm().show("Must generate a classification before creating a mask", "red")
+            ufm().show( "Must generate a classification before creating a mask", "red" )
         elif cid == 0:
-            ufm().show("Must choose a class in order to create a mask", "red")
+            ufm().show( "Must choose a class in order to create a mask", "red" )
         else:
             data: xa.DataArray = self.block.data
             mask: ma.MaskedArray = ma.masked_not_equal( self._classification_data, cid )
             mask_array = xa.DataArray( mask.mask, dims=data.dims[1:], coords= { d:data.coords[d] for d in data.dims[1:] } )
-            lgm().log( f"\n\n ###### create mask: {mask_array} \n")
+            output_dir = os.path.join( dm().cache_dir, "masks" )
+            os.makedirs( output_dir, exist_ok=True )
+            output_file = os.path.join( output_dir, f"{dm().dsid()}-{cid}.nc")
+            mask_array.to_netcdf( output_file, format='NETCDF4', engine='netcdf4' )
+            lgm().log(f"\n\n ###### create mask: {mask_array} \n Saved to file: {output_file}" )
 
     @exception_handled
     def plot_overlay_image( self, image_data: np.ndarray = None ):
