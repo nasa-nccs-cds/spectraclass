@@ -101,7 +101,7 @@ class ModeDataManager(SCSingletonConfigurable):
         return self._dataset_prefix + self._dset_selection.value
 
     @exception_handled
-    def select_dataset(self, *args):
+    def select_dataset(self):
         from spectraclass.data.base import DataManager, dm
         if dm().dsid() != self.selected_dataset:
             ufm().show( "Loading new data block")
