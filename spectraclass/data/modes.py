@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 import os, glob, sys
 import ipywidgets as ip
 from collections import OrderedDict
@@ -41,6 +41,7 @@ class ModeDataManager(SCSingletonConfigurable):
         self._subsample_selector: ip.SelectionSlider = None
         self._progress = None
         self._dset_selection: ip.Select = None
+        self._dataset_prefix = ""
 
     @property
     def mode(self):
@@ -93,20 +94,24 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def updateDatasetList(self):
         if self._dset_selection is not None:
-            self._dset_selection.options = self.getDatasetList()
+            self._dataset_prefix, self._dset_selection.options = self.getDatasetList()
+
+    @property
+    def selected_dataset(self):
+        return self._dataset_prefix + self._dset_selection.value
 
     @exception_handled
     def select_dataset(self, *args):
         from spectraclass.data.base import DataManager, dm
-        if dm().dsid() != self._dset_selection.value:
+        if dm().dsid() != self.selected_dataset:
             ufm().show( "Loading new data block")
-            lgm().log( f"Loading dataset '{self._dset_selection.value}', current dataset = '{dm().dsid()}', mdmgr id = {id(self)}")
-            dm().loadProject( self._dset_selection.value )
+            lgm().log( f"Loading dataset '{self.selected_dataset}', current dataset = '{dm().dsid()}', mdmgr id = {id(self)}")
+            dm().loadProject( self.selected_dataset )
             ufm().clear()
         dm().refresh_all()
 
     def getSelectionPanel(self) -> ip.HBox:
-        dsets: List[str] = self.getDatasetList()
+        self._dataset_prefix, dsets = self.getDatasetList()
         self._dset_selection: ip.Select = ip.Select(options=dsets, description='Datasets:', disabled=False, layout=ip.Layout(width="900px"))
         if len(dsets) > 0: self._dset_selection.value = dsets[0]
         load: ip.Button = ip.Button(description="Load", border='1px solid dimgrey')
@@ -204,12 +209,21 @@ class ModeDataManager(SCSingletonConfigurable):
         dataset.attrs['data_file'] = data_file
         return dataset
 
-    def getDatasetList(self):
+    def filterCommonPrefix(self, paths: List[str])-> Tuple[str,List[str]]:
+        letter_groups, longest_pre = zip(*paths), ""
+        for letter_group in letter_groups:
+            if len(set(letter_group)) > 1: break
+            longest_pre += letter_group[0]
+        plen = len( longest_pre )
+        return longest_pre, [ p[plen:] for p in paths ]
+
+    def getDatasetList( self ) -> Tuple[str,List[str]]:
         dset_glob = os.path.expanduser(f"{self.datasetDir}/*.nc")
         lgm().log(f"  Listing datasets from glob: '{dset_glob}' ")
         files = list(filter(os.path.isfile, glob.glob(dset_glob)))
         files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
-        return [Path(f).stem for f in files]
+        filenames = [Path(f).stem for f in files]
+        return self.filterCommonPrefix( filenames )
 
     def loadCurrentProject(self) -> xa.Dataset:
         return self.loadDataset( )
