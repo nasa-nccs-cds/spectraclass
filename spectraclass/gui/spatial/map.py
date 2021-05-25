@@ -2,6 +2,7 @@ from collections import OrderedDict
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.model.base import SCSingletonConfigurable, Marker
 from functools import partial
+import numpy.ma as ma
 import traitlets as tl
 from spectraclass.data.spatial.tile.tile import Block
 from .satellite import SatellitePlotManager
@@ -194,7 +195,7 @@ class MapManager(SCSingletonConfigurable):
 
     def create_mask( self, cid: int ):
         data: xa.DataArray = self.block.data
-        mask = ( self._classification_data == cid )
+        mask = ma.masked_not_equal( self._classification_data, cid )
         lgm().log(f"\n\n ###### create mask, shape = {mask.shape}, data shape = {data.shape}, data coords = {data.coords.keys()} ###### \n")
 #        mask_array = xa.DataArray( )
 
