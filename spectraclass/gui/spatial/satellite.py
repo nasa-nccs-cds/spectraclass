@@ -149,7 +149,7 @@ class GoogleMaps():
         extent = self.block.extent( 4326 )   # left, right, bottom, top
         center = [ (extent[0]+extent[1])/2, (extent[2]+extent[3])/2 ]
         url = f"http://maps.googleapis.com/maps/api/staticmap?center={center[0]},{center[1]}&size={self.image_size[0]}x{self.image_size[1]}&zoom={zoom}&sensor=false&key={self.api_key}&maptype={type}"
-        lgm().log( f"Accessing google map at {center[0]},{center[1]} with dimensions {self.image_size[0]}x{self.image_size[1]}\n  ** url = {url}" )
+        lgm().log( f"Accessing google map at {center[0]},{center[1]} with dimensions {self.image_size[0]}x{self.image_size[1]}, key={self.api_key}\n  ** url = {url}" )
         buffer = BytesIO(request.urlopen(url).read())
         google_image: Image.Image = Image.open(buffer)
         return google_image
