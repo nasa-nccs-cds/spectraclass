@@ -63,6 +63,13 @@ class SpectraclassController(SCSingletonConfigurable):
         pcm().update_marked_points()
 
     @exception_handled
+    def mask(self):
+        from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.gui.spatial.map import MapManager, mm
+        lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> MASK ")
+        mm().create_mask( lm().current_cid )
+
+    @exception_handled
     def clear(self):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.gui.plot import GraphPlotManager, gpm

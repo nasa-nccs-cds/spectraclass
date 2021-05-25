@@ -134,6 +134,7 @@ class MapManager(SCSingletonConfigurable):
         self.image: Optional[AxesImage] = None
         self.image_template: Optional[xa.DataArray]  = None
         self.overlay_image: Optional[AxesImage] = None
+        self._classification_data: Optional[np.ndarray] = None
         self.use_model_data: bool = False
         self.labels = None
         self.transients = []
@@ -191,10 +192,17 @@ class MapManager(SCSingletonConfigurable):
         marker = Marker( [pid], cid, labeled=False )
         self.add_marker( marker )
 
+    def create_mask( self, cid: int ):
+        data: xa.DataArray = self.block.data
+        mask = ( self._classification_data == cid )
+        lgm().log(f"\n\n ###### create mask, shape = {mask.shape}, data shape = {data.shape}, data coords = {data.coords.keys()} ###### \n")
+#        mask_array = xa.DataArray( )
+
     @exception_handled
     def plot_overlay_image( self, image_data: np.ndarray = None ):
         if image_data is not None:
             lgm().log( f" plot image overlay, shape = {image_data.shape}, vrange = {[ image_data.min(), image_data.max() ]}, dtype = {image_data.dtype}" )
+            self._classification_data = image_data
             self.overlay_image.set_data( image_data )
         self.overlay_image.set_alpha( self.overlay_alpha )
         self.update_canvas()

@@ -111,9 +111,10 @@ class ModeDataManager(SCSingletonConfigurable):
         dm().refresh_all()
 
     def getSelectionPanel(self) -> ip.HBox:
+        from spectraclass.data.base import DataManager, dm
         self._dataset_prefix, dsets = self.getDatasetList()
         self._dset_selection: ip.Select = ip.Select(options=dsets, description='Datasets:', disabled=False, layout=ip.Layout(width="900px"))
-        if len(dsets) > 0: self._dset_selection.value = dsets[0]
+        if len(dsets) > 0: self._dset_selection.value = dm().dsid()[ len(self._dataset_prefix): ]
         load: ip.Button = ip.Button(description="Load", border='1px solid dimgrey')
         load.on_click(self.select_dataset)
         filePanel: ip.HBox = ip.HBox([self._dset_selection, load], layout=ip.Layout(width="100%", height="100%"), border='2px solid firebrick')
