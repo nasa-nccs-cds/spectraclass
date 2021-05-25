@@ -194,10 +194,15 @@ class MapManager(SCSingletonConfigurable):
         self.add_marker( marker )
 
     def create_mask( self, cid: int ):
-        data: xa.DataArray = self.block.data
-        mask = ma.masked_not_equal( self._classification_data, cid )
-        lgm().log(f"\n\n ###### create mask, shape = {mask.shape}, data shape = {data.shape}, data coords = {data.coords.keys()} ###### \n")
-#        mask_array = xa.DataArray( )
+        if self._classification_data is None:
+            ufm().show("Must generate a classification before creating a mask", "red")
+        elif cid == 0:
+            ufm().show("Must choose a class in order to create a mask", "red")
+        else:
+            data: xa.DataArray = self.block.data
+            mask: ma.MaskedArray = ma.masked_not_equal( self._classification_data, cid )
+            mask_array = xa.DataArray( mask.mask, dims=data.dims[1:], coords= { d:data.coords[d] for d in data.dims[1:] } )
+            lgm().log( f"\n\n ###### create mask: {mask_array} \n")
 
     @exception_handled
     def plot_overlay_image( self, image_data: np.ndarray = None ):
