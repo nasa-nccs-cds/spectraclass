@@ -24,6 +24,7 @@ class TileManager(SCSingletonConfigurable):
     tile_index = tl.List(tl.Int, (0, 0), 2, 2).tag(config=True, sync=True)
     block_size = tl.Int(250).tag(config=True, sync=True)
     block_index = tl.List(tl.Int, (0, 0), 2, 2).tag(config=True, sync=True)
+    mask_class = tl.Int(0).tag(config=True, sync=True)
     image_attrs = {}
 
     def __init__(self):
@@ -50,6 +51,22 @@ class TileManager(SCSingletonConfigurable):
 
     def getBlock(self) -> Block:
         return self.tile.getBlock( self.block_index[0], self.block_index[1] )
+
+    def getMask(self) -> Optional[xa.DataArray]:
+        from spectraclass.data.base import DataManager, dm
+        from spectraclass.gui.control import UserFeedbackManager, ufm
+        if self.mask_class < 1: return None
+        mask = None
+        mvar = f"mask-{self.mask_class}"
+        mask_file = dm().mask_file
+        if os.path.exists( mask_file ):
+            mask_dset: xa.Dataset = xa.open_dataset( mask_file )
+            if mvar in mask_dset.variables:
+                mask = mask_dset[mvar]
+        if mask is None:
+            ufm().show( f"The mask for class {self.mask_class} has not yet been generated.", "red")
+            lgm().log( f"Can't apply mask for class {self.mask_class} because it has not yet been generated. Mask file: {mask_file}" )
+        return mask
 
 
     def get_marker(self, lon: float, lat: float, cid: int =-1, **kwargs ) -> Marker:

@@ -94,6 +94,12 @@ class DataManager(SCSingletonConfigurable):
             config_dict[ scope ] = load_pyconfig_files( [cfg_file], self.config_dir )
         return config_dict
 
+    @property
+    def mask_file(self ) -> str:
+        output_dir = os.path.join( self.cache_dir, "masks")
+        os.makedirs( output_dir, exist_ok=True)
+        return os.path.join( output_dir, f"{self.dsid()}-masks.nc" )
+
     def save_config( self ):
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.data.spatial.tile.manager import TileManager, tm

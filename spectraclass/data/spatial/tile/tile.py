@@ -109,11 +109,12 @@ class Block:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         try:
             dataset = dm().modal.loadDataFile( block=self )
-            block_raster = dataset["raw"]
+            raw_raster = dataset["raw"]
         except Exception:
             if self.tile.data is None: return None
             ybounds, xbounds = self.getBounds()
-            block_raster = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
+            raw_raster = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
+        block_raster = self._apply_mask( raw_raster )
         block_raster.attrs['block_coords'] = self.block_coords
         block_raster.attrs['dsid'] = self.dsid()
         block_raster.attrs['file_name'] = self.file_name
@@ -121,6 +122,11 @@ class Block:
         block_raster.attrs['transform'] = pt.params.flatten().tolist()
         block_raster.name = self.file_name
         return block_raster
+
+    def _apply_mask(self, block_array: xa.DataArray ) -> xa.DataArray:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        mask_array = tm().getMask()
+        return block_array
 
     def _loadTileData(self):
         from spectraclass.data.spatial.tile.manager import TileManager, tm

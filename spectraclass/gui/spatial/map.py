@@ -201,12 +201,15 @@ class MapManager(SCSingletonConfigurable):
             ufm().show( "Must choose a class in order to create a mask", "red" )
         else:
             data: xa.DataArray = self.block.data
-            mask: ma.MaskedArray = ma.masked_not_equal( self._classification_data, cid )
-            mask_array = xa.DataArray( mask.mask, dims=data.dims[1:], coords= { d:data.coords[d] for d in data.dims[1:] } )
-            output_dir = os.path.join( dm().cache_dir, "masks" )
-            os.makedirs( output_dir, exist_ok=True )
-            output_file = os.path.join( output_dir, f"{dm().dsid()}-{cid}.nc")
-            mask_array.to_netcdf( output_file, format='NETCDF4', engine='netcdf4' )
+            mask_data: np.ndarray = np.not_equal( self._classification_data, np.array(cid).reshape((1,1)) )
+            mask_array = xa.DataArray( mask_data, name=f"mask-{cid}", dims=data.dims[1:], coords= { d:data.coords[d] for d in data.dims[1:] } )
+            output_file = dm().mask_file
+            if os.path.exists( output_file ):
+                mask_dset: xa.Dataset = xa.open_dataset( output_file )
+                mask_dset.update( { mask_array.name: mask_array } )
+                mask_dset.to_netcdf( output_file, format='NETCDF4', engine='netcdf4' )
+            else:
+                mask_array.to_netcdf( output_file, format='NETCDF4', engine='netcdf4' )
             lgm().log( f"\n\n ###### create mask: {mask_array} \n Saved to file: {output_file}" )
 
     @exception_handled
