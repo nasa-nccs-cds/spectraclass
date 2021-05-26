@@ -125,7 +125,7 @@ class Block:
 
     def _apply_mask(self, block_array: xa.DataArray ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        mask_array = tm().getMask()
+        mask_array = tm().getMask()                                                 # TODO:   Add masking op
         return block_array
 
     def _loadTileData(self):
