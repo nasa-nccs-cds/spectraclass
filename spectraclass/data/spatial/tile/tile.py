@@ -125,8 +125,10 @@ class Block:
 
     def _apply_mask(self, block_array: xa.DataArray ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        mask_array = tm().getMask()                                                 # TODO:   Add masking op
-        return block_array
+        print( f"apply_mask: block_array attrs = {block_array.attrs}")
+        nodata_value = np.nan
+        mask_array: Optional[xa.DataArray] = tm().getMask()
+        return block_array if mask_array is None else block_array.where( mask_array, nodata_value )
 
     def _loadTileData(self):
         from spectraclass.data.spatial.tile.manager import TileManager, tm

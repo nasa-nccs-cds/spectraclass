@@ -201,7 +201,7 @@ class MapManager(SCSingletonConfigurable):
             ufm().show( "Must choose a class in order to create a mask", "red" )
         else:
             data: xa.DataArray = self.block.data
-            mask_data: np.ndarray = np.not_equal( self._classification_data, np.array(cid).reshape((1,1)) )
+            mask_data: np.ndarray = np.equal( self._classification_data, np.array(cid).reshape((1,1)) )
             mask_array = xa.DataArray( mask_data, name=f"mask-{cid}", dims=data.dims[1:], coords= { d:data.coords[d] for d in data.dims[1:] } )
             output_file = dm().mask_file
             if os.path.exists( output_file ):
