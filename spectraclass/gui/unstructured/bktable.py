@@ -28,6 +28,7 @@ class bkSpreadsheet:
         else:
             raise TypeError( f"Unsupported data class supplied to bkSpreadsheet: {data.__class__}" )
         self._source: ColumnDataSource = ColumnDataSource( pdf )
+        lgm().log( f"\n +++++++++ Creating bkSpreadsheet, data shape = {pdf.shape} +++++++++ \n")
         self._table = DataTable( source=self._source, selectable="checkbox" )
 
     def selection_callback( self, callback: Callable[[str,str,str],None] ):  # callback( attr, old, new )

@@ -1,4 +1,4 @@
-table_type = "qgrid"
+table_type = "bokeh"
 
 def tm():
     if table_type == "bokeh":
