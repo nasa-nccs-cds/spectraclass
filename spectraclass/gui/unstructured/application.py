@@ -25,7 +25,7 @@ class Spectraclass(SpectraclassController):
     def gui( self, embed: bool = False ):
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.gui.points import PointCloudManager, pcm
-        from spectraclass.gui.unstructured.table import TableManager, tm
+        from spectraclass.gui.unstructured.table import tm
         from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
         from spectraclass.data.base import DataManager, dm
 
@@ -45,29 +45,29 @@ class Spectraclass(SpectraclassController):
     def mark(self):
         super(Spectraclass, self).mark()
         lgm().log(f"      *UNSTRUCTURED CONTROLLER -> MARK ")
-        from spectraclass.gui.unstructured.table import TableManager, tm
+        from spectraclass.gui.unstructured.table import tm
         tm().update_selection()
 
     def clear(self):
-        from spectraclass.gui.unstructured.table import TableManager, tm
+        from spectraclass.gui.unstructured.table import tm
         super(Spectraclass, self).clear()
         lgm().log( f"      *UNSTRUCTURED CONTROLLER -> CLEAR ")
         tm().update_selection()
 
     def undo_action(self):
-        from spectraclass.gui.unstructured.table import TableManager, tm
+        from spectraclass.gui.unstructured.table import tm
         super(Spectraclass, self).undo_action()
         lgm().log(f"      *UNSTRUCTURED CONTROLLER -> UNDO ")
         tm().update_selection()
 
     def spread_selection(self, niters=1):
-        from spectraclass.gui.unstructured.table import TableManager, tm
+        from spectraclass.gui.unstructured.table import tm
         super(Spectraclass, self).spread_selection()
         lgm().log(f"      *UNSTRUCTURED CONTROLLER -> SPREAD ")
         tm().update_selection()
 
     def add_marker(self, source: str, marker: Marker):
-        from spectraclass.gui.unstructured.table import TableManager, tm
+        from spectraclass.gui.unstructured.table import tm
         super(Spectraclass, self).add_marker( source, marker )
         lgm().log(f"      *UNSTRUCTURED CONTROLLER -> ADD_MARKER ")
         tm().update_selection()
