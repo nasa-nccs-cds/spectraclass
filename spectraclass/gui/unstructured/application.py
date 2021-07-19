@@ -23,16 +23,17 @@ class Spectraclass(SpectraclassController):
             display(HTML('<style type="text/css">%s</style>Customized changes loaded.' % css))
 
     def gui( self, embed: bool = False ):
+        from bokeh.io import output_notebook
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.gui.unstructured.table import tm
         from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
         from spectraclass.data.base import DataManager, dm
+        output_notebook()
 
         self.set_spectraclass_theme()
         css_border = '1px solid blue'
-
-        collapsibles = ipw.Accordion(children = [dm().gui(), pcm().gui()], layout=ipw.Layout(width='100%'))
+        collapsibles = ipw.Accordion( children = [ dm().gui(), pcm().gui() ], layout=ipw.Layout(width='100%'))
         for iT, title in enumerate(['data', 'embedding']): collapsibles.set_title(iT, title)
         collapsibles.selected_index = 1
         plot = ipw.VBox([ ufm().gui(), collapsibles ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )

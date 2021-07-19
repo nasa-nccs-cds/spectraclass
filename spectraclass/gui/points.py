@@ -1,12 +1,10 @@
 import time, math, os, sys, numpy as np
 from typing import List, Union, Tuple, Optional, Dict, Callable, Iterable
 from matplotlib import cm
-from itkwidgets import view
-from itkwidgets.widget_viewer import Viewer
 import xarray as xa
 from matplotlib import colors
 import numpy.ma as ma
-import traitlets.config as tlc
+import ipywidgets as ip
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable, Marker
@@ -25,7 +23,7 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def __init__(self):
         super(PointCloudManager, self).__init__()
-        self._gui: Viewer = None
+        self._gui = None
         self._n_point_bins = 27
         self._color_values = None
         self.reduced_opacity = 0.111111
@@ -213,15 +211,19 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def gui(self, **kwargs ):
         if self._gui is None:
-            self.init_data()
-            invert = False
-            bin_colors = [ x[:3] for x in self.get_bin_colors( self.color_map, invert ) ]
-            label_colors = [ colors.to_rgb(c) for c in lm().colors[::-1] ]
-            self.standard_colors =   [ [1.0, 1.0, 1.0], ] + bin_colors + label_colors
-            pt_alphas = [ self.standard_opacity ] * ( self._n_point_bins + 1 ) + [ 1.0 ] * lm().nLabels
-            ptsizes = [1] + [1]*self._n_point_bins + [8]*lm().nLabels
-            self._gui = view( point_sets = self.point_sets, point_set_sizes=ptsizes, point_set_colors=self.standard_colors, point_set_opacities=pt_alphas, background=[0,0,0] )
-            self._gui.layout = dict( width= '100%', flex= '1 0 1200px' )
+            try:
+                from itkwidgets import view
+                self.init_data()
+                invert = False
+                bin_colors = [ x[:3] for x in self.get_bin_colors( self.color_map, invert ) ]
+                label_colors = [ colors.to_rgb(c) for c in lm().colors[::-1] ]
+                self.standard_colors =   [ [1.0, 1.0, 1.0], ] + bin_colors + label_colors
+                pt_alphas = [ self.standard_opacity ] * ( self._n_point_bins + 1 ) + [ 1.0 ] * lm().nLabels
+                ptsizes = [1] + [1]*self._n_point_bins + [8]*lm().nLabels
+                self._gui = view( point_sets = self.point_sets, point_set_sizes=ptsizes, point_set_colors=self.standard_colors, point_set_opacities=pt_alphas, background=[0,0,0] )
+                self._gui.layout = dict( width= '100%', flex= '1 0 1200px' )
+            except ModuleNotFoundError:
+                self._gui = ip.HBox( [] )
         return self._gui
 
     def set_base_points_alpha( self, alpha: float ):
