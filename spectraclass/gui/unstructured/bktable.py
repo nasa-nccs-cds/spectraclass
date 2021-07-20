@@ -8,10 +8,8 @@ from spectraclass.gui.widgets import ToggleButton
 from spectraclass.data.base import DataManager, dm
 from spectraclass.model.labels import LabelsManager
 from spectraclass.model.base import SCSingletonConfigurable
-import jupyter_bokeh as jbk
 from jupyter_bokeh.widgets import BokehModel
-import ipywidgets as ip
-import xarray as xa
+import math, xarray as xa
 from bokeh.models import ColumnDataSource, DataTable, CustomJS, TableColumn
 from bokeh.core.property.container import ColumnData
 from typing import List, Union, Tuple, Optional, Dict, Callable, Set
@@ -28,10 +26,10 @@ class bkSpreadsheet:
         else:
             raise TypeError( f"Unsupported data class supplied to bkSpreadsheet: {data.__class__}" )
 #        self._pdf = self._pdf.iloc[0:250,:]
+        cols = [ str(col) for col in self._pdf.columns if str(col).lower() != "index" ]
         self._source: ColumnDataSource = ColumnDataSource( self._pdf )
-        cids = [ str(cid) for cid in self._pdf.columns.values ]
-        self._columns = [ TableColumn(field=cid, title=cid, sortable=False) for cid in cids ]
-        self._table = DataTable( source=self._source, columns=self._columns, width=400, height=280, selectable="checkbox" )
+        self._columns = [ TableColumn(field=cid, title=cid, sortable=False) for cid in cols ]
+        self._table = DataTable( source=self._source, columns=self._columns, width=400, height=280, selectable="checkbox", index_position=0, index_header="index" )
 
     def to_df(self) -> pd.DataFrame:
         return self._source.to_df()
@@ -48,9 +46,13 @@ class bkSpreadsheet:
     def get_col_data(self, colname: str ) -> List:
         return self._source.data[colname]
 
-    def from_df(self, data: pd.DataFrame ):
-        data = { str(cname): cdata.array for cname, cdata in data.items() }
+    def from_df(self, pdf: pd.DataFrame ):
+        data = { str(cname): cdata.array for cname, cdata in pdf.items() }
+        data['index'] = pdf.index.to_numpy()
         self._source.data = data
+
+    def patch_data_element(self, colname: str, index: int, value ):
+        self._source.patch( { colname: [( slice(index,index+1), [value] )] } )
 
     def patch_data(self, colname: str, indices, values ):
         self._source.patch( { colname: [( indices, values )] } )
@@ -66,6 +68,8 @@ class TableManager(SCSingletonConfigurable):
     def __init__(self):
         super(TableManager, self).__init__()
         self._wGui: ipw.VBox = None
+        self._rows_per_page = 100
+        self._current_page = 0
         self._dataFrame: pd.DataFrame = None
         self._tables: List[bkSpreadsheet] = []
         self._cols: List[str] = None
@@ -85,8 +89,9 @@ class TableManager(SCSingletonConfigurable):
         if catalog is None:  catalog = { tcol: project_data[tcol].values for tcol in dm().modal.METAVARS }
         nrows = catalog[ dm().modal.METAVARS[0] ].shape[0]
         lgm().log( f"Catalog: nrows = {nrows}, entries: {[ f'{k}:{v.shape}' for (k,v) in catalog.items() ]}" )
-        self._dataFrame: pd.DataFrame = pd.DataFrame( catalog, dtype='U', index=pd.Int64Index( range(nrows), name="Index" ) )
-        self._cols = list(catalog.keys()) + [ "Class" ]
+        self._dataFrame: pd.DataFrame = pd.DataFrame( catalog, dtype='U', index=pd.Int64Index( range(nrows), name="index" ) )
+        lgm().log(f"DataFrame: cols = {self._dataFrame.columns.names}" )
+        self._cols = list(catalog.keys()) + [ "class" ]
         self._class_map = np.zeros( nrows, np.int32 )
         self._flow_class_map = np.zeros( nrows, np.int32 )
 
@@ -110,7 +115,8 @@ class TableManager(SCSingletonConfigurable):
         for (cid,table) in enumerate(self._tables):
             if cid > 0:
                 pdf: pd.DataFrame = table.to_df()
-                current_pids = set( table.get_col_data("Index") )
+                lgm().log(f" TM----> TABLE [class={cid}, cols = {pdf.columns}]")
+                current_pids = set( table.get_col_data("index") )
                 new_ids: Set[int] = label_map.get( cid, set() )
                 deleted_pids = current_pids - new_ids
                 added_pids = new_ids - current_pids
@@ -124,99 +130,16 @@ class TableManager(SCSingletonConfigurable):
                     for pid in deleted_pids:  changed_pids[pid] = 0
                     pdf.drop( index=deleted_pids, inplace= True )
                     for pid in added_pids:
-                        drow = directory.loc[pid]
-                        drow["Class"] = cid
+                        drow = directory.loc[ (directory['index'] == pid) ]
+                        drow["class"] = cid
                         lgm().log(f" TM----> ADD ROW [class={cid},pid={pid}]: row = \n{drow}")
                         pdf.append( drow, sort=True )
                     table.from_df( pdf )
         if n_changes > 0:
             dtable = self._tables[0]
             for (pid,cid) in changed_pids.items():
-                dtable.patch_data( "Class", pid, cid )
-                lgm().log(f" TM----> UPDATE DIRECTORY [pid={pid}] -> Class = {cid}")
-
-#        self._broadcast_selection_events = True
-
-#        self.update_table( 0, False )
-
-        # directory_table = self._tables[0]
-        # for (cid, pids) in label_map.items():
-        #     table = self._tables[cid]
-        #     if cid > 0:
-        #         for pid in pids:
-        #             directory_table.edit_cell( pid, "Class", cid )
-        #             self._class_map[pid] = cid
-        #             row = directory_table.df.loc[pid]
-        #             table.add_row( row )
-        #
-        #         index_list: List[int] = selection_table.index.tolist()
-        #         table.edit_cell( index_list, "Class", cid )
-        #         lgm().log( f" Edit directory table: set classes for indices {index_list} to {cid}")
-        #         table.df = pd.concat( [table.df, selection_table] )
-        #         lgm().log(f" Edit class table[{cid}]: add pids {pids}, append selection_table with shape {selection_table.shape}")
-
-#     def mark_selection(self):
-#         from spectraclass.model.labels import LabelsManager, lm
-# #        self._broadcast_selection_events = False
-#         label_map: Dict[int,Set[int]] = lm().getLabelMap()
-#         directory = self._tables[0]
-#         changed_pids = dict()
-#         n_changes = 0
-#         for (cid,table) in enumerate(self._tables):
-#             if cid > 0:
-#                 current_pids = set( table.get_changed_df().index.tolist() )
-#                 new_ids: Set[int] = label_map.get( cid, set() )
-#                 deleted_pids = current_pids - new_ids
-#                 added_pids = new_ids - current_pids
-#                 nc = len(added_pids) + len(deleted_pids)
-#                 if nc > 0:
-#                     n_changes = n_changes + nc
-#                     if n_changes:         lgm().log(f"\n TM----> update_selection[{cid}]" )
-#                     if len(deleted_pids): lgm().log(f"    ######## deleted: {deleted_pids} ")
-#                     if len(added_pids):   lgm().log(f"    ######## added: {added_pids} ")
-#                     for pid in added_pids: changed_pids[pid] = cid
-#                     for pid in deleted_pids:
-#                         if pid not in  changed_pids.keys(): changed_pids[pid] = 0
-#                     table._remove_rows( deleted_pids )
-#                     for pid in added_pids:
-#                         row = directory.df.loc[pid].to_dict()
-#                         row.update( dict( Class=cid, Index=pid ) )
-# #                        lgm().log(f" TableManager.update_selection[{cid},{pid}]: row = {row}")
-#                         table._add_row( row.items() )
-#         if n_changes > 0:
-#             for (pid,cid) in changed_pids.items():
-#                 directory.edit_cell( pid, "Class", cid )
-# #        self._broadcast_selection_events = True
-#
-#         # directory_table = self._tables[0]
-#         # for (cid, pids) in label_map.items():
-#         #     table = self._tables[cid]
-#         #     if cid > 0:
-#         #         for pid in pids:
-#         #             directory_table.edit_cell( pid, "Class", cid )
-#         #             self._class_map[pid] = cid
-#         #             row = directory_table.df.loc[pid]
-#         #             table.add_row( row )
-#         #
-#         #         index_list: List[int] = selection_table.index.tolist()
-#         #         table.edit_cell( index_list, "Class", cid )
-#         #         lgm().log( f" Edit directory table: set classes for indices {index_list} to {cid}")
-#         #         table.df = pd.concat( [table.df, selection_table] )
-#         #         lgm().log(f" Edit class table[{cid}]: add pids {pids}, append selection_table with shape {selection_table.shape}")
-#
-#     def mark_selection(self):
-#         from spectraclass.model.labels import LabelsManager, lm
-#         selection_table: pd.DataFrame = self._tables[0].df.loc[self._current_selection]
-#         cid: int = lm().mark_points( selection_table.index.to_numpy(np.int32) )
-#         self._class_map[self._current_selection] = cid
-#         for table_index, table in enumerate( self._tables ):
-#             if table_index == 0:
-#                 index_list: List[int] = selection_table.index.tolist()
-#                 lgm().log( f" -----> Setting cid[{cid}] for indices[:10]= {index_list[:10]}, current_selection = {self._current_selection}, class map nonzero = {np.count_nonzero(self._class_map)}")
-#                 table.edit_cell( index_list, "Class", cid )
-#             else:
-#                 if table_index == cid:    table.df = pd.concat( [ table.df, selection_table ] ).drop_duplicates()
-#                 else:                     self.drop_rows( table_index, self._current_selection )
+                dtable.patch_data_element( "class", pid, cid )
+                lgm().log(f" TM----> UPDATE DIRECTORY [pid={pid}] -> class = {cid}")
 
     @property
     def selected_class(self) -> int:
@@ -251,15 +174,19 @@ class TableManager(SCSingletonConfigurable):
         cid = lm().current_cid if self.mark_on_selection else 0
         app().add_marker( "table", Marker( pids, cid ) )
 
+    def _get_page_data(self) -> pd.DataFrame:
+        page_start = self._current_page * self._rows_per_page
+        data_table = self._dataFrame.iloc[page_start:page_start + self._rows_per_page]
+        data_table.insert(len(self._cols) - 1, "class", 0, True)
+        return data_table
+
     def _createTable( self, tab_index: int ) -> bkSpreadsheet:
         assert self._dataFrame is not None, " TableManager has not been initialized "
         if tab_index == 0:
-            data_table = self._dataFrame.sort_values(self._cols[0] )
-            data_table.insert( len(self._cols)-1, "Class", 0, True )
-            bkTable = bkSpreadsheet( data_table )
+            bkTable = bkSpreadsheet( self._get_page_data() )
         else:
             empty_catalog = {col: np.empty( [0], 'U' ) for col in self._cols}
-            dFrame: pd.DataFrame = pd.DataFrame(empty_catalog, dtype='U', index=pd.Int64Index( [], name="Index" ) )
+            dFrame: pd.DataFrame = pd.DataFrame(empty_catalog, dtype='U' )
             bkTable = bkSpreadsheet( dFrame )
         bkTable.selection_callback( self._handle_table_event )
         return bkTable
@@ -269,11 +196,27 @@ class TableManager(SCSingletonConfigurable):
         self._wTablesWidget = self._createTableTabs()
         return ipw.VBox([wSelectionPanel, self._wTablesWidget])
 
+    def _createPageWidget(self):
+        nRows = self._dataFrame.shape[0]
+        npages = math.ceil( nRows/self._rows_per_page )
+        widget = ipw.Dropdown( options=list(range(npages)), description = "Page", index=0 )
+        widget.observe( self._update_page, "value" )
+        return widget
+
+    def _update_page(self, event: Dict[str,str] ):
+        if event['type'] == 'change':
+            self._current_page = event['new']
+            directory: bkSpreadsheet = self._tables[0]
+            page_data: pd.DataFrame = self._get_page_data()
+            lgm().log( f" ** update_page, data shape = {page_data.shape}, cols = {page_data.columns}, index = {page_data.index.to_numpy()}")
+            directory.from_df( page_data )
+
     def _createSelectionPanel( self ) -> ipw.HBox:
         self._wFind = ipw.Text( value='', placeholder='Find items', description='Find:', disabled=False, continuous_update = False, tooltip="Search in sorted column" )
         self._wFind.observe(self._process_find, 'value')
         wFindOptions = self._createFindOptionButtons()
-        wSelectionPanel = ipw.HBox( [ self._wFind, wFindOptions ] )
+        wPages = self._createPageWidget()
+        wSelectionPanel = ipw.HBox( [ self._wFind, wFindOptions, wPages ] )
         wSelectionPanel.layout = ipw.Layout( justify_content = "center", align_items="center", width = "auto", height = "50px", min_height = "50px", border_width=1, border_color="white" )
         return wSelectionPanel
 
@@ -350,3 +293,85 @@ class TableManager(SCSingletonConfigurable):
             self._wGui.layout = ipw.Layout(width='auto', flex='1 0 500px')
         return self._wGui
 
+#        self._broadcast_selection_events = True
+
+#        self.update_table( 0, False )
+
+        # directory_table = self._tables[0]
+        # for (cid, pids) in label_map.items():
+        #     table = self._tables[cid]
+        #     if cid > 0:
+        #         for pid in pids:
+        #             directory_table.edit_cell( pid, "class", cid )
+        #             self._class_map[pid] = cid
+        #             row = directory_table.df.loc[pid]
+        #             table.add_row( row )
+        #
+        #         index_list: List[int] = selection_table.index.tolist()
+        #         table.edit_cell( index_list, "class", cid )
+        #         lgm().log( f" Edit directory table: set classes for indices {index_list} to {cid}")
+        #         table.df = pd.concat( [table.df, selection_table] )
+        #         lgm().log(f" Edit class table[{cid}]: add pids {pids}, append selection_table with shape {selection_table.shape}")
+
+#     def mark_selection(self):
+#         from spectraclass.model.labels import LabelsManager, lm
+# #        self._broadcast_selection_events = False
+#         label_map: Dict[int,Set[int]] = lm().getLabelMap()
+#         directory = self._tables[0]
+#         changed_pids = dict()
+#         n_changes = 0
+#         for (cid,table) in enumerate(self._tables):
+#             if cid > 0:
+#                 current_pids = set( table.get_changed_df().index.tolist() )
+#                 new_ids: Set[int] = label_map.get( cid, set() )
+#                 deleted_pids = current_pids - new_ids
+#                 added_pids = new_ids - current_pids
+#                 nc = len(added_pids) + len(deleted_pids)
+#                 if nc > 0:
+#                     n_changes = n_changes + nc
+#                     if n_changes:         lgm().log(f"\n TM----> update_selection[{cid}]" )
+#                     if len(deleted_pids): lgm().log(f"    ######## deleted: {deleted_pids} ")
+#                     if len(added_pids):   lgm().log(f"    ######## added: {added_pids} ")
+#                     for pid in added_pids: changed_pids[pid] = cid
+#                     for pid in deleted_pids:
+#                         if pid not in  changed_pids.keys(): changed_pids[pid] = 0
+#                     table._remove_rows( deleted_pids )
+#                     for pid in added_pids:
+#                         row = directory.df.loc[pid].to_dict()
+#                         row.update( dict( class=cid, Index=pid ) )
+# #                        lgm().log(f" TableManager.update_selection[{cid},{pid}]: row = {row}")
+#                         table._add_row( row.items() )
+#         if n_changes > 0:
+#             for (pid,cid) in changed_pids.items():
+#                 directory.edit_cell( pid, "class", cid )
+# #        self._broadcast_selection_events = True
+#
+#         # directory_table = self._tables[0]
+#         # for (cid, pids) in label_map.items():
+#         #     table = self._tables[cid]
+#         #     if cid > 0:
+#         #         for pid in pids:
+#         #             directory_table.edit_cell( pid, "class", cid )
+#         #             self._class_map[pid] = cid
+#         #             row = directory_table.df.loc[pid]
+#         #             table.add_row( row )
+#         #
+#         #         index_list: List[int] = selection_table.index.tolist()
+#         #         table.edit_cell( index_list, "class", cid )
+#         #         lgm().log( f" Edit directory table: set classes for indices {index_list} to {cid}")
+#         #         table.df = pd.concat( [table.df, selection_table] )
+#         #         lgm().log(f" Edit class table[{cid}]: add pids {pids}, append selection_table with shape {selection_table.shape}")
+#
+#     def mark_selection(self):
+#         from spectraclass.model.labels import LabelsManager, lm
+#         selection_table: pd.DataFrame = self._tables[0].df.loc[self._current_selection]
+#         cid: int = lm().mark_points( selection_table.index.to_numpy(np.int32) )
+#         self._class_map[self._current_selection] = cid
+#         for table_index, table in enumerate( self._tables ):
+#             if table_index == 0:
+#                 index_list: List[int] = selection_table.index.tolist()
+#                 lgm().log( f" -----> Setting cid[{cid}] for indices[:10]= {index_list[:10]}, current_selection = {self._current_selection}, class map nonzero = {np.count_nonzero(self._class_map)}")
+#                 table.edit_cell( index_list, "class", cid )
+#             else:
+#                 if table_index == cid:    table.df = pd.concat( [ table.df, selection_table ] ).drop_duplicates()
+#                 else:                     self.drop_rows( table_index, self._current_selection )
