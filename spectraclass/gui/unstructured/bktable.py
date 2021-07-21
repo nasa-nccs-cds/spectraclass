@@ -13,13 +13,19 @@ import math, xarray as xa
 from bokeh.models import ColumnDataSource, DataTable, CustomJS, TableColumn
 from bokeh.core.property.container import ColumnData, Seq
 from typing import List, Union, Tuple, Optional, Dict, Callable, Set, Any
+from enum import Enum
+
+class TableIndexStructure(Enum):
+    Sequential = 1
+    Selection = 2
 
 class bkSpreadsheet:
 
     def __init__(self, data: Union[pd.DataFrame,xa.DataArray], **kwargs ):
         self._current_page_data: pd.DataFrame = None
+        self._index_structure = TableIndexStructure.Sequential
         self._rows_per_page = kwargs.get( 'rows_per_page', 100 )
-        self._current_page = kwargs.get( 'init_page', 0 )
+        self._current_page = None
         self._dataFrame: pd.DataFrame = None
         if isinstance( data, pd.DataFrame ):
             self._dataFrame = data
@@ -31,6 +37,7 @@ class bkSpreadsheet:
         self._source: ColumnDataSource = ColumnDataSource( self.page_data )
         self._columns = [ TableColumn( field=cid, title=cid, sortable=True ) for cid in self._dataFrame.columns ]
         self._table = DataTable( source=self._source, columns=self._columns, width=400, height=280, selectable="checkbox", index_position=None )
+        self.current_page = kwargs.get('init_page', 0)
 
     @property
     def pids(self) -> List[int]:
@@ -53,22 +60,22 @@ class bkSpreadsheet:
         pass                            # TODO: complete this
 
     def idxs2pids(self, idxs: List[int]) -> List[int]:
-        return [ self.pids[idx] for idx in idxs ]
+        if self._index_structure == TableIndexStructure.Sequential:
+            return [ idx + self.page_start for idx in idxs]
+        else:
+            return [ self.pids[idx] for idx in idxs ]
+
+    @property
+    def page_start(self):
+        return self._current_page * self._rows_per_page
 
     def pid2idx(self, pid: int ) -> int:
-        for idx, pid1  in enumerate( self.pids ):
-            if pid == pid1: return idx
+        if self._index_structure == TableIndexStructure.Sequential:
+            return pid - self.page_start
+        else:
+            for idx, pid1  in enumerate( self.pids ):
+                if pid == pid1: return idx
         return -1
-
-    def pv2idx(self, pids: List[int], values: List[Any] ) -> List[Tuple[int,Any]]:
-        result: List[Tuple[int,Any]] = []
-        for (pid,v) in zip(pids,values):
-            idx = self.pid2idx( pid )
-            if idx >= 0: result.append( (idx,v) )
-        return result
-
-    def filter_valid_idx(self, idxs: List[int]):
-        return [ i for i in idxs if self.valid_idx(i) ]
 
     def valid_idx(self, idx: int ):
         return (idx>=0) and (idx<self._rows_per_page)
