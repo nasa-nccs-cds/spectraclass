@@ -11,34 +11,83 @@ from spectraclass.model.base import SCSingletonConfigurable
 from jupyter_bokeh.widgets import BokehModel
 import math, xarray as xa
 from bokeh.models import ColumnDataSource, DataTable, CustomJS, TableColumn
-from bokeh.core.property.container import ColumnData
-from typing import List, Union, Tuple, Optional, Dict, Callable, Set
+from bokeh.core.property.container import ColumnData, Seq
+from typing import List, Union, Tuple, Optional, Dict, Callable, Set, Any
 
 class bkSpreadsheet:
 
-    def __init__(self, data: Union[pd.DataFrame,xa.DataArray] ):
-        self._pdf: pd.DataFrame = None
+    def __init__(self, data: Union[pd.DataFrame,xa.DataArray], **kwargs ):
+        self._current_page_data: pd.DataFrame = None
+        self._rows_per_page = kwargs.get( 'rows_per_page', 100 )
+        self._current_page = kwargs.get( 'init_page', 0 )
+        self._dataFrame: pd.DataFrame = None
         if isinstance( data, pd.DataFrame ):
-            self._pdf = data
+            self._dataFrame = data
         elif isinstance( data, xa.DataArray ):
             assert data.ndim == 2, f"Wrong DataArray.ndim for bkSpreadsheet ({data.ndim}): must have ndim = 2"
-            self._pdf = data.to_pandas()
+            self._dataFrame = data.to_pandas()
         else:
             raise TypeError( f"Unsupported data class supplied to bkSpreadsheet: {data.__class__}" )
-#        self._pdf = self._pdf.iloc[0:250,:]
-        cols = [ str(col) for col in self._pdf.columns if str(col).lower() != "index" ]
-        self._source: ColumnDataSource = ColumnDataSource( self._pdf )
-        self._columns = [ TableColumn(field=cid, title=cid, sortable=False) for cid in cols ]
-        self._table = DataTable( source=self._source, columns=self._columns, width=400, height=280, selectable="checkbox", index_position=0, index_header="index" )
+        self._source: ColumnDataSource = ColumnDataSource( self.page_data )
+        self._columns = [ TableColumn( field=cid, title=cid, sortable=True ) for cid in self._dataFrame.columns ]
+        self._table = DataTable( source=self._source, columns=self._columns, width=400, height=280, selectable="checkbox", index_position=None )
 
-    def to_df(self) -> pd.DataFrame:
+    @property
+    def pids(self) -> List[int]:
+        return list(self._source.data["index"])
+
+    @property
+    def current_page(self) -> int:
+        return self._current_page
+
+    @current_page.setter
+    def current_page(self, page_index: int):
+        if self._current_page != page_index:
+            self._current_page = page_index
+            page_start = self._current_page * self._rows_per_page
+            self._current_page_data = self._dataFrame.iloc[page_start:page_start + self._rows_per_page]
+            self._source.data = self._current_page_data
+            self.update_selection()
+
+    def update_selection(self):
+        pass                            # TODO: complete this
+
+    def idxs2pids(self, idxs: List[int]) -> List[int]:
+        return [ self.pids[idx] for idx in idxs ]
+
+    def pid2idx(self, pid: int ) -> int:
+        for idx, pid1  in enumerate( self.pids ):
+            if pid == pid1: return idx
+        return -1
+
+    def pv2idx(self, pids: List[int], values: List[Any] ) -> List[Tuple[int,Any]]:
+        result: List[Tuple[int,Any]] = []
+        for (pid,v) in zip(pids,values):
+            idx = self.pid2idx( pid )
+            if idx >= 0: result.append( (idx,v) )
+        return result
+
+    def filter_valid_idx(self, idxs: List[int]):
+        return [ i for i in idxs if self.valid_idx(i) ]
+
+    def valid_idx(self, idx: int ):
+        return (idx>=0) and (idx<self._rows_per_page)
+
+    @property
+    def page_data(self) -> pd.DataFrame:
+        return self._current_page_data
+
+    def to_df( self ) -> pd.DataFrame:
         return self._source.to_df()
 
-    def selection_callback( self, callback: Callable[[str,str,str],None] ):  # callback( attr, old, new )
-        self._source.selected.on_change("indices", callback)
+    def selection_callback( self, callback: Callable[[List[int],List[int]],None] ):
+        self._source.selected.on_change("indices", partial( self._exec_selection_callback, callback ) )
 
-    def set_selection(self, indices: List[int] ):
-        self._source.selected.indices = indices
+    def _exec_selection_callback(self, callback: Callable[[List[int],List[int]],None], attr, old, new ):
+        callback(self.idxs2pids(old), self.idxs2pids(new))
+
+    def set_selection(self, pids: List[int] ):
+        self._source.selected.indices = [ self.pid2idx( pid ) for pid in pids ]
 
     def set_col_data(self, colname: str, data: List ):
         self._source.data[colname] = data
@@ -47,18 +96,18 @@ class bkSpreadsheet:
         return self._source.data[colname]
 
     def from_df(self, pdf: pd.DataFrame ):
-        data = { str(cname): cdata.array for cname, cdata in pdf.items() }
-        data['index'] = pdf.index.to_numpy()
+        data = self._source.from_df( pdf )
         self._source.data = data
+        lgm().log( f"Update page, source data cols = {data.keys()}, source cols = {self._source.column_names}, "
+                   f"table cols = {[c.field for c in self._table.columns]}, table index position = {self._table.index_position}")
 
-    def patch_data_element(self, colname: str, index: int, value ):
-        self._source.patch( { colname: [( slice(index,index+1), [value] )] } )
-
-    def patch_data(self, colname: str, indices, values ):
-        self._source.patch( { colname: [( indices, values )] } )
+    def patch_data_element(self, colname: str, pid: int, value ):
+        idx = self.pid2idx( pid )
+        if idx >= 0:
+            self._source.patch( { colname: [( slice(idx,idx+1), [value] )] } )
 
     def get_selection( self ) -> List[int]:
-        return self._source.selected.indices
+        return self.idxs2pids(self._source.selected.indices)
 
     def gui(self) -> BokehModel:
         return BokehModel(self._table)
@@ -68,8 +117,6 @@ class TableManager(SCSingletonConfigurable):
     def __init__(self):
         super(TableManager, self).__init__()
         self._wGui: ipw.VBox = None
-        self._rows_per_page = 100
-        self._current_page = 0
         self._dataFrame: pd.DataFrame = None
         self._tables: List[bkSpreadsheet] = []
         self._cols: List[str] = None
@@ -90,14 +137,13 @@ class TableManager(SCSingletonConfigurable):
         nrows = catalog[ dm().modal.METAVARS[0] ].shape[0]
         lgm().log( f"Catalog: nrows = {nrows}, entries: {[ f'{k}:{v.shape}' for (k,v) in catalog.items() ]}" )
         self._dataFrame: pd.DataFrame = pd.DataFrame( catalog, dtype='U', index=pd.Int64Index( range(nrows), name="index" ) )
+        self._dataFrame.insert(len(self._cols) - 1, "class", 0, True)
         lgm().log(f"DataFrame: cols = {self._dataFrame.columns.names}" )
-        self._cols = list(catalog.keys()) + [ "class" ]
-        self._class_map = np.zeros( nrows, np.int32 )
-        self._flow_class_map = np.zeros( nrows, np.int32 )
+        self._cols = list(catalog.keys())
 
-    def edit_table(self, cid, index, column, value ):
+    def edit_table(self, cid, pid, column, value ):
          table: bkSpreadsheet = self._tables[cid]
-         table.patch_data( column, index, value )
+         table.patch_data_element( column, pid, value )
 
     def update_table(self, cid, fire_event = True):
         table: bkSpreadsheet = self._tables[cid]
@@ -107,7 +153,6 @@ class TableManager(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, lm
  #       self._broadcast_selection_events = False
         label_map: Dict[int,Set[int]] = lm().getLabelMap()
-        directory: pd.DataFrame = self._tables[0].to_df()
         table: bkSpreadsheet = None
         changed_pids = dict()
         lgm().log(f"\n TM----> update_selection:")
@@ -130,7 +175,7 @@ class TableManager(SCSingletonConfigurable):
                     for pid in deleted_pids:  changed_pids[pid] = 0
                     pdf.drop( index=deleted_pids, inplace= True )
                     for pid in added_pids:
-                        drow = directory.loc[ (directory['index'] == pid) ]
+                        drow = self._dataFrame.loc[ ( self._dataFrame['index'] == pid ) ]
                         drow["class"] = cid
                         lgm().log(f" TM----> ADD ROW [class={cid},pid={pid}]: row = \n{drow}")
                         pdf.append( drow, sort=True )
@@ -149,14 +194,12 @@ class TableManager(SCSingletonConfigurable):
     def selected_table(self) -> bkSpreadsheet:
         return self._tables[ self.selected_class ]
 
-    def _handle_table_event(self, attr, old, new ):
-        print( f" _handle_table_event: {attr} {old} {new} ")
-        if (attr == 'indices'):
-            new_selection = new
-            lgm().log(f"  **TABLE-> new selection event: indices = {new}")
-            if new_selection != self._current_selection:
-                self._current_selection = new_selection
-                self.broadcast_selection_event( self._current_selection )
+    def _handle_table_selection(self, old: List[int], new: List[int] ):
+        new_selection = new
+        lgm().log(f"  **TABLE-> new selection event: indices = {new}")
+        if new_selection != self._current_selection:
+            self._current_selection = new_selection
+            self.broadcast_selection_event( self._current_selection )
 
     def is_block_selection( self, old: List[int], new: List[int] ) -> bool:
         lgm().log(   f"   **TABLE->  is_block_selection: old = {old}, new = {new}"  )
@@ -174,21 +217,15 @@ class TableManager(SCSingletonConfigurable):
         cid = lm().current_cid if self.mark_on_selection else 0
         app().add_marker( "table", Marker( pids, cid ) )
 
-    def _get_page_data(self) -> pd.DataFrame:
-        page_start = self._current_page * self._rows_per_page
-        data_table = self._dataFrame.iloc[page_start:page_start + self._rows_per_page]
-        data_table.insert(len(self._cols) - 1, "class", 0, True)
-        return data_table
-
     def _createTable( self, tab_index: int ) -> bkSpreadsheet:
         assert self._dataFrame is not None, " TableManager has not been initialized "
         if tab_index == 0:
-            bkTable = bkSpreadsheet( self._get_page_data() )
+            bkTable = bkSpreadsheet( self._dataFrame )
         else:
             empty_catalog = {col: np.empty( [0], 'U' ) for col in self._cols}
             dFrame: pd.DataFrame = pd.DataFrame(empty_catalog, dtype='U' )
             bkTable = bkSpreadsheet( dFrame )
-        bkTable.selection_callback( self._handle_table_event )
+        bkTable.selection_callback(self._handle_table_selection)
         return bkTable
 
     def _createGui( self ) -> ipw.VBox:
@@ -203,13 +240,13 @@ class TableManager(SCSingletonConfigurable):
         widget.observe( self._update_page, "value" )
         return widget
 
+
+
     def _update_page(self, event: Dict[str,str] ):
         if event['type'] == 'change':
-            self._current_page = event['new']
+            self.current_page = event['new']
             directory: bkSpreadsheet = self._tables[0]
-            page_data: pd.DataFrame = self._get_page_data()
-            lgm().log( f" ** update_page, data shape = {page_data.shape}, cols = {page_data.columns}, index = {page_data.index.to_numpy()}")
-            directory.from_df( page_data )
+            directory.from_df( self.page_data )
 
     def _createSelectionPanel( self ) -> ipw.HBox:
         self._wFind = ipw.Text( value='', placeholder='Find items', description='Find:', disabled=False, continuous_update = False, tooltip="Search in sorted column" )
@@ -282,6 +319,8 @@ class TableManager(SCSingletonConfigurable):
     def refresh(self):
         self._wGui = None
         self._tables = []
+        self._current_page_data = None
+        self._current_page = 0
 
     def _handle_key_event(self, event: Dict ):
         lgm().log( f" ################## handle_key_event: {event}  ################## ################## ##################" )

@@ -74,7 +74,7 @@ class TableManager(SCSingletonConfigurable):
                     table.remove_rows( deleted_pids ) # table._remove_rows( deleted_pids )
                     for pid in added_pids:
                         row = directory.get_changed_df().loc[pid].to_dict()
-                        row.update( dict( class=cid, Index=pid ) )
+                        row.update( dict( Class=cid, Index=pid ) )
                         lgm().log(f"  **TABLE-> update_selection[{cid},{pid}]: row = {row}")
                         table._add_row( row.items() )
         if n_changes > 0:
