@@ -51,8 +51,8 @@ class bkSpreadsheet:
     def current_page(self, page_index: int):
         if self._current_page != page_index:
             self._current_page = page_index
-            page_start = self._current_page * self._rows_per_page
-            self._current_page_data = self._dataFrame.iloc[page_start:page_start + self._rows_per_page]
+            self._index_structure = TableIndexStructure.Sequential
+            self._current_page_data = self._dataFrame.iloc[ self.page_start:self.page_end ]
             self._source.data = self._current_page_data
             self.update_selection()
 
@@ -66,8 +66,12 @@ class bkSpreadsheet:
             return [ self.pids[idx] for idx in idxs ]
 
     @property
-    def page_start(self):
+    def page_start(self) -> int:
         return self._current_page * self._rows_per_page
+
+    @property
+    def page_end(self) -> int:
+        return self.page_start + self._rows_per_page
 
     def pid2idx(self, pid: int ) -> int:
         if self._index_structure == TableIndexStructure.Sequential:
@@ -105,6 +109,7 @@ class bkSpreadsheet:
     def from_df(self, pdf: pd.DataFrame ):
         data = self._source.from_df( pdf )
         self._source.data = data
+        self._index_structure = TableIndexStructure.Selection
         lgm().log( f"Update page, source data cols = {data.keys()}, source cols = {self._source.column_names}, "
                    f"table cols = {[c.field for c in self._table.columns]}, table index position = {self._table.index_position}")
 
