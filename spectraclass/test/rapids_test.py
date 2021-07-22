@@ -38,10 +38,10 @@ print(f"Completed embedding, shape = {embedding.shape}")
 
 # df = embedding.to_pandas()
 # df.columns = ["x", "y"]
-# df['class'] = pd.Series([str(x) for x in target.to_array()], dtype="category")
+# df['cid'] = pd.Series([str(x) for x in target.to_array()], dtype="category")
 #
 # cvs = ds.Canvas(plot_width=400, plot_height=400)
-# agg = cvs.points(df, 'x', 'y', ds.count_cat('class'))
+# agg = cvs.points(df, 'x', 'y', ds.count_cat('cid'))
 # img = tf.shade(agg, color_key=color_key, how='eq_hist')
 #
 # utils.export_image(img, filename='fashion-mnist', background='black')

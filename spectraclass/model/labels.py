@@ -189,9 +189,11 @@ class LabelsManager(SCSingletonConfigurable):
 
     @property
     def markers(self):
+        lgm().log(f" ^^^^^^^^^ markers -> actions = {self._actions}")
         return [ a["marker"] for a in self._actions if a.type == "mark" ]
 
     def getMarker( self, pid: int ) -> Optional[Marker]:
+        lgm().log( f" ^^^^^^^^^ getMarker[{pid}] -> markers = {self.markers}")
         for marker in self.markers:
             if pid in marker.pids: return marker
         return None

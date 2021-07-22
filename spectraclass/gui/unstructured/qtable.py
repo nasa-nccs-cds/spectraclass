@@ -37,7 +37,7 @@ class TableManager(SCSingletonConfigurable):
         nrows = catalog[ dm().modal.METAVARS[0] ].shape[0]
         lgm().log( f"Catalog: nrows = {nrows}, entries: {[ f'{k}:{v.shape}' for (k,v) in catalog.items() ]}" )
         self._dataFrame: pd.DataFrame = pd.DataFrame( catalog, dtype='U', index=pd.Int64Index( range(nrows), name="Index" ) )
-        self._cols = list(catalog.keys()) + [ "class" ]
+        self._cols = list(catalog.keys()) + [ "cid" ]
         self._class_map = np.zeros( nrows, np.int32 )
         self._flow_class_map = np.zeros( nrows, np.int32 )
 
@@ -80,7 +80,7 @@ class TableManager(SCSingletonConfigurable):
         if n_changes > 0:
             lgm().log(f" TM----> edit directory[ {changed_pids} ]")
             for (pid,cid) in changed_pids.items():
-                directory.edit_cell( pid, "class", cid ) # self.edit_table( 0, pid, "Class", cid )
+                directory.edit_cell( pid, "cid", cid ) # self.edit_table( 0, pid, "Class", cid )
 #            directory.change_selection([])
 
 #        self._broadcast_selection_events = True
@@ -98,7 +98,7 @@ class TableManager(SCSingletonConfigurable):
         #             table.add_row( row )
         #
         #         index_list: List[int] = selection_table.index.tolist()
-        #         table.edit_cell( index_list, "class", cid )
+        #         table.edit_cell( index_list, "cid", cid )
         #         lgm().log( f" Edit directory table: set classes for indices {index_list} to {cid}")
         #         table.df = pd.concat( [table.df, selection_table] )
         #         lgm().log(f" Edit class table[{cid}]: add pids {pids}, append selection_table with shape {selection_table.shape}")
@@ -133,7 +133,7 @@ class TableManager(SCSingletonConfigurable):
 #                         table._add_row( row.items() )
 #         if n_changes > 0:
 #             for (pid,cid) in changed_pids.items():
-#                 directory.edit_cell( pid, "class", cid )
+#                 directory.edit_cell( pid, "cid", cid )
 # #        self._broadcast_selection_events = True
 #
 #         # directory_table = self._tables[0]
@@ -141,13 +141,13 @@ class TableManager(SCSingletonConfigurable):
 #         #     table = self._tables[cid]
 #         #     if cid > 0:
 #         #         for pid in pids:
-#         #             directory_table.edit_cell( pid, "class", cid )
+#         #             directory_table.edit_cell( pid, "cid", cid )
 #         #             self._class_map[pid] = cid
 #         #             row = directory_table.df.loc[pid]
 #         #             table.add_row( row )
 #         #
 #         #         index_list: List[int] = selection_table.index.tolist()
-#         #         table.edit_cell( index_list, "class", cid )
+#         #         table.edit_cell( index_list, "cid", cid )
 #         #         lgm().log( f" Edit directory table: set classes for indices {index_list} to {cid}")
 #         #         table.df = pd.concat( [table.df, selection_table] )
 #         #         lgm().log(f" Edit class table[{cid}]: add pids {pids}, append selection_table with shape {selection_table.shape}")
@@ -161,7 +161,7 @@ class TableManager(SCSingletonConfigurable):
 #             if table_index == 0:
 #                 index_list: List[int] = selection_table.index.tolist()
 #                 lgm().log( f" -----> Setting cid[{cid}] for indices[:10]= {index_list[:10]}, current_selection = {self._current_selection}, class map nonzero = {np.count_nonzero(self._class_map)}")
-#                 table.edit_cell( index_list, "class", cid )
+#                 table.edit_cell( index_list, "cid", cid )
 #             else:
 #                 if table_index == cid:    table.df = pd.concat( [ table.df, selection_table ] ).drop_duplicates()
 #                 else:                     self.drop_rows( table_index, self._current_selection )
@@ -217,7 +217,7 @@ class TableManager(SCSingletonConfigurable):
         grid_opts = dict(  editable=False, maxVisibleRows=40 )
         if tab_index == 0:
             data_table = self._dataFrame.sort_values(self._cols[0] )
-            data_table.insert( len(self._cols)-1, "class", 0, True )
+            data_table.insert( len(self._cols)-1, "cid", 0, True )
             wTable = qgrid.show_grid( data_table, column_options=col_opts, grid_options=grid_opts, show_toolbar=False )
         else:
             empty_catalog = {col: np.empty( [0], 'U' ) for col in self._cols}
