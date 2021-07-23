@@ -6,11 +6,10 @@ from traitlets.config.loader import Config
 def pid( instance ): return hex(id(instance))[-4:]
 
 class Marker:
-    def __init__(self, pids: Union[List[int],np.ndarray], cid: int, **kwargs ):
+    def __init__(self, pids: np.ndarray, cid: int, **kwargs ):
         self.cid = cid
         self.args = kwargs
-        pid_array = pids if isinstance( pids, np.ndarray ) else np.array( pids )
-        self._pids: np.ndarray = np.unique( pid_array )
+        self._pids: np.ndarray = pids
 
     @property
     def pids(self) -> np.ndarray:

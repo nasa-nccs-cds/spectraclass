@@ -187,7 +187,6 @@ class TableManager(SCSingletonConfigurable):
 
     def update_selection(self):
         from spectraclass.model.labels import LabelsManager, lm
- #       self._broadcast_selection_events = False
         label_map: Dict[int,Set[int]] = lm().getLabelMap()
         table: bkSpreadsheet = None
         changed_pids = dict()
@@ -196,7 +195,6 @@ class TableManager(SCSingletonConfigurable):
         for (cid,table) in enumerate(self._tables):
             if cid > 0:
                 pdf: pd.DataFrame = table.to_df()
-                lgm().log(f" TM----> TABLE [class={cid}, cols = {pdf.columns}]")
                 current_pids: Set[int] = set( table.pids(False).tolist() )
                 new_ids: Set[int] = label_map.get( cid, set() )
                 deleted_pids = current_pids - new_ids
@@ -229,10 +227,9 @@ class TableManager(SCSingletonConfigurable):
         return self._tables[ self.selected_class ]
 
     def _handle_table_selection(self, old: np.ndarray, new: np.ndarray ):
-        lgm().log(f"  **TABLE-> new selection event: indices = {new}")
-        if new != self._current_selection:
-            self._current_selection = new
-            self.broadcast_selection_event( self._current_selection )
+        lgm().log(f"  **TABLE-> new selection event, indices:  {old} -> {new}")
+        self._current_selection = new
+        self.broadcast_selection_event( new )
 
     def is_block_selection( self, old: List[int], new: List[int] ) -> bool:
         lgm().log(   f"   **TABLE->  is_block_selection: old = {old}, new = {new}"  )

@@ -189,7 +189,6 @@ class LabelsManager(SCSingletonConfigurable):
 
     @property
     def markers(self):
-        lgm().log(f" ^^^^^^^^^ markers -> actions = {self._actions}")
         return [ a["marker"] for a in self._actions if a.type == "mark" ]
 
     def getMarker( self, pid: int ) -> Optional[Marker]:
@@ -281,6 +280,11 @@ class LabelsManager(SCSingletonConfigurable):
         for m in self.markers:
             pids = label_map.get( m.cid, set() )
             label_map[m.cid] = pids.union( set(m.pids) )
+            for cid, lmap in label_map.items():
+                if (cid > 0) and (cid != m.cid):
+                    common_items = lmap.intersection(m.pids)
+                    if len( common_items ):
+                        label_map[cid] = lmap.difference(common_items)
         return label_map
 
     @property
