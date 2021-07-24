@@ -54,11 +54,15 @@ class bkSpreadsheet:
                 self._source = ColumnDataSource( self._current_page_data )
                 self._source.selected.on_change("indices", self._process_selection_change )
             self._source.data = self._current_page_data
+#            lgm().log( f"\n   bkSpreadsheet-> current_page: source.data = {self._source.data}, page data is {self._current_page_data.__class__}, source data is {self._source.data.__class__}" )
+            lgm().log(f"bkSpreadsheet-> new page = {page_index}")
             self.update_selection()
 
+    @exception_handled
     def update_selection(self):
-        selection_indices: Tuple[np.ndarray] = np.nonzero( self._selection )
-        self.set_selection( selection_indices[0] )
+        selection_indices: np.ndarray = np.nonzero( self._selection )[0]
+        lgm().log(f" update_selection[{self._current_page}] -> selection_indices = {selection_indices.tolist()}")
+        self.set_selection( selection_indices )
 
     def idxs2pids(self, idxs: np.ndarray) -> np.ndarray:
         if self._paging_enabled:
@@ -88,7 +92,8 @@ class bkSpreadsheet:
 
     def pids2idxs(self, pids: np.ndarray ) -> np.ndarray:
         if self._paging_enabled:
-            return pids - self.page_start
+            idx: np.ndarray = pids - self.page_start
+            return idx[ (idx>=0) & (idx<self._rows_per_page) ]
         else:
             page_pids: np.ndarray = self.pids()
             return np.nonzero( page_pids.isin( pids ) )
@@ -104,31 +109,35 @@ class bkSpreadsheet:
         return self._source.to_df()
 
     def _process_selection_change(self, attr: str, old: List[int], new: List[int] ):
-        if len( old ): self._selection[ self._dataFrame.index.isin(old) ] = False
-        if len( new ): self._selection[ self._dataFrame.index.isin(new) ] = True
+        old_pids: np.ndarray = self.idxs2pids( np.array(old) )
+        new_pids: np.ndarray = self.idxs2pids( np.array(new) )
+        if len( old ): self._selection[ old_pids ] = False
+        if len( new ): self._selection[ new_pids ] = True
 
-    def selection_callback( self, callback: Callable[[List[int],List[int]],None] ):
+    def selection_callback( self, callback: Callable[[np.ndarray,np.ndarray],None] ):
         self._source.selected.on_change("indices", partial( self._exec_selection_callback, callback ) )
 
-    def _exec_selection_callback(self, callback: Callable[[List[int],List[int]],None], attr, old, new ):
+    def _exec_selection_callback(self, callback: Callable[[np.ndarray,np.ndarray],None], attr, old, new ):
         old_ids, new_ids = np.array( old ), np.array( new )
         lgm().log( f"\n-----------> exec_selection_callback[{old.__class__}][{new[0].__class__}]: old = {old}, new = {new}, old_ids ={old_ids}, new_ids ={new_ids}\n")
         callback(self.idxs2pids( old_ids ), self.idxs2pids( new_ids ) )
 
     def set_selection(self, pids: np.ndarray ):
-        self._source.selected.indices = self.pids2idxs( pids )
+        idxs: np.ndarray = self.pids2idxs( pids )
+        lgm().log( f" set_selection[{self._current_page}] -> idxs = {idxs.tolist()}, pids = {pids.tolist()}")
+        self._source.selected.indices = idxs
 
-    def set_col_data(self, colname: str, data: List ):
-        self._source.data[colname] = data
+    def set_col_data(self, colname: str, value: Any ):
+        self._source.data[colname].fill( value )
 
     def get_col_data(self, colname: str ) -> List:
         return self._source.data[colname]
 
     def from_df(self, pdf: pd.DataFrame ):
-        data = self._source.from_df( pdf )
-        self._source.data = data
+#        data = self._source.from_df( pdf )
+        self._source.data = pdf
         self._paging_enabled = False
-        lgm().log( f"Update page, source data cols = {data.keys()}, pdf shape = {pdf.shape}")
+        lgm().log( f"\n   bkSpreadsheet-> Update page, pdf cols = {pdf.columns}, pdf shape = {pdf.shape}, source.data = {self._source.data}, col data = {self._source.data['cid']}")
 
     def patch_data_element(self, colname: str, pid: int, value ):
         idx = self.pid2idx( pid )
@@ -181,42 +190,37 @@ class TableManager(SCSingletonConfigurable):
         self._dataFrame.insert(len(self._cols), "cid", 0, True)
         lgm().log(f"\nDataFrame: cols = {self._dataFrame.columns}, catalog cols = {self._cols}\n" )
 
-    def edit_table(self, cid, pid, column, value ):
+    def edit_table(self, cid: int, pids: np.ndarray, column: str, value: Any ):
          table: bkSpreadsheet = self._tables[cid]
-         table.patch_data_element( column, pid, value )
+         for pid in pids.tolist():
+            table.patch_data_element( column, pid, value )
+
+    def  clear_table(self,cid: int):
+        table: bkSpreadsheet = self._tables[cid]
+        table.set_col_data( "cid", 0 )
+
 
     def update_selection(self):
         from spectraclass.model.labels import LabelsManager, lm
-        label_map: Dict[int,Set[int]] = lm().getLabelMap()
+        label_map: Dict[int,Set[int]] = lm().getLabelMap( True )
         table: bkSpreadsheet = None
-        changed_pids = dict()
         lgm().log(f"\n TM----> update_selection:")
-        n_changes = 0
         for (cid,table) in enumerate(self._tables):
             if cid > 0:
-                pdf: pd.DataFrame = table.to_df()
                 current_pids: Set[int] = set( table.pids(False).tolist() )
                 new_ids: Set[int] = label_map.get( cid, set() )
                 deleted_pids = current_pids - new_ids
                 added_pids = new_ids - current_pids
                 nc = len(added_pids) + len(deleted_pids)
                 if nc > 0:
-                    n_changes = n_changes + nc
                     lgm().log(f" TM----> UPDATE CLASS TABLE [class={cid}]:" )
                     if len(deleted_pids): lgm().log(f"    ######## deleted pids= {deleted_pids} ")
                     if len(added_pids):   lgm().log(f"    ######## added pids= {added_pids} ")
-                    for pid in added_pids:    changed_pids[pid] = cid
-                    for pid in deleted_pids:  changed_pids[pid] = 0
                     cid_mask: np.ndarray = self._dataFrame.index.isin( new_ids )
                     lgm().log( f" TM----> dataFrame.index = {self._dataFrame.index}, current_pids={current_pids}, cid_mask = {cid_mask}")
                     df: pd.DataFrame = self._dataFrame[ cid_mask ].assign( cid=cid )
                     lgm().log(f" TM----> Add rows to class[{cid}], df.shape = {df.shape}, mask shape = {cid_mask.shape}")
                     table.from_df( df )
-        if n_changes > 0:
-            dtable = self._tables[0]
-            for (pid,cid) in changed_pids.items():
-                dtable.patch_data_element( "cid", pid, cid )
-                lgm().log(f" TM----> UPDATE DIRECTORY [pid={pid}] -> class = {cid}")
 
     @property
     def selected_class(self) -> int:

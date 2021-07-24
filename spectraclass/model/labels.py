@@ -275,8 +275,10 @@ class LabelsManager(SCSingletonConfigurable):
             if (m.cid > 0): pids.extend( m.pids )
         return pids
 
-    def getLabelMap( self ) -> Dict[int,Set[int]]:
+    def getLabelMap( self, update_directory_table = False ) -> Dict[int,Set[int]]:
+        from spectraclass.gui.unstructured.table import tm
         label_map = {}
+        if update_directory_table: tm().clear_table(0)
         for m in self.markers:
             pids = label_map.get( m.cid, set() )
             label_map[m.cid] = pids.union( set(m.pids) )
@@ -285,6 +287,8 @@ class LabelsManager(SCSingletonConfigurable):
                     common_items = lmap.intersection(m.pids)
                     if len( common_items ):
                         label_map[cid] = lmap.difference(common_items)
+            if update_directory_table:
+                tm().edit_table( 0, m.pids, "cid", m.cid )
         return label_map
 
     @property
