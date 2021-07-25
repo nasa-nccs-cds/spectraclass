@@ -21,6 +21,7 @@ class bkSpreadsheet:
         self._current_page_data: pd.DataFrame = None
         self._rows_per_page = kwargs.get( 'rows_per_page', 100 )
         self._current_page = None
+        self.current_action: str = None
         self._paging_enabled = True
         self._selection: np.ndarray = None
         self._dataFrame: pd.DataFrame = None
@@ -54,8 +55,7 @@ class bkSpreadsheet:
                 self._source = ColumnDataSource( self._current_page_data )
                 self._source.selected.on_change("indices", self._process_selection_change )
             self._source.data = self._current_page_data
-#            lgm().log( f"\n   bkSpreadsheet-> current_page: source.data = {self._source.data}, page data is {self._current_page_data.__class__}, source data is {self._source.data.__class__}" )
-            lgm().log(f"bkSpreadsheet-> new page = {page_index}")
+            lgm().log( f"\n   bkSpreadsheet[{page_index}]-> current_page: source.data = {self._source.data}" )
             self.update_selection()
 
     @exception_handled
@@ -117,15 +117,16 @@ class bkSpreadsheet:
     def selection_callback( self, callback: Callable[[np.ndarray,np.ndarray],None] ):
         self._source.selected.on_change("indices", partial( self._exec_selection_callback, callback ) )
 
-    def _exec_selection_callback(self, callback: Callable[[np.ndarray,np.ndarray],None], attr, old, new ):
+    def _exec_selection_callback(self, callback: Callable[["bkSpreadsheet",np.ndarray,np.ndarray],None], attr, old, new ):
         old_ids, new_ids = np.array( old ), np.array( new )
         lgm().log( f"\n-----------> exec_selection_callback: old = {old}, new = {new}, old_ids ={old_ids}, new_ids ={new_ids}\n" )
-        callback(self.idxs2pids( old_ids ), self.idxs2pids( new_ids ) )
+        callback( self, self.idxs2pids( old_ids ), self.idxs2pids( new_ids ) )
 
     def set_selection(self, pids: np.ndarray ):
         idxs: List[int] = self.pids2idxs( pids ).tolist()
         lgm().log( f" set_selection[{self._current_page}] -> idxs = {idxs}, pids = {pids.tolist()}" )
         self._source.selected.indices = idxs
+        self._current_action = None
 
     def set_col_data(self, colname: str, value: Any ):
         self._source.data[colname].fill( value )
@@ -160,6 +161,7 @@ class bkSpreadsheet:
 
     def _update_page(self, event: Dict[str,str] ):
         if event['type'] == 'change':
+            self.current_action = "page"
             self.current_page = event['new']
 
 class TableManager(SCSingletonConfigurable):
@@ -178,6 +180,7 @@ class TableManager(SCSingletonConfigurable):
         self._events = []
         self._broadcast_selection_events = True
         self.mark_on_selection = False
+        self.ignorable_actions = ["page"]
 
     def init(self, **kwargs):
         catalog: Dict[str,np.ndarray] = kwargs.get( 'catalog', None )
@@ -200,12 +203,13 @@ class TableManager(SCSingletonConfigurable):
         table.set_col_data( "cid", 0 )
 
 
-    def update_selection(self):
+    def update_selection(self, action: str ):
         from spectraclass.model.labels import LabelsManager, lm
         label_map: Dict[int,Set[int]] = lm().getLabelMap( True )
         table: bkSpreadsheet = None
         lgm().log(f"\n TM----> update_selection:")
         for (cid,table) in enumerate(self._tables):
+            table.current_action = action
             if cid > 0:
                 current_pids: Set[int] = set( table.pids(False).tolist() )
                 new_ids: Set[int] = label_map.get( cid, set() )
@@ -230,10 +234,12 @@ class TableManager(SCSingletonConfigurable):
     def selected_table(self) -> bkSpreadsheet:
         return self._tables[ self.selected_class ]
 
-    def _handle_table_selection(self, old: np.ndarray, new: np.ndarray ):
+    def _handle_table_selection(self, table: bkSpreadsheet, old: np.ndarray, new: np.ndarray ):
         lgm().log(f"  **TABLE-> new selection event, indices:  {old} -> {new}")
-        self._current_selection = new
-        self.broadcast_selection_event( new )
+        action: str = table.current_action
+        if action not in self.ignorable_actions:
+            self._current_selection = new
+            self.broadcast_selection_event( new )
 
     def is_block_selection( self, old: List[int], new: List[int] ) -> bool:
         lgm().log(   f"   **TABLE->  is_block_selection: old = {old}, new = {new}"  )
