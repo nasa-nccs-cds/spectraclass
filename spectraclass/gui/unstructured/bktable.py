@@ -119,12 +119,12 @@ class bkSpreadsheet:
 
     def _exec_selection_callback(self, callback: Callable[[np.ndarray,np.ndarray],None], attr, old, new ):
         old_ids, new_ids = np.array( old ), np.array( new )
-        lgm().log( f"\n-----------> exec_selection_callback[{old.__class__}][{new[0].__class__}]: old = {old}, new = {new}, old_ids ={old_ids}, new_ids ={new_ids}\n")
+        lgm().log( f"\n-----------> exec_selection_callback: old = {old}, new = {new}, old_ids ={old_ids}, new_ids ={new_ids}\n" )
         callback(self.idxs2pids( old_ids ), self.idxs2pids( new_ids ) )
 
     def set_selection(self, pids: np.ndarray ):
-        idxs: np.ndarray = self.pids2idxs( pids )
-        lgm().log( f" set_selection[{self._current_page}] -> idxs = {idxs.tolist()}, pids = {pids.tolist()}")
+        idxs: List[int] = self.pids2idxs( pids ).tolist()
+        lgm().log( f" set_selection[{self._current_page}] -> idxs = {idxs}, pids = {pids.tolist()}" )
         self._source.selected.indices = idxs
 
     def set_col_data(self, colname: str, value: Any ):
