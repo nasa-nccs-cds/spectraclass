@@ -20,10 +20,8 @@ class bkSpreadsheet:
     def __init__(self, data: Union[pd.DataFrame,xa.DataArray], **kwargs ):
         self._current_page_data: pd.DataFrame = None
         self._rows_per_page = kwargs.get( 'rows_per_page', 100 )
-        self._current_page = None
-        self.current_action: str = None
         self._paging_enabled = True
-        self._selection: np.ndarray = None
+        self._current_page = None
         self._dataFrame: pd.DataFrame = None
         self._source: ColumnDataSource = None
         if isinstance( data, pd.DataFrame ):
@@ -34,8 +32,8 @@ class bkSpreadsheet:
         else:
             raise TypeError( f"Unsupported data class supplied to bkSpreadsheet: {data.__class__}" )
         self._columns = [TableColumn(field=cid, title=cid, sortable=True) for cid in self._dataFrame.columns]
-        self.current_page = kwargs.get('init_page', 0)
         self._selection = np.full( [ self._dataFrame.shape[0] ], False, np.bool )
+        self.current_page = kwargs.get('init_page', 0)
         self._table = DataTable( source=self._source, columns=self._columns, width=400, height=280, selectable="checkbox", index_position=None )
 
     def pids(self, page = True ) -> np.ndarray:
@@ -55,18 +53,18 @@ class bkSpreadsheet:
                 self._source = ColumnDataSource( self._current_page_data )
                 self._source.selected.on_change("indices", self._process_selection_change )
             self._source.data = self._current_page_data
-            lgm().log( f"\n   bkSpreadsheet[{page_index}]-> current_page: source.data = {self._source.data}" )
-            self.update_selection()
+            self.refresh_selection()
 
     @exception_handled
-    def update_selection(self):
-        selection_indices: np.ndarray = np.nonzero( self._selection )[0]
+    def refresh_selection(self):
+        selection_indices: np.ndarray = self.pids2idxs( np.nonzero( self._selection )[0] )
         lgm().log(f" update_selection[{self._current_page}] -> selection_indices = {selection_indices.tolist()}")
-        self.set_selection( selection_indices )
+        self._source.selected.indices = selection_indices.tolist()
 
-    def idxs2pids(self, idxs: np.ndarray) -> np.ndarray:
+    def idxs2pids(self, idxs: Union[List,np.ndarray]) -> np.ndarray:
         if self._paging_enabled:
-            return idxs + self.page_start
+            _idxs = idxs if isinstance(idxs,np.ndarray) else np.array( idxs )
+            return _idxs + self.page_start
         else:
             page_pids: np.ndarray = self.pids()
             return page_pids[idxs]
@@ -90,9 +88,10 @@ class bkSpreadsheet:
             except ValueError:
                 return -1
 
-    def pids2idxs(self, pids: np.ndarray ) -> np.ndarray:
+    def pids2idxs(self, pids: Union[List,np.ndarray] ) -> np.ndarray:
         if self._paging_enabled:
-            idx: np.ndarray = pids - self.page_start
+            _pids = pids if isinstance(pids, np.ndarray) else np.array(pids)
+            idx: np.ndarray = _pids - self.page_start
             return idx[ (idx>=0) & (idx<self._rows_per_page) ]
         else:
             page_pids: np.ndarray = self.pids()
@@ -117,16 +116,17 @@ class bkSpreadsheet:
     def selection_callback( self, callback: Callable[[np.ndarray,np.ndarray],None] ):
         self._source.selected.on_change("indices", partial( self._exec_selection_callback, callback ) )
 
-    def _exec_selection_callback(self, callback: Callable[["bkSpreadsheet",np.ndarray,np.ndarray],None], attr, old, new ):
+    def _exec_selection_callback(self, callback: Callable[[np.ndarray,np.ndarray],None], attr, old, new ):
         old_ids, new_ids = np.array( old ), np.array( new )
         lgm().log( f"\n-----------> exec_selection_callback: old = {old}, new = {new}, old_ids ={old_ids}, new_ids ={new_ids}\n" )
-        callback( self, self.idxs2pids( old_ids ), self.idxs2pids( new_ids ) )
+        callback( self.idxs2pids( old_ids ), self.idxs2pids( new_ids ) )
 
-    def set_selection(self, pids: np.ndarray ):
+    def set_selection(self, pids: np.ndarray, refresh: bool ):
         idxs: List[int] = self.pids2idxs( pids ).tolist()
         lgm().log( f" set_selection[{self._current_page}] -> idxs = {idxs}, pids = {pids.tolist()}" )
-        self._source.selected.indices = idxs
-        self._current_action = None
+        if refresh: self._selection.fill( False )
+        self._selection[ pids ] = True
+        self.refresh_selection()
 
     def set_col_data(self, colname: str, value: Any ):
         self._source.data[colname].fill( value )
@@ -146,7 +146,7 @@ class bkSpreadsheet:
             self._source.patch( { colname: [( slice(idx,idx+1), [value] )] } )
             self._dataFrame.at[ pid, colname ] = value
 
-    def get_selection( self ) -> List[int]:
+    def get_selection( self ) -> np.ndarray:
         return self.idxs2pids(self._source.selected.indices)
 
     def gui(self) -> BokehModel:
@@ -161,7 +161,6 @@ class bkSpreadsheet:
 
     def _update_page(self, event: Dict[str,str] ):
         if event['type'] == 'change':
-            self.current_action = "page"
             self.current_page = event['new']
 
 class TableManager(SCSingletonConfigurable):
@@ -202,30 +201,6 @@ class TableManager(SCSingletonConfigurable):
         table: bkSpreadsheet = self._tables[cid]
         table.set_col_data( "cid", 0 )
 
-
-    def update_selection(self, action: str ):
-        from spectraclass.model.labels import LabelsManager, lm
-        label_map: Dict[int,Set[int]] = lm().getLabelMap( True )
-        table: bkSpreadsheet = None
-        lgm().log(f"\n TM----> update_selection:")
-        for (cid,table) in enumerate(self._tables):
-            table.current_action = action
-            if cid > 0:
-                current_pids: Set[int] = set( table.pids(False).tolist() )
-                new_ids: Set[int] = label_map.get( cid, set() )
-                deleted_pids = current_pids - new_ids
-                added_pids = new_ids - current_pids
-                nc = len(added_pids) + len(deleted_pids)
-                if nc > 0:
-                    lgm().log(f" TM----> UPDATE CLASS TABLE [class={cid}]:" )
-                    if len(deleted_pids): lgm().log(f"    ######## deleted pids= {deleted_pids} ")
-                    if len(added_pids):   lgm().log(f"    ######## added pids= {added_pids} ")
-                    cid_mask: np.ndarray = self._dataFrame.index.isin( new_ids )
-                    lgm().log( f" TM----> dataFrame.index = {self._dataFrame.index}, current_pids={current_pids}, cid_mask = {cid_mask}")
-                    df: pd.DataFrame = self._dataFrame[ cid_mask ].assign( cid=cid )
-                    lgm().log(f" TM----> Add rows to class[{cid}], df.shape = {df.shape}, mask shape = {cid_mask.shape}")
-                    table.from_df( df )
-
     @property
     def selected_class(self) -> int:
         return int( self._wTablesWidget.selected_index )
@@ -234,12 +209,30 @@ class TableManager(SCSingletonConfigurable):
     def selected_table(self) -> bkSpreadsheet:
         return self._tables[ self.selected_class ]
 
-    def _handle_table_selection(self, table: bkSpreadsheet, old: np.ndarray, new: np.ndarray ):
+    def mark_points(self):
+        from spectraclass.model.labels import LabelsManager, lm
+        dtable = self._tables[ 0 ]
+        pids: np.ndarray = dtable.get_selection()
+        self.edit_table(0, pids, "cid", lm().current_cid )
+        new_pids = set( pids.tolist() )
+        for (cid,table) in enumerate(self._tables):
+            if cid > 0:
+                current_pids: Set[int] = set( table.pids(False).tolist() )
+                deleted_pids, added_pids = set(),set()
+                if cid == lm().current_cid:     added_pids = (new_pids - current_pids)
+                else:                           deleted_pids = new_pids.intersection(current_pids)
+                nc = len(added_pids) + len(deleted_pids)
+                if nc > 0:
+                    lgm().log(f" TM----> UPDATE CLASS TABLE [class={cid}]:" )
+                    if len(deleted_pids): lgm().log(f"    ######## deleted pids= {deleted_pids} ")
+                    if len(added_pids):   lgm().log(f"    ######## added pids= {added_pids} ")
+                    cid_mask: np.ndarray = self._dataFrame.index.isin( new_pids )
+                    df: pd.DataFrame = self._dataFrame[ cid_mask ].assign( cid=cid )
+                    table.from_df( df )
+
+    def _handle_table_selection(self, old: np.ndarray, new: np.ndarray ):
         lgm().log(f"  **TABLE-> new selection event, indices:  {old} -> {new}")
-        action: str = table.current_action
-        if action not in self.ignorable_actions:
-            self._current_selection = new
-            self.broadcast_selection_event( new )
+        self.broadcast_selection_event( new )
 
     def is_block_selection( self, old: List[int], new: List[int] ) -> bool:
         lgm().log(   f"   **TABLE->  is_block_selection: old = {old}, new = {new}"  )
@@ -250,11 +243,11 @@ class TableManager(SCSingletonConfigurable):
     def broadcast_selection_event(self, pids: np.ndarray ):
         from spectraclass.application.controller import app
         from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.model.base import Marker
         item_str = "" if pids.size > 8 else f",  pids={pids}"
         lgm().log(f" **TABLE-> gui.selection_changed, nitems={pids.size}{item_str}")
-        cid = lm().current_cid if self.mark_on_selection else 0
-        app().add_marker( "table", Marker( pids, cid ) )
+        gpm().plot_graph(pids)
 
     def _createTable( self, tab_index: int ) -> bkSpreadsheet:
         assert self._dataFrame is not None, " TableManager has not been initialized "

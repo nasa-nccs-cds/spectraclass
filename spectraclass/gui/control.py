@@ -28,7 +28,7 @@ class ActionsManager(SCSingletonConfigurable):
     @exception_handled
     def on_button_click( self, task, button: ipw.Button = None ):
         from spectraclass.application.controller import app
-        lgm().log(f"\n\n  APP EXECUTE: {task}" )
+        lgm().log(f" ***  APP EXECUTE: {task}" )
         if task == "embed":
             app().embed()
         elif task == "mark":

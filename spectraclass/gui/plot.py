@@ -3,7 +3,7 @@ from typing import List, Union, Tuple, Optional, Dict, Callable
 import xarray as xa
 import numpy as np
 from spectraclass.data.base import DataManager
-from spectraclass.util.logs import LogManager, lgm
+from spectraclass.util.logs import LogManager, lgm, exception_handled
 import matplotlib.pyplot as plt
 import ipywidgets as ipw
 from spectraclass.model.base import SCSingletonConfigurable
@@ -68,17 +68,12 @@ class mplGraphPlot:
         self._selected_pids = idxs
 
     def plot(self):
-        from spectraclass.model.labels import LabelsManager, lm
         self.ax.title.text = self.title
-        marked_pids = lm().getPids()
-        lgm().log(f"Plotting lines, cid={lm().current_cid}, nselected={len(self._selected_pids)}, nmarked={len(marked_pids)}")
-        if lm().current_cid == 0:
-            if len(self._selected_pids) > 0:
-                self.update_graph( self.x2, self.y2 )
-        else:
-            if len(marked_pids) > 0:
-                self._selected_pids = marked_pids
-                self.update_graph( self.x, self.y )
+        lgm().log(f"Plotting lines, nselected={len(self._selected_pids)}")
+        if len(self._selected_pids) == 1:
+            self.update_graph( self.x2, self.y2 )
+        elif len(self._selected_pids) > 1:
+            self.update_graph( self.x, self.y )
 
     def update_graph(self, xs: List[ np.ndarray ], ys: List[ np.ndarray ] ):
         self.clear()
@@ -158,14 +153,14 @@ class GraphPlotManager(SCSingletonConfigurable):
     def current_graph(self) -> mplGraphPlot:
         return self._graphs[ self._wGui.selected_index ]
 
+    @exception_handled
     def plot_graph( self, pids: List[int] = None ):
         from spectraclass.model.labels import LabelsManager, lm
-        if self._wGui is not None:
-            if pids is None: pids = lm().getPids()
-            lgm().log(f" plot spectral graph[{self._wGui.selected_index}]: pids = {pids} ")
-            current_graph: mplGraphPlot = self.current_graph()
-            current_graph.select_items( pids )
-            current_graph.plot()
+        if pids is None: pids = lm().getPids()
+        lgm().log(f" plot spectral graph[{self._wGui.selected_index}]: pids = {pids} ")
+        current_graph: mplGraphPlot = self.current_graph()
+        current_graph.select_items( pids )
+        current_graph.plot()
 
     def _createGui( self, **kwargs ) -> ipw.Tab():
         wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 500px' ) )

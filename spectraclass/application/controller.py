@@ -58,9 +58,7 @@ class SpectraclassController(SCSingletonConfigurable):
     def mark(self):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.points import PointCloudManager, pcm
-        lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> MARK ")
-        lm().mark_points()
-        pcm().update_marked_points()
+    #    lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> MARK ")
 
     @exception_handled
     def mask(self):
@@ -97,33 +95,13 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.gui.plot import GraphPlotManager, gpm
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> UNDO ")
-        while True:
-            action: Optional[Action] = lm().popAction()
-            is_transient = self.process_undo( action )
-            if not is_transient: break
-        pcm().update_plot()
-        gpm().plot_graph()
-        return action
 
     def process_undo( self, action ) -> bool:
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
         from spectraclass.gui.spatial.map import MapManager, mm
-        is_transient = False
-        if action is not None:
-            lgm().log(f" UNDO action:  {action}")
-            if action.type == "mark":
-                m: Marker = action["marker"]
-                if m.cid == 0: is_transient = True
-                lgm().log(f" POP marker:  {m}")
-                pcm().clear_pids(m.cid, m.pids)
-            elif action.type == "color":
-                pcm().clear_bins()
-                mm().clear_overlay_image()
-                spm().clear_overlay_image()
-            lm().log_markers("post-undo")
-        return is_transient
+        return False
 
     @exception_handled
     def classify(self) -> xa.DataArray:
