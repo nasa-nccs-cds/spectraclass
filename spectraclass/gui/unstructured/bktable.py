@@ -19,10 +19,9 @@ class bkSpreadsheet:
 
     def __init__(self, data: Union[pd.DataFrame,xa.DataArray], **kwargs ):
         self._current_page_data: pd.DataFrame = None
-        self._rows_per_page = kwargs.get( 'rows_per_page', 100 )
-        self._sequential_index = kwargs.get( 'sequential',False )
         self._current_page = None
         self._dataFrame: pd.DataFrame = None
+        self._filteredData: pd.DataFrame = None
         self._source: ColumnDataSource = None
         if isinstance( data, pd.DataFrame ):
             self._dataFrame = data
@@ -35,9 +34,22 @@ class bkSpreadsheet:
         self._selection = np.full( [ self._dataFrame.shape[0] ], False, np.bool )
         self.current_page = kwargs.get('init_page', 0)
         self._table = DataTable( source=self._source, columns=self._columns, width=400, height=280, selectable="checkbox", index_position=None )
+        self._table.columns
+
+    @property
+    def table_data(self) -> pd.DataFrame:
+        return self._dataFrame if self._filteredData is None else self._filteredData
+
+    def clear_filter(self):
+        self._filteredData = None
+        self.refresh_page_data()
+
+    def set_filter_data(self, filter_data: pd.DataFrame):
+        self._filteredData = filter_data
+        self.refresh_page_data()
 
     def pids(self) -> np.ndarray:
-        return self._dataFrame.index.to_numpy()
+        return self.table_data.index.to_numpy()
 
     def page_pids(self) -> np.ndarray:
         return self.idxs2pids( np.array( self._source.data["index"] ) )
@@ -53,7 +65,7 @@ class bkSpreadsheet:
             self.refresh_page_data()
 
     def refresh_page_data(self):
-        self._current_page_data = self._dataFrame.iloc[ self.page_start:self.page_end ]
+        self._current_page_data = self.table_data.iloc[ self.page_start:self.page_end ]
         if self._source is None:
             self._source = ColumnDataSource( self._current_page_data )
             self._source.selected.on_change("indices", self._process_selection_change )
@@ -67,44 +79,42 @@ class bkSpreadsheet:
         self._source.selected.indices = selection_indices.tolist()
 
     def idxs2pids(self, idxs: Union[List,np.ndarray]) -> np.ndarray:
-        page_idxs = idxs if isinstance(idxs, np.ndarray) else np.array(idxs)
-        global_idxs = page_idxs + self.page_start
-        if self._sequential_index:
-            return global_idxs
+        if len(idxs) == 0:
+            return np.array([],dtype=np.int)
         else:
+            page_idxs = idxs if isinstance(idxs, np.ndarray) else np.array(idxs)
+            global_idxs = page_idxs + self.page_start
             global_pids: np.ndarray = self.pids()
+            lgm().log(f" idxs2pids[{self._current_page}]: global_pids = {global_pids}, global_idxs = {global_idxs}")
             return global_pids[global_idxs]
 
     @property
     def page_start(self) -> int:
-        return self._current_page * self._rows_per_page
+        return self._current_page * TableManager.rows_per_page
 
     @property
     def page_end(self) -> int:
-        return self.page_start + self._rows_per_page
+        return self.page_start + TableManager.rows_per_page
 
     def pid2idx(self, pid: int ) -> int:
-        if self._sequential_index:
-            idx = pid - self.page_start
-        else:
-            try:
-                pids = self.pids()
-                idx = pids.tolist().index( pid ) - self.page_start
-            except ValueError:
-                return -1
+        try:
+            pids = self.pids()
+            idx = pids.tolist().index( pid ) - self.page_start
+        except ValueError:
+            return -1
         return idx if self.valid_idx(idx) else -1
 
     def pids2idxs(self, pids: Union[List,np.ndarray] ) -> np.ndarray:
-        _pids: np.ndarray = pids if isinstance(pids, np.ndarray) else np.array(pids)
-        if self._sequential_index:
-            idx: np.ndarray = _pids - self.page_start
+        if len(pids) == 0:
+            return np.array([],dtype=np.int)
         else:
+            _pids: np.ndarray = pids if isinstance(pids, np.ndarray) else np.array(pids)
             global_idxs: np.ndarray = np.nonzero( np.isin( self.pids(), _pids ) )[0]
             idx: np.ndarray = global_idxs - self.page_start
-        return idx[(idx >= 0) & (idx < self._rows_per_page)]
+            return idx[(idx >= 0) & (idx < TableManager.rows_per_page)]
 
     def valid_idx(self, idx: int ):
-        return (idx>=0) and (idx<self._rows_per_page)
+        return (idx>=0) and (idx<TableManager.rows_per_page)
 
     @property
     def page_data(self) -> pd.DataFrame:
@@ -150,6 +160,8 @@ class bkSpreadsheet:
         if idx >= 0:
             self._source.patch( { colname: [( slice(idx,idx+1), [value] )] } )
             self._dataFrame.at[ pid, colname ] = value
+            if self._filteredData is not None:
+                self._filteredData.at[pid, colname] = value
 
     def get_selection( self ) -> np.ndarray:
         return self.idxs2pids(self._source.selected.indices)
@@ -157,18 +169,8 @@ class bkSpreadsheet:
     def gui(self) -> BokehModel:
         return BokehModel(self._table)
 
-    def page_widget(self):
-        nRows = self._dataFrame.shape[0]
-        npages = math.ceil( nRows/self._rows_per_page )
-        widget = ipw.Dropdown( options=list(range(npages)), description = "Page", index=0 )
-        widget.observe( self._update_page, "value" )
-        return widget
-
-    def _update_page(self, event: Dict[str,str] ):
-        if event['type'] == 'change':
-            self.current_page = event['new']
-
 class TableManager(SCSingletonConfigurable):
+    rows_per_page = 100
 
     def __init__(self):
         super(TableManager, self).__init__()
@@ -207,12 +209,12 @@ class TableManager(SCSingletonConfigurable):
         table.set_col_data( "cid", 0 )
 
     @property
-    def selected_class(self) -> int:
+    def selected_table_index(self) -> int:
         return int( self._wTablesWidget.selected_index )
 
     @property
     def selected_table(self) -> bkSpreadsheet:
-        return self._tables[ self.selected_class ]
+        return self._tables[ self.selected_table_index ]
 
     def mark_points(self):
         from spectraclass.model.labels import LabelsManager, lm
@@ -255,7 +257,7 @@ class TableManager(SCSingletonConfigurable):
     def _createTable( self, tab_index: int ) -> bkSpreadsheet:
         assert self._dataFrame is not None, " TableManager has not been initialized "
         if tab_index == 0:
-            bkTable = bkSpreadsheet( self._dataFrame, sequential=True )
+            bkTable = bkSpreadsheet( self._dataFrame ) # , sequential=True )
         else:
             empty_catalog = {col: np.empty( [0], 'U' ) for col in self._cols}
             dFrame: pd.DataFrame = pd.DataFrame(empty_catalog, dtype='U' )
@@ -269,18 +271,28 @@ class TableManager(SCSingletonConfigurable):
         return ipw.VBox([wSelectionPanel, self._wTablesWidget])
 
     def _createSelectionPanel( self ) -> ipw.HBox:
-        self._wFind = ipw.Text( value='', placeholder='Find items', description='Find:', disabled=False, continuous_update = False, tooltip="Search in sorted column" )
-        self._wFind.observe(self._process_find, 'value')
-        wFindOptions = self._createFindOptionButtons()
-        wPages = self._tables[0].page_widget()
-        wSelectionPanel = ipw.HBox( [ self._wFind, wFindOptions, wPages ] )
+        self._wFilter = ipw.Text(value='', placeholder='Filter rows', description='Filter:', disabled=False, continuous_update = False, tooltip="Filter selected column by regex")
+        self._wFilter.observe(self._process_filter, 'value')
+        wFindOptions = self._createFilterOptionButtons()
+        wPages = self.page_widget()
+        wSelectionPanel = ipw.HBox([self._wFilter, wFindOptions, wPages])
         wSelectionPanel.layout = ipw.Layout( justify_content = "center", align_items="center", width = "auto", height = "50px", min_height = "50px", border_width=1, border_color="white" )
         return wSelectionPanel
 
-    def _createFindOptionButtons(self):
+    def page_widget(self):
+        nRows = self._dataFrame.shape[0]
+        npages = math.ceil( nRows/self.rows_per_page )
+        widget = ipw.Dropdown( options=list(range(npages)), description = "Page", index=0 )
+        widget.observe( self._update_page, "value" )
+        return widget
+
+    def _update_page(self, event: Dict[str,str] ):
+        if event['type'] == 'change':
+            self.selected_table.current_page = event['new']
+
+    def _createFilterOptionButtons(self):
         if self._search_widgets is None:
             self._search_widgets = dict(
-                find_select=     ToggleButton( [ 'search-location', 'th-list'], ['find','select'], [ 'find first', 'select all'] ),
                 case_sensitive=  ToggleButton( ['font', 'asterisk'], ['true', 'false'],['case sensitive', 'case insensitive']),
                 match=           ToggleButton( ['caret-square-left', 'caret-square-right', 'caret-square-down'], ['begins-with', 'ends-with', 'contains'], ['begins with', 'ends with', 'contains'])
             )
@@ -292,7 +304,7 @@ class TableManager(SCSingletonConfigurable):
         buttonbox.layout = ipw.Layout( width = "300px", min_width = "300px", height = "auto" )
         return buttonbox
 
-    def _process_find(self, event: Dict[str,str]):
+    def _process_filter(self, event: Dict[str, str]):
         match = self._match_options['match']
         case_sensitive = ( self._match_options['case_sensitive'] == "true" )
         df: pd.DataFrame = self.selected_table.to_df()
@@ -300,31 +312,25 @@ class TableManager(SCSingletonConfigurable):
         np_coldata = df[cname].to_numpy( dtype='U' )
         if not case_sensitive: np_coldata = np.char.lower( np_coldata )
         match_str = event['new'] if case_sensitive else event['new'].lower()
-        if match == "begins-with":   mask = np.char.startswith( np_coldata, match_str )
-        elif match == "ends-with":   mask = np.char.endswith( np_coldata, match_str )
-        elif match == "contains":    mask = ( np.char.find( np_coldata, match_str ) >= 0 )
-        else: raise Exception( f"Unrecognized match option: {match}")
-        lgm().log( f" **TABLE-> process_find[ M:{match} CS:{case_sensitive} col:{self._current_column_index} ], coldata shape = {np_coldata.shape}, match_str={match_str}, coldata[:10]={np_coldata[:10]}" )
-        self._current_selection = df.index[mask].to_numpy()
-        lgm().log(f"  **TABLE->  cname = {cname}, mask shape = {mask.shape}, mask #nonzero = {np.count_nonzero(mask)}, #selected = {len(self._current_selection)}, selection[:8] = {self._current_selection[:8]}")
-        self._select_find_results( )
+        if len( match_str ) == 0:
+            self.selected_table.clear_filter()
+        else:
+            if match == "begins-with":   mask = np.char.startswith( np_coldata, match_str )
+            elif match == "ends-with":   mask = np.char.endswith( np_coldata, match_str )
+            elif match == "contains":    mask = ( np.char.find( np_coldata, match_str ) >= 0 )
+            else: raise Exception( f"Unrecognized match option: {match}")
+            lgm().log( f" **TABLE-> process_find[ M:{match} CS:{case_sensitive} col:{self._current_column_index} ], coldata shape = {np_coldata.shape}, match_str={match_str}, coldata[:10]={np_coldata[:10]}" )
+            self.selected_table.set_filter_data( df[mask] )
+            lgm().log(f"  **TABLE->  cname = {cname}, mask shape = {mask.shape}, mask #nonzero = {np.count_nonzero(mask)}")
 
     def _clear_selection(self):
         self._current_selection = None
-        self._wFind.value = ""
-
-    def _select_find_results(self ):
-        if len( self._wFind.value ) > 0:
-            find_select = self._match_options['find_select']
-            selection: np.ndarray = self._current_selection if find_select=="select" else self._current_selection[:1]
-            lgm().log(f" **TABLE-> apply_selection[ {find_select} ], nitems: {len(selection)}")
-            self.selected_table.set_selection( selection )
-            self.broadcast_selection_event( selection )
+        self._wFilter.value = ""
 
     def _process_find_options(self, name: str, state: str ):
         lgm().log( f" **TABLE-> process_find_options[{name}]: {state}" )
         self._match_options[ name ] = state
-        self._process_find( dict( new=self._wFind.value ) )
+        self._process_filter(dict(new=self._wFilter.value))
 
     def _createTableTabs(self) -> ipw.Tab:
         wTab = ipw.Tab()

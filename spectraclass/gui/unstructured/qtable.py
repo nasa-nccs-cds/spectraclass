@@ -233,8 +233,8 @@ class TableManager(SCSingletonConfigurable):
         return ipw.VBox([wSelectionPanel, self._wTablesWidget])
 
     def _createSelectionPanel( self ) -> ipw.HBox:
-        self._wFind = ipw.Text( value='', placeholder='Find items', description='Find:', disabled=False, continuous_update = False, tooltip="Search in sorted column" )
-        self._wFind.observe(self._process_find, 'value')
+        self._wFind = ipw.Text( value='', placeholder='Filter table rows', description='Filter:', disabled=False, continuous_update = False, tooltip="Filter selected column with regex" )
+        self._wFind.observe(self._process_filter, 'value')
         wFindOptions = self._createFindOptionButtons()
         wSelectionPanel = ipw.HBox( [ self._wFind, wFindOptions ] )
         wSelectionPanel.layout = ipw.Layout( justify_content = "center", align_items="center", width = "auto", height = "50px", min_height = "50px", border_width=1, border_color="white" )
@@ -255,7 +255,7 @@ class TableManager(SCSingletonConfigurable):
         buttonbox.layout = ipw.Layout( width = "300px", min_width = "300px", height = "auto" )
         return buttonbox
 
-    def _process_find(self, event: Dict[str,str]):
+    def _process_filter(self, event: Dict[str, str]):
         match = self._match_options['match']
         case_sensitive = ( self._match_options['case_sensitive'] == "true" )
         df: pd.DataFrame = self.selected_table.get_changed_df()
@@ -287,7 +287,7 @@ class TableManager(SCSingletonConfigurable):
     def _process_find_options(self, name: str, state: str ):
         lgm().log( f" **TABLE-> process_find_options[{name}]: {state}" )
         self._match_options[ name ] = state
-        self._process_find( dict( new=self._wFind.value ) )
+        self._process_filter(dict(new=self._wFind.value))
 
     def _createTableTabs(self) -> ipw.Tab:
         wTab = ipw.Tab()
