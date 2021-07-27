@@ -20,7 +20,7 @@ class bkSpreadsheet:
     def __init__(self, data: Union[pd.DataFrame,xa.DataArray], **kwargs ):
         self._current_page_data: pd.DataFrame = None
         self._rows_per_page = kwargs.get( 'rows_per_page', 100 )
-        self._paging_enabled = True
+        self._sequential_index = kwargs.get( 'sequential',False )
         self._current_page = None
         self._dataFrame: pd.DataFrame = None
         self._source: ColumnDataSource = None
@@ -36,8 +36,11 @@ class bkSpreadsheet:
         self.current_page = kwargs.get('init_page', 0)
         self._table = DataTable( source=self._source, columns=self._columns, width=400, height=280, selectable="checkbox", index_position=None )
 
-    def pids(self, page = True ) -> np.ndarray:
-        return self.idxs2pids( np.array( self._source.data["index"] ) ) if page else self._dataFrame.index.to_numpy()
+    def pids(self) -> np.ndarray:
+        return self._dataFrame.index.to_numpy()
+
+    def page_pids(self) -> np.ndarray:
+        return self.idxs2pids( np.array( self._source.data["index"] ) )
 
     @property
     def current_page(self) -> int:
@@ -47,13 +50,15 @@ class bkSpreadsheet:
     def current_page(self, page_index: int):
         if self._current_page != page_index:
             self._current_page = page_index
-            self._paging_enabled = True
-            self._current_page_data = self._dataFrame.iloc[ self.page_start:self.page_end ]
-            if self._source is None:
-                self._source = ColumnDataSource( self._current_page_data )
-                self._source.selected.on_change("indices", self._process_selection_change )
-            self._source.data = self._current_page_data
-            self.refresh_selection()
+            self.refresh_page_data()
+
+    def refresh_page_data(self):
+        self._current_page_data = self._dataFrame.iloc[ self.page_start:self.page_end ]
+        if self._source is None:
+            self._source = ColumnDataSource( self._current_page_data )
+            self._source.selected.on_change("indices", self._process_selection_change )
+        self._source.data = self._current_page_data
+        self.refresh_selection()
 
     @exception_handled
     def refresh_selection(self):
@@ -62,12 +67,13 @@ class bkSpreadsheet:
         self._source.selected.indices = selection_indices.tolist()
 
     def idxs2pids(self, idxs: Union[List,np.ndarray]) -> np.ndarray:
-        if self._paging_enabled:
-            _idxs = idxs if isinstance(idxs,np.ndarray) else np.array( idxs )
-            return _idxs + self.page_start
+        page_idxs = idxs if isinstance(idxs, np.ndarray) else np.array(idxs)
+        global_idxs = page_idxs + self.page_start
+        if self._sequential_index:
+            return global_idxs
         else:
-            page_pids: np.ndarray = self.pids()
-            return page_pids[idxs]
+            global_pids: np.ndarray = self.pids()
+            return global_pids[global_idxs]
 
     @property
     def page_start(self) -> int:
@@ -78,24 +84,24 @@ class bkSpreadsheet:
         return self.page_start + self._rows_per_page
 
     def pid2idx(self, pid: int ) -> int:
-        if self._paging_enabled:
+        if self._sequential_index:
             idx = pid - self.page_start
-            return idx if self.valid_idx( idx ) else -1
         else:
             try:
-                page_pids = self.pids()
-                return page_pids.tolist().index( pid )
+                pids = self.pids()
+                idx = pids.tolist().index( pid ) - self.page_start
             except ValueError:
                 return -1
+        return idx if self.valid_idx(idx) else -1
 
     def pids2idxs(self, pids: Union[List,np.ndarray] ) -> np.ndarray:
-        if self._paging_enabled:
-            _pids = pids if isinstance(pids, np.ndarray) else np.array(pids)
+        _pids: np.ndarray = pids if isinstance(pids, np.ndarray) else np.array(pids)
+        if self._sequential_index:
             idx: np.ndarray = _pids - self.page_start
-            return idx[ (idx>=0) & (idx<self._rows_per_page) ]
         else:
-            page_pids: np.ndarray = self.pids()
-            return np.nonzero( page_pids.isin( pids ) )
+            global_idxs: np.ndarray = np.nonzero( np.isin( self.pids(), _pids ) )[0]
+            idx: np.ndarray = global_idxs - self.page_start
+        return idx[(idx >= 0) & (idx < self._rows_per_page)]
 
     def valid_idx(self, idx: int ):
         return (idx>=0) and (idx<self._rows_per_page)
@@ -135,9 +141,8 @@ class bkSpreadsheet:
         return self._source.data[colname]
 
     def from_df(self, pdf: pd.DataFrame ):
-#        data = self._source.from_df( pdf )
-        self._source.data = pdf
-        self._paging_enabled = False
+        self._dataFrame = pdf
+        self.refresh_page_data()
         lgm().log( f"\n   bkSpreadsheet-> Update page, pdf cols = {pdf.columns}, pdf shape = {pdf.shape}, source.data = {self._source.data}, col data = {self._source.data['cid']}")
 
     def patch_data_element(self, colname: str, pid: int, value ):
@@ -217,18 +222,16 @@ class TableManager(SCSingletonConfigurable):
         new_pids = set( pids.tolist() )
         for (cid,table) in enumerate(self._tables):
             if cid > 0:
-                current_pids: Set[int] = set( table.pids(False).tolist() )
-                deleted_pids, added_pids = set(),set()
-                if cid == lm().current_cid:     added_pids = (new_pids - current_pids)
-                else:                           deleted_pids = new_pids.intersection(current_pids)
-                nc = len(added_pids) + len(deleted_pids)
-                if nc > 0:
-                    lgm().log(f" TM----> UPDATE CLASS TABLE [class={cid}]:" )
-                    if len(deleted_pids): lgm().log(f"    ######## deleted pids= {deleted_pids} ")
-                    if len(added_pids):   lgm().log(f"    ######## added pids= {added_pids} ")
-                    cid_mask: np.ndarray = self._dataFrame.index.isin( new_pids )
-                    df: pd.DataFrame = self._dataFrame[ cid_mask ].assign( cid=cid )
-                    table.from_df( df )
+                current_pids: Set[int] = set( table.pids().tolist() )
+                if cid == lm().current_cid:
+                    updated_pids = current_pids.union(new_pids)
+                else:
+                    updated_pids = current_pids - new_pids
+                if len( updated_pids ) != len( current_pids ):
+                    cid_mask: np.ndarray = self._dataFrame.index.isin(updated_pids)
+                    df: pd.DataFrame = self._dataFrame[cid_mask].assign(cid=cid)
+                    table.from_df(df)
+                    lgm().log(f"  TABLE[{cid}] update: {current_pids} -> {updated_pids}" )
 
     def _handle_table_selection(self, old: np.ndarray, new: np.ndarray ):
         lgm().log(f"  **TABLE-> new selection event, indices:  {old} -> {new}")
@@ -252,7 +255,7 @@ class TableManager(SCSingletonConfigurable):
     def _createTable( self, tab_index: int ) -> bkSpreadsheet:
         assert self._dataFrame is not None, " TableManager has not been initialized "
         if tab_index == 0:
-            bkTable = bkSpreadsheet( self._dataFrame )
+            bkTable = bkSpreadsheet( self._dataFrame, sequential=True )
         else:
             empty_catalog = {col: np.empty( [0], 'U' ) for col in self._cols}
             dFrame: pd.DataFrame = pd.DataFrame(empty_catalog, dtype='U' )
