@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import ipywidgets as ipw
 from spectraclass.gui.widgets import ToggleButton
+from bokeh.models.widgets import TextInput
 from spectraclass.data.base import DataManager, dm
 from spectraclass.model.labels import LabelsManager
 from spectraclass.model.base import SCSingletonConfigurable
@@ -34,11 +35,10 @@ class bkSpreadsheet:
         self._selection = np.full( [ self._dataFrame.shape[0] ], False, np.bool )
         self.current_page = kwargs.get('init_page', 0)
         self._table = DataTable( source=self._source, columns=self._columns, width=400, height=280, selectable="checkbox", index_position=None )
-        self._table.columns
 
     @property
     def table_data(self) -> pd.DataFrame:
-        return self._dataFrame if self._filteredData is None else self._filteredData
+        return self._dataFrame if self._filteredData is None else self._filteredData.filter( items=self._dataFrame.columns )
 
     def clear_filter(self):
         self._filteredData = None
@@ -182,6 +182,7 @@ class TableManager(SCSingletonConfigurable):
         self._current_column_index: int = 0
         self._current_selection: np.ndarray = None
         self._search_widgets: Dict[str,ToggleButton] = None
+        self._search_column: ipw.Dropdown = None
         self._match_options = {}
         self._events = []
         self._broadcast_selection_events = True
@@ -294,13 +295,15 @@ class TableManager(SCSingletonConfigurable):
         if self._search_widgets is None:
             self._search_widgets = dict(
                 case_sensitive=  ToggleButton( ['font', 'asterisk'], ['true', 'false'],['case sensitive', 'case insensitive']),
-                match=           ToggleButton( ['caret-square-left', 'caret-square-right', 'caret-square-down'], ['begins-with', 'ends-with', 'contains'], ['begins with', 'ends with', 'contains'])
+                match=           ToggleButton( ['caret-square-left', 'caret-square-right', 'caret-square-down'], ['begins-with', 'ends-with', 'contains'], ['begins with', 'ends with', 'contains']),
             )
             for name, widget in self._search_widgets.items():
                 widget.add_listener( partial( self._process_find_options, name ) )
                 self._match_options[ name ] = widget.state
+            self._search_column = ipw.Dropdown(options=self._dataFrame.columns, value=self._dataFrame.columns[0], description_tooltip='column', disabled=False)
+            self._search_column.layout = ipw.Layout( width = "120px", min_width = "120px", height = "27px" )
 
-        buttonbox =  ipw.HBox( [ w.gui() for w in self._search_widgets.values() ] )
+        buttonbox =  ipw.HBox( [ w.gui() for w in self._search_widgets.values() ] + [ self._search_column ] )
         buttonbox.layout = ipw.Layout( width = "300px", min_width = "300px", height = "auto" )
         return buttonbox
 
@@ -308,7 +311,7 @@ class TableManager(SCSingletonConfigurable):
         match = self._match_options['match']
         case_sensitive = ( self._match_options['case_sensitive'] == "true" )
         df: pd.DataFrame = self.selected_table.to_df()
-        cname = self._cols[ self._current_column_index ]
+        cname = self._search_column.value
         np_coldata = df[cname].to_numpy( dtype='U' )
         if not case_sensitive: np_coldata = np.char.lower( np_coldata )
         match_str = event['new'] if case_sensitive else event['new'].lower()
@@ -319,18 +322,15 @@ class TableManager(SCSingletonConfigurable):
             elif match == "ends-with":   mask = np.char.endswith( np_coldata, match_str )
             elif match == "contains":    mask = ( np.char.find( np_coldata, match_str ) >= 0 )
             else: raise Exception( f"Unrecognized match option: {match}")
-            lgm().log( f" **TABLE-> process_find[ M:{match} CS:{case_sensitive} col:{self._current_column_index} ], coldata shape = {np_coldata.shape}, match_str={match_str}, coldata[:10]={np_coldata[:10]}" )
             self.selected_table.set_filter_data( df[mask] )
-            lgm().log(f"  **TABLE->  cname = {cname}, mask shape = {mask.shape}, mask #nonzero = {np.count_nonzero(mask)}")
 
     def _clear_selection(self):
         self._current_selection = None
         self._wFilter.value = ""
 
     def _process_find_options(self, name: str, state: str ):
-        lgm().log( f" **TABLE-> process_find_options[{name}]: {state}" )
         self._match_options[ name ] = state
-        self._process_filter(dict(new=self._wFilter.value))
+ #       self._process_filter(dict(new=self._wFilter.value))
 
     def _createTableTabs(self) -> ipw.Tab:
         wTab = ipw.Tab()

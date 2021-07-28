@@ -285,9 +285,7 @@ class TableManager(SCSingletonConfigurable):
             self.broadcast_selection_event( selection )
 
     def _process_find_options(self, name: str, state: str ):
-        lgm().log( f" **TABLE-> process_find_options[{name}]: {state}" )
         self._match_options[ name ] = state
-        self._process_filter(dict(new=self._wFind.value))
 
     def _createTableTabs(self) -> ipw.Tab:
         wTab = ipw.Tab()
