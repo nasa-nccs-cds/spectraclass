@@ -157,7 +157,6 @@ class GraphPlotManager(SCSingletonConfigurable):
     def plot_graph( self, pids: List[int] = None ):
         from spectraclass.model.labels import LabelsManager, lm
         if pids is None: pids = lm().getPids()
-        lgm().log(f" plot spectral graph[{self._wGui.selected_index}]: pids = {pids} ")
         current_graph: mplGraphPlot = self.current_graph()
         current_graph.select_items( pids )
         current_graph.plot()

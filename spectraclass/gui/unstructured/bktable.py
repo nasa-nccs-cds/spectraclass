@@ -45,6 +45,7 @@ class bkSpreadsheet:
         self.refresh_page_data()
 
     def set_filter_data(self, filter_data: pd.DataFrame):
+        self._current_page = 0
         self._filteredData = filter_data
         self.refresh_page_data()
 
@@ -60,7 +61,7 @@ class bkSpreadsheet:
 
     @current_page.setter
     def current_page(self, page_index: int):
-        if self._current_page != page_index:
+        if (self._current_page != page_index) and (page_index is not None):
             self._current_page = page_index
             self.refresh_page_data()
 
@@ -179,10 +180,11 @@ class TableManager(SCSingletonConfigurable):
         self._tables: List[bkSpreadsheet] = []
         self._cols: List[str] = None
         self._wTablesWidget: ipw.Tab = None
+        self._wPages: ipw.Dropdown = None
         self._current_column_index: int = 0
         self._current_selection: np.ndarray = None
-        self._search_widgets: Dict[str,ToggleButton] = None
-        self._search_column: ipw.Dropdown = None
+        self._filter_state_widgets: Dict[str, ToggleButton] = None
+        self._filter_column: ipw.Dropdown = None
         self._match_options = {}
         self._events = []
         self._broadcast_selection_events = True
@@ -275,8 +277,8 @@ class TableManager(SCSingletonConfigurable):
         self._wFilter = ipw.Text(value='', placeholder='Filter rows', description='Filter:', disabled=False, continuous_update = False, tooltip="Filter selected column by regex")
         self._wFilter.observe(self._process_filter, 'value')
         wFindOptions = self._createFilterOptionButtons()
-        wPages = self.page_widget()
-        wSelectionPanel = ipw.HBox([self._wFilter, wFindOptions, wPages])
+        self._wPages = self.page_widget()
+        wSelectionPanel = ipw.HBox([self._wFilter, wFindOptions, self._wPages])
         wSelectionPanel.layout = ipw.Layout( justify_content = "center", align_items="center", width = "auto", height = "50px", min_height = "50px", border_width=1, border_color="white" )
         return wSelectionPanel
 
@@ -287,23 +289,32 @@ class TableManager(SCSingletonConfigurable):
         widget.observe( self._update_page, "value" )
         return widget
 
+    @exception_handled
+    def _update_page_widget(self):
+        nRows: int = self.selected_table.table_data.shape[0]
+        npages: int = math.ceil( nRows / self.rows_per_page )
+        self._wPages.options = list(range(npages))
+        self._wPages.index = 0
+        lgm().log( f"  Update pages: npages = {npages}")
+
     def _update_page(self, event: Dict[str,str] ):
         if event['type'] == 'change':
             self.selected_table.current_page = event['new']
 
     def _createFilterOptionButtons(self):
-        if self._search_widgets is None:
-            self._search_widgets = dict(
+        if self._filter_state_widgets is None:
+            self._filter_state_widgets = dict(
+                clear=           ToggleButton( ['redo'], ['reset'], ['clear/reset'] ),  #  "times-circle"?
                 case_sensitive=  ToggleButton( ['font', 'asterisk'], ['true', 'false'],['case sensitive', 'case insensitive']),
-                match=           ToggleButton( ['caret-square-left', 'caret-square-right', 'caret-square-down'], ['begins-with', 'ends-with', 'contains'], ['begins with', 'ends with', 'contains']),
+                match=           ToggleButton( ['caret-square-left', 'caret-square-down', 'caret-square-right',  'caret-square-up'], ['begins-with', 'regex', 'ends-with', 'contains'], ['begins with', 'regex', 'ends with', 'contains']),
             )
-            for name, widget in self._search_widgets.items():
-                widget.add_listener( partial( self._process_find_options, name ) )
+            for name, widget in self._filter_state_widgets.items():
+                widget.add_listener(partial(self._process_filter_options, name))
                 self._match_options[ name ] = widget.state
-            self._search_column = ipw.Dropdown(options=self._dataFrame.columns, value=self._dataFrame.columns[0], description_tooltip='column', disabled=False)
-            self._search_column.layout = ipw.Layout( width = "120px", min_width = "120px", height = "27px" )
+            self._filter_column = ipw.Dropdown(options=self._dataFrame.columns, value=self._dataFrame.columns[0], description_tooltip='column', disabled=False)
+            self._filter_column.layout = ipw.Layout(width ="120px", min_width ="120px", height ="27px")
 
-        buttonbox =  ipw.HBox( [ w.gui() for w in self._search_widgets.values() ] + [ self._search_column ] )
+        buttonbox =  ipw.HBox([w.gui() for w in self._filter_state_widgets.values()] + [self._filter_column])
         buttonbox.layout = ipw.Layout( width = "300px", min_width = "300px", height = "auto" )
         return buttonbox
 
@@ -311,26 +322,30 @@ class TableManager(SCSingletonConfigurable):
         match = self._match_options['match']
         case_sensitive = ( self._match_options['case_sensitive'] == "true" )
         df: pd.DataFrame = self.selected_table.to_df()
-        cname = self._search_column.value
-        np_coldata = df[cname].to_numpy( dtype='U' )
+        cname = self._filter_column.value
+        np_coldata = df[cname]
         if not case_sensitive: np_coldata = np.char.lower( np_coldata )
         match_str = event['new'] if case_sensitive else event['new'].lower()
         if len( match_str ) == 0:
             self.selected_table.clear_filter()
         else:
-            if match == "begins-with":   mask = np.char.startswith( np_coldata, match_str )
-            elif match == "ends-with":   mask = np.char.endswith( np_coldata, match_str )
-            elif match == "contains":    mask = ( np.char.find( np_coldata, match_str ) >= 0 )
+            if match == "begins-with":   mask = np_coldata.str.startswith( match_str )
+            elif match == "ends-with":   mask = np_coldata.str.endswith( match_str )
+            elif match == "contains":    mask = np_coldata.str.contains(  match_str )
+            elif match == "regex":       mask = np_coldata.str.match( r'{}'.format(match_str) )
             else: raise Exception( f"Unrecognized match option: {match}")
             self.selected_table.set_filter_data( df[mask] )
+        self._update_page_widget()
 
     def _clear_selection(self):
         self._current_selection = None
         self._wFilter.value = ""
 
-    def _process_find_options(self, name: str, state: str ):
+    def _process_filter_options(self, name: str, state: str):
         self._match_options[ name ] = state
- #       self._process_filter(dict(new=self._wFilter.value))
+        if name == "clear":
+            self.selected_table.clear_filter()
+            self._wFilter.value = ""
 
     def _createTableTabs(self) -> ipw.Tab:
         wTab = ipw.Tab()
