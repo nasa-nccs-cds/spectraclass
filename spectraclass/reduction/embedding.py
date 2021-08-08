@@ -3,6 +3,8 @@ from typing import List, Union, Tuple, Optional, Dict
 from ..graph.manager import ActivationFlowManager
 from sklearn.decomposition import PCA, FastICA
 import xarray as xa
+import torch
+import torch.nn as nn
 import numpy as np, time, traceback
 from ..model.labels import LabelsManager
 import traitlets as tl
@@ -93,9 +95,6 @@ class ReductionManager(SCSingletonConfigurable):
             return results
 
     def autoencoder_reduction(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], ndim: int, epochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
-        from keras.layers import Input, Dense
-        from keras.models import Model
-        from keras import losses, regularizers
         input_dims = train_input.shape[1]
         ispecs: List[np.ndarray] = [train_input.data.max(0), train_input.data.min(0), train_input.data.mean(0), train_input.data.std(0)]
         lgm().log(f" autoencoder_reduction: train_input shape = {train_input.shape} ")
@@ -104,26 +103,26 @@ class ReductionManager(SCSingletonConfigurable):
         lgm().log(f"   ----> ave = {ispecs[2][:64].tolist()} ")
         lgm().log(f"   ----> std = {ispecs[3][:64].tolist()} ")
         reduction_factor = 2
-        inputlayer = Input( shape=[input_dims] )
         activation = 'tanh'
         optimizer = 'rmsprop'
-        layer_dims, x = int( round( input_dims / reduction_factor )), inputlayer
-        while layer_dims > ndim:
-            x = Dense(layer_dims, activation=activation)(x)
-            layer_dims = int( round( layer_dims / reduction_factor ))
-        encoded = x = Dense( ndim, activation=activation, activity_regularizer=regularizers.l1( sparsity ) )(x)
-        layer_dims = int( round( ndim * reduction_factor ))
-        while layer_dims < input_dims:
-            x = Dense(layer_dims, activation=activation)(x)
-            layer_dims = int( round( layer_dims * reduction_factor ))
-        decoded = Dense( input_dims, activation='linear' )(x)
+        in_features, x = int( round( input_dims / reduction_factor )), inputlayer
+        layers = []
+        while in_features > ndim:
+            out_features = int( round( in_features / reduction_factor ))
+            layers.append( nn.Linear(in_features=in_features, out_features=out_features ) )
+            in_features = out_features
+        encoded = nn.Linear(in_features=in_features, out_features=ndim )
+        layers.append( encoded )
+        in_features = ndim
+        while in_features < input_dims:
+            out_features = int(round(in_features * reduction_factor))
+            layers.append( nn.Linear(in_features=in_features, out_features=out_features ) )
+            in_features = out_features
+        decoded = nn.Linear(in_features=in_features, out_features=input_dims )
+        layers.append(decoded)
 
-#        modelcheckpoint = ModelCheckpoint('xray_auto.weights', monitor='loss', verbose=1, save_best_only=True, save_weights_only=True, mode='auto', period=1)
-#        earlystopping = EarlyStopping(monitor='loss', min_delta=0., patience=100, verbose=1, mode='auto')
         autoencoder = Model( inputs=[inputlayer], outputs=[decoded] )
         encoder = Model( inputs=[inputlayer], outputs=[encoded] )
-#        autoencoder.summary()
-#        encoder.summary()
         autoencoder.compile(loss=self.loss, optimizer=optimizer )
         autoencoder.fit( train_input.data, train_input.data, epochs=epochs, batch_size=256, shuffle=True )
         results = []
@@ -141,6 +140,65 @@ class ReductionManager(SCSingletonConfigurable):
                     lgm().log(f" ----> encoding: shape = {encoded_data.shape}, val[5][5]108 = {encoded_data[:5][:5]}, std = {encoded_data.std(0)} ")
             except Exception as err:
                 lgm().exception( f"Unable to process test input[{iT}], input shape = {test_input.shape}, error = {err}" )
+        return results
+
+    def autoencoder_reduction_keras(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], ndim: int,
+                              epochs: int = 100, sparsity: float = 0.0) -> List[
+        Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
+        from keras.layers import Input, Dense
+        from keras.models import Model
+        from keras import losses, regularizers
+        input_dims = train_input.shape[1]
+        ispecs: List[np.ndarray] = [train_input.data.max(0), train_input.data.min(0), train_input.data.mean(0),
+                                    train_input.data.std(0)]
+        lgm().log(f" autoencoder_reduction: train_input shape = {train_input.shape} ")
+        lgm().log(f"   ----> max = {ispecs[0][:64].tolist()} ")
+        lgm().log(f"   ----> min = {ispecs[1][:64].tolist()} ")
+        lgm().log(f"   ----> ave = {ispecs[2][:64].tolist()} ")
+        lgm().log(f"   ----> std = {ispecs[3][:64].tolist()} ")
+        reduction_factor = 2
+        inputlayer = Input(shape=[input_dims])
+        activation = 'tanh'
+        optimizer = 'rmsprop'
+        layer_dims, x = int(round(input_dims / reduction_factor)), inputlayer
+        while layer_dims > ndim:
+            x = Dense(layer_dims, activation=activation)(x)
+            layer_dims = int(round(layer_dims / reduction_factor))
+        encoded = x = Dense(ndim, activation=activation, activity_regularizer=regularizers.l1(sparsity))(x)
+        layer_dims = int(round(ndim * reduction_factor))
+        while layer_dims < input_dims:
+            x = Dense(layer_dims, activation=activation)(x)
+            layer_dims = int(round(layer_dims * reduction_factor))
+        decoded = Dense(input_dims, activation='linear')(x)
+
+        #        modelcheckpoint = ModelCheckpoint('xray_auto.weights', monitor='loss', verbose=1, save_best_only=True, save_weights_only=True, mode='auto', period=1)
+        #        earlystopping = EarlyStopping(monitor='loss', min_delta=0., patience=100, verbose=1, mode='auto')
+        autoencoder = Model(inputs=[inputlayer], outputs=[decoded])
+        encoder = Model(inputs=[inputlayer], outputs=[encoded])
+        #        autoencoder.summary()
+        #        encoder.summary()
+        autoencoder.compile(loss=self.loss, optimizer=optimizer)
+        autoencoder.fit(train_input.data, train_input.data, epochs=epochs, batch_size=256, shuffle=True)
+        results = []
+        if test_inputs is None: test_inputs = [train_input]
+        for iT, test_input in enumerate(test_inputs):
+            try:
+                encoded_data: np.ndarray = encoder.predict(test_input.data)
+                reproduced_data: np.ndarray = autoencoder.predict(test_input.data)
+                reproduction: xa.DataArray = test_input.copy(data=reproduced_data)
+                results.append((encoded_data, reproduction, test_input))
+                if iT == 0:
+                    lgm().log(
+                        f" Autoencoder_reduction with sparsity={sparsity}, result: shape = {encoded_data.shape}")
+                    lgm().log(
+                        f" ----> encoder_input: shape = {test_input.shape}, val[5][5] = {test_input.data[:5][:5]} ")
+                    lgm().log(
+                        f" ----> reproduction: shape = {reproduced_data.shape}, val[5][5] = {reproduced_data[:5][:5]} ")
+                    lgm().log(
+                        f" ----> encoding: shape = {encoded_data.shape}, val[5][5]108 = {encoded_data[:5][:5]}, std = {encoded_data.std(0)} ")
+            except Exception as err:
+                lgm().exception(
+                    f"Unable to process test input[{iT}], input shape = {test_input.shape}, error = {err}")
         return results
 
     def umap_init( self,  point_data: xa.DataArray, **kwargs ) -> Optional[np.ndarray]:
