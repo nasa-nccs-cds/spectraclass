@@ -20,6 +20,65 @@ def scale( x: xa.DataArray, axis = 0 ) -> xa.DataArray:
     result.attrs.update( x.attrs )
     return result
 
+class Autoencoder(nn.Module):
+    def __init__(self, input_dims: int, reduced_dims: int, shrink_factor: float = 2 ):
+        super(Autoencoder, self).__init__()
+        self.flatten = nn.Flatten()
+        self.loss = nn.MSELoss()
+        in_features = input_dims
+        model_layers, encoder_layers = [], []
+        while True:
+            out_features = int( round( in_features / shrink_factor ))
+            if out_features <= reduced_dims: break
+            encoder_layers += [ nn.Linear(in_features=in_features, out_features=out_features ), nn.Tanh() ]
+            in_features = out_features
+        encoder_layers +=  [ nn.Linear(in_features=in_features, out_features=reduced_dims ), nn.Tanh() ]
+        model_layers += encoder_layers
+        in_features = reduced_dims
+        while True:
+            out_features = int( round( in_features * shrink_factor ) )
+            if out_features >= input_dims: break
+            model_layers += [ nn.Linear(in_features=in_features, out_features=out_features ), nn.Tanh() ]
+            in_features = out_features
+        model_layers += [ nn.Linear( in_features=in_features, out_features=input_dims ) ]
+        self.linear_relu_stack = nn.Sequential( *model_layers )
+
+    def forward(self, x):
+        x = self.flatten(x)
+        reproduction = self.linear_relu_stack(x)
+        return reproduction
+
+    def train_loop(self, dataloader, learning_rate ):
+        optimizer = torch.optim.SGD( self.parameters(), lr=learning_rate )
+        size = len(dataloader.dataset)
+        for batch, (X, y) in enumerate(dataloader):
+            pred = self(X)
+            loss = self.loss(pred, y)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            if batch % 100 == 0:
+                loss, current = loss.item(), batch * len(X)
+                print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+
+
+    def test_loop(self, dataloader):
+        size = len(dataloader.dataset)
+        num_batches = len(dataloader)
+        test_loss, correct = 0, 0
+
+        with torch.no_grad():
+            for X, y in dataloader:
+                pred = self(X)
+                test_loss += self.loss(pred, y).item()
+                correct += (pred.argmax(1) == y).type(torch.float).sum().item()
+
+        test_loss /= num_batches
+        correct /= size
+        print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+
 class ReductionManager(SCSingletonConfigurable):
     init = tl.Unicode("random").tag(config=True,sync=True)
     loss = tl.Unicode("mean_squared_error").tag(config=True,sync=True)
@@ -103,23 +162,24 @@ class ReductionManager(SCSingletonConfigurable):
         lgm().log(f"   ----> ave = {ispecs[2][:64].tolist()} ")
         lgm().log(f"   ----> std = {ispecs[3][:64].tolist()} ")
         reduction_factor = 2
-        activation = 'tanh'
         optimizer = 'rmsprop'
-        in_features, x = int( round( input_dims / reduction_factor )), inputlayer
-        layers = []
-        while in_features > ndim:
+        in_features = input_dims
+        model_layers, encoder_layers = [], []
+        while True:
             out_features = int( round( in_features / reduction_factor ))
-            layers.append( nn.Linear(in_features=in_features, out_features=out_features ) )
+            if out_features <= ndim: break
+            encoder_layers += [ nn.Linear(in_features=in_features, out_features=out_features ), nn.Tanh() ]
             in_features = out_features
-        encoded = nn.Linear(in_features=in_features, out_features=ndim )
-        layers.append( encoded )
+        encoder_layers +=  [ nn.Linear(in_features=in_features, out_features=ndim ), nn.Tanh() ]
+        model_layers += encoder_layers
         in_features = ndim
-        while in_features < input_dims:
-            out_features = int(round(in_features * reduction_factor))
-            layers.append( nn.Linear(in_features=in_features, out_features=out_features ) )
+        while True:
+            out_features = int( round( in_features * reduction_factor ) )
+            if out_features >= input_dims: break
+            model_layers += [ nn.Linear(in_features=in_features, out_features=out_features ), nn.Tanh() ]
             in_features = out_features
-        decoded = nn.Linear(in_features=in_features, out_features=input_dims )
-        layers.append(decoded)
+        model_layers += [ nn.Linear( in_features=in_features, out_features=input_dims ) ]
+        self.autoencoder = nn.Sequential( *model_layers )
 
         autoencoder = Model( inputs=[inputlayer], outputs=[decoded] )
         encoder = Model( inputs=[inputlayer], outputs=[encoded] )
