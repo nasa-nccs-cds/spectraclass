@@ -14,7 +14,7 @@ Conda CPU Versioned Setup
     > jupyter labextension install @jupyter-widgets/jupyterlab-manager ipycanvas ipyevents ipywidgets itkwidgets qgrid2 jupyter-matplotlib @bokeh/jupyter_bokeh
 
 ##### Jupyterlab 3
-    > conda install -c conda-forge nb_conda_kernels nodejs jupyterlab jupytext  jupyterlab_server ipywidgets ipycanvas ipyevents itkwidgets ipympl numpy gdal shapely pynndescent xarray rasterio umap-learn scipy scikit-learn toml jupyter_bokeh keras tensorflow rioxarray numba dask netcdf4 tornado matplotlib utm scikit-image
+    > conda install -c conda-forge nb_conda_kernels nodejs jupyterlab jupytext  jupyterlab_server ipywidgets ipycanvas ipyevents itkwidgets ipympl numpy gdal shapely pynndescent xarray rasterio umap-learn scipy scikit-learn toml jupyter_bokeh pytorch rioxarray numba dask netcdf4 matplotlib utm scikit-image
 
 Conda GPU Setup
 ---------------
