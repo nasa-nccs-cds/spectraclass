@@ -87,7 +87,7 @@ class SpatialDataManager(ModeDataManager):
         if self.reduce_method and (self.reduce_method.lower() != "none"):
             dave, dmag =  data.values.mean(0), 2.0*data.values.std(0)
             normed_data = ( data.values - dave ) / dmag
-            reduced_spectra, reproduction, _ = rm().reduce( normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )[0]
+            reduced_spectra, reproduction, _ = rm().reduce( normed_data, self.model_dims, self.reduce_nepochs )
             coords = dict( samples=data.coords['samples'], band=np.arange( self.model_dims )  )
             return xa.DataArray( reduced_spectra, dims=['samples', 'band'], coords=coords )
         return data
@@ -268,9 +268,9 @@ class SpatialDataManager(ModeDataManager):
             else:
                 range = [ blocks_point_data.min().data, blocks_point_data.max().data ]
                 lgm().log(f" Preparing point data with shape {blocks_point_data.shape} and range = {range}", print=True)
-                blocks_reduction = rm().reduce( blocks_point_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
+                blocks_reduction = rm().reduce( blocks_point_data, self.model_dims, self.reduce_nepochs )
                 if blocks_reduction is not None:
-                    self.model_dims = blocks_reduction[0][0].shape[1]
+                    self.model_dims = blocks_reduction[0].shape[1]
                     for ( reduced_spectra, reproduction, point_data ) in blocks_reduction:
                         file_name = point_data.attrs['file_name']
                         model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )

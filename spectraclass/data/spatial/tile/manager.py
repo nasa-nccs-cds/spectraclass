@@ -140,14 +140,10 @@ class TileManager(SCSingletonConfigurable):
 
     def rescale(self, raster: xa.DataArray, **kwargs ) -> xa.DataArray:
         norm_type = kwargs.get( 'norm', 'spectral' )
-        refresh = kwargs.get('refresh', False )
         if norm_type == "none":
             result = raster
         else:
-            if norm_type == "spatial":
-                norm: xa.DataArray = self._computeSpatialNorm( raster, refresh )
-            else:          # 'spectral'
-                norm: xa.DataArray = raster.mean( dim=['band'], skipna=True )
+            norm: xa.DataArray = raster.mean( dim=['band'], skipna=True )
             result =  raster / norm
             result.attrs = raster.attrs
         return result
