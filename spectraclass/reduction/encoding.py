@@ -5,7 +5,7 @@ import xarray as xa
 import torch
 import torch.nn as nn
 import numpy as np, time, traceback
-from spectraclass.data.loaders import xaTorchDataset, xaTorchDataLoader
+from spectraclass.data.loaders import xaTorchDataset
 import traitlets as tl
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 from spectraclass.model.base import SCSingletonConfigurable
@@ -53,21 +53,23 @@ class Autoencoder(nn.Module):
         return xa.DataArray( x.numpy(), coords, dims, f"{input.name}_embedding-{self.reduced_dims}", input.attrs )
 
     def forward(self, x: torch.Tensor ) -> torch.Tensor:
-        print( "forward ---->")
+        npX: np.ndarray = x.numpy()
+        lgm().log(f"  --> forward: x shape = {npX.shape}, dtype = {npX.dtype}")
         for lid in self._ops:
             layer = getattr( self, lid )
             x = layer(x)
         return x
 
     @classmethod
-    def getLoader( cls, input: xa.DataArray, batch_size, shuffle ) -> Optional[xaTorchDataLoader]:
+    def getLoader( cls, input: xa.DataArray, batch_size, shuffle ) -> Optional[DataLoader]:
         if input is None: return None
-        dataset = xaTorchDataset( input, input)
-        return xaTorchDataLoader( dataset, batch_size, shuffle )
+        dataset = xaTorchDataset( input, input )
+        return DataLoader( dataset, batch_size, shuffle )
 
 class ReductionManager(SCSingletonConfigurable):
-    loss = tl.Unicode("mean_squared_error").tag(config=True,sync=True)
-    ndim = tl.Int( 3 ).tag(config=True,sync=True)
+    learning_rate = tl.Float(0.001).tag(config=True,sync=True)
+    reduction_factor = tl.Float(2).tag(config=True,sync=True)
+    batch_size = tl.Int(64).tag(config=True,sync=True)
 
     def __init__(self, **kwargs):
         super(ReductionManager, self).__init__(**kwargs)
@@ -76,30 +78,28 @@ class ReductionManager(SCSingletonConfigurable):
         self._samples_coord = None
 
     @exception_handled
-    def reduce(self, input_data: xa.DataArray,  ndim: int, nepochs: int = 100 ) -> Tuple[xa.DataArray, xa.DataArray, xa.DataArray]:
+    def reduce(self, input_data: xa.DataArray, ndim: int, nepochs: int = 2 ) -> Tuple[xa.DataArray, xa.DataArray, xa.DataArray]:
         with xa.set_options(keep_attrs=True):
             return self.autoencoder_reduction( input_data, ndim, nepochs )
 
     def autoencoder_reduction(self, input_data: xa.DataArray, ndim: int, epochs: int, **kwargs ) -> Tuple[xa.DataArray, xa.DataArray, xa.DataArray]:
         input_dims = input_data.shape[1]
         ispecs: List[np.ndarray] = [input_data.data.max(0), input_data.data.min(0), input_data.data.mean(0), input_data.data.std(0)]
-        lgm().log(f" autoencoder_reduction: input_data shape = {input_data.shape} ")
-        lgm().log(f"   ----> max = {ispecs[0][:64].tolist()} " )
-        lgm().log(f"   ----> min = {ispecs[1][:64].tolist()} " )
-        lgm().log(f"   ----> ave = {ispecs[2][:64].tolist()} " )
-        lgm().log(f"   ----> std = {ispecs[3][:64].tolist()} " )
-        reduction_factor = kwargs.get('reduction_factor', 2 )
-        batch_size = kwargs.get('batch_size', 64 )
-        learning_rate: float = float( kwargs.get('learning_rate', 0.1 ) )
+        print(f" autoencoder_reduction: input_data shape = {input_data.shape}, learning_rate = {self.learning_rate} ")
+        print(f"   ----> max = {ispecs[0][:64].tolist()} " )
+        print(f"   ----> min = {ispecs[1][:64].tolist()} " )
+        print(f"   ----> ave = {ispecs[2][:64].tolist()} " )
+        print(f"   ----> std = {ispecs[3][:64].tolist()} " )
+
         shuffle: bool = bool( kwargs.get('shuffle', True ) )
         autoencoder = Autoencoder( )
-        autoencoder.build( input_dims, ndim, reduction_factor )
-        dataloader: xaTorchDataLoader = Autoencoder.getLoader( input_data, batch_size, shuffle )
+        autoencoder.build( input_dims, ndim, self.reduction_factor )
+        dataloader: DataLoader = Autoencoder.getLoader( input_data, self.batch_size, shuffle )
         self.criterion = nn.MSELoss()
-        self.optimizer = torch.optim.Adam(autoencoder.parameters(), lr=float(learning_rate))
+        self.optimizer = torch.optim.Adam( autoencoder.parameters(), lr=self.learning_rate )
 
         for t in range(epochs):
-            lgm().log(f"Epoch {t + 1}\n-------------------------------")
+            print(f"Epoch {t + 1}\n-------------------------------")
             self.train_loop( autoencoder, dataloader )
 
         embedding: xa.DataArray = autoencoder.embedding( input_data )
@@ -107,20 +107,20 @@ class ReductionManager(SCSingletonConfigurable):
 
         return ( embedding, reproduction, input_data )
 
-    def train_loop( self, autoencoder: Autoencoder, dataloader: xaTorchDataLoader ):
-        size = len( dataloader )
+    def train_loop( self, autoencoder: Autoencoder, dataloader: DataLoader ):
+        size = len( dataloader.dataset )
         for batch, (X, y) in enumerate(dataloader):
-            lgm().log( f"  --> Batch: {batch}, X shape = {X.numpy().shape}" )
             self.optimizer.zero_grad()
             pred = autoencoder(X)
             loss = self.criterion(pred, y)
             loss.backward()
             self.optimizer.step()
-            lgm().log(f"  --- --> Optimize: loss = {loss}")
 
             if batch % 10 == 0:
+                npX: np.ndarray = X.numpy()
+                print(f"  --> Batch: {batch}, X shape = {npX.shape}, dtype = {npX.dtype}")
                 loss, current = loss.item(), batch * len(X)
-                print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+                print(f"  ** loss: {loss:>7f}  [{current:>5d}/{size}]")
 
 
 def rm():
