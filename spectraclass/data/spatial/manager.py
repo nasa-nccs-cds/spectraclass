@@ -2,7 +2,7 @@ import numpy as np
 import xarray as xa
 from typing import List, Union, Tuple, Optional, Dict
 from spectraclass.gui.control import UserFeedbackManager, ufm
-from spectraclass.reduction.embedding import ReductionManager, rm
+from spectraclass.reduction.encoding import ReductionManager, rm
 from spectraclass.data.base import ModeDataManager
 import matplotlib.pyplot as plt
 from collections import OrderedDict

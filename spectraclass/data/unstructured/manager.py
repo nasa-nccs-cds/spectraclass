@@ -1,6 +1,6 @@
 from spectraclass.data.base import ModeDataManager
 from collections import OrderedDict
-from spectraclass.reduction.embedding import ReductionManager, rm
+from spectraclass.reduction.encoding import ReductionManager, rm
 from pathlib import Path
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import xarray as xa
