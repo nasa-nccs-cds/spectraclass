@@ -58,13 +58,13 @@ class PointCloudManager(SCSingletonConfigurable):
         return np.empty(shape=[0], dtype=np.int)
 
     def init_data( self, **kwargs  ):
-        from spectraclass.reduction.embedding import ReductionManager, rm
+        from spectraclass.reduction.embedding import EmbeddingManager, em
         from spectraclass.data.base import DataManager
         project_dataset: xa.Dataset = DataManager.instance().loadCurrentProject("points")
         reduced_data: xa.DataArray = project_dataset.reduction
         reduced_data.attrs['dsid'] = project_dataset.attrs['dsid']
         lgm().log( f"UMAP init, init data shape = {reduced_data.shape}")
-        embedding = rm().umap_init( reduced_data, **kwargs  )
+        embedding = em().umap_init( reduced_data, **kwargs  )
         self._points = self.normalize( embedding )
         self.initialize_markers()
 

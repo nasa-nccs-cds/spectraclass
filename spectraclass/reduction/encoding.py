@@ -15,7 +15,7 @@ class Autoencoder(nn.Module):
     def addLayer(self, in_features: int, out_features: int, is_encoder: bool ):
         index = len( self._ops ) // 2
         layer_ops = [ f'lin-{index}', f'nl-{index}' ]
-        setattr( self, layer_ops[0], nn.Linear( in_features=in_features, out_features=out_features ) )
+        setattr( self, layer_ops[0], nn.Linear( in_features=in_features, out_features=out_features, dtype=torch.float64 ) )
         setattr( self, layer_ops[1], nn.ReLU() )
         self._ops += layer_ops
         if is_encoder: self._encoder_layers = len( self._ops )
@@ -50,15 +50,19 @@ class Autoencoder(nn.Module):
             x = layer(x)
         dims = [ input.dims[0], "model" ]
         coords = { dims[0]: input.coords[ dims[0] ], "model": range(self.reduced_dims) }
-        return xa.DataArray( x.numpy(), coords, dims, f"{input.name}_embedding-{self.reduced_dims}", input.attrs )
+        return xa.DataArray( x.detach().numpy(), coords, dims, f"{input.name}_embedding-{self.reduced_dims}", input.attrs )
 
     def forward(self, x: torch.Tensor ) -> torch.Tensor:
-        npX: np.ndarray = x.numpy()
-        lgm().log(f"  --> forward: x shape = {npX.shape}, dtype = {npX.dtype}")
-        for lid in self._ops:
-            layer = getattr( self, lid )
-            x = layer(x)
-        return x
+        try:
+            for lid in self._ops:
+                layer = getattr( self, lid )
+                x = layer(x)
+        except RuntimeError as err:
+            lgm().exception(f" forward error: {str(err)}")
+            npx: np.ndarray = x.numpy()
+            lgm().log(f" x shape = {npx.shape}, x type = {npx.dtype}")
+        finally:
+            return x
 
     @classmethod
     def getLoader( cls, input: xa.DataArray, batch_size, shuffle ) -> Optional[DataLoader]:
@@ -103,7 +107,7 @@ class ReductionManager(SCSingletonConfigurable):
             self.train_loop( autoencoder, dataloader )
 
         embedding: xa.DataArray = autoencoder.embedding( input_data )
-        reproduction: xa.DataArray = autoencoder.reproduction(input_data)
+        reproduction: xa.DataArray = autoencoder(input_data)
 
         return ( embedding, reproduction, input_data )
 

@@ -121,27 +121,22 @@ class ModeDataManager(SCSingletonConfigurable):
         return filePanel
 
     def getConfigPanel(self):
-        from spectraclass.reduction.embedding import ReductionManager
-        rm = ReductionManager.instance()
+        from spectraclass.reduction.embedding import EmbeddingManager, em
 
-        nepochs_selector: ip.IntSlider = ip.IntSlider(min=50, max=500, description='UMAP nepochs:', value=rm.nepochs,
+        nepochs_selector: ip.IntSlider = ip.IntSlider(min=50, max=500, description='UMAP nepochs:', value=em().nepochs,
                                                       continuous_update=False, layout=ip.Layout(width="auto"))
         alpha_selector: ip.FloatSlider = ip.FloatSlider(min=0.1, max=0.8, step=0.01, description='UMAP alpha:',
-                                                        value=rm.alpha, readout_format=".2f", continuous_update=False,
+                                                        value=em().alpha, readout_format=".2f", continuous_update=False,
                                                         layout=ip.Layout(width="auto"))
-        init_selector: ip.Select = ip.Select(options=["random", "spectral", "autoencoder"],
-                                             description='UMAP init method:', value="autoencoder",
-                                             layout=ip.Layout(width="auto"))
 
         def apply_handler(*args):
-            rm.nepochs = nepochs_selector.value
-            rm.alpha = alpha_selector.value
-            rm.init = init_selector.value
+            em().nepochs = nepochs_selector.value
+            em().alpha = alpha_selector.value
 
         apply: ip.Button = ip.Button(description="Apply", layout=ip.Layout(flex='1 1 auto'), border='1px solid dimgrey')
         apply.on_click(apply_handler)
 
-        configPanel: ip.VBox = ip.VBox([nepochs_selector, alpha_selector, init_selector, apply],
+        configPanel: ip.VBox = ip.VBox([nepochs_selector, alpha_selector, apply],
                                        layout=ip.Layout(width="100%", height="100%"), border='2px solid firebrick')
         return configPanel
 
@@ -200,9 +195,9 @@ class ModeDataManager(SCSingletonConfigurable):
     def loadDataFile( self, **kwargs ) -> xa.Dataset:
         from spectraclass.data.base import DataManager, dm
         data_file = os.path.join( self.datasetDir, self.dsid(**kwargs) + ".nc" )
-        try:
+        if os.path.isfile( data_file ):
             dataset: xa.Dataset = xa.open_dataset( data_file )
-        except FileNotFoundError:
+        else:
             print( "Preparing input" )
             dm().prepare_inputs()
             dm().save_config()

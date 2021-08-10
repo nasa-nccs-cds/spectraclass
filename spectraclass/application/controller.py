@@ -82,10 +82,10 @@ class SpectraclassController(SCSingletonConfigurable):
     @exception_handled
     def embed(self):
         from spectraclass.gui.points import PointCloudManager, pcm
-        from spectraclass.reduction.embedding import ReductionManager, rm
+        from spectraclass.reduction.embedding import EmbeddingManager, em
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> EMBED ")
         ufm().show( "Computing 3D embedding")
-        embedding = rm().umap_embedding()
+        embedding = em().umap_embedding()
         pcm().reembed(embedding)
         ufm().clear()
 

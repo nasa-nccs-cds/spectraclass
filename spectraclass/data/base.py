@@ -103,7 +103,7 @@ class DataManager(SCSingletonConfigurable):
     def save_config( self ):
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        from spectraclass.reduction.embedding import ReductionManager, rm
+        from spectraclass.reduction.encoding import ReductionManager, rm
         from spectraclass.features.texture.manager import TextureManager, texm
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, lm

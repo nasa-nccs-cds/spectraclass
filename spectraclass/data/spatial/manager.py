@@ -268,25 +268,23 @@ class SpatialDataManager(ModeDataManager):
             else:
                 range = [ blocks_point_data.min().data, blocks_point_data.max().data ]
                 lgm().log(f" Preparing point data with shape {blocks_point_data.shape} and range = {range}", print=True)
-                blocks_reduction = rm().reduce( blocks_point_data, self.model_dims, self.reduce_nepochs )
-                if blocks_reduction is not None:
-                    self.model_dims = blocks_reduction[0].shape[1]
-                    for ( reduced_spectra, reproduction, point_data ) in blocks_reduction:
-                        file_name = point_data.attrs['file_name']
-                        model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
-                        raw_data = block.data
-                        raw_data.attrs['wkt'] = tile_data.spatial_ref.crs_wkt
-                        data_vars = dict( raw=raw_data, norm=point_data )
-                        data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
-                        data_vars['reproduction'] = reproduction
-                        result_dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
-                        self.dataset = self.reduced_dataset_name( file_name )
-                        output_file = os.path.join( self.datasetDir, self.dataset + ".nc")
-                        lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file} with {blocks_point_data.size} samples, dset attrs:")
-                        for varname, da in result_dataset.data_vars.items():
-                            da.attrs['long_name'] = f"{file_name}.{varname}"
-                        print( f"Writing output file: '{output_file}' with {blocks_point_data.size} samples")
-                        result_dataset.to_netcdf(output_file)
+                ( reduced_spectra, reproduction, point_data ) = rm().reduce( blocks_point_data, self.model_dims, self.reduce_nepochs )
+                self.model_dims = reduced_spectra.shape[1]
+                file_name = point_data.attrs['file_name']
+                model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
+                raw_data = block.data
+                raw_data.attrs['wkt'] = tile_data.spatial_ref.crs_wkt
+                data_vars = dict( raw=raw_data, norm=point_data )
+                data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
+                data_vars['reproduction'] = reproduction
+                result_dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
+                self.dataset = self.reduced_dataset_name( file_name )
+                output_file = os.path.join( self.datasetDir, self.dataset + ".nc")
+                lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file} with {blocks_point_data.size} samples, dset attrs:")
+                for varname, da in result_dataset.data_vars.items():
+                    da.attrs['long_name'] = f"{file_name}.{varname}"
+                print( f"Writing output file: '{output_file}' with {blocks_point_data.size} samples")
+                result_dataset.to_netcdf(output_file)
 
     def getFilePath(self, use_tile: bool ) -> str:
         base_dir = dm().modal.data_dir
