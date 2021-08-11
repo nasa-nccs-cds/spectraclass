@@ -1,15 +1,15 @@
 import traitlets.config as tlc
 import os, logging, numpy as np
-from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type
+from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type, Iterable
 from traitlets.config.loader import Config
 
 def pid( instance ): return hex(id(instance))[-4:]
 
 class Marker:
-    def __init__(self, pids: np.ndarray, cid: int, **kwargs ):
+    def __init__(self, pids: Union[np.ndarray,Iterable], cid: int, **kwargs ):
         self.cid = cid
         self.args = kwargs
-        self._pids: np.ndarray = pids
+        self._pids: np.ndarray = pids if isinstance( pids, np.ndarray ) else np.array(pids)
 
     @property
     def pids(self) -> np.ndarray:

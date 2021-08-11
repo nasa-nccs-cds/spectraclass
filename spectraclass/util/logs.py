@@ -39,7 +39,9 @@ class LogManager(SCSingletonConfigurable):
     def init_logging(self, name: str, mode: str ):
         log_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "logging", mode )
         os.makedirs( log_dir, 0o777, exist_ok=True )
-        self._log_file = open( f'{log_dir}/{name}.{os.getpid()}.log', 'w' )
+        log_file = f'{log_dir}/{name}.{os.getpid()}.log'
+        self._log_file = open( log_file, 'w' )
+        print( f"Opening log file:  '{log_file}'" )
 
     def log( self,  msg, **kwargs ):
         if kwargs.get( 'print', False ): print( msg )
