@@ -221,7 +221,7 @@ class Block:
             result: xa.DataArray =  SpatialDataManager.raster2points( self.data )
             self._point_coords: Dict = dict( y=self.data.y, x=self.data.x )
             npts = self.data.y.size * self.data.x.size
-            self._point_data = result.assign_coords( samples = np.arange( 0, npts ) )
+            self._point_data = result.assign_coords( pid = np.arange( 0, npts ) )
             self._samples_axis = self._point_data.coords['samples']
             self._point_data.attrs['type'] = 'block'
             self._point_data.attrs['dsid'] = self.dsid()

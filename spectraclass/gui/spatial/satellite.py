@@ -59,23 +59,25 @@ class SatellitePlotManager(SCSingletonConfigurable):
         lgm().log(f"Setting satellite image extent: {extent}, xlim = {self.block.xlim}, ylim = {self.block.ylim}")
         lgm().log(f"Google Earth block center coords: {(extent[2] + extent[3]) / 2},{(extent[1] + extent[0]) / 2}")
 
+        cspecs = lm().get_labels_colormap()
+        block_data = self.block.data[0]
+        lgm().log(f" *** Creating overlay from block, shape = {block_data.shape}, dims = {block_data.dims}")
+        image_data: xa.DataArray = block_data.xgeo.gdal_reproject()  # .reproject( espg=4326 )   gdal_reproject()
+        self.overlay: AxesImage = self.axes.imshow( image_data, extent=extent, alpha=0.0, aspect='auto', cmap=cspecs['cmap'], norm=cspecs['norm'], origin= 'upper', interpolation= 'nearest' )
+        self.axes.set_xlim(extent[0],extent[1])
+        self.axes.set_ylim(extent[2],extent[3])
+
         if os.path.isfile( cfile ):
             lgm().log( f"Reading cached image {cfile}" )
             self.image = Image.open(cfile)
         else:
             self.image = self.google.get_tiled_google_map( type, extent, self.zoom_level )
-            if self.image is None: return
-            self.image.save( cfile )
-        self.plot: AxesImage = self.axes.imshow(self.image,  extent=extent, alpha=1.0, aspect='auto' )
-        cspecs = lm().get_labels_colormap()
-        self.axes.set_xlim(extent[0],extent[1])
-        self.axes.set_ylim(extent[2],extent[3])
-        self._mousepress = self.plot.figure.canvas.mpl_connect('button_press_event', self.onMouseClick )
+
+        if self.image is not None:
+            self.plot: AxesImage = self.axes.imshow( self.image,  extent=extent, alpha=1.0, aspect='auto' )
+            self._mousepress = self.plot.figure.canvas.mpl_connect( 'button_press_event', self.onMouseClick )
+            if not os.path.isfile(cfile): self.image.save(cfile)
         self.figure.canvas.draw_idle()
-        block_data = self.block.data[0]
-        lgm().log(f" *** Creating overlay from block, shape = {block_data.shape}, dims = {block_data.dims}")
-        image_data: xa.DataArray = block_data.xgeo.gdal_reproject()  # .reproject( espg=4326 )   gdal_reproject()
-        self.overlay: AxesImage = self.axes.imshow( image_data, extent=extent, alpha=0.0, aspect='auto', cmap=cspecs['cmap'], norm=cspecs['norm'], origin= 'upper', interpolation= 'nearest' )
 
     @exception_handled
     def plot_overlay_image( self, image_data: xa.DataArray = None, alpha: float = 0.0 ):

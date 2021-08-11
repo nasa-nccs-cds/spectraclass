@@ -15,7 +15,7 @@ class Autoencoder(nn.Module):
     def addLayer(self, in_features: int, out_features: int, is_encoder: bool ):
         index = len( self._ops ) // 2
         layer_ops = [ f'lin-{index}', f'nl-{index}' ]
-        setattr( self, layer_ops[0], nn.Linear( in_features=in_features, out_features=out_features, dtype=torch.float64 ) )
+        setattr( self, layer_ops[0], nn.Linear( in_features=in_features, out_features=out_features, dtype=torch.float32 ) )
         setattr( self, layer_ops[1], nn.ReLU() )
         self._ops += layer_ops
         if is_encoder: self._encoder_layers = len( self._ops )

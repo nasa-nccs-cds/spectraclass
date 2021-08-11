@@ -26,10 +26,6 @@ class SettingsManager:
     def iparm(self, key: str ):
         return int( self.config.get(key) )
 
-    def get_dtype(self, result ):
-        if isinstance( result, np.ndarray ): return result.dtype
-        else: return np.float64 if type( result[0] ) == "float" else None
-
     @property
     def settings_dir(self) -> str:
         root_dir = os.path.join( os.path.expanduser("~/.spectraclass"), self.project_name )

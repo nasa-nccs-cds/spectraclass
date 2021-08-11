@@ -18,8 +18,8 @@ class xaTorchDataset( Dataset ):
         return self._data.shape[0]
 
     def __getitem__(self, idx) -> Tuple[Tensor,Tensor]:
-        data = torch.from_numpy( self._data[idx].values.astype( "float64" ) )
-        label = None if self._labels is None else torch.from_numpy( self._labels[idx].values.astype( "float64" ) )
+        data = torch.from_numpy( self._data[idx].values.astype( "float32" ) )
+        label = None if self._labels is None else torch.from_numpy( self._labels[idx].values.astype( "float32" ) )
         if self._transform:
             data = self._transform(data)
         return data, label

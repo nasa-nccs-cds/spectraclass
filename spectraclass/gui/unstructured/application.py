@@ -27,9 +27,10 @@ class Spectraclass(SpectraclassController):
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.gui.unstructured.table import tm
-        from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
+        from spectraclass.gui.control import ActionsManager, am, UserFeedbackManager, ufm
         from spectraclass.data.base import DataManager, dm
         output_notebook()
+        print( f"Initializing unstructured GUI using controller {str(self.__class__)}")
 
         self.set_spectraclass_theme()
         css_border = '1px solid blue'
