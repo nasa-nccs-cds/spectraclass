@@ -200,10 +200,10 @@ class ModeDataManager(SCSingletonConfigurable):
     def loadDataFile( self, **kwargs ) -> xa.Dataset:
         from spectraclass.data.base import DataManager, dm
         data_file = os.path.join( self.datasetDir, self.dsid(**kwargs) + ".nc" )
-        try:
+        if os.path.isfile( data_file ):
             dataset: xa.Dataset = xa.open_dataset( data_file )
-        except FileNotFoundError:
-            print( "Preparing input" )
+        else:
+            print( f"Preparing input file: '{data_file}'" )
             dm().prepare_inputs()
             dm().save_config()
             dataset: xa.Dataset = xa.open_dataset( data_file )

@@ -1,4 +1,4 @@
-import numpy as np
+import torch, numpy as np
 import xarray as xa
 from typing import List, Union, Tuple, Optional, Dict
 import os, time, threading, traceback
@@ -26,6 +26,9 @@ class ActivationFlow():
         raise NotImplementedError()
 
     def getGraph(self):
+        raise NotImplementedError()
+
+    def getEdgeIndex(self) -> torch.tensor:
         raise NotImplementedError()
 
     @classmethod
