@@ -11,8 +11,6 @@ flow: ActivationFlow = afm().getActivationFlow()
 graph: NNDescent = flow.getGraph()
 D: np.ndarray  = graph.neighbor_graph[1]     # shape [nsamples,n_neighbors]
 edge_index: torch.tensor = flow.getEdgeIndex()
-
-
 print( edge_index )
 
 
