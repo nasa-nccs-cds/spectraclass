@@ -53,8 +53,12 @@ class ActivationFlowManager(SCSingletonConfigurable):
         self.instances = {}
         self.condition = threading.Condition()
 
-    def getActivationFlow( self ) -> Optional["ActivationFlow"]:
+    def reset(self):
+        self.instances = {}
+
+    def getActivationFlow( self, reset = False ) -> Optional["ActivationFlow"]:
         from spectraclass.data.base import DataManager
+        if reset: self.reset()
         point_data: xa.DataArray = DataManager.instance().getModelData()
         result = None
         if point_data is not None:

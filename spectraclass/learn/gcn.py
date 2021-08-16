@@ -10,7 +10,10 @@ class GCN(torch.nn.Module):
         super(GCN, self).__init__()
         self.conv1 = GCNConv( num_features, num_hidden )
         self.conv2 = GCNConv( num_hidden, num_classes )
+#        torch.nn.init.xavier_uniform(self.conv1.weight)
+#        torch.nn.init.xavier_uniform(self.conv2.weight)
         self._dropout = True
+        print( f"Init GCN: Base Layer weights = {self.conv1.weight.data.numpy()}")
 
     def set_dropout(self, active: bool ):
         self._dropout = active
@@ -45,13 +48,15 @@ class GCN(torch.nn.Module):
                 print(f'epoch: {epoch}, loss = {loss.data}' )
 
     @classmethod
-    def evaluate_model( cls, model: "GCN", data: Data ) -> Tuple[torch.tensor,float]:
+    def evaluate_model( cls, model: "GCN", data: Data ) -> Tuple[np.ndarray,float]:
         model.eval()
         _, pred = model(data).max(dim=1)
         correct = int(pred[data.test_mask].eq(data.y[data.test_mask]).sum().item())
         acc = correct / int(data.test_mask.sum())
         print(' --> Accuracy: {:.4f}'.format(acc))
-        return ( pred, acc )
+        pred_data = pred.numpy() + 1
+        pred_data[ data.nodata_mask.numpy() ] = 0
+        return ( pred_data, acc )
 
 
     @classmethod

@@ -1,6 +1,8 @@
 import torch
 import torch.nn.functional as F
 from torch_geometric.data import Data
+import numpy as np
+from typing import List, Union, Tuple, Optional, Dict
 
 class MLP(torch.nn.Module):
     def __init__( self, num_features: int, num_hidden: int, num_classes: int ):
@@ -33,10 +35,12 @@ class MLP(torch.nn.Module):
                 print(f'epoch: {epoch}, loss = {loss.data}' )
 
     @classmethod
-    def evaluate_model( cls, model: "MLP", data: Data ) -> torch.tensor:
+    def evaluate_model( cls, model: "MLP", data: Data ) -> Tuple[np.ndarray,float]:
         model.eval()
         _, pred = model(data).max(dim=1)
         correct = int(pred[data.test_mask].eq(data.y[data.test_mask]).sum().item())
         acc = correct / int(data.test_mask.sum())
         print(' --> Accuracy: {:.4f}'.format(acc))
-        return pred
+        pred_data = pred.numpy() + 1
+        pred_data[ data.nodata_mask.numpy() ] = 0
+        return ( pred_data, acc )
