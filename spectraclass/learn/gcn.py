@@ -1,38 +1,67 @@
-from typing import List, Union, Dict, Callable, Tuple, Optional
-import xarray as xa
-import time, traceback
-from typing import List, Tuple, Optional, Dict
+import torch
+import torch.nn.functional as F
 import numpy as np
-from .base import LearningModel
+from typing import List, Union, Tuple, Optional, Dict
+from torch_geometric.nn import GCNConv
+from torch_geometric.data import Data
 
-class GCNLearningModel(LearningModel):
+class GCN(torch.nn.Module):
+    def __init__( self, num_features: int, num_hidden: int, num_classes: int ):
+        super(GCN, self).__init__()
+        self.conv1 = GCNConv( num_features, num_hidden )
+        self.conv2 = GCNConv( num_hidden, num_classes )
+        self._dropout = True
 
-    def __init__(self, **kwargs ):
-        LearningModel.__init__(self, "svc",  **kwargs )
-        self._score: Optional[np.ndarray] = None
-        norm = kwargs.get( 'norm', True )
-        tol = kwargs.pop( 'tol', 1e-5 )
-        if norm: self.svc = make_pipeline( StandardScaler(), LinearSVC( tol=tol, dual=False, fit_intercept=False, **kwargs ) )
-        else:    self.svc = LinearSVC(tol=tol, dual=False, fit_intercept=False, **kwargs)
+    def set_dropout(self, active: bool ):
+        self._dropout = active
 
-    def fit( self, X: np.ndarray, y: np.ndarray, **kwargs ):       # X[n_samples, n_features], y[n_samples]
-        from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
-        flow: ActivationFlow = afm().getActivationFlow()
-        t0 = time.time()
-        print(f"Running SVC fit, X shape: {X.shape}), y shape: {y.shape})")
-        self.svc.fit( X, y )
-        self._score = self.decision_function(X)
-        print(f"Completed SVC fit, in {time.time()-t0} secs")
+    def forward( self, data: Data ):
+        x, edge_index = data.x, data.edge_index
+        edge_weights = data.__dict__.get( 'edge_weights', None )
+        x = self.conv1( x, edge_index, edge_weights )
+        x = F.relu(x)
+        if self._dropout:
+            x = F.dropout( x, training=self.training )
+        x = self.conv2( x, edge_index, edge_weights )
+        return F.log_softmax(x, dim=1)
 
-#        self._support_vector_indices = np.where( (2 * y - 1) * self._score <= 1 )[0]    # For binary classifier
-#        self._support_vectors = X[ self.support_vector_indices ]
+    @classmethod
+    def train_model( cls, model: "GCN", data: Data, **kwargs ):
+        lr = kwargs.get('lr',0.01)
+        weight_decay = kwargs.get('weight_decay', 5e-4)
+        nepochs = kwargs.get( 'nepochs', 200 )
+        dropout = kwargs.get( 'dropout', True )
+        model.set_dropout( dropout )
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay )
+        print( f"Training model with lr={lr}, weight_decay={weight_decay}, nepochs={nepochs}, dropout={model._dropout}")
+        model.train()
+        for epoch in range(nepochs):
+            optimizer.zero_grad()
+            out = model(data)
+            loss = F.nll_loss(out[data.train_mask], data.y[data.train_mask])
+            loss.backward()
+            optimizer.step()
+            if epoch % 25 == 0:
+                print(f'epoch: {epoch}, loss = {loss.data}' )
 
-    def predict( self, X: np.ndarray, **kwargs ) -> np.ndarray:
-        return self.svc.predict( X ).astype( int )
+    @classmethod
+    def evaluate_model( cls, model: "GCN", data: Data ) -> Tuple[torch.tensor,float]:
+        model.eval()
+        _, pred = model(data).max(dim=1)
+        correct = int(pred[data.test_mask].eq(data.y[data.test_mask]).sum().item())
+        acc = correct / int(data.test_mask.sum())
+        print(' --> Accuracy: {:.4f}'.format(acc))
+        return ( pred, acc )
 
-    @property
-    def decision_function(self) -> Callable:
-        return self.svc.decision_function
+
+    @classmethod
+    def calc_edge_weights(cls, distance: np.ndarray ) -> torch.tensor:
+        sig = distance.std()
+        x = ( distance * distance ) / ( -2 * sig * sig )
+        return torch.from_numpy( np.exp( x ) )
+
+
+
 
 
 

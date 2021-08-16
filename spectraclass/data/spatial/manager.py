@@ -275,7 +275,8 @@ class SpatialDataManager(ModeDataManager):
                         file_name = point_data.attrs['file_name']
                         model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
                         raw_data = block.data
-                        raw_data.attrs['wkt'] = tile_data.spatial_ref.crs_wkt
+                        try: raw_data.attrs['wkt'] = tile_data.spatial_ref.crs_wkt
+                        except: pass
                         data_vars = dict( raw=raw_data, norm=point_data )
                         data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
                         data_vars['reproduction'] = reproduction
@@ -286,6 +287,7 @@ class SpatialDataManager(ModeDataManager):
                         for varname, da in result_dataset.data_vars.items():
                             da.attrs['long_name'] = f"{file_name}.{varname}"
                         print( f"Writing output file: '{output_file}' with {blocks_point_data.size} samples")
+                        os.makedirs( os.path.dirname( output_file ), exist_ok=True )
                         result_dataset.to_netcdf(output_file)
 
     def getFilePath(self, use_tile: bool ) -> str:
@@ -304,13 +306,24 @@ class SpatialDataManager(ModeDataManager):
             lgm().log(f"Unable to write raster file to {output_file}: {err}")
             return None
 
-    def readGeotiff(self, read_tile: bool ) -> xa.DataArray:
+    def readSpectralData(self, read_tile: bool) -> xa.DataArray:
         input_file_path = self.getFilePath( read_tile )
         assert os.path.isfile( input_file_path ), f"Input file does not exist: {input_file_path}"
+        return self.readGeoTiff( input_file_path )
+
+    def readGeoTiff(self, input_file_path: str ) -> xa.DataArray:
         input_bands = rio.open_rasterio(input_file_path)
         if 'transform' not in input_bands.attrs.keys():
             gts = input_bands.spatial_ref.GeoTransform.split()
             input_bands.attrs['transform'] = [float(gts[i]) for i in [1, 2, 0, 4, 5, 3]]
         lgm().log(f"Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}")
         return input_bands
+
+    def getClassMap(self) -> Optional[xa.DataArray]:
+        try:
+            class_file_path = os.path.join( self.data_dir, self.class_file )
+            print( f"\nReading class file: {class_file_path}\n")
+            return self.readGeoTiff( class_file_path )
+        except AssertionError:
+            return None
 

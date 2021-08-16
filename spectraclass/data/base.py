@@ -57,6 +57,9 @@ class DataManager(SCSingletonConfigurable):
     def _contingent_configuration_(self):
         pass
 
+    def getClassMap(self)-> Optional[xa.DataArray]:
+        return self.modal.getClassMap()
+
     @property
     def sysconfig(self) -> Config:
         if self._config is None: raise TypeError( "DataManager not initialized" )

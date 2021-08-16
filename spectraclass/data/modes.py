@@ -25,6 +25,7 @@ class ModeDataManager(SCSingletonConfigurable):
     image_name = tl.Unicode("NONE").tag(config=True ,sync=True)
     cache_dir = tl.Unicode(os.path.expanduser("~/Development/Cache")).tag(config=True)
     data_dir = tl.Unicode(os.path.expanduser("~/Development/Data")).tag(config=True)
+    class_file = tl.Unicode("NONE").tag(config=True, sync=True)
 
     model_dims = tl.Int(32).tag(config=True, sync=True)
     subsample = tl.Int(1).tag(config=True, sync=True)
@@ -61,6 +62,9 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def valid_bands(self) -> Optional[List]:
         return self.VALID_BANDS
+
+    def getClassMap(self) -> Optional[xa.DataArray]:
+        raise NotImplementedError()
 
     @classmethod
     def getXarray(cls, id: str, xcoords: Dict, subsample: int, xdims: OrderedDict, **kwargs) -> xa.DataArray:

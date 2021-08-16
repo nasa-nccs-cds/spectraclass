@@ -1,18 +1,27 @@
 from .manager import SpatialDataManager
 from typing import List, Union, Tuple, Optional, Dict, Callable
+import traitlets as tl
 import os, sys
 
 class AvirisDataManager(SpatialDataManager):
     from spectraclass.gui.spatial.application import Spectraclass
+    valid_aviris_bands = tl.List([0,sys.maxsize]).tag(config=True, sync=True)
 
     MODE = "aviris"
     METAVARS = []
     INPUTS = dict()
-    VALID_BANDS = [ [5, 193], [214, 283], [319, sys.maxsize] ]
     application = Spectraclass
 
     def __init__(self):
         super(AvirisDataManager, self).__init__()
+        self.VALID_BANDS = []
+        self._unpack_valid_bands()
+
+    def _unpack_valid_bands(self):
+        bv0 = 0
+        for ib, bv1 in enumerate(self.valid_aviris_bands):
+            if ib % 2 == 1: self.VALID_BANDS.append( [ bv0, bv1 ] )
+            bv0 = bv1
 
 class KeelinDataManager(SpatialDataManager):
     from spectraclass.gui.spatial.application import Spectraclass

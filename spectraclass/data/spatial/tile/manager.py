@@ -178,7 +178,7 @@ class TileManager(SCSingletonConfigurable):
     def _getTileDataFromImage(self) -> xa.DataArray:
         tm = TileManager.instance()
         tm.setTilesPerImage()
-        full_input_bands: xa.DataArray = DataManager.instance().modal.readGeotiff(False)
+        full_input_bands: xa.DataArray = DataManager.instance().modal.readSpectralData(False)
         ybounds, xbounds = tm.getTileBounds()
         tile_raster = full_input_bands[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1]]
         tile_raster.attrs['tilename'] = tm.tileName()
@@ -193,7 +193,7 @@ class TileManager(SCSingletonConfigurable):
         assert self.cacheTileData, "Tile file not cached."
         image_specs = self.image_attrs.get(self.image_name, None)
         TileManager.instance().setTilesPerImage(image_specs)
-        tile_raster: xa.DataArray = DataManager.instance().modal.readGeotiff(True)
+        tile_raster: xa.DataArray = DataManager.instance().modal.readSpectralData(True)
         if tile_raster is not None:
             tile_raster.name = self.tileName()
             tile_raster.attrs['tilename'] = self.tileName()
