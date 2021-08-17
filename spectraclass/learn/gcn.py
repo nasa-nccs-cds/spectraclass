@@ -13,7 +13,7 @@ class GCN(torch.nn.Module):
 #        torch.nn.init.xavier_uniform(self.conv1.weight)
 #        torch.nn.init.xavier_uniform(self.conv2.weight)
         self._dropout = True
-        print( f"Init GCN: Base Layer weights = {self.conv1.weight.data.numpy()}")
+#        print( f"Init GCN: Base Layer weights = {self.conv1.weight.data.numpy()}")
 
     def set_dropout(self, active: bool ):
         self._dropout = active
@@ -44,8 +44,7 @@ class GCN(torch.nn.Module):
             loss = F.nll_loss(out[data.train_mask], data.y[data.train_mask])
             loss.backward()
             optimizer.step()
-            if epoch % 25 == 0:
-                print(f'epoch: {epoch}, loss = {loss.data}' )
+            if epoch % 10 == 0: print( '.', end='')
 
     @classmethod
     def evaluate_model( cls, model: "GCN", data: Data ) -> Tuple[np.ndarray,float]:
