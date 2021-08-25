@@ -11,10 +11,10 @@ from .base import LearningModel
 class SVCLearningModel(LearningModel):
 
     def __init__(self, **kwargs ):
+        norm = kwargs.pop( 'norm', True )
+        tol = kwargs.pop( 'tol', 1e-5 )
         LearningModel.__init__(self, "svc",  **kwargs )
         self._score: Optional[np.ndarray] = None
-        norm = kwargs.get( 'norm', True )
-        tol = kwargs.pop( 'tol', 1e-5 )
         if norm: self.svc = make_pipeline( StandardScaler(), LinearSVC( tol=tol, dual=False, fit_intercept=False, **kwargs ) )
         else:    self.svc = LinearSVC(tol=tol, dual=False, fit_intercept=False, **kwargs)
 

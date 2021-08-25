@@ -213,6 +213,11 @@ class DataManager(SCSingletonConfigurable):
         model_data.attrs['dsid'] = project_dataset.attrs['dsid']
         return model_data
 
+    def getSpatialDims(self) -> Dict[str,int]:
+        project_dataset: xa.Dataset = self.loadCurrentProject("getModelData")
+        raw_data: xa.DataArray = project_dataset['raw']
+        return dict( ny = raw_data.shape[1], nx = raw_data.shape[2] )
+
     def loadMatlabDataFile(self, file_path: str ):
         from scipy.io import loadmat
         data = loadmat( file_path )

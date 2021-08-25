@@ -266,7 +266,7 @@ class SpatialDataManager(ModeDataManager):
             if blocks_point_data.size == 0:
                lgm().log( f" Warning:  Block {block.block_coords} has no valid samples.", print=True )
             else:
-                range = [ blocks_point_data.min().data, blocks_point_data.max().data ]
+                range = [ blocks_point_data.values.min(), blocks_point_data.values.max() ]
                 lgm().log(f" Preparing point data with shape {blocks_point_data.shape} and range = {range}", print=True)
                 blocks_reduction = rm().reduce( blocks_point_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
                 if blocks_reduction is not None:
@@ -281,7 +281,7 @@ class SpatialDataManager(ModeDataManager):
                         data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
                         data_vars['reproduction'] = reproduction
                         result_dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
-                        self.dataset = self.reduced_dataset_name( file_name )
+                        self.dataset = self.reduced_dataset_name( file_name, raw_data.shape[1:] )
                         output_file = os.path.join( self.datasetDir, self.dataset + ".nc")
                         lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file} with {blocks_point_data.size} samples, dset attrs:")
                         for varname, da in result_dataset.data_vars.items():
@@ -293,7 +293,10 @@ class SpatialDataManager(ModeDataManager):
     def getFilePath(self, use_tile: bool ) -> str:
         base_dir = dm().modal.data_dir
         base_file = self.tiles.tileName() if use_tile else self.tiles.image_name
-        return f"{base_dir}/{base_file}.tif"
+        if base_file.endswith(".mat") or base_file.endswith(".tif"):
+            return f"{base_dir}/{base_file}"
+        else:
+            return f"{base_dir}/{base_file}.tif"
 
     def writeGeotiff(self, raster_data: xa.DataArray ) -> Optional[str]:
         output_file = self.getFilePath(True)
@@ -309,7 +312,13 @@ class SpatialDataManager(ModeDataManager):
     def readSpectralData(self, read_tile: bool) -> xa.DataArray:
         input_file_path = self.getFilePath( read_tile )
         assert os.path.isfile( input_file_path ), f"Input file does not exist: {input_file_path}"
-        return self.readGeoTiff( input_file_path )
+        return self.readDataFile( input_file_path )
+
+    def readDataFile(self, file_path: str ):
+        if file_path.endswith(".mat"):
+            return self.readMatlabFile( file_path )
+        else:
+            return self.readGeoTiff( file_path )
 
     def readGeoTiff(self, input_file_path: str ) -> xa.DataArray:
         input_bands = rio.open_rasterio(input_file_path)
@@ -319,11 +328,30 @@ class SpatialDataManager(ModeDataManager):
         lgm().log(f"Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}")
         return input_bands
 
+    def readMatlabFile(self, input_file_path: str ) -> xa.DataArray:
+        from scipy.io import loadmat
+        gtdset = loadmat(input_file_path)
+        vnames = [ vid for vid in gtdset.keys() if not vid.startswith("_") ]
+        assert len( vnames ) == 1, f"Can't find unique variable in matlab file {input_file_path}, vars = {vnames} "
+        gtarray: np.ndarray = gtdset[vnames[0]]
+        gs: List[int] = [ *gtarray.shape ]
+        print(f"Reading variable '{vnames[0]}' from Matlab dataset '{input_file_path}': {gtdset['__header__']}")
+        if gtarray.ndim == 2:
+            dims = [ 'y', 'x' ]
+            coords = {dims[i]: np.array(range(gs[i])) for i in (0,1) }
+        elif gtarray.ndim == 3:
+            gtarray = gtarray.reshape( [gs[0]*gs[1], gs[2]] ).transpose().reshape( [ gs[2], gs[0], gs[1] ] )
+            dims = [ 'band', 'y', 'x' ]
+            coords = { dims[i]: np.array(range(gtarray.shape[i])) for i in (0,1,2) }
+        else:
+            raise Exception( f"Can't process matlabe file with {gtarray.ndim} dims")
+        lgm().log(f"Reading Matlab file {input_file_path}, varname = {vnames[0]},  shape = {gtarray.shape}")
+        return xa.DataArray( gtarray, coords, dims, vnames[0], dict( transform = [ 1, 0, 0,   0, 1, 0 ] )  )
+
     def getClassMap(self) -> Optional[xa.DataArray]:
-        try:
-            class_file_path = os.path.join( self.data_dir, self.class_file )
-            print( f"\nReading class file: {class_file_path}\n")
-            return self.readGeoTiff( class_file_path )
-        except AssertionError:
-            return None
+        class_file_path = os.path.join( self.data_dir, self.class_file )
+        if not os.path.isfile(class_file_path): return None
+        print( f"\nReading class file: {class_file_path}\n")
+        return self.readDataFile( class_file_path )
+
 
