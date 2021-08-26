@@ -1,19 +1,11 @@
 import time, random, numpy as np, torch
 from typing import List, Union, Tuple, Optional, Dict, Callable
-from pynndescent import NNDescent
 from spectraclass.data.base import DataManager
 import torch_geometric
-import hvplot.xarray
-import holoviews as hv
 from spectraclass.learn.gcn import GCN
-import panel as pn
 from torch_geometric.data import Data
+from spectraclass.gui.spatial.image import plot_results
 import xarray as xa
-
-def plot_results( class_map: xa.DataArray, pred_class_map: xa.DataArray ):
-    class_plot = class_map.hvplot.image(cmap='Category20')
-    pred_class_plot = pred_class_map.hvplot.image( cmap='Category20' )
-    pn.Row( class_plot, pred_class_plot  ).show("Indian Pines")
 
 def calc_edge_weights( distance: np.ndarray) -> torch.tensor:
     sig = distance.std()
@@ -78,9 +70,9 @@ def getGraphData( trial: int, project_data: xa.Dataset, class_data: np.ndarray, 
     return graph_data
 
 nhidden = 32
-sgd_parms = dict( nepochs = 500, lr = 0.02, weight_decay = 0.0005, dropout = True )
+sgd_parms = dict( nepochs = 500, lr = 0.005, weight_decay = 0.0005, dropout = True )
 G_parms = dict( nnspatial = 8, nnspectral = 0, cosine = False )     # 'cosine' only available on GPU
-ntrials = 1
+ntrials = 40
 num_class_exemplars = 5
 accuracy = []
 

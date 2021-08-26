@@ -68,7 +68,6 @@ class CNN(torch.nn.Module):
         _, pred = self(data).max(dim=1)
         correct = int( pred[data.test_mask].eq( data.y[data.test_mask] ).sum().item() )
         acc = correct / int( data.test_mask.sum() )
-        print(' --> Accuracy: {:.4f}'.format(acc))
         pred_data = pred.numpy() + 1
         pred_data[ data.nodata_mask.numpy() ] = 0
         return ( pred_data, acc )

@@ -24,20 +24,19 @@ def getMasks( class_data: np.ndarray, num_class_exemplars: int) -> Dict[str, tor
                 test_mask=torch.from_numpy(test_mask),
                 nodata_mask=torch.from_numpy(nodata_mask))
 
-nhidden = 32
-num_class_exemplars = 5
-ntrials = 100
-accum_acc = []
-
-dm: DataManager = DataManager.initialize( "indianPines", 'aviris' )
+dm: DataManager = DataManager.initialize( "salinas", 'aviris' )
 project_data: xa.Dataset = dm.loadCurrentProject( "main" )
-feature_data: xa.DataArray = project_data.reduction
+class_map: xa.DataArray = dm.getClassMap()
+class_data: np.ndarray = class_map.values.flatten().astype(np.compat.long)
+feature_data: xa.DataArray = project_data['reduction']
+
+ntrials = 40
+nHidden = 32
+num_class_exemplars = 5
+accuracy = []
 
 for iT in range( ntrials ):
-    class_data: np.ndarray = dm.getClassMap().values.flatten().astype(np.compat.long)
     class_masks: Dict[str,torch.tensor] = getMasks( class_data, num_class_exemplars )
-
-
     train_mask = class_masks['train_mask']
     test_mask = class_masks['test_mask']
     svc = SVCLearningModel( norm=False )
@@ -52,9 +51,9 @@ for iT in range( ntrials ):
 
     acc = np.count_nonzero( yp == yt ) / np.count_nonzero( test_mask )
     print(' Trial[{}]--> Accuracy: {:.4f}'.format(iT,acc))
-    accum_acc.append( acc )
+    accuracy.append( acc )
 
-print(f' Average Accuracy: {np.array(accum_acc).mean()}')
+print(f' Average Accuracy: {np.array(accuracy).mean()}')
 
 
 

@@ -180,6 +180,9 @@ class TileManager(SCSingletonConfigurable):
         tm.setTilesPerImage()
         full_input_bands: xa.DataArray = DataManager.instance().modal.readSpectralData(False)
         ybounds, xbounds = tm.getTileBounds()
+        if full_input_bands.attrs['fileformat'] == 'mat':
+            tsize_test = ( ybounds[1] >= full_input_bands.shape[1] ) and ( xbounds[1] >= full_input_bands.shape[2] )
+            assert tsize_test, "For matlab files the tile size and block size must be greater then the data's spatial dimensions"
         tile_raster = full_input_bands[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1]]
         tile_raster.attrs['tilename'] = tm.tileName()
         tile_raster.attrs['image'] = self.image_name

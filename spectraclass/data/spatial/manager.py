@@ -281,7 +281,7 @@ class SpatialDataManager(ModeDataManager):
                         data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
                         data_vars['reproduction'] = reproduction
                         result_dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
-                        self.dataset = self.reduced_dataset_name( file_name, raw_data.shape[1:] )
+                        self.dataset = self.reduced_dataset_name( file_name ) # "-".join( [file_name] + raw_data.shape[1:] ) )
                         output_file = os.path.join( self.datasetDir, self.dataset + ".nc")
                         lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file} with {blocks_point_data.size} samples, dset attrs:")
                         for varname, da in result_dataset.data_vars.items():
@@ -325,28 +325,20 @@ class SpatialDataManager(ModeDataManager):
         if 'transform' not in input_bands.attrs.keys():
             gts = input_bands.spatial_ref.GeoTransform.split()
             input_bands.attrs['transform'] = [float(gts[i]) for i in [1, 2, 0, 4, 5, 3]]
+            input_bands.attrs['fileformat'] = "tif"
         lgm().log(f"Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}")
         return input_bands
 
     def readMatlabFile(self, input_file_path: str ) -> xa.DataArray:
         from scipy.io import loadmat
+        from spectraclass.gui.spatial.image import toXA
         gtdset = loadmat(input_file_path)
         vnames = [ vid for vid in gtdset.keys() if not vid.startswith("_") ]
         assert len( vnames ) == 1, f"Can't find unique variable in matlab file {input_file_path}, vars = {vnames} "
         gtarray: np.ndarray = gtdset[vnames[0]]
-        gs: List[int] = [ *gtarray.shape ]
         print(f"Reading variable '{vnames[0]}' from Matlab dataset '{input_file_path}': {gtdset['__header__']}")
-        if gtarray.ndim == 2:
-            dims = [ 'y', 'x' ]
-            coords = {dims[i]: np.array(range(gs[i])) for i in (0,1) }
-        elif gtarray.ndim == 3:
-            gtarray = gtarray.reshape( [gs[0]*gs[1], gs[2]] ).transpose().reshape( [ gs[2], gs[0], gs[1] ] )
-            dims = [ 'band', 'y', 'x' ]
-            coords = { dims[i]: np.array(range(gtarray.shape[i])) for i in (0,1,2) }
-        else:
-            raise Exception( f"Can't process matlabe file with {gtarray.ndim} dims")
-        lgm().log(f"Reading Matlab file {input_file_path}, varname = {vnames[0]},  shape = {gtarray.shape}")
-        return xa.DataArray( gtarray, coords, dims, vnames[0], dict( transform = [ 1, 0, 0,   0, 1, 0 ] )  )
+        filename, file_extension = os.path.splitext( input_file_path )
+        return toXA( vnames[0], gtarray, file_extension, True )
 
     def getClassMap(self) -> Optional[xa.DataArray]:
         class_file_path = os.path.join( self.data_dir, self.class_file )

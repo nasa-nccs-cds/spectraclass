@@ -1,3 +1,32 @@
+import hvplot.xarray
+import xarray as xa
+import numpy as np
+from typing import List, Optional, Dict, Tuple
+import holoviews as hv
+import panel as pn
+
+def toXA( vname: str, nparray: np.ndarray, format="np", transpose = False ):
+    gs: List[int] = [*nparray.shape]
+    if nparray.ndim == 2:
+        dims = ['y', 'x']
+        coords = { dims[i]: np.array(range(gs[i])) for i in (0, 1) }
+    elif nparray.ndim == 3:
+        if transpose:
+            nparray = nparray.reshape([gs[0] * gs[1], gs[2]]).transpose().reshape([gs[2], gs[0], gs[1]])
+        dims = ['band', 'y', 'x']
+        coords = { dims[i]: np.array(range(nparray.shape[i])) for i in (0, 1, 2) }
+    else:
+        raise Exception(f"Can't convert numpy->xa array with {nparray.ndim} dims")
+    return xa.DataArray( nparray, coords, dims, vname, dict(transform=[1, 0, 0, 0, 1, 0], fileformat=format))
+
+
+def plot_results( class_map: xa.DataArray, pred_class_map: xa.DataArray, feature_maps: xa.DataArray ):
+    class_plot = class_map.hvplot.image(cmap='Category20')
+    pred_class_plot = pred_class_map.hvplot.image( cmap='Category20' )
+    kwargs = {} if (feature_maps.ndim < 3) else dict( groupby=feature_maps.dims[0], widget_type='scrubber', widget_location='bottom' )
+    feature_plot = feature_maps.hvplot.image( cmap='jet', **kwargs )
+    pn.Row( pn.Column( class_plot, pred_class_plot ), feature_plot ).show( str(class_map.name) )
+
 # class LabelingWidget(QWidget):
 #     def __init__(self, parent, **kwargs):
 #         QWidget.__init__(self, parent, **kwargs)

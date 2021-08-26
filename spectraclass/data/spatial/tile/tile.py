@@ -42,7 +42,8 @@ class Tile:
 
     def getBlocks(self, **kwargs ) -> List["Block"]:
         from spectraclass.data.spatial.tile.manager import TileManager
-        (nx,ny) = TileManager.instance().block_dims
+        tm = TileManager.instance()
+        (nx,ny) = tm.block_dims
         if self.data is None: return []
         return [ Block( self, iy, ix, **kwargs ) for ix in range(0,nx) for iy in range(0,ny) ]
 
