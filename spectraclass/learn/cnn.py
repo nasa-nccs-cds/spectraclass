@@ -63,14 +63,21 @@ class CNN(torch.nn.Module):
             if epoch % 10 == 0:
                 print(f'epoch: {epoch}, loss = {loss.data}' )
 
-    def evaluate_model( self, data: Data ) -> Tuple[np.ndarray,float]:
+    def npnorm(self, data: np.ndarray, axis: int ):
+        v0, v1 = data.min(axis=axis).elem(), data.max(axis=axis).elem()
+        return ( data - v0 ) / ( v1 - v0 )
+
+    def evaluate_model( self, data: Data ) -> Tuple:
         self.eval()
-        _, pred = self(data).max(dim=1)
+        class_results = self(data)
+        rvals, pred = class_results.max(dim=1)
+        reliability = rvals.detach().numpy()
         correct = int( pred[data.test_mask].eq( data.y[data.test_mask] ).sum().item() )
         acc = correct / int( data.test_mask.sum() )
         pred_data = pred.numpy() + 1
         pred_data[ data.nodata_mask.numpy() ] = 0
-        return ( pred_data, acc )
+        print( f"Class prob range = ({class_results.min()}, {class_results.max()}), mean = {class_results.mean()}, std = {class_results.std()}")
+        return ( pred_data, reliability, acc )
 
     @staticmethod
     def getMasks( class_map: np.ndarray, num_class_exemplars: int) -> Dict[str, torch.tensor]:

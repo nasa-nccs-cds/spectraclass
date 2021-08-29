@@ -20,12 +20,13 @@ def toXA( vname: str, nparray: np.ndarray, format="np", transpose = False ):
     return xa.DataArray( nparray, coords, dims, vname, dict(transform=[1, 0, 0, 0, 1, 0], fileformat=format))
 
 
-def plot_results( class_map: xa.DataArray, pred_class_map: xa.DataArray, feature_maps: xa.DataArray ):
+def plot_results( class_map: xa.DataArray, pred_class_map: xa.DataArray, feature_maps: xa.DataArray, reliability_map: xa.DataArray ):
     class_plot = class_map.hvplot.image(cmap='Category20')
     pred_class_plot = pred_class_map.hvplot.image( cmap='Category20' )
     kwargs = {} if (feature_maps.ndim < 3) else dict( groupby=feature_maps.dims[0], widget_type='scrubber', widget_location='bottom' )
     feature_plot = feature_maps.hvplot.image( cmap='jet', **kwargs )
-    pn.Row( pn.Column( class_plot, pred_class_plot ), feature_plot ).show( str(class_map.name) )
+    reliability_plot = reliability_map.hvplot.image(cmap='jet')
+    pn.Row( pn.Column( class_plot, pred_class_plot ), pn.Column( feature_plot, reliability_plot) ).show( str(class_map.name) )
 
 # class LabelingWidget(QWidget):
 #     def __init__(self, parent, **kwargs):

@@ -21,6 +21,7 @@ best_data = None
 X: torch.Tensor = CNN.getConvData(dm)
 class_map: xa.DataArray = dm.getClassMap()
 class_data: np.ndarray = class_map.values
+nodata_mask = (class_data.flatten() == 0)
 Y: torch.Tensor = torch.from_numpy( class_data.flatten().astype(np.compat.long) ) - 1
 Nf = X.shape[1]
 Nc = class_data.max()
@@ -32,7 +33,7 @@ for iT in range(ntrials):
     train_data = Data(x=X, y=Y, **masks)
     cnn = CNN( LS, Nc, KS )
     cnn.train_model( train_data, **sgd_parms )
-    (pred, acc) = cnn.evaluate_model( train_data )
+    (pred, reliability, acc) = cnn.evaluate_model( train_data )
     accuracy.append( acc )
     print(f" ** Completed trial {iT}/{ntrials}: Accuracy = {acc}, running average = {np.array(accuracy).mean()}")
     if acc > best_acc:
@@ -44,13 +45,15 @@ for iT in range(ntrials):
 acc_data = np.array(accuracy)
 print( f"Average accuracy over {ntrials} trials = {acc_data.mean()}, std = {acc_data.std()}")
 
-( pred, acc ) = best_model.evaluate_model( best_data )
+( pred, reliability, acc ) = best_model.evaluate_model( best_data )
 ntest  = np.count_nonzero( best_data.test_mask.numpy() )
 ntrain = np.count_nonzero( best_data.train_mask.numpy() )
 print( f"Plotting classification, accuracy = {acc}, with {ntest} test labels and {ntrain} train labels ({Nc} classes)")
 pred_class_map: xa.DataArray = class_map.copy( data = pred.reshape( class_map.shape ) )
 feature_map = toXA( "featureMap", X.numpy().squeeze() )
-plot_results( class_map, pred_class_map, feature_map )
+reliability[nodata_mask] = 0.0
+reliability_map = toXA( "reliability", reliability.reshape(class_map.shape) )
+plot_results( class_map, pred_class_map, feature_map, reliability_map )
 
 
 

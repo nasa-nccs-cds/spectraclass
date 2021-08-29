@@ -24,16 +24,18 @@ def getMasks( class_data: np.ndarray, num_class_exemplars: int) -> Dict[str, tor
                 test_mask=torch.from_numpy(test_mask),
                 nodata_mask=torch.from_numpy(nodata_mask))
 
-dm: DataManager = DataManager.initialize( "salinas", 'aviris' )
+dm: DataManager = DataManager.initialize( "pavia", 'aviris' )
 project_data: xa.Dataset = dm.loadCurrentProject( "main" )
 class_map: xa.DataArray = dm.getClassMap()
 class_data: np.ndarray = class_map.values.flatten().astype(np.compat.long)
 feature_data: xa.DataArray = project_data['reduction']
 
-ntrials = 40
+ntrials = 100
 nHidden = 32
 num_class_exemplars = 5
 accuracy = []
+yt: np.ndarray = None
+yp: np.ndarray = None
 
 for iT in range( ntrials ):
     class_masks: Dict[str,torch.tensor] = getMasks( class_data, num_class_exemplars )
@@ -46,8 +48,8 @@ for iT in range( ntrials ):
     svc.fit( X, Y )
 
     xt: np.ndarray = feature_data.values[test_mask]
-    yt: np.ndarray = class_data[test_mask]
-    yp: np.ndarray = svc.predict( xt )
+    yt = class_data[test_mask]
+    yp = svc.predict( xt )
 
     acc = np.count_nonzero( yp == yt ) / np.count_nonzero( test_mask )
     print(' Trial[{}]--> Accuracy: {:.4f}'.format(iT,acc))
