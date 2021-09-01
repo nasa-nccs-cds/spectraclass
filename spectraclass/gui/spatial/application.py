@@ -1,5 +1,5 @@
-import os, ipywidgets as ipw
 from spectraclass.util.logs import LogManager, lgm
+import ipywidgets as ipw
 from spectraclass.application.controller import SpectraclassController
 from spectraclass.model.base import Marker
 

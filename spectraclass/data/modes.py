@@ -199,7 +199,12 @@ class ModeDataManager(SCSingletonConfigurable):
         return self.datasets[ self.dsid() ]
 
     def blockFilePath( self, **kwargs ) -> str:
-        return os.path.join(self.datasetDir, self.dsid(**kwargs) + ".nc")
+        ext = kwargs.get('ext','nc')
+        return os.path.join(self.datasetDir, self.dsid(**kwargs) + "." + ext )
+
+    def leafletRasterPath( self, **kwargs ) -> str:
+        from spectraclass.data.base import DataManager, dm
+        return f"files/spectraclass/datasets/{self.MODE}/{dm().name}/{self.dsid(**kwargs)}.tif"
 
     def loadDataFile( self, **kwargs ) -> xa.Dataset:
         from spectraclass.data.base import DataManager, dm

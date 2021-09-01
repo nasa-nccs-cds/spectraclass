@@ -230,7 +230,7 @@ class SpatialDataManager(ModeDataManager):
         if colorbar:
             cbar: Colorbar = ax.figure.colorbar(img, ax=ax, **cbar_kwargs )
             cbar.set_ticklabels( [ cval[1] for cval in lm().labeledColors ] )
-        if showplot: plt.show()
+ #       if showplot: plt.show()
         return img
 
     @classmethod
@@ -261,13 +261,13 @@ class SpatialDataManager(ModeDataManager):
         tile_data = self.tiles.getTileData()
         for block in self.tiles.tile.getBlocks():
             block.clearBlockCache()
-            block.addTextureBands( )
+#           block.addTextureBands( )
             blocks_point_data: xa.DataArray = block.getPointData()[0]
             if blocks_point_data.size == 0:
                lgm().log( f" Warning:  Block {block.block_coords} has no valid samples.", print=True )
             else:
-                range = [ blocks_point_data.values.min(), blocks_point_data.values.max() ]
-                lgm().log(f" Preparing point data with shape {blocks_point_data.shape} and range = {range}", print=True)
+                prange = [ blocks_point_data.values.min(), blocks_point_data.values.max() ]
+                lgm().log(f" Preparing point data with shape {blocks_point_data.shape} and range = {prange}", print=True)
                 blocks_reduction = rm().reduce( blocks_point_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
                 if blocks_reduction is not None:
                     self.model_dims = blocks_reduction[0][0].shape[1]
@@ -278,17 +278,27 @@ class SpatialDataManager(ModeDataManager):
                         try: raw_data.attrs['wkt'] = tile_data.spatial_ref.crs_wkt
                         except: pass
                         data_vars = dict( raw=raw_data, norm=point_data )
-                        data_vars['reduction'] = xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
+                        reduced_dataArray =  xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
+                        data_vars['reduction'] = reduced_dataArray
                         data_vars['reproduction'] = reproduction
-                        result_dataset = xa.Dataset( data_vars ) # , attrs={'type': 'spectra'} )
-                        self.dataset = self.reduced_dataset_name( file_name ) # "-".join( [file_name] + raw_data.shape[1:] ) )
-                        output_file = os.path.join( self.datasetDir, self.dataset + ".nc")
+                        result_dataset = xa.Dataset( data_vars )
+                        self.dataset = self.reduced_dataset_name( file_name )
+                        output_file = os.path.join( self.datasetDir, self.dataset + ".nc" )
+                        self._reduced_raster_file = os.path.join(self.datasetDir, self.dataset + ".tif")
                         lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file} with {blocks_point_data.size} samples, dset attrs:")
                         for varname, da in result_dataset.data_vars.items():
                             da.attrs['long_name'] = f"{file_name}.{varname}"
                         print( f"Writing output file: '{output_file}' with {blocks_point_data.size} samples")
                         os.makedirs( os.path.dirname( output_file ), exist_ok=True )
-                        result_dataset.to_netcdf(output_file)
+                        result_dataset.to_netcdf( output_file )
+                        print(f"Writing raster file: '{self._reduced_raster_file}' with dims={reduced_dataArray.dims}, attrs = {reduced_dataArray.attrs}")
+#                        reduced_dataArray.rio.set_spatial_dims()
+                        raw_data.rio.to_raster( self._reduced_raster_file )
+
+
+    @property
+    def reduced_raster_file(self):
+        return self._reduced_raster_file
 
     def getFilePath(self, use_tile: bool ) -> str:
         base_dir = dm().modal.data_dir

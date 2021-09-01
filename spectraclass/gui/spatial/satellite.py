@@ -3,7 +3,6 @@ from typing import List
 from urllib import request
 from io import BytesIO
 from math import log, exp, tan, atan, ceil
-from spectraclass.xext.xgeo import XGeo
 from PIL import Image
 import os, traitlets as tl
 import xarray as xa

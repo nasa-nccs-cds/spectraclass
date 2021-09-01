@@ -120,8 +120,11 @@ class TileManager(SCSingletonConfigurable):
             init_shape = [*tile_data.shape]
             valid_bands = DataManager.instance().valid_bands()
             if valid_bands is not None:
+                band_names = tile_data.attrs.get( 'long_name', None )
                 dataslices = [tile_data.isel(band=slice(valid_band[0], valid_band[1])) for valid_band in valid_bands]
                 tile_data = xa.concat(dataslices, dim="band")
+                if isinstance(band_names, (list, tuple)):
+                    tile_data.attrs['long_name'] = sum( [ list(band_names[valid_band[0]:valid_band[1]]) for valid_band in valid_bands ], [] )
                 lgm().log( f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
             result = self.rescale(tile_data)
             self._tile_data = result

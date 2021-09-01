@@ -117,7 +117,7 @@ class ReductionManager(SCSingletonConfigurable):
             x = Dense(layer_dims, activation=activation)(x)
             layer_dims = int( round( layer_dims * reduction_factor ))
         decoded = Dense( input_dims, activation='linear' )(x)
-
+        print( f" Autoencoder_reduction: train_input shape = {train_input.shape} " )
 #        modelcheckpoint = ModelCheckpoint('xray_auto.weights', monitor='loss', verbose=1, save_best_only=True, save_weights_only=True, mode='auto', period=1)
 #        earlystopping = EarlyStopping(monitor='loss', min_delta=0., patience=100, verbose=1, mode='auto')
         autoencoder = Model( inputs=[inputlayer], outputs=[decoded] )
@@ -134,6 +134,7 @@ class ReductionManager(SCSingletonConfigurable):
                 reproduced_data: np.ndarray = autoencoder.predict( test_input.data )
                 reproduction: xa.DataArray = test_input.copy( data=reproduced_data )
                 results.append( (encoded_data, reproduction, test_input ) )
+                print(".")
                 if iT == 0:
                     lgm().log(f" Autoencoder_reduction with sparsity={sparsity}, result: shape = {encoded_data.shape}")
                     lgm().log(f" ----> encoder_input: shape = {test_input.shape}, val[5][5] = {test_input.data[:5][:5]} ")
