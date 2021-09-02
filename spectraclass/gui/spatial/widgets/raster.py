@@ -4,6 +4,7 @@ from spectraclass.model.base import SCSingletonConfigurable, Marker
 from functools import partial
 import traitlets as tl
 import ipywidgets as ipw
+from .tools import PageSlider, PolygonSelectionTool
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import types, pandas as pd
@@ -63,6 +64,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
         self.image_template: Optional[xa.DataArray]  = None
         self.overlay_image: Optional[AxesImage] = None
         self._classification_data: Optional[np.ndarray] = None
+        self._polygon_selection: PolygonSelectionTool = None
         self.use_model_data: bool = False
         self.labels = None
         self.transients = []
@@ -90,15 +92,49 @@ class TrainingSetSelection(SCSingletonConfigurable):
         atexit.register(self.exit)
         self._update(0)
 
+    def select_region(self, *args, **kwargs ):
+        rtype = self._region_types.value
+        ufm().show( f"select_region, type = {rtype}" )
+        if rtype == "Polygon":
+            if self._polygon_selection is None:
+                self._polygon_selection = PolygonSelectionTool( self.figure )
+            self._polygon_selection.enable()
+
+    def label_region(self, *args, **kwargs ):
+        ufm().show("label_region")
+        self._polygon_selection.disconnect()
+
+    def getLabelsPanel(self):
+        self._region_types = ipw.Dropdown( options=[ "Point", "Rectanble", "Polygon" ], description="Region Type", index=0 )
+        select_button = ipw.Button( description="Select Region", border= '1px solid gray', layout=ipw.Layout( width='120px' ) )
+        select_button.layout = ipw.Layout( width='auto', flex="1 0 auto" )
+        select_button.on_click( self.select_region )
+        label_button = ipw.Button( description="Label Region", border= '1px solid gray', layout=ipw.Layout( width='120px' ) )
+        label_button.layout = ipw.Layout( width='auto', flex="1 0 auto" )
+        label_button.on_click( self.label_region )
+        buttonbox = ipw.HBox( [ select_button, label_button  ] )
+        return ipw.VBox( [ self._region_types, buttonbox ] )
+
+    def getLayersPanel(self):
+        return ipw.VBox( [ ] )
+
+    def getControlPanel(self):
+        control_collapsibles = ipw.Accordion( children=[ self.getLabelsPanel(), self.getLayersPanel()  ], layout=ipw.Layout(width='300px'))  #
+        for iT, title in enumerate([ 'Labels', 'Layers' ]): control_collapsibles.set_title(iT, title)
+        control_collapsibles.selected_index = 1
+        return control_collapsibles
+
     def gui(self):
         css_border = '1px solid blue'
         self.setBlock()
         self.defineActions()
-        control = ipw.VBox([ ufm().gui(), am().gui(), self.figure.canvas ], layout=ipw.Layout(flex='0 0 700px'), border=css_border)
+        actions = ipw.VBox([ ufm().gui(), am().gui(),  ], layout=ipw.Layout(width='100%'), border=css_border)
+        map_panels = ipw.HBox( [ self.figure.canvas, self.getControlPanel() ], border=css_border )
+        tsgui = ipw.VBox( [ actions, map_panels ], border=css_border )
         print( f"figure.canvas.toolbar = {self.figure.canvas.toolbar}" )
         print( f"figure.canvas.manager.toolbar = {self.figure.canvas.manager.toolbar}" )
 
-        return control
+        return tsgui
 
     def defineActions(self):
         am().add_action( "mark", self.mark_selection_action )

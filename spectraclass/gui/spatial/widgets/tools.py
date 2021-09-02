@@ -26,8 +26,9 @@ class PolygonSelectionTool(ToolToggleBase):
     default_keymap = 'p'
     description = 'Select Polygonal Region'
 
-    def __init__( self, *args, **kwargs ):
-        super().__init__( *args, toggled=False, **kwargs )
+    def __init__( self, figure, **kwargs ):
+        super().__init__( figure.canvas.manager.toolmanager, "PolygonSelectionTool", toggled=False, **kwargs )
+        self.figure = figure
         self.poly = None
 
     def enable(self, event=None):
