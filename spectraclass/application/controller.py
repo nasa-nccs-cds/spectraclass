@@ -36,6 +36,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.points import PointCloudManager, pcm
         return pcm().color_map
 
+    @exception_handled
     def update_current_class(self, iclass: int ):
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.model.labels import LabelsManager, lm

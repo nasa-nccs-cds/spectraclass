@@ -28,6 +28,11 @@ from .tools import PageSlider, PolygonSelectionTool
 
 ROOT_DIR = pathlib.Path(__file__).parent.parent.parent.parent.absolute()
 
+class RegionTypes:
+    Polygon = "Polygon"
+    Rectangle = "Rectangle"
+    Point = "Point"
+
 def get_color_bounds( color_values: List[float] ) -> List[float]:
     color_bounds = []
     for iC, cval in enumerate( color_values ):
@@ -47,8 +52,8 @@ def tss() -> "TrainingSetSelection":
     return mgr
 
 class TrainingSetSelection(SCSingletonConfigurable):
-    init_band = tl.Int(10).tag(config=True, sync=True)
-    overlay_alpha = tl.Float(0.5).tag(config=True, sync=True)
+    init_band = tl.Int(10).tag( config=True, sync=True )
+    overlay_alpha = tl.Float(0.5).tag( config=True, sync=True )
 
     RIGHT_BUTTON = 3
     MIDDLE_BUTTON = 2
@@ -81,6 +86,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
         self.flow_iterations = kwargs.get( 'flow_iterations', 1 )
         self.frame_marker: Optional[Line2D] = None
         self.control_axes = {}
+        self._control_panels = OrderedDict()
         self.setup_plot(**kwargs)
 
 #        google_actions = [[maptype, None, None, partial(self.run_task, self.download_google_map, "Accessing Landsat Image...", maptype, task_context='newfig')] for maptype in ['satellite', 'hybrid', 'terrain', 'roadmap']]
@@ -92,35 +98,38 @@ class TrainingSetSelection(SCSingletonConfigurable):
         atexit.register(self.exit)
         self._update(0)
 
-    def select_region(self, *args, **kwargs ):
-        rtype = self._region_types.value
-        ufm().show( f"select_region, type = {rtype}" )
-        if rtype == "Polygon":
+    @property
+    def region_type(self) -> str:
+        return str( self._region_types.value )
+
+    def select_region( self, *args, **kwargs ):
+        ufm().show( f"select_region, type = {self.region_type}" )
+        if self.region_type == RegionTypes.Polygon:
             if self._polygon_selection is None:
                 self._polygon_selection = PolygonSelectionTool( self.figure )
             self._polygon_selection.enable()
 
-    def label_region(self, *args, **kwargs ):
-        ufm().show("label_region")
-        self._polygon_selection.disconnect()
+    def label_region( self, *args, **kwargs ):
+        ufm().show( "label_region" )
+        region: List[Tuple] = self.getSelectedRegion()
+        self._polygon_selection.disable()
+
+    def addPanel(self, name: str, widget: ipw.Widget ):
+        self._control_panels[ name ] = widget
+
+    def getLearningPanel(self):
+        return ipw.VBox( [ ] )
 
     def getLabelsPanel(self):
-        self._region_types = ipw.Dropdown( options=[ "Point", "Rectanble", "Polygon" ], description="Region Type", index=0 )
-        select_button = ipw.Button( description="Select Region", border= '1px solid gray', layout=ipw.Layout( width='120px' ) )
-        select_button.layout = ipw.Layout( width='auto', flex="1 0 auto" )
-        select_button.on_click( self.select_region )
-        label_button = ipw.Button( description="Label Region", border= '1px solid gray', layout=ipw.Layout( width='120px' ) )
-        label_button.layout = ipw.Layout( width='auto', flex="1 0 auto" )
-        label_button.on_click( self.label_region )
-        buttonbox = ipw.HBox( [ select_button, label_button  ] )
-        return ipw.VBox( [ self._region_types, buttonbox ] )
+        self._region_types = ipw.Dropdown( options=[ RegionTypes.Point, RegionTypes.Rectangle, RegionTypes.Polygon ], description="Region Type", index=0 )
+        return ipw.VBox( [ self._region_types ] )
 
     def getLayersPanel(self):
         return ipw.VBox( [ ] )
 
     def getControlPanel(self):
-        control_collapsibles = ipw.Accordion( children=[ self.getLabelsPanel(), self.getLayersPanel()  ], layout=ipw.Layout(width='300px'))  #
-        for iT, title in enumerate([ 'Labels', 'Layers' ]): control_collapsibles.set_title(iT, title)
+        control_collapsibles = ipw.Accordion( children=tuple(self._control_panels.values()), layout=ipw.Layout(width='300px'))  #
+        for iT, title in enumerate(self._control_panels.keys()): control_collapsibles.set_title(iT, title)
         control_collapsibles.selected_index = 1
         return control_collapsibles
 
@@ -131,15 +140,25 @@ class TrainingSetSelection(SCSingletonConfigurable):
         actions = ipw.VBox([ ufm().gui(), am().gui(),  ], layout=ipw.Layout(width='100%'), border=css_border)
         map_panels = ipw.HBox( [ self.figure.canvas, self.getControlPanel() ], border=css_border )
         tsgui = ipw.VBox( [ actions, map_panels ], border=css_border )
-        print( f"figure.canvas.toolbar = {self.figure.canvas.toolbar}" )
-        print( f"figure.canvas.manager.toolbar = {self.figure.canvas.manager.toolbar}" )
-
         return tsgui
 
     def defineActions(self):
-        am().add_action( "mark", self.mark_selection_action )
-        am().add_action( "undo", self.undo_action )
-        am().add_action( "clear", self.clear_action )
+        am().add_action( "select",  self.select_region )
+        am().add_action( "label",   self.label_region  )
+        am().add_action( "augment", self.mark_selection_action )
+        am().add_action( "undo",    self.undo_action   )
+        am().add_action( "clear",   self.clear_action  )
+
+    def getSelectedRegion(self) -> List[Tuple]:
+        try:
+            if self.region_type == RegionTypes.Polygon:
+                assert self._polygon_selection is not None, "Must selected a region first."
+                selected_polygon: List[Tuple] = self._polygon_selection.selection()
+                return selected_polygon
+            else:
+                raise AssertionError( f"Unknown Region: {self.region_type}" )
+        except AssertionError as err:
+           ufm().show( str(err), "red" )
 
     def mark_selection_action(self):
         ufm().show( "mark selection" )
@@ -303,18 +322,9 @@ class TrainingSetSelection(SCSingletonConfigurable):
         lgm().log( f"Canvas.manager class = {self.figure.canvas.manager.__class__}")
         items = self.figure.canvas.trait_values().items()
         for k,v in items: lgm().log(f" ** {k}: {v}")
-        self.setup_toolbar()
-
-    def setup_toolbar(self):
-        pass
-        # icons:  https://fontawesome.com/icons?d=gallery&p=2&m=free
-
-        # toolbar = self.figure.canvas.toolbar
-        # tool_items = list(toolbar.toolitems)
-        # tool_items.append( ("TM", "Toggle Marker Visibility", "map-marker-alt", "toggle_markers") )               toolbar.toolitems = tool_items
-        # toolbar.toggle_markers = types.MethodType( partial( toggle_markers, self ), toolbar )
-    #        self.figure.canvas.manager.toolmanager.add_tool( 'SelectRegion', PolygonSelectionTool )
-    #        self.figure.canvas.manager.toolbar.add_tool( "SelectRegion", 'navigation', 1 )
+        self._control_panels['Labels'] = self.getLabelsPanel()
+        self._control_panels['Layers'] = self.getLayersPanel()
+        self._control_panels['Augment'] = self.getLearningPanel()
 
     def invert_yaxis(self):
         self.plot_axes.invert_yaxis()

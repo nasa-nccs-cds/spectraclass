@@ -31,18 +31,25 @@ class PolygonSelectionTool(ToolToggleBase):
         self.figure = figure
         self.poly = None
 
+    def selection(self) -> List[Tuple]:
+        assert ( (self.poly is not None) and self.poly._polygon_completed ), "Region boundary is not well defined"
+        return self.poly.verts
+
     def enable(self, event=None):
        ufm().show( "Enable PolygonSelection")
-       self.poly = PolygonSelector( self.figure.axes, self.onselect )
+       self.poly = PolygonSelector( self.figure.axes[0], self.onselect )
 
     def disable(self, event=None):
+        self.poly.set_visible(False)
         self.disconnect()
+        super().disable( self, event=None )
 
     def onselect(self, *args ):
         print( f"onselect: {args} ")
         self.canvas.draw_idle()
 
     def disconnect(self):
+        print(f"DISCONNECT")
         self.poly.disconnect_events()
         self.poly = None
         self.canvas.draw_idle()
