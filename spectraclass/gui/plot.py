@@ -157,9 +157,9 @@ class GraphPlotManager(SCSingletonConfigurable):
     def plot_graph( self, pids: List[int] = None ):
         from spectraclass.model.labels import LabelsManager, lm
         if pids is None: pids = lm().getPids()
-        current_graph: mplGraphPlot = self.current_graph()
-        current_graph.select_items( pids )
-        current_graph.plot()
+        # current_graph: mplGraphPlot = self.current_graph()
+        # current_graph.select_items( pids )
+        # current_graph.plot()
 
     def _createGui( self, **kwargs ) -> ipw.Tab():
         wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 500px' ) )

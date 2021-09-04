@@ -122,11 +122,11 @@ class Block:
         pt: ProjectiveTransform = tm().get_block_transform(*self.block_coords)
         block_raster.attrs['transform'] = pt.params.flatten().tolist()
         block_raster.name = self.file_name
+        block_raster['crs'] = block_raster.spatial_ref.crs_wkt
         return block_raster
 
     def _apply_mask(self, block_array: xa.DataArray ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        print( f"apply_mask: block_array attrs = {block_array.attrs}")
         nodata_value = np.nan
         mask_array: Optional[xa.DataArray] = tm().getMask()
         return block_array if mask_array is None else block_array.where( mask_array, nodata_value )

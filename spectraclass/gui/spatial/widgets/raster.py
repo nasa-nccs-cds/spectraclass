@@ -2,8 +2,11 @@ from collections import OrderedDict
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.model.base import SCSingletonConfigurable, Marker
 from functools import partial
+from numpy.ma import MaskedArray
 import traitlets as tl
 import ipywidgets as ipw
+from shapely import geometry
+import rasterio
 from .tools import PageSlider, PolygonSelectionTool
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.util.logs import LogManager, lgm, exception_handled
@@ -71,11 +74,10 @@ class TrainingSetSelection(SCSingletonConfigurable):
         self._classification_data: Optional[np.ndarray] = None
         self._polygon_selection: PolygonSelectionTool = None
         self.use_model_data: bool = False
-        self.labels = None
+        self.labels_map: Optional[xa.DataArray] = None
         self.transients = []
         self.plot_axes: Optional[Axes] = None
         self.marker_plot: Optional[PathCollection] = None
-        self.label_map: Optional[xa.DataArray] = None
         self.dataLims = {}
         self.key_mode = None
         self.currentClass = 0
@@ -110,8 +112,12 @@ class TrainingSetSelection(SCSingletonConfigurable):
             self._polygon_selection.enable()
 
     def label_region( self, *args, **kwargs ):
-        ufm().show( "label_region" )
-        region: List[Tuple] = self.getSelectedRegion()
+        from rasterio.mask import mask
+        iClass: int = lm().current_cid
+        region: geometry.Polygon = self.getSelectedRegion()
+        dataset = xa.Dataset( dict( labels = self.labels_map ), self.labels_map.coords, self.labels_map.attrs ).rio
+        ( new_label_map, out_transform ) = mask( dataset, [region], invert=True, nodata=iClass, filled=True )
+        self.labels_map = self.labels_map.copy( data=new_label_map )
         self._polygon_selection.disable()
 
     def addPanel(self, name: str, widget: ipw.Widget ):
@@ -137,7 +143,8 @@ class TrainingSetSelection(SCSingletonConfigurable):
         css_border = '1px solid blue'
         self.setBlock()
         self.defineActions()
-        actions = ipw.VBox([ ufm().gui(), am().gui(),  ], layout=ipw.Layout(width='100%'), border=css_border)
+        top_layout = ipw.Layout( width="100%", height="120px",  border= '2px solid firebrick' ) # justify_content="space-between", flex='0 0 70px',
+        actions = ipw.VBox([ ufm().gui(), lm().gui(), am().gui() ], layout = top_layout )
         map_panels = ipw.HBox( [ self.figure.canvas, self.getControlPanel() ], border=css_border )
         tsgui = ipw.VBox( [ actions, map_panels ], border=css_border )
         return tsgui
@@ -149,12 +156,12 @@ class TrainingSetSelection(SCSingletonConfigurable):
         am().add_action( "undo",    self.undo_action   )
         am().add_action( "clear",   self.clear_action  )
 
-    def getSelectedRegion(self) -> List[Tuple]:
+    def getSelectedRegion(self) -> geometry.Polygon:
         try:
             if self.region_type == RegionTypes.Polygon:
                 assert self._polygon_selection is not None, "Must selected a region first."
                 selected_polygon: List[Tuple] = self._polygon_selection.selection()
-                return selected_polygon
+                return geometry.Polygon( selected_polygon )
             else:
                 raise AssertionError( f"Unknown Region: {self.region_type}" )
         except AssertionError as err:
@@ -195,33 +202,33 @@ class TrainingSetSelection(SCSingletonConfigurable):
         marker = Marker( [pid], cid, labeled=False )
         self.add_marker( marker )
 
-    def create_mask( self, cid: int ):
-        from spectraclass.data.base import DataManager, dm
-        if self._classification_data is None:
-            ufm().show( "Must generate a classification before creating a mask", "red" )
-        elif cid == 0:
-            ufm().show( "Must choose a class in order to create a mask", "red" )
-        else:
-            data: xa.DataArray = self.block.data
-            mask_data: np.ndarray = np.equal( self._classification_data, np.array(cid).reshape((1,1)) )
-            mask_array = xa.DataArray( mask_data, name=f"mask-{cid}", dims=data.dims[1:], coords= { d:data.coords[d] for d in data.dims[1:] } )
-            output_file = dm().mask_file
-            if os.path.exists( output_file ):
-                mask_dset: xa.Dataset = xa.open_dataset( output_file )
-                mask_dset.update( { mask_array.name: mask_array } )
-                mask_dset.to_netcdf( output_file, format='NETCDF4', engine='netcdf4' )
-            else:
-                mask_array.to_netcdf( output_file, format='NETCDF4', engine='netcdf4' )
-            lgm().log( f"\n\n ###### create mask: {mask_array} \n Saved to file: {output_file}" )
-
-    @exception_handled
-    def plot_overlay_image( self, image_data: np.ndarray = None ):
-        if image_data is not None:
-            lgm().log( f" plot image overlay, shape = {image_data.shape}, vrange = {[ image_data.min(), image_data.max() ]}, dtype = {image_data.dtype}" )
-            self._classification_data = image_data
-            self.overlay_image.set_data( image_data )
-        self.overlay_image.set_alpha( self.overlay_alpha )
-        self.update_canvas()
+    # def create_mask( self, cid: int ):
+    #     from spectraclass.data.base import DataManager, dm
+    #     if self._classification_data is None:
+    #         ufm().show( "Must generate a classification before creating a mask", "red" )
+    #     elif cid == 0:
+    #         ufm().show( "Must choose a class in order to create a mask", "red" )
+    #     else:
+    #         data: xa.DataArray = self.block.data
+    #         mask_data: np.ndarray = np.equal( self._classification_data, np.array(cid).reshape((1,1)) )
+    #         mask_array = xa.DataArray( mask_data, name=f"mask-{cid}", dims=data.dims[1:], coords= { d:data.coords[d] for d in data.dims[1:] } )
+    #         output_file = dm().mask_file
+    #         if os.path.exists( output_file ):
+    #             mask_dset: xa.Dataset = xa.open_dataset( output_file )
+    #             mask_dset.update( { mask_array.name: mask_array } )
+    #             mask_dset.to_netcdf( output_file, format='NETCDF4', engine='netcdf4' )
+    #         else:
+    #             mask_array.to_netcdf( output_file, format='NETCDF4', engine='netcdf4' )
+    #         lgm().log( f"\n\n ###### create mask: {mask_array} \n Saved to file: {output_file}" )
+    #
+    # @exception_handled
+    # def plot_overlay_image( self, image_data: np.ndarray = None ):
+    #     if image_data is not None:
+    #         lgm().log( f" plot image overlay, shape = {image_data.shape}, vrange = {[ image_data.min(), image_data.max() ]}, dtype = {image_data.dtype}" )
+    #         self._classification_data = image_data
+    #         self.overlay_image.set_data( image_data )
+    #     self.overlay_image.set_alpha( self.overlay_alpha )
+    #     self.update_canvas()
 
     def on_overlay_alpha_change(self, *args ):
         self.overlay_image.set_alpha( self.overlay_alpha )
@@ -265,10 +272,10 @@ class TrainingSetSelection(SCSingletonConfigurable):
     def initLabels(self):
         nodata_value = -2
         template = self.block.data[0].squeeze( drop=True )
-        self.labels: xa.DataArray = xa.full_like( template, -1, dtype=np.dtype(np.int32) ).where( template.notnull(), nodata_value )
-        self.labels.attrs['_FillValue'] = nodata_value
-        self.labels.name = f"{self.block.data.name}_labels"
-        self.labels.attrs[ 'long_name' ] = [ "labels" ]
+        self.labels_map: xa.DataArray = xa.full_like( template, -1, dtype=np.dtype(np.int32) ).where( template.notnull(), nodata_value )
+        self.labels_map.attrs['_FillValue'] = nodata_value
+        self.labels_map.name = f"{self.block.data.name}_labels"
+        self.labels_map.attrs[ 'long_name' ] = [ "labels" ]
 
     def clearLabels( self):
         if self.block is not None:
@@ -422,11 +429,11 @@ class TrainingSetSelection(SCSingletonConfigurable):
                 pid = self.block.coords2pindex( event.ydata, event.xdata )
                 if pid >= 0:
                     cid = lm().current_cid
-                    lgm().log( f"Adding marker for pid = {pid}, cid = {cid}")
-                    ptindices = self.block.pindex2indices(pid)
-                    classification = self.label_map.values[ ptindices['iy'], ptindices['ix'] ] if (self.label_map is not None) else -1
-                    self.add_marker( Marker( [pid], cid, classification = classification ) )
-                    self.dataLims = event.inaxes.dataLim
+                    # lgm().log( f"Adding marker for pid = {pid}, cid = {cid}")
+                    # ptindices = self.block.pindex2indices(pid)
+                    # classification = self.label_map.values[ ptindices['iy'], ptindices['ix'] ] if (self.label_map is not None) else -1
+                    # self.add_marker( Marker( [pid], cid, classification = classification ) )
+                    # self.dataLims = event.inaxes.dataLim
                 else:
                     lgm().log(f"Can't add marker, pid = {pid}")
 
@@ -455,8 +462,8 @@ class TrainingSetSelection(SCSingletonConfigurable):
     #         Task.taskNotAvailable( "Workflow violation", "Must load a block and label some points first", **kwargs )
     #     else:
     #         print( "Submitting training set" )
-    #         labels: xa.DataArray = self.getLabeledPointData()
-    #         sample_labels: Optional[xa.DataArray] = self.block.flow.spread( labels, self.flow_iterations, **kwargs )
+    #         labels_map: xa.DataArray = self.getLabeledPointData()
+    #         sample_labels: Optional[xa.DataArray] = self.block.flow.spread( labels_map, self.flow_iterations, **kwargs )
     #         if sample_labels is not None:
     #             self.plot_label_map( sample_labels )
 

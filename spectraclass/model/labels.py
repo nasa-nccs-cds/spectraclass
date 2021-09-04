@@ -113,12 +113,11 @@ class LabelsManager(SCSingletonConfigurable):
     def gui( self ) -> ipw.DOMWidget:
         if self.wSelectedClass is None:
             for iC, (color, label) in enumerate(zip( self._colors, self._labels )):
-                button = ipw.Button( description=label, layout=ipw.Layout( flex='1 1 auto', height="auto"), border= '1px solid dimgrey'  )
+                button = ipw.Button( description=label, layout=ipw.Layout( width = "100%", max_width="500px" ), border= '1px solid dimgrey'  ) # flex='1 1 auto',
                 button.style.button_color = color
                 button.on_click( partial( self.set_selected_class, iC ) )
                 self._buttons.append( button )
-            self.wSelectedClass = ipw.HBox( self._buttons )
-            self.wSelectedClass.layout = ipw.Layout( flex='1 1 auto', width = "100%"  )
+            self.wSelectedClass = ipw.HBox( self._buttons, layout = ipw.Layout( width = "100%"  ) )
             self.set_selected_class( 0 )
         return self.wSelectedClass
 

@@ -137,11 +137,10 @@ class MapManager(SCSingletonConfigurable):
         self.overlay_image: Optional[AxesImage] = None
         self._classification_data: Optional[np.ndarray] = None
         self.use_model_data: bool = False
-        self.labels = None
+        self.label_map: Optional[xa.DataArray]  = None
         self.transients = []
         self.plot_axes: Optional[Axes] = None
         self.marker_plot: Optional[PathCollection] = None
-        self.label_map: Optional[xa.DataArray] = None
         self.dataLims = {}
         self.key_mode = None
         self.currentClass = 0
@@ -162,6 +161,9 @@ class MapManager(SCSingletonConfigurable):
 
         atexit.register(self.exit)
         self._update(0)
+
+    def labels_dset(self):
+        return xa.Dataset( self.label_map )
 
     def gui(self):
         self.setBlock()
@@ -293,10 +295,10 @@ class MapManager(SCSingletonConfigurable):
     def initLabels(self):
         nodata_value = -2
         template = self.block.data[0].squeeze( drop=True )
-        self.labels: xa.DataArray = xa.full_like( template, -1, dtype=np.dtype(np.int32) ).where( template.notnull(), nodata_value )
-        self.labels.attrs['_FillValue'] = nodata_value
-        self.labels.name = f"{self.block.data.name}_labels"
-        self.labels.attrs[ 'long_name' ] = [ "labels" ]
+        self.label_map: xa.DataArray = xa.full_like( template, -1, dtype=np.dtype(np.int32) ).where( template.notnull(), nodata_value )
+        self.label_map.attrs['_FillValue'] = nodata_value
+        self.label_map.name = f"{self.block.data.name}_labels"
+        self.label_map.attrs[ 'long_name' ] = [ "labels" ]
 
     def clearLabels( self):
         if self.block is not None:
@@ -312,7 +314,7 @@ class MapManager(SCSingletonConfigurable):
     #             coords = self.block.pindex2coords(pid)
     #             index = self.block.coords2indices( coords['y'], coords['x'] )
     #             try:
-    #                 self.labels[ index['iy'], index['ix'] ] = marker.cid
+    #                 self.label_map[ index['iy'], index['ix'] ] = marker.cid
     #             except:
     #                 print( f"Skipping out of bounds label at local row/col coords {index['iy']} {index['ix']}")
 
@@ -320,7 +322,7 @@ class MapManager(SCSingletonConfigurable):
     #     from spectraclass.data.base import DataManager, dm
     #     if update: self.updateLabelsFromMarkers()
     #     sdm: SpatialDataManager = dm().modal
-    #     labeledPointData = sdm.raster2points( self.labels )
+    #     labeledPointData = sdm.raster2points( self.label_map )
     #     return labeledPointData
     #
     # def getExtendedLabelPoints( self ) -> xa.DataArray:

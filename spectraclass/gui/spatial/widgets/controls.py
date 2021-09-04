@@ -37,7 +37,6 @@ class ActionsManager(SCSingletonConfigurable):
         else: executable()
 
     def _createGui( self, **kwargs ) -> ipw.Box:
-        from spectraclass.model.labels import LabelsManager
         for task in self._actions.keys():
             button = ipw.Button( description=task, border= '1px solid gray' )
             button.layout = ipw.Layout( width='auto', flex="1 0 auto" )
@@ -45,9 +44,7 @@ class ActionsManager(SCSingletonConfigurable):
             self._buttons[ task ] = button
         buttonBox =  ipw.HBox( list(self._buttons.values()) )
         buttonBox.layout = ipw.Layout( width = "100%" )
-        classes: ipw.DOMWidget = LabelsManager.instance().gui()
-        gui = ipw.VBox([ classes, buttonBox ], layout = ipw.Layout( width="100%", justify_content="space-between", flex='0 0 70px', border= '2px solid firebrick' )  )
-        return gui
+        return buttonBox
 
 def pm() -> "ParametersManager":
     return ParametersManager.instance()
