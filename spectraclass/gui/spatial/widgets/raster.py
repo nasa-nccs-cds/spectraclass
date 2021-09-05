@@ -111,15 +111,21 @@ class TrainingSetSelection(SCSingletonConfigurable):
         elif self.region_type == RegionTypes.Rectangle: Selector = RectangleSelectionTool
         elif self.region_type == RegionTypes.Lasso: Selector = LassoSelectionTool
         else: raise NotImplementedError( f"Select tool not implemented for {self.region_type}")
+        self.clear_selection()
         self._selection_tool = Selector( self.figure )
         self._selection_tool.enable()
+
+    def clear_selection(self):
+        if self._selection_tool is not None:
+            self._selection_tool.disable()
+            self._selection_tool = None
 
     def label_region( self, *args, **kwargs ):
         iClass: int = lm().current_cid
         region: geometry.Polygon = self.getSelectedRegion()
         self._labels_map = self.fill_regions( self._labels_map, [region], iClass )
-        self._selection_tool.disable()
         self.display_label_image()
+        self.clear_selection()
 #        self.save_labels( self._labels_map )
 
     def display_label_image(self):
