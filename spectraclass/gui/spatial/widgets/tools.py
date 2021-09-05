@@ -35,14 +35,14 @@ class PolygonSelectionTool(ToolToggleBase):
         assert ( (self.poly is not None) and self.poly._polygon_completed ), "Region boundary is not well defined"
         return self.poly.verts
 
-    def enable(self, event=None):
+    def enable(self, *args ):
        ufm().show( "Enable PolygonSelection")
        self.poly = PolygonSelector( self.figure.axes[0], self.onselect )
 
-    def disable(self, event=None):
+    def disable(self, *args ):
         self.poly.set_visible(False)
         self.disconnect()
-        super().disable( self, event=None )
+        super().disable( self )
 
     def onselect(self, *args ):
         print( f"onselect: {args} ")

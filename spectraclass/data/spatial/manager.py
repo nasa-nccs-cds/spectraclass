@@ -274,7 +274,7 @@ class SpatialDataManager(ModeDataManager):
                     for ( reduced_spectra, reproduction, point_data ) in blocks_reduction:
                         file_name = point_data.attrs['file_name']
                         model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
-                        raw_data = block.data
+                        raw_data: xa.DataArray = block.data
                         try: raw_data.attrs['wkt'] = tile_data.spatial_ref.crs_wkt
                         except: pass
                         data_vars = dict( raw=raw_data, norm=point_data )

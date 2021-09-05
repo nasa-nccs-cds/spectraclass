@@ -72,7 +72,7 @@ class Block:
         self._ylim = None
 
     @property
-    def data(self):
+    def data(self) -> Optional[xa.DataArray]:
         if self._data is None:
             self._data = self._getData()
         return self._data
