@@ -1,22 +1,23 @@
+
+from typing import List, Union, Tuple, Optional, Dict, Callable
 from collections import OrderedDict
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.model.base import SCSingletonConfigurable, Marker
 from functools import partial
-from numpy.ma import MaskedArray
 import traitlets as tl
 import ipywidgets as ipw
+import rioxarray as rio
+from rioxarray.raster_dataset import RasterDataset
 from shapely import geometry
-import rasterio
-from .tools import PageSlider, PolygonSelectionTool
+from spectraclass.gui.spatial.widgets.tools import PageSlider, PolygonSelectionTool
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import types, pandas as pd
 import xarray as xa
 import numpy as np
-from typing import List, Dict, Tuple, Optional
 import math, atexit, os, traceback
 import pathlib
-from .controls import am, ufm
+from spectraclass.gui.spatial.widgets.controls import am, ufm
 from  ipympl.backend_nbagg import Toolbar
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
@@ -25,11 +26,8 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
 from matplotlib.colors import Normalize
-from matplotlib.backend_bases import PickEvent, MouseButton  # , NavigationToolbar2
+from matplotlib.backend_bases import PickEvent, MouseButton
 from spectraclass.gui.control import UserFeedbackManager, ufm
-from .tools import PageSlider, PolygonSelectionTool
-
-ROOT_DIR = pathlib.Path(__file__).parent.parent.parent.parent.absolute()
 
 class RegionTypes:
     Polygon = "Polygon"
@@ -71,10 +69,11 @@ class TrainingSetSelection(SCSingletonConfigurable):
         self.image: Optional[AxesImage] = None
         self.image_template: Optional[xa.DataArray]  = None
         self.overlay_image: Optional[AxesImage] = None
-        self._classification_data: Optional[np.ndarray] = None
+#        self._classification_data: Optional[np.ndarray] = None
         self._polygon_selection: PolygonSelectionTool = None
         self.use_model_data: bool = False
-        self.labels_map: Optional[xa.DataArray] = None
+        self._label_files_stack: List[str] = []
+        self._labels_map: xa.DataArray = None
         self.transients = []
         self.plot_axes: Optional[Axes] = None
         self.marker_plot: Optional[PathCollection] = None
@@ -112,13 +111,23 @@ class TrainingSetSelection(SCSingletonConfigurable):
             self._polygon_selection.enable()
 
     def label_region( self, *args, **kwargs ):
-        from rasterio.mask import mask
         iClass: int = lm().current_cid
         region: geometry.Polygon = self.getSelectedRegion()
-        dataset = xa.Dataset( dict( labels = self.labels_map ), self.labels_map.coords, self.labels_map.attrs ).rio
-        ( new_label_map, out_transform ) = mask( dataset, [region], invert=True, nodata=iClass, filled=True )
-        self.labels_map = self.labels_map.copy( data=new_label_map )
+        self._labels_map = self.fill_regions( self._labels_map, [region], iClass )
         self._polygon_selection.disable()
+        self.display_label_image()
+#        self.save_labels( self._labels_map )
+
+    def display_label_image(self):
+        self.overlay_image.set_data( self._labels_map )
+        self.overlay_image.set_alpha( self.overlay_alpha )
+        self.update_canvas()
+
+    def fill_regions(self, data_array: xa.DataArray, shapes: List[geometry.Polygon], fill_value: int ):
+        from rasterio.mask import  geometry_mask
+        from affine import Affine
+        mask = geometry_mask( shapes, transform=Affine( *data_array.transform[:6] ), out_shape=data_array.shape )
+        return data_array.where( mask, fill_value )
 
     def addPanel(self, name: str, widget: ipw.Widget ):
         self._control_panels[ name ] = widget
@@ -127,7 +136,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
         return ipw.VBox( [ ] )
 
     def getLabelsPanel(self):
-        self._region_types = ipw.Dropdown( options=[ RegionTypes.Polygon, RegionTypes.Rectangle, RegionTypes.Point ], description="Region Type", index=0 )
+        self._region_types = ipw.Dropdown( options=[ RegionTypes.Point, RegionTypes.Rectangle, RegionTypes.Polygon ], description="Region Type", index=0 )
         return ipw.VBox( [ self._region_types ] )
 
     def getLayersPanel(self):
@@ -271,10 +280,42 @@ class TrainingSetSelection(SCSingletonConfigurable):
 
     def initLabels(self):
         nodata_value = -2
-        self.labels_map: xa.DataArray = self.image_template.copy( data=np.full( self.image_template.shape, -1, np.int32 ) ).where( self.image_template.notnull(), nodata_value )
-        self.labels_map.attrs['_FillValue'] = nodata_value
-        self.labels_map.name = f"{self.block.data.name}_labels"
-        self.labels_map.attrs[ 'long_name' ] = [ "labels" ]
+        self._labels_map: xa.DataArray = self.image_template.copy( data=np.full( self.image_template.shape, -1, np.int32 ) )
+        self._labels_map.attrs['_FillValue'] = nodata_value
+        self._labels_map.name = "labels"
+        self._labels_map.attrs[ 'long_name' ] = [ "labels" ]
+        self._labels_map = self._labels_map.where( self.image_template.notnull(), nodata_value )
+#        self._labels_map.transform = Affine( *self._labels_map.transform[:6] )
+#        self.save_labels( self._labels_map )
+
+    def save_labels(self, labels: xa.DataArray ):
+        from datetime import datetime
+        now = datetime.now() # current date and time
+        date_time = now.strftime("%m.%d.%Y_%H.%M.%S")
+        dset_name = f"{self.block.data.name}_labels_{date_time}"
+        file_name = self.writeGeotiff( dset_name, labels )
+        if file_name is not None:
+            self._label_files_stack.append( dset_name )
+
+    def get_raster_file_name(self, dset_name: str ) -> str:
+        from spectraclass.data.base import DataManager, dm
+        return f"{dm().modal.data_dir}/{dset_name}.tif"
+
+    def read_labels( self ) -> xa.Dataset:
+        dset_name = self._label_files_stack[-1]
+        labels_file = self.get_raster_file_name(dset_name)
+        return rio.open_rasterio(labels_file)
+
+    def writeGeotiff(self, dset_name: str, raster_data: xa.DataArray ) -> Optional[str]:
+        output_file = self.get_raster_file_name(dset_name)
+        try:
+            if os.path.exists(output_file): os.remove(output_file)
+            lgm().log(f"Writing (raster) tile file {output_file}")
+            raster_data.rio.to_raster(output_file)
+            return output_file
+        except Exception as err:
+            lgm().log(f"Unable to write raster file to {output_file}: {err}")
+            return None
 
     def clearLabels( self):
         if self.block is not None:
@@ -484,16 +525,16 @@ class TrainingSetSelection(SCSingletonConfigurable):
 # #        event = dict( event="gui", type="update" )
 # #        self.submitEvent(event, EventMode.Gui)
 
-    def show_labels(self):
-        if self.labels_image is not None:
-            self.labels_image.set_alpha(1.0)
-            self.update_canvas()
-
-    def toggle_labels(self):
-        if self.labels_image is not None:
-            new_alpha = 1.0 if (self.labels_image.get_alpha() == 0.0) else 0.0
-            self.labels_image.set_alpha( new_alpha )
-            self.update_canvas()
+    # def show_labels(self):
+    #     if self.labels_image is not None:
+    #         self.labels_image.set_alpha(1.0)
+    #         self.update_canvas()
+    #
+    # def toggle_labels(self):
+    #     if self.labels_image is not None:
+    #         new_alpha = 1.0 if (self.labels_image.get_alpha() == 0.0) else 0.0
+    #         self.labels_image.set_alpha( new_alpha )
+    #         self.update_canvas()
 
     def get_layer(self, layer_id: str ):
         if layer_id == "bands": return self.image
