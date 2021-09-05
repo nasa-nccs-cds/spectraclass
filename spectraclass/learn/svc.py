@@ -16,7 +16,7 @@ class SVCLearningModel(LearningModel):
         LearningModel.__init__(self, "svc",  **kwargs )
         self._score: Optional[np.ndarray] = None
 #        model = LinearSVC( tol=tol, dual=False, fit_intercept=False, **kwargs )
-        model = SVC( tol=tol, kernel="linear", probability=True, **kwargs ) # poly rbf linear
+        model = SVC( tol=tol, kernel="linear", probability=True, **kwargs ) # curve rbf linear
         if norm: self.svc = make_pipeline( StandardScaler(), model  )
         else:    self.svc = model
 

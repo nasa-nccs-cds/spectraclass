@@ -9,7 +9,7 @@ import ipywidgets as ipw
 import rioxarray as rio
 from rioxarray.raster_dataset import RasterDataset
 from shapely import geometry
-from spectraclass.gui.spatial.widgets.tools import PageSlider, PolygonSelectionTool
+from spectraclass.gui.spatial.widgets.tools import PageSlider, PolygonSelectionTool, RectangleSelectionTool, LassoSelectionTool, SelectionTool
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import types, pandas as pd
@@ -32,7 +32,9 @@ from spectraclass.gui.control import UserFeedbackManager, ufm
 class RegionTypes:
     Polygon = "Polygon"
     Rectangle = "Rectangle"
+    Lasso = "Lasso"
     Point = "Point"
+    All = [ Polygon, Rectangle, Lasso, Point ]
 
 def get_color_bounds( color_values: List[float] ) -> List[float]:
     color_bounds = []
@@ -70,7 +72,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
         self.image_template: Optional[xa.DataArray]  = None
         self.overlay_image: Optional[AxesImage] = None
 #        self._classification_data: Optional[np.ndarray] = None
-        self._polygon_selection: PolygonSelectionTool = None
+        self._selection_tool: SelectionTool = None
         self.use_model_data: bool = False
         self._label_files_stack: List[str] = []
         self._labels_map: xa.DataArray = None
@@ -105,16 +107,18 @@ class TrainingSetSelection(SCSingletonConfigurable):
 
     def select_region( self, *args, **kwargs ):
         ufm().show( f"select_region, type = {self.region_type}" )
-        if self.region_type == RegionTypes.Polygon:
-            if self._polygon_selection is None:
-                self._polygon_selection = PolygonSelectionTool( self.figure )
-            self._polygon_selection.enable()
+        if self.region_type == RegionTypes.Polygon: Selector = PolygonSelectionTool
+        elif self.region_type == RegionTypes.Rectangle: Selector = RectangleSelectionTool
+        elif self.region_type == RegionTypes.Lasso: Selector = LassoSelectionTool
+        else: raise NotImplementedError( f"Select tool not implemented for {self.region_type}")
+        self._selection_tool = Selector( self.figure )
+        self._selection_tool.enable()
 
     def label_region( self, *args, **kwargs ):
         iClass: int = lm().current_cid
         region: geometry.Polygon = self.getSelectedRegion()
         self._labels_map = self.fill_regions( self._labels_map, [region], iClass )
-        self._polygon_selection.disable()
+        self._selection_tool.disable()
         self.display_label_image()
 #        self.save_labels( self._labels_map )
 
@@ -136,7 +140,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
         return ipw.VBox( [ ] )
 
     def getLabelsPanel(self):
-        self._region_types = ipw.Dropdown( options=[ RegionTypes.Point, RegionTypes.Rectangle, RegionTypes.Polygon ], description="Region Type", index=0 )
+        self._region_types = ipw.Dropdown( options=RegionTypes.All, description="Region Type", index=0 )
         return ipw.VBox( [ self._region_types ] )
 
     def getLayersPanel(self):
@@ -166,15 +170,10 @@ class TrainingSetSelection(SCSingletonConfigurable):
         am().add_action( "clear",   self.clear_action  )
 
     def getSelectedRegion(self) -> geometry.Polygon:
-        try:
-            if self.region_type == RegionTypes.Polygon:
-                assert self._polygon_selection is not None, "Must selected a region first."
-                selected_polygon: List[Tuple] = self._polygon_selection.selection()
-                return geometry.Polygon( selected_polygon )
-            else:
-                raise AssertionError( f"Unknown Region: {self.region_type}" )
-        except AssertionError as err:
-           ufm().show( str(err), "red" )
+        assert self._selection_tool is not None, "Must selected a region first."
+        selected_polygon: List[Tuple] = self._selection_tool.selection()
+        lgm().log(f"Selected Region: {selected_polygon}")
+        return geometry.Polygon( selected_polygon )
 
     def mark_selection_action(self):
         ufm().show( "mark selection" )
@@ -369,7 +368,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
         lgm().log( f"Canvas.manager class = {self.figure.canvas.manager.__class__}")
         items = self.figure.canvas.trait_values().items()
         for k,v in items: lgm().log(f" ** {k}: {v}")
-        self._control_panels['Labels'] = self.getLabelsPanel()
+        self._control_panels['Selection'] = self.getLabelsPanel()
         self._control_panels['Layers'] = self.getLayersPanel()
         self._control_panels['Augment'] = self.getLearningPanel()
 
