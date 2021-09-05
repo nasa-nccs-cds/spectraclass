@@ -112,7 +112,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
         elif self.region_type == RegionTypes.Lasso: Selector = LassoSelectionTool
         else: raise NotImplementedError( f"Select tool not implemented for {self.region_type}")
         self.clear_selection()
-        self._selection_tool = Selector( self.figure )
+        self._selection_tool = Selector( self.figure    )
         self._selection_tool.enable()
 
     def clear_selection(self):
