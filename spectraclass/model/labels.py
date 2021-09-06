@@ -99,6 +99,10 @@ class LabelsManager(SCSingletonConfigurable):
     def current_cid(self) -> int:
         return self._selected_class
 
+    @property
+    def current_color(self) -> int:
+        return self._colors[ self._selected_class ]
+
     def set_selected_class(self, iclass, *args ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
         from spectraclass.application.controller import app

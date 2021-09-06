@@ -7,9 +7,11 @@ from functools import partial
 import traitlets as tl
 import ipywidgets as ipw
 import rioxarray as rio
+from shapely.geometry.base import BaseGeometry
 from rioxarray.raster_dataset import RasterDataset
 from shapely import geometry
-from spectraclass.gui.spatial.widgets.tools import PageSlider, PolygonSelectionTool, RectangleSelectionTool, LassoSelectionTool, SelectionTool
+from spectraclass.gui.spatial.widgets.tools import PageSlider
+from spectraclass.gui.spatial.widgets.selection import *
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import types, pandas as pd
@@ -108,6 +110,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
     def select_region( self, *args, **kwargs ):
         ufm().show( f"select_region, type = {self.region_type}" )
         if self.region_type == RegionTypes.Polygon: Selector = PolygonSelectionTool
+        elif self.region_type == RegionTypes.Point: Selector = PointSelectionTool
         elif self.region_type == RegionTypes.Rectangle: Selector = RectangleSelectionTool
         elif self.region_type == RegionTypes.Lasso: Selector = LassoSelectionTool
         else: raise NotImplementedError( f"Select tool not implemented for {self.region_type}")
@@ -122,8 +125,8 @@ class TrainingSetSelection(SCSingletonConfigurable):
 
     def label_region( self, *args, **kwargs ):
         iClass: int = lm().current_cid
-        region: geometry.Polygon = self.getSelectedRegion()
-        self._labels_map = self.fill_regions( self._labels_map, [region], iClass )
+        regions: List[BaseGeometry] = self.getSelectedRegions()
+        self._labels_map = self.fill_regions( self._labels_map, regions, iClass )
         self.display_label_image()
         self.clear_selection()
 #        self.save_labels( self._labels_map )
@@ -133,10 +136,10 @@ class TrainingSetSelection(SCSingletonConfigurable):
         self.overlay_image.set_alpha( self.overlay_alpha )
         self.update_canvas()
 
-    def fill_regions(self, data_array: xa.DataArray, shapes: List[geometry.Polygon], fill_value: int ):
+    def fill_regions(self, data_array: xa.DataArray, regions: List[BaseGeometry], fill_value: int ):
         from rasterio.mask import  geometry_mask
         from affine import Affine
-        mask = geometry_mask( shapes, transform=Affine( *data_array.transform[:6] ), out_shape=data_array.shape )
+        mask = geometry_mask( regions, transform=Affine( *data_array.transform[:6] ), out_shape=data_array.shape, all_touched=True )
         return data_array.where( mask, fill_value )
 
     def addPanel(self, name: str, widget: ipw.Widget ):
@@ -175,11 +178,14 @@ class TrainingSetSelection(SCSingletonConfigurable):
         am().add_action( "undo",    self.undo_action   )
         am().add_action( "clear",   self.clear_action  )
 
-    def getSelectedRegion(self) -> geometry.Polygon:
+    def getSelectedRegions(self) -> List[BaseGeometry]:
         assert self._selection_tool is not None, "Must selected a region first."
-        selected_polygon: List[Tuple] = self._selection_tool.selection()
-        lgm().log(f"Selected Region: {selected_polygon}")
-        return geometry.Polygon( selected_polygon )
+        selected_vertices: List[Tuple] = self._selection_tool.selection()
+        lgm().log(f"Selected Region: {selected_vertices}")
+        if self.region_type == RegionTypes.Point:
+            return [ geometry.Point(*vertex) for vertex in selected_vertices ]
+        else:
+            return [ geometry.Polygon( selected_vertices ) ]
 
     def mark_selection_action(self):
         ufm().show( "mark selection" )
@@ -251,7 +257,6 @@ class TrainingSetSelection(SCSingletonConfigurable):
 
     def setBlock( self, **kwargs ) -> Block:
         from spectraclass.data.spatial.tile.manager import TileManager
-        self.clearLabels()
         reset = kwargs.get( 'reset', False )
         tm = TileManager.instance()
         self.block: Block = tm.getBlock()
@@ -270,7 +275,6 @@ class TrainingSetSelection(SCSingletonConfigurable):
                 self.add_slider(**kwargs)
                 self.initLabels()
                 self.update_plot_axis_bounds()
-                self.plot_markers_image()
                 self.update_plots()
 
         return self.block
@@ -321,13 +325,6 @@ class TrainingSetSelection(SCSingletonConfigurable):
         except Exception as err:
             lgm().log(f"Unable to write raster file to {output_file}: {err}")
             return None
-
-    def clearLabels( self):
-        if self.block is not None:
-             self.initLabels()
-             self.plot_markers_image()
-             if self.labels_image is not None:
-                self.labels_image.set_alpha(0.0)
 
     @property
     def data(self) -> Optional[xa.DataArray]:
@@ -560,23 +557,23 @@ class TrainingSetSelection(SCSingletonConfigurable):
     #     if self.marker_list:
     #         self.marker_list = [ marker for marker in self.marker_list if marker['c'] > 0 ]
 
-    def get_markers( self ) -> Tuple[ List[float], List[float], List[List[float]] ]:
-        ycoords, xcoords, colors, markers = [], [], [], lm().markers
-        lgm().log(f" ** get_markers, #markers = {len(markers)}")
-        for marker in markers:
-            for pid in marker.pids:
-                coords = self.block.pindex2coords( pid )
-                if (coords is not None) and self.block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
-                    ycoords.append( coords['y'] )
-                    xcoords.append( coords['x'] )
-                    colors.append( lm().colors[marker.cid] )
-                else:
-                    lgm().log(f" ** coords[{pid}] out of bounds: {[coords['y'], coords['x']]}, bounds = ( {self.block._ylim}, {self.block._xlim} )")
-                    lgm().log(f" ** Point coords range: {[coords['y'], coords['x']]}")
-                    lgm().log(f" ** Projection bounds: xlim = {self.block.xlim}, ylim = {self.block.ylim} " )
-                    yc = self.block.point_coords['y']; xc = self.block.point_coords['x']
-                    lgm().log(f" ** Coordinates bounds: xrange = {[xc.min(),xc.max()]}, yrange = {[yc.min(),yc.max()]} ")
-        return ycoords, xcoords, colors
+    # def get_markers( self ) -> Tuple[ List[float], List[float], List[List[float]] ]:
+    #     ycoords, xcoords, colors, markers = [], [], [], lm().markers
+    #     lgm().log(f" ** get_markers, #markers = {len(markers)}")
+    #     for marker in markers:
+    #         for pid in marker.pids:
+    #             coords = self.block.pindex2coords( pid )
+    #             if (coords is not None) and self.block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
+    #                 ycoords.append( coords['y'] )
+    #                 xcoords.append( coords['x'] )
+    #                 colors.append( lm().colors[marker.cid] )
+    #             else:
+    #                 lgm().log(f" ** coords[{pid}] out of bounds: {[coords['y'], coords['x']]}, bounds = ( {self.block._ylim}, {self.block._xlim} )")
+    #                 lgm().log(f" ** Point coords range: {[coords['y'], coords['x']]}")
+    #                 lgm().log(f" ** Projection bounds: xlim = {self.block.xlim}, ylim = {self.block.ylim} " )
+    #                 yc = self.block.point_coords['y']; xc = self.block.point_coords['x']
+    #                 lgm().log(f" ** Coordinates bounds: xrange = {[xc.min(),xc.max()]}, yrange = {[yc.min(),yc.max()]} ")
+    #     return ycoords, xcoords, colors
 
     # def get_class_markers( self, **kwargs ) -> Dict[ int, List[int] ]:
     #     class_markers = {}
@@ -585,18 +582,18 @@ class TrainingSetSelection(SCSingletonConfigurable):
     #         pids.extend( marker.pids )
     #     return class_markers
 
-    @exception_handled
-    def plot_markers_image( self ):
-        if self.marker_plot:
-            ycoords, xcoords, colors = self.get_markers()
-            lgm().log(f" ** plot markers image, nmarkers = {len(ycoords)}")
-            if len(ycoords) > 0:
-                self.marker_plot.set_offsets(np.c_[xcoords, ycoords])
-                self.marker_plot.set_facecolor(colors)
-            else:
-                offsets = np.ma.column_stack([[], []])
-                self.marker_plot.set_offsets(offsets)
-            self.update_canvas()
+    # @exception_handled
+    # def plot_markers_image( self ):
+    #     if self.marker_plot:
+    #         ycoords, xcoords, colors = self.get_markers()
+    #         lgm().log(f" ** plot markers image, nmarkers = {len(ycoords)}")
+    #         if len(ycoords) > 0:
+    #             self.marker_plot.set_offsets(np.c_[xcoords, ycoords])
+    #             self.marker_plot.set_facecolor(colors)
+    #         else:
+    #             offsets = np.ma.column_stack([[], []])
+    #             self.marker_plot.set_offsets(offsets)
+    #         self.update_canvas()
 
     # def plot_markers_volume(self, **kwargs):
     #     class_markers = self.get_class_markers( **kwargs )
@@ -622,27 +619,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
         if self.image is None:
             self.image = self.create_image(**kwargs)
             self.overlay_image = self.create_overlay_image()
-            if self.image is not None: self.initMarkersPlot()
         return self.image
-
-    def clearMarkersPlot( self ):
-        offsets = np.ma.column_stack([[], []])
-        self.marker_plot.set_offsets( offsets )
-        self.plot_markers_image()
-
-    def toggleMarkersVisible(self ):
-        if self.marker_plot:
-            new_alpha = 1.0 if (self.marker_plot.get_alpha() == 0.0) else 0.0
-            self.marker_plot.set_alpha( new_alpha )
-            self.update_canvas()
-
-    def initMarkersPlot(self):
-        print( "Init Markers Plot")
-        self.marker_plot: PathCollection = self.plot_axes.scatter([], [], s=50, zorder=3, alpha=1, picker=True)
-        self.marker_plot.set_edgecolor([0, 0, 0])
-        self.marker_plot.set_linewidth(2)
-        self.figure.canvas.mpl_connect('pick_event', self.mpl_pick_marker)
-        self.plot_markers_image()
 
     def add_slider(self,  **kwargs ):
         if self.slider is None:
