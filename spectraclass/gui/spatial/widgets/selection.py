@@ -4,6 +4,7 @@ import numpy as np
 from matplotlib.collections import PathCollection
 from matplotlib.widgets import PolygonSelector,  RectangleSelector, _SelectorWidget
 from matplotlib.lines import Line2D
+from spectraclass.util.logs import LogManager, lgm
 from matplotlib.backend_tools import ToolBase, ToolToggleBase
 from matplotlib.axes import Axes
 from spectraclass.gui.control import UserFeedbackManager, ufm
@@ -16,9 +17,8 @@ class PointsSelector(_SelectorWidget):
         self.initMarkers()
 
     def clearMarkers( self ):
-        offsets = np.ma.column_stack([[], []])
-        self.marker_plot.set_offsets( offsets )
-        self.plotMarkers()
+        self.set_alpha( 0.0 )
+        self.initMarkers()
 
     def set_alpha(self, new_alpha ):
         self.marker_plot.set_alpha( new_alpha )
@@ -31,8 +31,6 @@ class PointsSelector(_SelectorWidget):
     def initMarkers(self):
         self.ycoords = []
         self.xcoords = []
-        self.colors = []
-        self.cids = []
         self.marker_plot: PathCollection = self.ax.scatter([], [], s=50, zorder=3, alpha=1, picker=True)
         self.marker_plot.set_edgecolor([0, 0, 0])
         self.marker_plot.set_linewidth(2)
@@ -41,8 +39,9 @@ class PointsSelector(_SelectorWidget):
 
     def plotMarkers( self ):
         if len(self.ycoords) > 0:
+            lgm().log( f"plotMarkers: {self.xcoords} {self.ycoords}")
             self.marker_plot.set_offsets(np.c_[self.xcoords, self.ycoords])
-            self.marker_plot.set_facecolor( self.colors )
+            self.marker_plot.set_facecolor( "white" )
         else:
             offsets = np.ma.column_stack([[], []])
             self.marker_plot.set_offsets(offsets)
@@ -52,12 +51,9 @@ class PointsSelector(_SelectorWidget):
         self.press(event)
 
     def _press(self, event):
-        from spectraclass.model.labels import LabelsManager, lm
         mouse_coords = self._get_data(event)
         self.xcoords.append( mouse_coords[0] )
         self.ycoords.append( mouse_coords[1] )
-        self.cids.append( lm().current_cid )
-        self.colors.append( lm().current_color )
 
     def _release(self, event):
         self.plotMarkers()
@@ -132,7 +128,7 @@ class PointSelectionTool(SelectionTool):
         return self.markers.verts
 
     def enable(self, *args ):
-       ufm().show( "Enable Lasso Selection")
+       ufm().show( "Enable Point Selection")
        self.markers = PointsSelector(self.figure.axes[0], self.onselect, useblit=False, button=[1] )
 
     def disconnect(self):

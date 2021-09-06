@@ -294,7 +294,6 @@ class TrainingSetSelection(SCSingletonConfigurable):
         self._labels_map.name = "labels"
         self._labels_map.attrs[ 'long_name' ] = [ "labels" ]
         self._labels_map = self._labels_map.where( self.image_template.notnull(), nodata_value )
-#        self._labels_map.transform = Affine( *self._labels_map.transform[:6] )
 #        self.save_labels( self._labels_map )
 
     def save_labels(self, labels: xa.DataArray ):

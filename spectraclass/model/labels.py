@@ -320,7 +320,7 @@ class LabelsManager(SCSingletonConfigurable):
         return list(zip(values, self._labels, self._colors))
 
     def setLabels(self, labels: List[Tuple[str, str]], **kwargs):
-        unlabeled_color = kwargs.get( 'unlabeled', "yellow" )
+        unlabeled_color = kwargs.get( 'unlabeled', "white" )
         label_list = [ ('Unlabeled', unlabeled_color ) ] + labels
         for ( label, color ) in labels:
             if color.lower() == unlabeled_color: raise Exception( f"{unlabeled_color} is a reserved color")
