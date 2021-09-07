@@ -158,7 +158,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
         if self._layer_manager is None:
             self._layer_manager = LayersManager( self.figure, self.set_layer_alpha )
         self._layer_manager.add_layer( "data", 1.0, True )
-        self._layer_manager.add_layer( "labels", 0.5, False )
+        self._layer_manager.add_layer( "labels", 0.5, True )
         return self._layer_manager.gui()
 
     def set_layer_alpha( self, name: str, alpha: float ):
