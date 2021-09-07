@@ -156,13 +156,12 @@ class TrainingSetSelection(SCSingletonConfigurable):
 
     def getLayersPanel(self):
         if self._layer_manager is None:
-            self._layer_manager = LayersManager( self.figure )
-        self._layer_manager.add_layer( "data", 1.0, True, self.set_layer_alpha )
-        self._layer_manager.add_layer( "labels", 0.5, False, self.set_layer_alpha )
+            self._layer_manager = LayersManager( self.figure, self.set_layer_alpha )
+        self._layer_manager.add_layer( "data", 1.0, True )
+        self._layer_manager.add_layer( "labels", 0.5, False )
         return self._layer_manager.gui()
 
     def set_layer_alpha( self, name: str, alpha: float ):
-        ufm().show( f"set_layer_alpha[{name}]: {alpha}" )
         if name == "data":      self.image.set_alpha( alpha )
         elif name == "labels":  self.overlay_image.set_alpha( alpha )
         else: raise Exception( f"Unrecognized layer name: {name}" )
