@@ -9,13 +9,19 @@ import traitlets as tl
 
 class LayerPanel:
 
-    def __init__(self, figure: Figure, name: str, ival: float, active: bool, handle_alpha_change: Callable ):
+    def __init__(self, figure: Figure, name: str, ival: float, active: bool, handle_alpha_change: Callable[[str,float],None] ):
         self.name = name
         self.figure: Figure = figure
-        self._slider = ipw.FloatSlider( ival, min=0.0, max=1.0, description=name )
-        self._checkbox = ipw.Checkbox( active, description='')
-        self._slider.observe( handle_alpha_change, names='value', type='change')
-        self._checkbox.observe(handle_alpha_change, names='value', type='change')
+        self._slider = ipw.FloatSlider( ival, min=0.0, max=1.0, description=name, layout = ipw.Layout( width = "100px" ) )
+        self._checkbox = ipw.Checkbox( active, description='' )
+        self._slider.observe( self.on_value_change, names='value', type='change' )
+        self._handle_alpha_change = handle_alpha_change
+        self._checkbox.observe( self.on_value_change, names='value', type='change' )
+
+    def on_value_change(self, event ):
+        new_value = event["new"]
+        if isinstance( new_value, bool ): new_value = 1.0 if new_value else 0.0
+        self._handle_alpha_change( self.name, new_value )
 
     def gui(self) -> ipw.Box:
         buttonBox = ipw.HBox( [ self._slider, self._checkbox ], layout = ipw.Layout( width = "100%" ) )
@@ -34,7 +40,7 @@ class LayersManager(object):
             self._wGui = self._createGui( )
         return self._wGui
 
-    def add_layer( self, name, ival: float, active: bool, handle_alpha_change: Callable ):
+    def add_layer( self, name, ival: float, active: bool, handle_alpha_change: Callable[[str,float],None] ):
         self._layers[name] = LayerPanel( self.figure, name, ival, active, handle_alpha_change )
 
     def layer( self, name: str ) -> Optional[LayerPanel]:

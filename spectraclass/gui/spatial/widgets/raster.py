@@ -14,6 +14,7 @@ from spectraclass.gui.spatial.widgets.tools import PageSlider
 from spectraclass.gui.spatial.widgets.selection import *
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.gui.spatial.widgets.layers import LayersManager
 import types, pandas as pd
 import xarray as xa
 import numpy as np
@@ -74,6 +75,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
         self.image_template: Optional[xa.DataArray]  = None
         self.overlay_image: Optional[AxesImage] = None
 #        self._classification_data: Optional[np.ndarray] = None
+        self._layer_manager: LayersManager = None
         self._selection_tool: SelectionTool = None
         self.use_model_data: bool = False
         self._label_files_stack: List[str] = []
@@ -153,7 +155,18 @@ class TrainingSetSelection(SCSingletonConfigurable):
         return ipw.VBox( [ self._region_types ] )
 
     def getLayersPanel(self):
-        return ipw.VBox( [ ] )
+        if self._layer_manager is None:
+            self._layer_manager = LayersManager( self.figure )
+        self._layer_manager.add_layer( "data", 1.0, True, self.set_layer_alpha )
+        self._layer_manager.add_layer( "labels", 0.5, False, self.set_layer_alpha )
+        return self._layer_manager.gui()
+
+    def set_layer_alpha( self, name: str, alpha: float ):
+        ufm().show( f"set_layer_alpha[{name}]: {alpha}" )
+        if name == "data":      self.image.set_alpha( alpha )
+        elif name == "labels":  self.overlay_image.set_alpha( alpha )
+        else: raise Exception( f"Unrecognized layer name: {name}" )
+        self.update_canvas()
 
     def getControlPanel(self):
         control_collapsibles = ipw.Accordion( children=tuple(self._control_panels.values()), layout=ipw.Layout(width='300px'))  #
@@ -452,6 +465,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
     def clear_overlay_image(self):
         self.overlay_image.set_extent(self.block.extent())
         self.overlay_image.set_alpha(0.0)
+        self.update_canvas()
 
     def onMouseRelease(self, event):
         if event.inaxes ==  self.plot_axes:
