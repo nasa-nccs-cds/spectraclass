@@ -14,7 +14,7 @@ class PageSlider(Slider):
         self.stepcolor = kwargs.pop('stepcolor', "#ff6f6f" )
         self.on_animcolor = kwargs.pop('on-animcolor', "#006622")
         self.fontsize = kwargs.pop('fontsize', 10)
-        self.maxIndexedPages = 24
+        self.maxIndexedPages = 10
         self.numpages = numpages
         self.axes = ax
 

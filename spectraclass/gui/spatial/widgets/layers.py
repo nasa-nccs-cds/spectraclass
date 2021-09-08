@@ -25,6 +25,10 @@ class LayerPanel:
         else:                                 alpha = event_value if self._checkbox.value else 0.0
         self._handle_alpha_change( self.name, alpha )
 
+    def update(self, alpha: float, enabled: bool ):
+        self._slider.value = alpha
+        self._checkbox.value = enabled
+
     def gui(self) -> ipw.Box:
         buttonBox = ipw.HBox( [ self._label, self._slider, self._checkbox ] ) # , layout = ipw.Layout( width = "150px" ) )
         return buttonBox

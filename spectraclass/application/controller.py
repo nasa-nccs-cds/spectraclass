@@ -12,6 +12,22 @@ def app():
     rv = dm().app()
     return rv
 
+class ActionEvent(object):
+
+    def __init__( self, type: str ):
+        super(ActionEvent, self).__init__()
+        self._type = type
+
+class LabelEvent(ActionEvent):
+
+    def __init__( self, type: str, label_map: np.ndarray ):
+        super(LabelEvent, self).__init__( type )
+        self._label_map = label_map
+
+    @property
+    def label_map(self):
+        return self._label_map
+
 class SpectraclassController(SCSingletonConfigurable):
 
     HOME = os.path.dirname( os.path.dirname( os.path.dirname(os.path.realpath(__file__)) ) )
@@ -19,11 +35,16 @@ class SpectraclassController(SCSingletonConfigurable):
 
     def __init__(self):
         super(SpectraclassController, self).__init__()
+        self._action_events = []
 
-    # def set_controller_instance(self):  # cls.__bases__
-    #     assert SpectraclassController._instance is None, "Error, SpectraclassController cannot be instantiated"
-    #     SpectraclassController._instance = self
-    #     SpectraclassController._instantiated = self.__class__
+    def addActionEvent(self, event: ActionEvent ):
+        self._action_events.append( event )
+
+    def popActionEvent(self) -> ActionEvent:
+        return self._action_events.pop()
+
+    def lastActionEvent(self) -> ActionEvent:
+        return self._action_events[-1]
 
     def process_menubar_action(self, mname, dname, op, b ):
         print(f" process_menubar_action.on_value_change: {mname}.{dname} -> {op}")
@@ -97,12 +118,6 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.plot import GraphPlotManager, gpm
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> UNDO ")
 
-    def process_undo( self, action ) -> bool:
-        from spectraclass.gui.points import PointCloudManager, pcm
-        from spectraclass.model.labels import LabelsManager, Action, lm
-        from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
-        from spectraclass.gui.spatial.map import MapManager, mm
-        return False
 
     @exception_handled
     def classify(self) -> xa.DataArray:

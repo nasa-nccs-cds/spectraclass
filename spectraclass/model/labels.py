@@ -79,7 +79,7 @@ class LabelsManager(SCSingletonConfigurable):
         self._labels = None
         self._flow: ActivationFlow = None
         self._actions: List[Action] = []
-        self._labels_data: xa.DataArray = None
+        self._label_maps: List[np.ndarray] = []
         self._selected_class = 0
         self._nodata_value = -1
         self._optype = None
@@ -139,6 +139,19 @@ class LabelsManager(SCSingletonConfigurable):
     def flow(self) -> Optional[ActivationFlow]:
         return self._flow
 
+    def setLabelData( self, labels_map: np.ndarray ):
+        self._label_maps.append( labels_map.copy() )
+
+    def undoLabelsUpdate(self) -> np.ndarray:
+        if len( self._label_maps ) > 1:
+            self._label_maps.pop()
+        return self._label_maps[-1]
+
+    def clearLabels(self) -> np.ndarray:
+        if len( self._label_maps ) > 1:
+            self._label_maps = self._label_maps[:1]
+        return self._label_maps[-1]
+
     def addMarkerAction(self, source: str, marker: Marker, **kwargs ):
         top_marker = self.topMarker
         if not marker.isEmpty() and ( marker != top_marker ):
@@ -184,11 +197,6 @@ class LabelsManager(SCSingletonConfigurable):
         if point_data is not None:
             self.template = point_data[:,0].squeeze( drop=True )
             self.template.attrs = point_data.attrs
-        if self.template is not None:
-            self._labels_data: xa.DataArray = xa.full_like( self.template, 0, dtype=np.dtype(np.int32) ).where( self.template.notnull(), self._nodata_value )
-            self._labels_data.attrs['_FillValue'] = self._nodata_value
-            self._labels_data.name = self.template.attrs['dsid'] + "_labels"
-            self._labels_data.attrs[ 'long_name' ] = [ "labels" ]
 
     @property
     def markers(self):
@@ -199,18 +207,6 @@ class LabelsManager(SCSingletonConfigurable):
         for marker in self.markers:
             if pid in marker.pids: return marker
         return None
-
-    def updateLabels(self):
-        self._labels_data = xa.where( self.template.notnull(), 0, self._nodata_value )
-        for marker in self.markers:
-            for pid in marker.pids:
-                self._labels_data[ pid ] = marker.cid
-        self.log_markers("updateLabels")
-        lgm().log(f" #LABELS: { np.count_nonzero( self._labels_data.data > 0 ) }" )
-
-    def labels_data( self ) -> xa.DataArray:
-        self.updateLabels()
-        return self._labels_data.copy( self._optype == "distance" )
 
     def log_markers(self, msg: str ):
         log_strs = []

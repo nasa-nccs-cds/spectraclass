@@ -3,6 +3,7 @@ from typing import List, Union, Tuple, Optional, Dict, Callable
 from collections import OrderedDict
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.model.base import SCSingletonConfigurable, Marker
+from spectraclass.gui.spatial.widgets.events import em
 from functools import partial
 import traitlets as tl
 import ipywidgets as ipw
@@ -46,10 +47,6 @@ def get_color_bounds( color_values: List[float] ) -> List[float]:
         else: color_bounds.append( (cval + color_values[iC-1])/2.0 )
     color_bounds.append( color_values[-1] + 0.5 )
     return color_bounds
-
-def toggle_markers( map: "TrainingSetSelection", toolbar: Toolbar ):
-    map.toggleMarkersVisible()
-
 
 def tss() -> "TrainingSetSelection":
     is_initialized = TrainingSetSelection.initialized()
@@ -131,11 +128,13 @@ class TrainingSetSelection(SCSingletonConfigurable):
         self._labels_map = self.fill_regions( self._labels_map, regions, iClass )
         self.display_label_image()
         self.clear_selection()
+        lm().setLabelData( self._labels_map.data )
 #        self.save_labels( self._labels_map )
 
     def display_label_image(self):
         self.overlay_image.set_data( self._labels_map )
         self.overlay_image.set_alpha( self.overlay_alpha )
+        self._layer_manager.layer("labels").update( self.overlay_alpha, True )
         self.update_canvas()
 
     def fill_regions(self, data_array: xa.DataArray, regions: List[BaseGeometry], fill_value: int ):
@@ -186,7 +185,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
     def defineActions(self):
         am().add_action( "select",  self.select_region )
         am().add_action( "label",   self.label_region  )
-        am().add_action( "augment", self.mark_selection_action )
+        am().add_action( "augment", self.augment_selection_action)
         am().add_action( "undo",    self.undo_action   )
         am().add_action( "clear",   self.clear_action  )
 
@@ -199,14 +198,18 @@ class TrainingSetSelection(SCSingletonConfigurable):
         else:
             return [ geometry.Polygon( selected_vertices ) ]
 
-    def mark_selection_action(self):
+    def augment_selection_action(self):
         ufm().show( "mark selection" )
 
     def undo_action(self):
         ufm().show( "undo" )
+        self._labels_map = self._labels_map.copy( data = lm().undoLabelsUpdate() )
+        self.display_label_image()
 
     def clear_action(self):
         ufm().show( "clear" )
+        self._labels_map = self._labels_map.copy( data = lm().clearLabels() )
+        self.display_label_image()
 
     def refresh(self):
         self.setBlock()
@@ -306,6 +309,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
         self._labels_map.name = "labels"
         self._labels_map.attrs[ 'long_name' ] = [ "labels" ]
         self._labels_map = self._labels_map.where( self.image_template.notnull(), nodata_value )
+        lm().setLabelData( self._labels_map.data )
 #        self.save_labels( self._labels_map )
 
     def save_labels(self, labels: xa.DataArray ):
@@ -456,9 +460,6 @@ class TrainingSetSelection(SCSingletonConfigurable):
                 lgm().log( f" Update Map: data shape = {frame_data.shape}, range = {drange}, extent = {self.block.extent()}")
                 self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
                 self.plot_axes.title.set_fontsize( 8 )
-
-                if self.overlay_image is not None:
-                    self.clear_overlay_image()
                 self.update_canvas()
 
     def clear_overlay_image(self):
