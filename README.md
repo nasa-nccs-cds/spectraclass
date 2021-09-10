@@ -9,8 +9,9 @@ Conda CPU Versioned Setup
     > conda create --name spectraclass
     > conda activate spectraclass
     > conda install -y clang_osx-64 clangxx_osx-64 gfortran_osx-64    # (osx only)
-    > conda install -c rusty1s -c conda-forge nb_conda_kernels nodejs jupyterlab jupytext  jupyterlab_server ipywidgets ipycanvas ipyevents itkwidgets ipympl numpy gdal shapely pynndescent xarray rasterio umap-learn scipy scikit-learn toml jupyter_bokeh keras tensorflow rioxarray numba dask netcdf4 matplotlib utm scikit-image pytorch-geometric torchmetrics pytorch
+    > conda install -c rusty1s -c conda-forge conda nb_conda_kernels nodejs jupyterlab jupytext jupyterlab_server ipywidgets ipycanvas ipyevents itkwidgets ipympl numpy gdal shapely pynndescent xarray rasterio umap-learn scipy scikit-learn toml jupyter_bokeh keras tensorflow rioxarray numba dask netcdf4 matplotlib utm proj4 pyproj pyepsg cartopy basemap-data-hires basemap scikit-image pytorch-geometric torchmetrics pytorch
     > conda install -c pyviz hvplot
+
 
 Installation
 ------------

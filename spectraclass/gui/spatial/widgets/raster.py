@@ -1,6 +1,8 @@
 
 from typing import List, Union, Tuple, Optional, Dict, Callable
+from cartopy.mpl.geoaxes import GeoAxes
 from collections import OrderedDict
+import cartopy.crs as ccrs
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.model.base import SCSingletonConfigurable, Marker
 from spectraclass.gui.spatial.widgets.events import em
@@ -48,9 +50,9 @@ def get_color_bounds( color_values: List[float] ) -> List[float]:
     color_bounds.append( color_values[-1] + 0.5 )
     return color_bounds
 
-def tss() -> "TrainingSetSelection":
+def tss( **kwargs ) -> "TrainingSetSelection":
     is_initialized = TrainingSetSelection.initialized()
-    mgr = TrainingSetSelection.instance()
+    mgr = TrainingSetSelection.instance( **kwargs )
     if not is_initialized: mgr.observe( mgr.on_overlay_alpha_change, names=["overlay_alpha"] )
     return mgr
 
@@ -67,6 +69,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
         self._debug = False
         self.currentFrame = 0
         self.block: Block = None
+        self.spatial_ref = kwargs.get( 'spatial_ref', None )
         self.slider: Optional[PageSlider] = None
         self.image: Optional[AxesImage] = None
         self.image_template: Optional[xa.DataArray]  = None
@@ -101,6 +104,14 @@ class TrainingSetSelection(SCSingletonConfigurable):
 
         atexit.register(self.exit)
         self._update(0)
+
+    def getProjection(self):
+        if self.spatial_ref is None:
+            return ccrs.PlateCarree()
+        else:
+            clon = self.spatial_ref.longitude_of_central_meridian
+            clat = self.spatial_ref.latitude_of_projection_origin
+            return ccrs.TransverseMercator( clon, clat )
 
     @property
     def region_type(self) -> str:
@@ -377,7 +388,8 @@ class TrainingSetSelection(SCSingletonConfigurable):
 
     def setup_plot(self, **kwargs):
         self.figure.suptitle("Band Image")
-        self.plot_axes:   Axes = self.figure.add_axes([0.01, 0.07, 0.98, 0.93])  # [left, bottom, width, height]
+        self.plot_axes: GeoAxes = self.figure.add_axes([0.01, 0.07, 0.98, 0.93], projection=self.getProjection() )  # [left, bottom, width, height]
+        self.plot_axes.coastlines()
         self.plot_axes.xaxis.set_visible( False ); self.plot_axes.yaxis.set_visible( False )
         self.slider_axes: Axes = self.figure.add_axes([0.01, 0.01, 0.85, 0.05])  # [left, bottom, width, height]
         self.figure.canvas.toolbar_visible = True
