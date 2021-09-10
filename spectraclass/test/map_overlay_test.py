@@ -51,17 +51,14 @@ fig = plt.figure( figsize=(16,8) )
 ax0 = fig.add_subplot( 121, projection=cart_crs )
 img0 = ax0.imshow( da.data, transform=cart_crs, origin='upper' )
 
-ax1 = fig.add_subplot( 122 )
+ax1 = fig.add_subplot( 122   )
 ax1.imshow( downscaled_data, origin='upper' )
 plt.show()
-
-
-
 
 # from mpl_toolkits.basemap import Basemap
 # def to_basemap( proj4: Dict, da: xa.DataArray, range: Tuple ) -> Dict:
 #     bmap = { k:v for k,v in proj4.items() if k[:4] in ( "lat_", "lon_" ) }
-#     bmap['projection'] =proj4['proj']
+#     bmap['projection'] =   proj4['proj']
 #     x: xa.IndexVariable = da.coords[da.dims[2]]
 #     y: xa.IndexVariable = da.coords[da.dims[1]]
 #     if proj4['units'] == "m":
