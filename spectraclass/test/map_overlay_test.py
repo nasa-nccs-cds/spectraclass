@@ -31,8 +31,8 @@ def downscale( a: np.ndarray, factor: int ):
     sh = new_shape[0], nsh[0], new_shape[1], nsh[1]
     return ta.reshape(sh).min(-1).min(1)
 
-origin = [ 15000, 30000 ]
-size = [ 300, 300 ]
+origin = [ 15100, 31000 ]
+size = [ 500, 500 ]
 xr = (  origin[0], origin[0]+size[0] )
 yr = (  origin[1], origin[1]+size[1] )
 
@@ -49,7 +49,7 @@ cart_crs: ccrs.CRS = get_ccrs( proj4_attrs )
 
 fig = plt.figure( figsize=(16,8) )
 ax0 = fig.add_subplot( 121, projection=cart_crs )
-img0 = ax0.imshow( da.data, transform=cart_crs, origin='upper' )
+img0 = ax0.imshow( da.data, transform=cart_crs, origin='upper', cmap="tab20" )
 
 ax1 = fig.add_subplot( 122   )
 ax1.imshow( downscaled_data, origin='upper' )
