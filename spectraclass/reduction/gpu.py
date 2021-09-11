@@ -2,7 +2,7 @@ from .base import UMAP
 import numpy as np
 import xarray as xa
 import pandas as pd
-from typing import List, Union, Tuple, Optional, Dict, Callable
+1
 import cuml, cudf
 import time
 
