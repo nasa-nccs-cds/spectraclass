@@ -10,7 +10,7 @@ from matplotlib.patches import Rectangle
 class TileSelector:
     INIT_POS = ( sys.float_info.max, sys.float_info.max )
 
-    def __init__( self, ax: Axes, rsize: int, on_click: Callable[[MouseEvent],None] ):
+    def __init__( self, ax: Axes, rsize: Tuple[float,float], on_click: Callable[[MouseEvent],None] ):
         self._rsize = rsize
         self._ax = ax
         self.rect = self._rect( self.INIT_POS )
@@ -22,7 +22,7 @@ class TileSelector:
         self.canvas = None
 
     def _rect( self, pos: Tuple[float,float] ):
-        rect = Rectangle( pos, self._rsize, self._rsize, facecolor="white", edgecolor="black", alpha=1.0 )
+        rect = Rectangle( pos, self._rsize[0], self._rsize[1], facecolor="white", edgecolor="black", alpha=1.0 )
         self._ax.add_patch(rect)
         return rect
 
@@ -50,14 +50,13 @@ class TileSelector:
         if (event.inaxes == self.rect.axes):
             self.rect.set_x( event.xdata )
             self.rect.set_y( event.ydata )
-            axes = self.rect.axes
             if self._background is not None:
                 self.canvas.restore_region(self._background)
             self._background = self.canvas.copy_from_bbox(self.rect.axes.bbox)
-            axes.draw_artist(self.rect)
+            self._ax.draw_artist(self.rect)
             if self._selection_rect is not None:
-                axes.draw_artist( self._selection_rect )
-            self.canvas.blit(axes.bbox)
+                self._ax.draw_artist( self._selection_rect )
+            self.canvas.blit(self._ax.bbox)
 
     def deactivate(self):
         self._active = False

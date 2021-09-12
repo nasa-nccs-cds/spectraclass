@@ -44,16 +44,22 @@ class Tile:
         self._tile_size: int = tile_size
 
     @staticmethod
-    def extent( transform: Union[List, Tuple], shape: Union[List, Tuple] ):
+    def dsize( transform: Union[List, Tuple], isize: int ) -> Tuple[float,float]:
+        return (  abs( isize * transform[0] + isize * transform[1] ),  abs( isize * transform[3] + isize * transform[4] ) )
+
+    @staticmethod
+    def extent( transform: Union[List, Tuple], shape: Union[List, Tuple], origin: str ):
         (sy,sx) = (shape[1],shape[2]) if len(shape) == 3 else (shape[0],shape[1])
-        return [transform[2], transform[2] + sx * transform[0] + sy * transform[1],
+        ext =  [transform[2], transform[2] + sx * transform[0] + sy * transform[1],
                 transform[5], transform[5] + sx * transform[3] + sy * transform[4]]
+        if origin == "upper": ( ext[2], ext[3] ) = ( ext[3], ext[2] )
+        return ext
 
     def get_full_extent(self):
         dx, dy = (self._xc[-1]-self._xc[-2]), (self._yc[-1]-self._yc[-2])
         return self._xc[0], self._xc[-1]+dx, self._yc[0], self._yc[-1]+dy
 
-    def get_tile(self, dloc: List[float] = None ) -> xa.DataArray:
+    def get_tile(self, dloc: List[float] = None, origin: str = "upper" ) -> xa.DataArray:
         if dloc is None:
             loc = [ self._data.shape[2]//2, self._data.shape[1]//2 ]
             dloc = [ self._xc[loc[0]], self._yc[loc[1]],  ]
@@ -64,10 +70,17 @@ class Tile:
         transform: List = list(self._data.attrs['transform'])
         transform[2], transform[5] = dloc[0], dloc[1]
         tile.attrs['transform'] = transform
-        tile.attrs['extent'] = self.extent( transform, tile.shape )
+        tile.attrs['extent'] = self.extent( transform, tile.shape, origin )
         return tile
 
-def downscale( geo_xarray: xa.DataArray, block_size: int, nodata=None ) -> xa.DataArray:
+def fill_nodata( da: xa.DataArray, fill_val ) -> xa.DataArray:
+    nodata = da.attrs.get('nodatavals')
+    if nodata is not None:
+        filled_data: np.ndarray = np.where( da.data == nodata, fill_val, da.data )
+        return da.copy( data=filled_data )
+    else: return da
+
+def downscale( geo_xarray: xa.DataArray, block_size: int, origin: str ) -> xa.DataArray:
     nbands, ishp = geo_xarray.shape[0], geo_xarray.shape[1:]
     new_shape = ishp[0]//block_size, ishp[1]//block_size
     nsh = [ ishp[0]//new_shape[0], ishp[1]//new_shape[1] ]
@@ -78,23 +91,23 @@ def downscale( geo_xarray: xa.DataArray, block_size: int, nodata=None ) -> xa.Da
     if issubclass( geo_xarray.dtype.type, numbers.Integral ):
         modes, counts = sps.mode( tas, axis=3, nan_policy='omit' )
     else: modes = tas.mean( axis=3 )
-    if nodata is not None: modes = np.where( modes==nodata, -1, modes )
     dxa: xa.DataArray = sxa[ :, ::block_size, ::block_size ]
     dxa = dxa.copy( data = modes.reshape( dxa.shape ) )
-    transform: List = list(dxa.attrs['transform'])
+    transform: List = list(geo_xarray.transform)
     for i in [0,1,3,4]: transform[i] = transform[i]*block_size
     dxa.attrs['transform'] = transform
-    dxa.attrs['extent'] = Tile.extent( transform, new_shape )
+    dxa.attrs['extent'] = Tile.extent( transform, new_shape, origin )
     return dxa
 
 iband = 0
 block_size = 100
+origin = "upper"
 blocks_per_tile = 5
 tile_size = block_size*blocks_per_tile
 LabelDataFile = "/Users/tpmaxwel/GDrive/Tom/Data/ChesapeakeLandUse/CalvertCounty/CALV_24009_LandUse.tif"
 
-da: xa.DataArray = xa.open_rasterio( LabelDataFile )
-downscaled_data: xa.DataArray = downscale( da, block_size, da.nodatavals )
+da: xa.DataArray = fill_nodata( xa.open_rasterio( LabelDataFile ), -1 )
+downscaled_data: xa.DataArray = downscale( da, block_size, origin )
 tile = Tile( da, tile_size )
 
 proj4_attrs: Dict = to_proj4( da.attrs["crs"] )
@@ -103,23 +116,27 @@ cart_crs: ccrs.CRS = get_ccrs( proj4_attrs )
 
 fig = plt.figure( figsize=(16,8) )
 ax0: Axes = fig.add_subplot( 121, projection=cart_crs )
-tile_array0 = tile.get_tile()
+tile_array0 = tile.get_tile( None, origin )
 tile_data = tile_array0.data[iband]
-img0: AxesImage = ax0.imshow( tile_data, transform=cart_crs, origin='upper', cmap="tab20", extent=tile_array0.attrs["extent"] )
+vmin, vmax = da.data.min(), da.data.max(),
+img0: AxesImage = ax0.imshow( tile_data, transform=cart_crs, origin=origin, cmap="tab20", extent=tile_array0.attrs["extent"] )
 
 def on_tile_selection( event: MouseEvent ):
     dloc = [ event.xdata, event.ydata ]
-    print( f"on_tile_selection: loc = {dloc}" )
-    tile_array = tile.get_tile( dloc )
+    tile_array = tile.get_tile( dloc, origin )
     tile_ext = tile_array.attrs["extent"]
     img0.set_extent( tile_ext )
-    img0.set_data( tile_array.data[iband] )
+    tile_data = tile_array.data[iband]
+    print(f"on_tile_selection: loc = {dloc}, vrange = {tile_data.min()} {tile_data.max()}")
+    img0.set_data( tile_data )
     img0.figure.canvas.draw()
+    img0.figure.canvas.flush_events()
 
 ax1 = fig.add_subplot( 122   )
-img1: AxesImage = ax1.imshow( downscaled_data.data[iband], origin='upper', cmap="tab20" )
+img1: AxesImage = ax1.imshow( downscaled_data.data[iband], origin='upper', cmap="tab20", vmin=vmin, vmax=vmax )
 img1.set_extent( downscaled_data.extent )
-ts = TileSelector( ax1, blocks_per_tile, on_tile_selection )
+rsize = Tile.dsize( downscaled_data.transform, blocks_per_tile )
+ts = TileSelector( ax1, rsize, on_tile_selection )
 ts.activate()
 plt.show()
 
