@@ -1,5 +1,5 @@
 import os
-import conda
+import conda, numbers
 
 conda_file_dir = conda.__file__
 conda_dir = conda_file_dir.split('lib')[0]
@@ -10,6 +10,7 @@ import xarray as xa
 from affine import Affine
 from matplotlib.backend_bases import MouseEvent
 from matplotlib.image import AxesImage
+from affine import Affine
 import numpy as np
 from matplotlib.axes import Axes
 from scipy import stats as sps
@@ -17,7 +18,7 @@ import matplotlib.pyplot as plt
 from spectraclass.gui.spatial.widgets.tiles import TileSelector
 import cartopy.crs as ccrs
 from spectraclass.gui.spatial.widgets.crs import get_ccrs
-from typing import List, Union, Tuple, Optional, Dict
+from typing import List, Union, Tuple, Optional, Dict, Iterable
 
 import pyproj.crs as pcrs
 import rasterio as rio
@@ -33,44 +34,67 @@ def idx_of_nearest( array: np.ndarray, value: float ):
     array = np.asarray(array)
     return (np.abs(array - value)).argmin()
 
-def downscale( a: np.ndarray, block_size: int, nodata=None ) -> np.ndarray:
-    new_shape = a.shape[0]//block_size, a.shape[1]//block_size
-    nsh = [ a.shape[0]//new_shape[0], a.shape[1]//new_shape[1] ]
-    sh = new_shape[0], nsh[0], new_shape[1], nsh[1]
-    ta: np.ndarray = a[ :new_shape[0]*nsh[0], :new_shape[1]*nsh[1] ].reshape(sh)
-    tas: np.ndarray = ta.transpose( (0,2,1,3) ).reshape( (new_shape[0], new_shape[1], nsh[0]*nsh[1]) )
-    modes, counts = sps.mode( tas, 2, nan_policy='omit' )
-    return np.squeeze( modes if nodata is None else np.where( modes==nodata, -1, modes ) )
-
 class Tile:
 
     def __init__(self, data: xa.DataArray, tile_size: int ):
-        self._data: xa.DataArray = data
-        self._xc: np.ndarray = data.coords[ data.dims[1] ].data
-        self._yc: np.ndarray = data.coords[ data.dims[0] ].data
+        assert data.ndim in [2,3], f"Can't defin Tile with {data.ndim} dims"
+        self._data: xa.DataArray = data.expand_dims( {"band":1}, 0 ) if data.ndim == 2 else data
+        self._xc: np.ndarray = data.coords[ data.dims[2] ].data
+        self._yc: np.ndarray = data.coords[ data.dims[1] ].data
         self._tile_size: int = tile_size
+
+    @staticmethod
+    def extent( transform: Union[List, Tuple], shape: Union[List, Tuple] ):
+        (sy,sx) = (shape[1],shape[2]) if len(shape) == 3 else (shape[0],shape[1])
+        return [transform[2], transform[2] + sx * transform[0] + sy * transform[1],
+                transform[5], transform[5] + sx * transform[3] + sy * transform[4]]
 
     def get_full_extent(self):
         dx, dy = (self._xc[-1]-self._xc[-2]), (self._yc[-1]-self._yc[-2])
         return self._xc[0], self._xc[-1]+dx, self._yc[0], self._yc[-1]+dy
 
     def get_tile(self, dloc: List[float] = None ) -> xa.DataArray:
-        if dloc is None:    loc = [ self._data.shape[1]//2, self._data.shape[0]//2 ]
-        else:               loc = [ idx_of_nearest(self._xc,dloc[0]), idx_of_nearest(self._yc,dloc[1]) ]
+        if dloc is None:
+            loc = [ self._data.shape[2]//2, self._data.shape[1]//2 ]
+            dloc = [ self._xc[loc[0]], self._yc[loc[1]],  ]
+        else:
+            loc = [ idx_of_nearest(self._xc,dloc[0]), idx_of_nearest(self._yc,dloc[1]) ]
         iext = [ loc[i]+self._tile_size for i in (0,1)  ]
-        cext = [ self._xc[ loc[0] ], self._xc[ loc[0]+self._tile_size ],
-                self._yc[ loc[1] ], self._yc[ loc[1]+self._tile_size ] ]
-        tile = self._data[ loc[1]:iext[1], loc[0]:iext[0] ]
-        tile.attrs["extent"] = cext
+        tile = self._data[ :, loc[1]:iext[1], loc[0]:iext[0] ]
+        transform: List = list(self._data.attrs['transform'])
+        transform[2], transform[5] = dloc[0], dloc[1]
+        tile.attrs['transform'] = transform
+        tile.attrs['extent'] = self.extent( transform, tile.shape )
         return tile
 
+def downscale( geo_xarray: xa.DataArray, block_size: int, nodata=None ) -> xa.DataArray:
+    nbands, ishp = geo_xarray.shape[0], geo_xarray.shape[1:]
+    new_shape = ishp[0]//block_size, ishp[1]//block_size
+    nsh = [ ishp[0]//new_shape[0], ishp[1]//new_shape[1] ]
+    sh = nbands, new_shape[0], nsh[0], new_shape[1], nsh[1]
+    sxa: xa.DataArray = geo_xarray[ :, :new_shape[0]*nsh[0], :new_shape[1]*nsh[1] ]
+    ta: np.ndarray = sxa.data.reshape(sh)
+    tas: np.ndarray = ta.transpose( (0,1,3,2,4) ).reshape( (nbands, new_shape[0], new_shape[1], nsh[0]*nsh[1]) )
+    if issubclass( geo_xarray.dtype.type, numbers.Integral ):
+        modes, counts = sps.mode( tas, axis=3, nan_policy='omit' )
+    else: modes = tas.mean( axis=3 )
+    if nodata is not None: modes = np.where( modes==nodata, -1, modes )
+    dxa: xa.DataArray = sxa[ :, ::block_size, ::block_size ]
+    dxa = dxa.copy( data = modes.reshape( dxa.shape ) )
+    transform: List = list(dxa.attrs['transform'])
+    for i in [0,1,3,4]: transform[i] = transform[i]*block_size
+    dxa.attrs['transform'] = transform
+    dxa.attrs['extent'] = Tile.extent( transform, new_shape )
+    return dxa
+
+iband = 0
 block_size = 100
 blocks_per_tile = 5
 tile_size = block_size*blocks_per_tile
 LabelDataFile = "/Users/tpmaxwel/GDrive/Tom/Data/ChesapeakeLandUse/CalvertCounty/CALV_24009_LandUse.tif"
 
-da: xa.DataArray = xa.open_rasterio( LabelDataFile ).squeeze(drop=True)
-downscaled_data: np.ndarray = downscale( da.data, block_size, da.nodatavals )
+da: xa.DataArray = xa.open_rasterio( LabelDataFile )
+downscaled_data: xa.DataArray = downscale( da, block_size, da.nodatavals )
 tile = Tile( da, tile_size )
 
 proj4_attrs: Dict = to_proj4( da.attrs["crs"] )
@@ -80,7 +104,8 @@ cart_crs: ccrs.CRS = get_ccrs( proj4_attrs )
 fig = plt.figure( figsize=(16,8) )
 ax0: Axes = fig.add_subplot( 121, projection=cart_crs )
 tile_array0 = tile.get_tile()
-img0: AxesImage = ax0.imshow( tile_array0.data, transform=cart_crs, origin='upper', cmap="tab20", extent=tile_array0.attrs["extent"] )
+tile_data = tile_array0.data[iband]
+img0: AxesImage = ax0.imshow( tile_data, transform=cart_crs, origin='upper', cmap="tab20", extent=tile_array0.attrs["extent"] )
 
 def on_tile_selection( event: MouseEvent ):
     dloc = [ event.xdata, event.ydata ]
@@ -88,12 +113,12 @@ def on_tile_selection( event: MouseEvent ):
     tile_array = tile.get_tile( dloc )
     tile_ext = tile_array.attrs["extent"]
     img0.set_extent( tile_ext )
-    img0.set_data( tile_array.data )
+    img0.set_data( tile_array.data[iband] )
     img0.figure.canvas.draw()
 
 ax1 = fig.add_subplot( 122   )
-img1: AxesImage = ax1.imshow( downscaled_data, origin='upper', cmap="tab20" )
-img1.set_extent( tile.get_full_extent() )
+img1: AxesImage = ax1.imshow( downscaled_data.data[iband], origin='upper', cmap="tab20" )
+img1.set_extent( downscaled_data.extent )
 ts = TileSelector( ax1, blocks_per_tile, on_tile_selection )
 ts.activate()
 plt.show()
