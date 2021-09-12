@@ -119,7 +119,7 @@ ax0: Axes = fig.add_subplot( 121, projection=cart_crs )
 tile_array0 = tile.get_tile( None, origin )
 tile_data = tile_array0.data[iband]
 vmin, vmax = da.data.min(), da.data.max(),
-img0: AxesImage = ax0.imshow( tile_data, transform=cart_crs, origin=origin, cmap="tab20", extent=tile_array0.attrs["extent"] )
+img0: AxesImage = ax0.imshow( tile_data, transform=cart_crs, origin=origin, cmap="tab20", extent=tile_array0.attrs["extent"], vmin=vmin, vmax=vmax )
 
 def on_tile_selection( event: MouseEvent ):
     dloc = [ event.xdata, event.ydata ]
@@ -127,7 +127,7 @@ def on_tile_selection( event: MouseEvent ):
     tile_ext = tile_array.attrs["extent"]
     img0.set_extent( tile_ext )
     tile_data = tile_array.data[iband]
-    print(f"on_tile_selection: loc = {dloc}, vrange = {tile_data.min()} {tile_data.max()}")
+    print(f"on_tile_selection: loc = {dloc}, dshape={tile_data.shape}, extent = {tile_ext}, vrange = [ {tile_data.min()}, {tile_data.max()} ]")
     img0.set_data( tile_data )
     img0.figure.canvas.draw()
     img0.figure.canvas.flush_events()

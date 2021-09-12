@@ -57,6 +57,11 @@ class TileSelector:
             if self._selection_rect is not None:
                 self._ax.draw_artist( self._selection_rect )
             self.canvas.blit(self._ax.bbox)
+        else:
+            if self._background is not None:
+                self.canvas.restore_region(self._background)
+                self._background = None
+                self.canvas.blit(self._ax.bbox)
 
     def deactivate(self):
         self._active = False
