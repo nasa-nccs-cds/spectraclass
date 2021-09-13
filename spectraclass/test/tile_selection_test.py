@@ -30,30 +30,34 @@ origin = "upper"
 blocks_per_tile = 5
 tile_size = block_size*blocks_per_tile
 LabelDataFile = "/Users/tpmaxwel/GDrive/Tom/Data/ChesapeakeLandUse/CalvertCounty/CALV_24009_LandUse.tif"
-SpectralDataFile = "/Users/tpmaxwel/Development/Data/desis/DESIS-HSI-L1C-DT0468853252_002-20200628T153803-V0210-SPECTRAL_IMAGE.tif"
 
 tmgr = TileManager( LabelDataFile, tile_size, origin, nodata_fill=-1 )
-spectral_array: xa.DataArray = TileManager.read_data_layer( SpectralDataFile, origin )
 crs: ccrs.CRS = tmgr.crs()
 
 fig = plt.figure( figsize=(16,8) )
 ax0: Axes = fig.add_subplot( 121, projection=crs )
-tile_array: xa.DataArray = tmgr.get_tile( None, origin )
-tile_extent = tile_array.attrs["extent"]
-tile_data = tile_array.data[iband]
-
+tile_array0 = tmgr.get_tile( None, origin )
+tile_data = tile_array0.data[iband]
 vr = tmgr.vrange()
-img0: AxesImage = ax0.imshow( tile_data, transform=crs, origin=origin, cmap="tab20", extent=tile_extent, vmin=vr[0], vmax=vr[1] )
+img0: AxesImage = ax0.imshow( tile_data, transform=crs, origin=origin, cmap="tab20", extent=tile_array0.attrs["extent"], vmin=vr[0], vmax=vr[1] )
 
-crs1 = spectral_array.attrs['ccrs']
-(x0,y0) = crs1.transform_point(tile_extent[0], tile_extent[2], crs)
-(x1,y1) = crs1.transform_point(tile_extent[1], tile_extent[3], crs)
-spectral_array_extent = TileManager.extent( spectral_array.attrs['transform'], spectral_array.shape, origin )
-spectral_tile = spectral_array.loc[:,y0:y1,x0:x1]
-spectral_tile_transform = TileManager.clipped_transform( spectral_tile, (x0, y0) )
-spectral_tile.attrs['transform'] = spectral_tile_transform
-spectral_tile_extent = TileManager.extent( spectral_tile_transform, spectral_tile.shape, origin )
-spectral_tile.attrs['extent'] = spectral_tile_extent
-img1: AxesImage = ax0.imshow( spectral_tile.data[iband], transform=crs1, origin=origin, cmap="tab20", extent=spectral_tile_extent )
+def on_tile_selection( event: MouseEvent ):
+    dloc = [ event.xdata, event.ydata ]
+    tile_array = tmgr.get_tile( dloc, origin )
+    tile_ext = tile_array.attrs["extent"]
+    img0.set_extent( tile_ext )
+    tile_data = tile_array.data[iband]
+    img0.set_data( tile_data )
+    img0.figure.canvas.draw()
+    img0.figure.canvas.flush_events()
 
+downscaled_data: xa.DataArray = tmgr.downscale( block_size, origin )
+ax1 = fig.add_subplot( 122   )
+img1: AxesImage = ax1.imshow( downscaled_data.data[iband], origin='upper', cmap="tab20", vmin=vr[0], vmax=vr[1] )
+img1.set_extent( downscaled_data.extent )
+rsize = tmgr.dsize( downscaled_data.transform, blocks_per_tile )
+ts = TileSelector( ax1, rsize, on_tile_selection )
+def onresize( event ): print( f" RESIZE: {event}" )
+cid = fig.canvas.mpl_connect('resize_event', onresize)
+ts.activate()
 plt.show()
