@@ -23,11 +23,10 @@ data_array: xa.DataArray = TileManager.read_data_layer( SpectralDataFile, origin
 crs: ccrs.CRS = data_array.attrs['ccrs']
 extent = data_array.attrs['extent']
 
-fig = plt.figure( figsize=(16,8) )
-ax0: GeoAxes = fig.add_subplot( 111, projection=crs )
+ax0: GeoAxes = plt.axes( projection=crs )
 raw_band_data: np.ndarray = data_array.data[iband]
 band_data: np.ndarray = raw_band_data/raw_band_data.max()
 img0: AxesImage = ax0.imshow( band_data, transform=crs, origin=origin, cmap=cmap, extent=extent )
-ax0.gridlines()
+ax0.gridlines( crs=ccrs.PlateCarree(), draw_labels=True )
 print(f"Plotting Image, shape = {data_array.shape[1:]}")
 plt.show()

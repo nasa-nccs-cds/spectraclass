@@ -1,5 +1,6 @@
 import numpy as np
 import sys, numbers
+from osgeo import ogr, osr
 from copy import deepcopy
 from spectraclass.gui.spatial.widgets.crs import get_ccrs
 import cartopy.crs as ccrs
@@ -153,6 +154,14 @@ class TileManager:
         return data.expand_dims( {"band":1}, 0 ) if data.ndim == 2 else data
 
     @classmethod
+    def get_shp_crs( cls, shapefile: str) -> Optional[ ccrs.CRS ]:
+        ogr_source: ogr.DataSource = ogr.Open(shapefile)
+        layer: ogr.Layer = ogr_source.GetLayer(0)
+        sref: osr.SpatialReference = layer.GetSpatialRef()
+        p4 = cls.to_proj4( sref.ExportToProj4() )
+        return cls.get_p4crs( p4 )
+
+    @classmethod
     def get_p4crs( cls, p4p: Dict ) -> Optional[ccrs.CRS]:
         crs = None
         crsid = p4p.get('proj',None)
@@ -161,6 +170,9 @@ class TileManager:
                 crs = ccrs.AlbersEqualArea(central_longitude=float(p4p['lon_0']), central_latitude=float(p4p['lat_0']),
                                            false_easting=float(p4p['x_0']), false_northing=float(p4p['y_0']),
                                            standard_parallels=(float(p4p['lat_1']), float(p4p['lat_2'])))
+            elif crsid == 'merc':
+                crs = ccrs.Mercator( central_longitude=float(p4p['lon_0']), scale_factor=float(p4p['k']),
+                                     false_easting=float(p4p['x_0']), false_northing=float(p4p['y_0']) )
         init = p4p.get('init', None)
         if init is not None:
             toks = init.split(":")

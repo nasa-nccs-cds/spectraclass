@@ -29,7 +29,9 @@ block_size = 100
 origin = "upper"
 blocks_per_tile = 5
 tile_size = block_size*blocks_per_tile
-LabelDataFile = "/Users/tpmaxwel/GDrive/Tom/Data/ChesapeakeLandUse/CalvertCounty/CALV_24009_LandUse.tif"
+# LabelDataFile = "/Users/tpmaxwel/GDrive/Tom/Data/ChesapeakeLandUse/CalvertCounty/CALV_24009_LandUse.tif"
+LabelDataFile = "/Users/tpmaxwel/GDrive/Tom/Data/ChesapeakeLandUse/AnneArundelCounty/ANNE_24003_LandUse.tif"
+
 SpectralDataFile = "/Users/tpmaxwel/Development/Data/desis/DESIS-HSI-L1C-DT0468853252_002-20200628T153803-V0210-SPECTRAL_IMAGE.tif"
 
 tmgr = TileManager( LabelDataFile, tile_size, origin, nodata_fill=-1 )

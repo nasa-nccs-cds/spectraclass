@@ -20,6 +20,13 @@ Installation
     $ cd spectraclass
     $ python setup.py install
 
+Image Index Creation
+--------------------
+
+For example, with DESIS data:
+
+>> gdaltindex -t_srs EPSG:32618 image_index_srs.shp *-SPECTRAL_IMAGE.tif
+
 When actively developing your extension, build Jupyter Lab with the command:
 
     $ jupyter lab --watch
