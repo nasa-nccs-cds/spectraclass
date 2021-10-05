@@ -1,5 +1,5 @@
 import numpy as np
-import sys, numbers
+import os, sys, numbers
 from osgeo import ogr, osr
 from copy import deepcopy
 from spectraclass.gui.spatial.widgets.crs import get_ccrs
@@ -152,6 +152,13 @@ class TileManager:
         data.attrs['ccrs'] = cls.get_p4crs( proj4_attrs )
         data.attrs['extent'] = cls.extent( data.attrs['transform'], data.shape, origin )
         return data.expand_dims( {"band":1}, 0 ) if data.ndim == 2 else data
+
+    @classmethod
+    def download(cls, target_url: str, result_dir: str, token: str):
+        cmd = f'wget -e robots=off -m -np -R .html,.tmp -nH --cut-dirs=4 "{target_url}" --header "Authorization: Bearer {token}" -P "{result_dir}"'
+        stream = os.popen(cmd)
+        output = stream.read()
+        print(f"Downloading url {target_url} to dir {result_dir}: result = {output}")
 
     @classmethod
     def get_shp_crs( cls, shapefile: str) -> Optional[ ccrs.CRS ]:

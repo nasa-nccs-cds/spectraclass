@@ -8,11 +8,15 @@ Conda CPU Versioned Setup
 
     > conda create --name spectraclass
     > conda activate spectraclass
-    > conda install -y clang_osx-64 clangxx_osx-64 gfortran_osx-64    # (osx only)
-    > conda install -c rusty1s -c conda-forge conda nb_conda_kernels nodejs jupyterlab jupytext jupyterlab_server ipywidgets ipycanvas ipyevents itkwidgets ipympl numpy gdal shapely pynndescent xarray rasterio umap-learn scipy scikit-learn toml jupyter_bokeh keras tensorflow rioxarray numba dask netcdf4 matplotlib utm proj4 pyproj pyepsg cartopy basemap-data-hires basemap scikit-image pytorch-geometric torchmetrics pytorch
-    > conda install -c pyviz hvplot
+    > conda install -c rusty1s -c conda-forge conda nb_conda_kernels nodejs jupyterlab jupytext jupyterlab_server ipywidgets ipycanvas ipyevents itkwidgets ipympl numpy  pynndescent xarray rasterio umap-learn scipy scikit-learn dask netcdf4 matplotlib basemap basemap-data-hires scikit-image pytorch-geometric torchmetrics pytorch gdal owslib hvplot bokeh rioxarray cartopy shapely pandas bottleneck geopandas
 
+Legacy:
 
+    > conda install -c rusty1s -c conda-forge conda nb_conda_kernels nodejs jupyterlab jupytext jupyterlab_server  
+                        ipycanvas ipyevents itkwidgets ipympl numpy gdal geos shapely kdtree pynndescent xarray  
+                        umap-learn scipy scikit-learn toml jupyter_bokeh keras tensorflow rioxarray numba dask   
+                        utm proj4 pyproj pyepsg owslib basemap ipywidgets scikit-image pytorch-geometric pytorch
+                        torchmetrics  matplotlib hvplot bokeh basemap-data-hires rasterio netcdf4
 Installation
 ------------
 
