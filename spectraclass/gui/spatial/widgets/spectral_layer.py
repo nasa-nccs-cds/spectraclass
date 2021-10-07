@@ -2,7 +2,6 @@ import param
 import xarray as xa
 import hvplot.xarray
 import holoviews as hv
-hv.extension('bokeh')
 
 class SpectralLayer(param.Parameterized):
     band = param.Integer(default=0)
