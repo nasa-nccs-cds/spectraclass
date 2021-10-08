@@ -37,7 +37,8 @@ tmgr = TileManager( SpectralDataFile, tile_size, origin, nodata_fill=-1 )
 data_array: xa.DataArray = TileManager.read_data_layer( SpectralDataFile, origin )
 crs: ccrs.CRS = tmgr.crs()
 
-slider = Slider(start=0.0, end=1.0, step=0.01, value=1.0)
+slider = pn.widgets.FloatSlider( start=0.0, end=1.0, step=0.01, value=1.0, name="Alpha" )
 desis_image: DynamicMap = data_array.hvplot.image( cmap='jet', tiles="EsriImagery", width=plot_size[0], height=plot_size[1], crs=crs )
+
 fig = hv.render(desis_image)
-slider.js_link('value', fig.renderers[-1].glyph, 'global_alpha' )
+slider.jslink('value', fig.renderers[-1].glyph, 'global_alpha' )

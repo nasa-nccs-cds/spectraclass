@@ -12,6 +12,7 @@ from matplotlib.backend_bases import MouseEvent
 from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
+from geoviews.util import  proj_to_cartopy, process_crs
 
 class TileSelector:
     INIT_POS = ( sys.float_info.max, sys.float_info.max )
@@ -144,14 +145,22 @@ class TileManager:
     @classmethod
     def read_data_layer(cls, file_path: str, origin: str, **kwargs ) -> xa.DataArray:
         data = xa.open_rasterio( file_path )
-        assert data.ndim in [2, 3], f"Can't defin Tile with {data.ndim} dims"
-        nodata_fill = kwargs.get( 'nodata_fill', None )
+        assert data.ndim in [2, 3], f"Can't define Tile with {data.ndim} dims"
+        return cls.to_standard_form( data, origin, **kwargs)
+
+    @classmethod
+    def to_standard_form(cls, raster: xa.DataArray, origin: str, **kwargs ):
+        nodata_fill = kwargs.get('nodata_fill', None)
+        name = kwargs.get('name', None)
         if nodata_fill is not None:
-            data = cls.fill_nodata( data, nodata_fill )
-        proj4_attrs: Dict = cls.to_proj4( data.attrs["crs"] )
-        data.attrs['ccrs'] = cls.get_p4crs( proj4_attrs )
-        data.attrs['extent'] = cls.extent( data.attrs['transform'], data.shape, origin )
-        return data.expand_dims( {"band":1}, 0 ) if data.ndim == 2 else data
+            raster = cls.fill_nodata(raster, nodata_fill)
+        if name is not None:
+            raster.name = name
+#        proj4_attrs: Dict = cls.to_proj4( raster.attrs["crs"] )
+#        raster.attrs['ccrs'] = cls.get_p4crs( proj4_attrs )
+        raster.attrs['ccrs'] = cls.get_ccrs( raster.attrs["crs"] )
+        raster.attrs['extent'] = cls.extent( raster.attrs['transform'], raster.shape, origin )
+        return raster.expand_dims({"band": 1}, 0) if raster.ndim == 2 else raster
 
     @classmethod
     def download(cls, target_url: str, result_dir: str, token: str):
@@ -194,9 +203,16 @@ class TileManager:
         return self._data.attrs['ccrs']
 
     @staticmethod
+    def get_ccrs( p4str: str ) -> ccrs.CRS:
+        from pyproj import Proj
+        pcrs = Proj( p4str )
+        return process_crs( pcrs )
+
+    @staticmethod
     def to_proj4( crs: str ) -> Dict:
         tups = [ kv.split('=') for kv in crs.split('+') ]
         return { t[0].strip(): t[1].strip() for t in tups if (len(t) == 2) }
+
 
     @staticmethod
     def fill_nodata( da: xa.DataArray, fill_val ) -> xa.DataArray:
