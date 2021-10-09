@@ -152,13 +152,14 @@ class TileManager:
     def to_standard_form(cls, raster: xa.DataArray, origin: str, **kwargs ):
         nodata_fill = kwargs.get('nodata_fill', None)
         name = kwargs.get('name', None)
+        ccrs = kwargs.get('ccrs', True)
         if nodata_fill is not None:
             raster = cls.fill_nodata(raster, nodata_fill)
         if name is not None:
             raster.name = name
 #        proj4_attrs: Dict = cls.to_proj4( raster.attrs["crs"] )
 #        raster.attrs['ccrs'] = cls.get_p4crs( proj4_attrs )
-        raster.attrs['ccrs'] = cls.get_ccrs( raster.attrs["crs"] )
+        if ccrs: raster.attrs['ccrs'] = cls.get_ccrs( raster.attrs["crs"] )
         raster.attrs['extent'] = cls.extent( raster.attrs['transform'], raster.shape, origin )
         return raster.expand_dims({"band": 1}, 0) if raster.ndim == 2 else raster
 

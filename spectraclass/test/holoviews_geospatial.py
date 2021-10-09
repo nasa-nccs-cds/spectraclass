@@ -23,12 +23,15 @@ from hvplot.plotting.core import hvPlot
 iband = 0
 plot_size = [ 500, 500 ]
 origin = "upper"
-SpectralDataFile = "/Users/tpmaxwel/Development/Data/desis/DESIS-HSI-L1C-DT0468853252_003-20200628T153803-V0210-SPECTRAL_IMAGE.tif"
+input_type = "nc"
+
+SpectralDataTile = "/Users/tpmaxwel/Development/Data/desis/DESIS-HSI-L1C-DT0468853252_003-20200628T153803-V0210-SPECTRAL_IMAGE.tif"
+SpectralDataset = "/Users/tpmaxwel/Development/Data/raster/tiles/DESIS-HSI-L1C-DT0468853252_003-20200628T153803-V0210-SPECTRAL_IMAGE.nc"
 
 tilemap: WMTS = gts.EsriImagery.opts(width=400, height=400 )
 
-data: xa.DataArray = xa.open_rasterio( SpectralDataFile )
-raster: xa.DataArray = TileManager.to_standard_form( data, origin )
+dataset: xa.Dataset = xa.open_dataset( SpectralDataset ) if input_type == "nc" else xa.open_rasterio( SpectralDataTile )
+raster: xa.DataArray = dataset.data_vars['z'] # TileManager.to_standard_form( data, origin )
 band: xa.DataArray = raster[iband]
 # feature_plot: hv.Image = hv.Image( raster[0] )
 

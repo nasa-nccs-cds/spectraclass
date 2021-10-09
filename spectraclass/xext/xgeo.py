@@ -119,11 +119,11 @@ class XGeo(XExtension):
             dst_shape = src_shape
             destination = np.zeros(dst_shape, np.uint8)
 
-            lgm().log( f" XGEO.reproject-> crs:  {src_crs.__class__} -> {dst_crs.__class__}, transform: {src_transform.__class__} -> {dst_transform.__class__}")
-            lgm().log(f" -->  src crs:  {src_crs}")
-            lgm().log(f" --> dest crs:  {dst_crs}")
-            lgm().log(f" -->  src transform:  {src_transform}")
-            lgm().log(f" --> dest transform:  {dst_transform}")
+            print( f" XGEO.reproject-> crs:  {src_crs.__class__} -> {dst_crs.__class__}, transform: {src_transform.__class__} -> {dst_transform.__class__}")
+            print(f" -->  src crs:  {src_crs}")
+            print(f" --> dest crs:  {dst_crs}")
+            print(f" -->  src transform:  {src_transform}")
+            print(f" --> dest transform:  {dst_transform}")
 
             reproject(
                 source,
