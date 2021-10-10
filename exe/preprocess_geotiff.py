@@ -34,7 +34,7 @@ result_path = os.path.join( result_dir, f"{base_name}.nc" )
 os.makedirs( result_dir, exist_ok=True )
 raster: xa.DataArray = rio.open_rasterio( SpectralDataFile, default_name='z' )
 if crs: raster = raster.rio.reproject( crs )
-raster = raster.chunk( chunks={ cdim: 1 } )
+# raster = raster.chunk( chunks={ cdim: 1 } )
 raster.to_netcdf( result_path )
 
 print( f"Completed generating file '{result_path}' in total time = {time.time()-t0} sec.")
