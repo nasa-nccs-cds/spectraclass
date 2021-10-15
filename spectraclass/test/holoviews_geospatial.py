@@ -33,7 +33,7 @@ tilemap: WMTS = gts.EsriImagery.opts(width=400, height=400 )
 dataset: xa.Dataset = xa.open_dataset( SpectralDataset ) if input_type == "nc" else xa.open_rasterio( SpectralDataTile )
 raster: xa.DataArray = dataset.data_vars['z'] # TileManager.to_standard_form( data, origin )
 band: xa.DataArray = raster[iband]
-# feature_plot: hv.Image = hv.Image( raster[0] )
+feature_plot: hv.Image = hv.Image( raster[0] ).opts( cmap="jet")
 
 crs = raster.attrs['ccrs']
 kdims = [ Dimension(d) for d in band.dims ]
