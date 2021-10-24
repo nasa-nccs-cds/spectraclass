@@ -28,6 +28,7 @@ def plot_results( class_map: xa.DataArray, pred_class_map: xa.DataArray, feature
     reliability_plot = reliability_map.hvplot.image(cmap='jet')
     pn.Row( pn.Column( class_plot, pred_class_plot ), pn.Column( feature_plot, reliability_plot) ).show( str(class_map.name) )
 
+
 # class LabelingWidget(QWidget):
 #     def __init__(self, parent, **kwargs):
 #         QWidget.__init__(self, parent, **kwargs)

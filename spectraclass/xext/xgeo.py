@@ -58,7 +58,7 @@ class XGeo(XExtension):
         longitude = (x_arr[0] + x_arr[-1]) / 2.0
         return CRS.get_utm_sref( longitude, latitude )
 
-    def bounds(self, geographic = False, sref= None ):
+    def bounds(self, geographic = False, sref= None ):   # [ minx, miny, maxx, maxy ]
         min_x, x_step, _, max_y, _, y_step = self.getTransform()
         bnds = [ min_x, max_y + y_step*self._obj.shape[-2], min_x + x_step*self._obj.shape[-1], max_y ]
         if geographic or sref:
