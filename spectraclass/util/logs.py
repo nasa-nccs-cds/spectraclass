@@ -36,10 +36,12 @@ class LogManager(SCSingletonConfigurable):
     def setLevel(self, level ):
         self._level = level
 
-    def init_logging(self, name: str, mode: str ):
+    def init_logging(self, name: str, mode: str, **kwargs ):
         log_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "logging", mode )
         os.makedirs( log_dir, 0o777, exist_ok=True )
-        log_file = f'{log_dir}/{name}.{os.getpid()}.log'
+        overwrite = kwargs.get( 'overwrite', True )
+        lid = "" if overwrite else f"-{os.getpid()}"
+        log_file = f'{log_dir}/{name}{lid}.log'
         self._log_file = open( log_file, 'w' )
         print( f"Opening log file:  '{log_file}'" )
 
