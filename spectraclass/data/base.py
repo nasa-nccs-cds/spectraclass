@@ -133,7 +133,7 @@ class DataManager(SCSingletonConfigurable):
             lgm().log(f"Config file written")
 
     def generate_config_file(self) -> Dict:
-        #        print( f"Generate config file, classes = {[inst.__class__ for inst in cls.config_instances]}")
+        #        print( f"Generate config file, _classes = {[inst.__class__ for inst in cls.config_instances]}")
         trait_map = self.getCurrentConfig()
         for inst in self.config_instances:
             self.add_trait_values(trait_map, inst)

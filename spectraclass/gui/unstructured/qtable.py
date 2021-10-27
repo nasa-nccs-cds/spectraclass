@@ -99,7 +99,7 @@ class TableManager(SCSingletonConfigurable):
         #
         #         index_list: List[int] = selection_table.index.tolist()
         #         table.edit_cell( index_list, "cid", cid )
-        #         lgm().log( f" Edit directory table: set classes for indices {index_list} to {cid}")
+        #         lgm().log( f" Edit directory table: set _classes for indices {index_list} to {cid}")
         #         table.df = pd.concat( [table.df, selection_table] )
         #         lgm().log(f" Edit class table[{cid}]: add pids {pids}, append selection_table with shape {selection_table.shape}")
 
@@ -148,7 +148,7 @@ class TableManager(SCSingletonConfigurable):
 #         #
 #         #         index_list: List[int] = selection_table.index.tolist()
 #         #         table.edit_cell( index_list, "cid", cid )
-#         #         lgm().log( f" Edit directory table: set classes for indices {index_list} to {cid}")
+#         #         lgm().log( f" Edit directory table: set _classes for indices {index_list} to {cid}")
 #         #         table.df = pd.concat( [table.df, selection_table] )
 #         #         lgm().log(f" Edit class table[{cid}]: add pids {pids}, append selection_table with shape {selection_table.shape}")
 #

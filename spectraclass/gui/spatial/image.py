@@ -148,16 +148,16 @@ def plot_results( class_map: xa.DataArray, pred_class_map: xa.DataArray, feature
 #         self.image: xa.DataArray = rio.open_rasterio( self.spec['path'] )
 #         self.xdim = self.image.dims[-1]
 #         self.ydim = self.image.dims[-2]
-#         self.classes = [ ('Unlabeled', [1.0, 1.0, 1.0, 0.5]) ] + self.format_labels( self.spec.get( 'classes', [] ) )
-#         if self.classes == None:    cmap = "jet"
-#         else:                       cmap = ListedColormap( [ item[1] for item in self.classes ] )
+#         self._classes = [ ('Unlabeled', [1.0, 1.0, 1.0, 0.5]) ] + self.format_labels( self.spec.get( '_classes', [] ) )
+#         if self._classes == None:    cmap = "jet"
+#         else:                       cmap = ListedColormap( [ item[1] for item in self._classes ] )
 #         self.plot: AxesImage = self.axes.imshow( self.image.squeeze().values, alpha=1.0, aspect='auto', cmap=cmap  )
 #         self._mousepress = self.plot.figure.canvas.mpl_connect('button_press_event', self.onMouseClick)
 #
 #     @classmethod
-#     def format_labels( cls, classes: List[Tuple[str, Union[str, List[Union[float, int]]]]]) -> List[Tuple[str, List[float]]]:
+#     def format_labels( cls, _classes: List[Tuple[str, Union[str, List[Union[float, int]]]]]) -> List[Tuple[str, List[float]]]:
 #         from hyperclass.gui.labels import format_color
-#         return [(label, format_color(color)) for (label, color) in classes]
+#         return [(label, format_color(color)) for (label, color) in _classes]
 #
 #     def onMouseClick(self, event):
 #         if event.xdata != None and event.ydata != None:
