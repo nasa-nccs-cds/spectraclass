@@ -12,17 +12,16 @@ from geoviews.element import WMTS
 import rioxarray as rio
 import rasterio
 from holoviews import streams
-
 from bokeh.io import push_notebook, show, output_notebook
 from holoviews import opts
 from typing import List, Dict, Tuple, Optional
 from spectraclass.xext.xgeo import XGeo
 import logging
-from bokeh.models.tools import BoxSelectTool
-from holoviews.plotting.bokeh.renderer import BokehRenderer
 hv.extension('bokeh')
 
-bokeh_renderer = BokehRenderer.instance(mode='server')
+# from bokeh.models.tools import BoxSelectTool
+# from holoviews.plotting.bokeh.renderer import BokehRenderer
+# bokeh_renderer = BokehRenderer.instance(mode='server')
 
 LOG_FORMAT = "%(levelname)s %(asctime)s - %(message)s"
 log_file = os.path.expanduser('~/.spectraclass/logging/geospatial.log')
@@ -31,7 +30,6 @@ file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
 logger = logging.getLogger(__name__)
 logger.addHandler(file_handler)
 logger.setLevel(logging.DEBUG)
-
 
 def exception_handled(func):
     def wrapper(*args, **kwargs):
@@ -54,10 +52,11 @@ class SpectralLayer(param.Parameterized):
     band = param.Integer(default=0)
     alpha = param.Magnitude()
     color_range = param.Range()
-    classes = param.Selector(objects=["class1", "class2", "class3"])
-    cmap = param.Selector(objects=hv.plotting.util.list_cmaps(), default="jet")
+    class_selector = param.ObjectSelector( objects=[] )
+    cmap = param.ObjectSelector( objects=hv.plotting.util.list_cmaps(), default="jet" )
     visible = param.Boolean(True)
     rescale_colors = param.Boolean(False)
+    classify_selection = param.Boolean(False)
     default_plot_args = dict(width=500, height=500)
 
     def __init__(self, raster: xa.DataArray, **kwargs):
@@ -65,10 +64,8 @@ class SpectralLayer(param.Parameterized):
         self.raster = raster
         self.bounds = self.raster.xgeo.bounds()
         self.polygon_selection: hv.Polygons = hv.Polygons([])
-        self.poly_draw_stream = streams.PolyDraw(source=self.polygon_selection, drag=True, show_vertices=True,
-                                                 styles={'fill_color': ['red', 'green', 'blue']})
-        self.poly_edit_stream = streams.PolyEdit(source=self.polygon_selection, vertex_style={'color': 'red'},
-                                                 shared=True)
+        self.poly_draw_stream = streams.PolyDraw(source=self.polygon_selection, drag=True, show_vertices=True, styles={'fill_color': ['red', 'green', 'blue']})
+        self.poly_edit_stream = streams.PolyEdit(source=self.polygon_selection, vertex_style={'color': 'red'}, shared=True)
         self.range_stream = streams.RangeXY()
         self._tile_source = None
         self._raster_range = (float(self.raster.min(skipna=True)), float(self.raster.max(skipna=True)))
@@ -82,12 +79,16 @@ class SpectralLayer(param.Parameterized):
 
     @property
     def decreasing_y(self):
-        return (spectral_layer.raster.y[0] > spectral_layer.raster.y[-1])
+        return ( self.raster.y[0] > self.raster.y[-1] )
 
     @exception_handled
     def control_panel(self):
         panels = [self._get_map_panel()]
-        if len(self.classes.objects) > 0:  panels.append(self._get_class_panel())
+        class_list = list(self._class_map.keys())
+        if len( class_list ) > 0:
+            self.param.class_selector.objects = class_list
+            class_panel = pn.Param( self.param, parameters=['class_selector','classify_selection'], name="classes", widgets={'classify_selection': {'widget_type': pn.widgets.Button}})
+            panels.append(class_panel)
         return pn.Tabs(*panels)
 
     def _get_map_panel(self):
@@ -95,16 +96,9 @@ class SpectralLayer(param.Parameterized):
         map_panel = pn.Param(self.param, name="map",
                              parameters=['band', 'cmap', 'color_range', 'rescale_colors', 'alpha', 'visible'],
                              widgets={'band': {'widget_type': pn.widgets.IntSlider, 'start': 0, 'end': shp[0] - 1},
-                                      'color_range': {'widget_type': pn.widgets.RangeSlider, 'start': rng[0],
-                                                      'end': rng[1]},
+                                      'color_range': {'widget_type': pn.widgets.RangeSlider, 'start': rng[0], 'end': rng[1]},
                                       'rescale_colors': {'widget_type': pn.widgets.Button}})
         return map_panel
-
-    def _get_class_panel(self):
-        self.classes.objects = list(self._class_map.keys())
-        class_panel = pn.Param(self.param, parameters=['classes'], name="class selection")
-        #                widgets={ 'classes': {'widget_type': pn.widgets.RadioButtonGroup }  } )
-        return class_panel
 
     @exception_handled
     def get_basemap(self, basemap: str = "ESRI", **kwargs) -> hv.Image:
@@ -156,13 +150,22 @@ class SpectralLayer(param.Parameterized):
         self._current_band = self.band
         return image
 
-    @param.depends('band', 'alpha', 'cmap', 'visible', 'rescale_colors', 'color_range')
+    @param.depends('band', 'alpha', 'cmap', 'visible', 'rescale_colors', 'color_range', 'classify_selection' )
     def dmap_spectral_plot(self, **kwargs):
+        logger.info(f"dmap_spectral_plot, args: {kwargs}")
         #        self.graph_selected_elements( **kwargs )
         image = self.image(**kwargs)
-        selection = self.polygon_selection.opts(opts.Polygons(fill_alpha=0.3))
         basemap = self.get_basemap()
+        selection = self.process_selection( **kwargs )
         return basemap * image * selection
+
+    @exception_handled
+    def process_selection( self, **kwargs ) -> hv.Polygons:
+        if self.classify_selection:
+            self.classify_selection = False
+            selections = kwargs.get( 'edited_data', kwargs.get('data', [] ) )
+            logger.info( f"Process selection: { selections }")
+        return self.polygon_selection.opts( opts.Polygons(fill_alpha=0.3) )
 
     @exception_handled
     def graph_selected_elements(self, **kwargs):
