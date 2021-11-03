@@ -5,8 +5,10 @@ import numpy as np
 import xarray as xa
 import hvplot.xarray
 from holoviews.plotting.links import RangeToolLink
+from bokeh.models.mappers import CategoricalColorMapper
 import panel as pn
 import geoviews as gv
+from collections import OrderedDict
 import geoviews.tile_sources as gts
 from geoviews.element import WMTS
 import rioxarray as rio
@@ -62,17 +64,24 @@ class SpectralLayer(param.Parameterized):
     def __init__(self, raster: xa.DataArray, **kwargs):
         param.Parameterized.__init__(self)
         self.raster = raster
+        self._class_map = OrderedDict( kwargs.pop('classes', {}) )
+        self._class_list = list(self._class_map.keys())
+        self._class_colors = list(self._class_map.values())
+        self._class_color_mapper = CategoricalColorMapper(palette=self._class_colors, factors=self._class_list )
         self.bounds = self.raster.xgeo.bounds()
-        self.polygon_selection: hv.Polygons = hv.Polygons([])
-        self.poly_draw_stream = streams.PolyDraw(source=self.polygon_selection, drag=True, show_vertices=True, styles={'fill_color': ['red', 'green', 'blue']})
-        self.poly_edit_stream = streams.PolyEdit(source=self.polygon_selection, vertex_style={'color': 'red'}, shared=True)
+        self._init_poly_temp: hv.Polygons = hv.Polygons( [] ).opts( fill_alpha=0.4, hover_alpha=0.6, fill_color="white" )
+        self._poly_temp: hv.Polygons = self._init_poly_temp
+        self._class_selections = {}
+        self.param.class_selector.objects = self._class_list
+        self.class_selector = self.param.class_selector.default = self._class_list[0]
+        self.poly_draw_stream = streams.PolyDraw( source=self._poly_temp, drag=False, show_vertices=True )
+        self.poly_edit_stream = streams.PolyEdit( source=self._poly_temp, vertex_style={'color': 'red'}, shared=True )
         self.range_stream = streams.RangeXY()
         self._tile_source = None
         self._raster_range = (float(self.raster.min(skipna=True)), float(self.raster.max(skipna=True)))
         self._current_band = -1
         self.tools = ['pan', 'box_zoom', 'wheel_zoom', 'hover', 'undo', 'redo', 'reset']
         self._image: hv.Image = None
-        self._class_map = kwargs.pop('classes', {})
         self._plot_args = dict(**self.default_plot_args)
         self._plot_args.update(**kwargs)
         self._color_range = (raster.values.min(), raster.values.max())
@@ -81,13 +90,18 @@ class SpectralLayer(param.Parameterized):
     def decreasing_y(self):
         return ( self.raster.y[0] > self.raster.y[-1] )
 
+    def clear_temp_polys(self):
+        self._poly_temp = self._init_poly_temp
+        for stream in [ self.poly_draw_stream, self.poly_edit_stream ]:
+            stream.reset()
+            stream.source = self._poly_temp
+
     @exception_handled
     def control_panel(self):
         panels = [self._get_map_panel()]
         class_list = list(self._class_map.keys())
         if len( class_list ) > 0:
-            self.param.class_selector.objects = class_list
-            class_panel = pn.Param( self.param, parameters=['class_selector','classify_selection'], name="classes", widgets={'classify_selection': {'widget_type': pn.widgets.Button}})
+            class_panel = pn.Param( self.param, parameters=['class_selector','classify_selection'], name="classes", widgets={'classify_selection': {'widget_type': pn.widgets.Button}}) #
             panels.append(class_panel)
         return pn.Tabs(*panels)
 
@@ -142,6 +156,7 @@ class SpectralLayer(param.Parameterized):
         elif self.color_range:
             self._color_range = self.color_range
 
+    @exception_handled
     def image(self, **kwargs):
         self.update_clim(**kwargs)
         current_image = self.get_image()
@@ -150,22 +165,50 @@ class SpectralLayer(param.Parameterized):
         self._current_band = self.band
         return image
 
-    @param.depends('band', 'alpha', 'cmap', 'visible', 'rescale_colors', 'color_range', 'classify_selection' )
+    @param.depends( 'band', 'alpha', 'cmap', 'visible', 'rescale_colors', 'color_range', 'class_selector', 'classify_selection' )
     def dmap_spectral_plot(self, **kwargs):
         logger.info(f"dmap_spectral_plot, args: {kwargs}")
         #        self.graph_selected_elements( **kwargs )
         image = self.image(**kwargs)
         basemap = self.get_basemap()
-        selection = self.process_selection( **kwargs )
-        return basemap * image * selection
+        class_selections = self.process_selection( **kwargs )
+        return basemap * image * class_selections
 
     @exception_handled
     def process_selection( self, **kwargs ) -> hv.Polygons:
+        polys = hv.Polygons([])
         if self.classify_selection:
-            self.classify_selection = False
-            selections = kwargs.get( 'edited_data', kwargs.get('data', [] ) )
-            logger.info( f"Process selection: { selections }")
-        return self.polygon_selection.opts( opts.Polygons(fill_alpha=0.3) )
+            self.classify_selection = False      # testl;mlag
+            selections = kwargs.get('edited_data', kwargs.get('data', []))
+            if len(selections):
+                class_color = self._class_map[self.class_selector]
+                iC = self._class_colors.index( class_color )
+                xs: List[List[float]] = selections.get( 'xs', [] )
+                ys: List[List[float]] = selections.get( 'ys', [] )
+                for (x,y) in zip(xs,ys):
+                    key = ( x[0], y[0] )
+                    if key not in self._class_selections:
+                        self._class_selections[ key ] = {'x': x, 'y': y, 'color': class_color, 'class': iC }
+                        logger.info( f"\n\nADD class selection, class: {self.class_selector}, color: {class_color}")
+                pdata = list( self._class_selections.values() )
+                logger.info(f" ---> SELECTION pdata: {pdata}")
+                polys = hv.Polygons( pdata, vdims='class' ).opts( color='color', line_width=1  ) # , cmap=self._class_colors )
+                self.clear_temp_polys()
+        return polys * self._poly_temp
+
+                   # [{'x': 1d-array, 'y': 1d-array, 'holes': list-of-lists-of-arrays, 'value': scalar}, ...]
+            # def rectangle(x=0, y=0, width=.05, height=.05):
+            #     return np.array([(x, y), (x + width, y), (x + width, y + height), (x, y + height)])
+            #
+            # polys = hv.Polygons([{('x', 'y'): rectangle(x, y), 'level': z}
+            #                      for x, y, z in np.random.rand(100, 3)], vdims='level').redim.range(x=(-.1, 1.1),
+            #                                                                                         y=(-0.1, 1.1))
+            #
+            # return self._class_selections.opts( color='class', line_width=1, cmap=self.cmap )
+
+
+
+
 
     @exception_handled
     def graph_selected_elements(self, **kwargs):
