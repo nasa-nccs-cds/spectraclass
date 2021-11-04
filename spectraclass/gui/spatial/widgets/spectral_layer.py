@@ -188,11 +188,11 @@ class SpectralLayer(param.Parameterized):
                 for (x,y) in zip(xs,ys):
                     key = ( x[0], y[0] )
                     if key not in self._class_selections:
-                        self._class_selections[ key ] = {'x': x, 'y': y, 'color': class_color, 'class': iC }
+                        self._class_selections[ key ] = {'x': x, 'y': y, 'color': class_color }
                         logger.info( f"\n\nADD class selection, class: {self.class_selector}, color: {class_color}")
                 pdata = list( self._class_selections.values() )
                 logger.info(f" ---> SELECTION pdata: {pdata}")
-                polys = hv.Polygons( pdata, vdims='class' ).opts( color='color', line_width=1  ) # , cmap=self._class_colors )
+                polys = hv.Polygons( pdata, vdims='color' ).opts( color='color', line_width=1  ) # , cmap=self._class_colors )
                 self.clear_temp_polys()
         return polys * self._poly_temp
 
