@@ -1,12 +1,12 @@
 import param
 import os, time, traceback
 import holoviews as hv
-import regionmask
 import numpy as np
 import xarray as xa
 import hvplot.xarray
 from holoviews.plotting.links import RangeToolLink
 from bokeh.models.mappers import CategoricalColorMapper
+from spectraclass.gui.spatial.widgets.points import PointSelection
 import panel as pn
 import geoviews as gv
 from collections import OrderedDict
@@ -65,15 +65,22 @@ class SpectralLayer(param.Parameterized):
     def __init__(self, raster: xa.DataArray, **kwargs):
         param.Parameterized.__init__(self)
         self.raster = raster
-        self._maxval = np.nanmean( self.raster.values ) + 2*np.nanstd( self.raster.values )
+        self._maxval = np.nanmax( self.raster.values )
         self._class_selections = {}
-        self._class_map = OrderedDict( kwargs.pop('classes', {}) )
+        self._class_map = OrderedDict()
+        self._class_map['unclassified'] = 'white'
+        self._class_map.update( kwargs.pop('classes', {} ) )
         self._class_list = list(self._class_map.keys())
         self._class_colors = list(self._class_map.values())
-        self.polys: hv.Polygons = hv.Polygons([]).opts( fill_alpha = 1.0 )
+#        self._ptx, self._pty, self._ptz = [], [], []
+#        self._points_data = dict( x=self._ptx, y=self._pty, z=self._ptz )
+        self.point_selection = PointSelection()
+        self._init_poly_temp: hv.Polygons = hv.Polygons( [] )
+        self._poly_temp: hv.Polygons = self._init_poly_temp
         pstyles = dict( fill_alpha=1.0, fill_color=[ "white" ] )
-        self.poly_draw_stream = streams.PolyDraw(source=self.polys, drag=False, show_vertices=True, styles=pstyles )
-        self.poly_edit_stream = streams.PolyEdit(source=self.polys, vertex_style={'color': 'red'}, shared=True)
+        self.poly_draw_stream = streams.PolyDraw(source=self._poly_temp, drag=False, show_vertices=True, styles=pstyles )
+        self.poly_edit_stream = streams.PolyEdit(source=self._poly_temp, vertex_style={'color': 'red'}, shared=True)
+        self.point_draw_stream = streams.PointDraw( )
         self.tap_stream = streams.SingleTap( transient=True )
         self.double_tap_stream = streams.DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True)
         self.bounds = self.raster.xgeo.bounds()
@@ -176,34 +183,50 @@ class SpectralLayer(param.Parameterized):
 
     @exception_handled
     def graph_selection(self, **kwargs ) -> hv.Curve:
-        x,y,z = kwargs.get('x'), kwargs.get('y'), None
+        rescale = False
+        x,y,x2,y2,z = kwargs.get('x'), kwargs.get('y'), kwargs.get('x2'), kwargs.get('y2'), None
         if x is not None:
             z = self.raster.sel( x=x, y=y, method="nearest" ).squeeze()
-            logger.info( f" *gdata: shape = {z.shape}, dims = {z.dims}" )
+        elif x2 is not None:
+            z = self.raster.sel( x=x2, y=y2, method="nearest" ).squeeze()
+            rescale = True
         elif self._graph is None:
             z = self.raster.isel( x=0, y=0 ).squeeze()
         if z is not None:
             graph_data = hv.Dataset( z )
-            self._graph = graph_data.to( hv.Curve, kdims=[self.raster.dims[0]] ) # .redim( z=hv.Dimension( "spectra", label='Spectral Intensity', range=(0.0,self._maxval) ) )
-            logger.info( f" graph vdims = {self._graph.vdims}, data max = {self._maxval}" )
+            range = (np.nanmin(z.values), np.nanmax(z.values)) if rescale else (0.0, self._maxval)
+            self._graph = graph_data.to( hv.Curve, kdims=[self.raster.dims[0]] )\
+                .relabel( 'Point Spectra' )\
+                .redim( z=hv.Dimension( "spectra", label='Spectral Intensity', range=range ) )
         return self._graph
 
-    @param.depends( 'band', 'alpha', 'cmap', 'visible', 'rescale_colors', 'color_range' )
+    @param.depends( 'band', 'alpha', 'cmap', 'visible', 'rescale_colors', 'color_range', 'class_selector' )
     def dmap_spectral_plot(self, **kwargs):
         logger.info(f"dmap_spectral_plot, args: {kwargs}")
         #        self.graph_selected_elements( **kwargs )
         image = self.image(**kwargs)
         basemap = self.get_basemap()
-#        class_selections = self.process_selection( **kwargs )
-        return basemap * image # * class_selections
+        class_selections = self.process_selection( **kwargs )
+        pd = [ self.point_selection.points.dimension_values(id) for id in range(3) ] # expanded=False)
+        logger.info( f" ---> Point data: {pd[0]} {pd[1]} {pd[1]}")
+#        logger.info(self.point_selection.table.dimension_values('z') )
+#        self.point_selection.set_color( self.class_selector )
+        points = self.point_selection.plot()
+        return basemap * image * class_selections * points
 
     def dmap_graph(self, **kwargs):
         graph = self.graph_selection(**kwargs)
         return graph.opts( width=800, height=250 )
 
+    def clear_temp_polys(self):
+        self._poly_temp = self._init_poly_temp
+        for stream in [ self.poly_draw_stream, self.poly_edit_stream ]:
+            stream.reset()
+            stream.source = self._poly_temp
+
     @exception_handled
     def process_selection( self, **kwargs ) -> hv.Polygons:
-#        self.poly_draw_stream.styles['fill_color'] = self.get_fill_color()
+        polys = hv.Polygons([])
         if self.classify_selection:
             self.classify_selection = False      # testl;mlag
             selections = kwargs.get('edited_data', kwargs.get('data', []))
@@ -219,7 +242,9 @@ class SpectralLayer(param.Parameterized):
                         logger.info( f"\n\nADD class selection, class: {self.class_selector}, color: {class_color}")
                 pdata = list( self._class_selections.values() )
                 logger.info(f" ---> SELECTION pdata: {pdata}")
-        return self.polys
+                polys = hv.Polygons( pdata, vdims='color' ).opts( color='color', line_width=1  ) # , cmap=self._class_colors )
+                self.clear_temp_polys()
+        return polys * self._poly_temp
 
     @exception_handled
     def graph_selected_elements(self, **kwargs):
@@ -263,8 +288,9 @@ class SpectralLayer(param.Parameterized):
     @exception_handled
     def plot(self):
         image = hv.DynamicMap( self.dmap_spectral_plot, streams=[ self.range_stream ] )
-        selection = self.polys.opts( opts.Polygons( active_tools=self.poly_streams ) )
-        return image * selection
+        points = hv.DynamicMap( self.points.point_color_op, streams=[ self.points ] )
+#        selection = self.polys.opts( opts.Polygons( active_tools=self.poly_streams ) )
+        return image
 
     @exception_handled
     def graph(self):
