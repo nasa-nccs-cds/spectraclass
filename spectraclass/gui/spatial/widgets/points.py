@@ -13,7 +13,7 @@ class PointColorOp(hv.Operation):
         colors = element.dimension_values(2)
         new_colors = [ self.color if c == "white" else c for c in colors ]
         element = element.clone( (xs, ys, new_colors) )
-        return element.opts( opts.Points( color='color' ) )
+        return element
 
 class PointSelection:
 
@@ -28,7 +28,7 @@ class PointSelection:
         self.point_stream.empty_value = color
 
     def plot(self):
-        return hv.DynamicMap( PointColorOp(self.points), streams=[self.points] ).opts( opts.Points( active_tools=['point_draw'], size=self.point_size ) )
+        return hv.DynamicMap( PointColorOp(self.points), streams=[self.point_stream] ).opts( opts.Points( color='color' ) )
 
 
 
