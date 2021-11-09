@@ -20,7 +20,6 @@ class PointSelection:
     def __init__(self, **kwargs ):
         self.points = hv.Points( ([], [], []), vdims='color')
         self.point_size = kwargs.get( 'size', 5 )
-        self.color_op = PointColorOp()
         self.point_stream = streams.PointDraw( source=self.points, empty_value='white' )
         self.table = hv.Table(self.points, ['x', 'y'], 'color')
         DataLink(self.points, self.table)
