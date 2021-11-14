@@ -75,18 +75,15 @@ class SpectralLayer(param.Parameterized):
         self.points = hv.Points(([], [], []), vdims='color')
         self.point_size = kwargs.get('size', 5)
         self.point_stream = streams.PointDraw(source=self.points, empty_value='white')
-        self._init_poly_temp: hv.Polygons = hv.Polygons( [] )
-        self._poly_temp: hv.Polygons = self._init_poly_temp
-        pstyles = dict( fill_alpha=1.0, fill_color=[ "white" ] )
-        self.poly_draw_stream = streams.PolyDraw(source=self._poly_temp, drag=False, show_vertices=True, styles=pstyles )
-        self.poly_edit_stream = streams.PolyEdit(source=self._poly_temp, vertex_style={'color': 'red'}, shared=True)
+        self.polys = hv.Polygons([])
+        self.poly_draw_stream = streams.PolyDraw(source=self.polys, drag=False, show_vertices=True, styles={ 'fill_color': self._class_colors[1:] })
+        self.poly_edit_stream = streams.PolyEdit(source=self.polys, vertex_style={'color': 'red'}, shared=True)
         self.tap_stream = streams.SingleTap( transient=True )
         self.double_tap_stream = streams.DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True)
         self.bounds = self.raster.xgeo.bounds()
         self.param.class_selector.objects = self._class_list
         self.class_selector = self.param.class_selector.default = self._class_list[0]
         self.range_stream = streams.RangeXY()
-        self.poly_streams = [ self.poly_draw_stream, self.poly_edit_stream.rename(data='edited_data')]
         self._tile_source = None
         self._raster_range = (float(self.raster.min(skipna=True)), float(self.raster.max(skipna=True)))
         self._current_band = -1
@@ -159,11 +156,11 @@ class SpectralLayer(param.Parameterized):
     def update_clim(self, **kwargs):
         xy_ranges = [kwargs.get('x_range', None), kwargs.get('y_range', None)]
         [xr, yr] = [[] if r is None else list(r) for r in xy_ranges]
+        logger.info( f" update_clim, xr={xr}, yr={yr}, rescale_colors={self.rescale_colors}")
         if self.rescale_colors:
             if self.decreasing_y: (yr[1], yr[0]) = (yr[0], yr[1])
             subimage = self.layer.loc[yr[0]:yr[1], xr[0]:xr[1]]
             self._color_range = (float(subimage.min(skipna=True)), float(subimage.max(skipna=True)))
-            self.color_range = self._color_range
             self.rescale_colors = False
             push_notebook()
         elif self.color_range:
@@ -202,43 +199,42 @@ class SpectralLayer(param.Parameterized):
     @param.depends( 'band', 'alpha', 'cmap', 'visible', 'rescale_colors', 'color_range', 'class_selector' )
     def dmap_spectral_plot(self, **kwargs):
         logger.info(f"dmap_spectral_plot, args: {kwargs}")
-        #        self.graph_selected_elements( **kwargs )
+        self.graph_selected_elements( **kwargs )
         image = self.image(**kwargs)
-        basemap = self.get_basemap()
-        class_selections = self.process_selection( **kwargs )
-        return basemap * image * class_selections * self.points
+#        class_selections = self.process_selection( **kwargs )
+        return image # class_selections *
 
     def dmap_graph(self, **kwargs):
         graph = self.graph_selection(**kwargs)
         return graph.opts( width=800, height=250 )
 
-    def clear_temp_polys(self):
-        self._poly_temp = self._init_poly_temp
-        for stream in [ self.poly_draw_stream, self.poly_edit_stream ]:
-            stream.reset()
-            stream.source = self._poly_temp
+    # def clear_temp_polys(self):
+    #     self._poly_temp = self._init_poly_temp
+    #     for stream in [ self.poly_draw_stream, self.poly_edit_stream ]:
+    #         stream.reset()
+    #         stream.source = self._poly_temp
 
-    @exception_handled
-    def process_selection( self, **kwargs ) -> hv.Polygons:
-        polys = hv.Polygons([])
-        if self.classify_selection:
-            self.classify_selection = False      # testl;mlag
-            selections = kwargs.get('edited_data', kwargs.get('data', []))
-            if len(selections):
-                class_color = self._class_map[self.class_selector]
-                iC = self._class_colors.index( class_color )
-                xs: List[List[float]] = selections.get( 'xs', [] )
-                ys: List[List[float]] = selections.get( 'ys', [] )
-                for (x,y) in zip(xs,ys):
-                    key = ( x[0], y[0] )
-                    if key not in self._class_selections:
-                        self._class_selections[ key ] = {'x': x, 'y': y, 'color': class_color }
-                        logger.info( f"\n\nADD class selection, class: {self.class_selector}, color: {class_color}")
-                pdata = list( self._class_selections.values() )
-                logger.info(f" ---> SELECTION pdata: {pdata}")
-                polys = hv.Polygons( pdata, vdims='color' ).opts( color='color', line_width=1  ) # , cmap=self._class_colors )
-                self.clear_temp_polys()
-        return polys * self._poly_temp
+    # @exception_handled
+    # def process_selection( self, **kwargs ) -> hv.Polygons:
+    #     polys = hv.Polygons([])
+    #     if self.classify_selection:
+    #         self.classify_selection = False      # testl;mlag
+    #         selections = kwargs.get('edited_data', kwargs.get('data', []))
+    #         if len(selections):
+    #             class_color = self._class_map[self.class_selector]
+    #             iC = self._class_colors.index( class_color )
+    #             xs: List[List[float]] = selections.get( 'xs', [] )
+    #             ys: List[List[float]] = selections.get( 'ys', [] )
+    #             for (x,y) in zip(xs,ys):
+    #                 key = ( x[0], y[0] )
+    #                 if key not in self._class_selections:
+    #                     self._class_selections[ key ] = {'x': x, 'y': y, 'color': class_color }
+    #                     logger.info( f"\n\nADD class selection, class: {self.class_selector}, color: {class_color}")
+    #             pdata = list( self._class_selections.values() )
+    #             logger.info(f" ---> SELECTION pdata: {pdata}")
+    #             polys = hv.Polygons( pdata, vdims='color' ).opts( color='color', line_width=1  ) # , cmap=self._class_colors )
+    #             self.clear_temp_polys()
+    #     return polys * self._poly_temp
 
     @exception_handled
     def graph_selected_elements(self, **kwargs):
@@ -270,14 +266,14 @@ class SpectralLayer(param.Parameterized):
 #             logger.error( traceback.format_exc() )
 #         return self.polys.opts( opts.Polygons( active_tools=self.poly_streams ) )
 
-    @param.depends('class_selector', watch=True)
-    def update_selection(self):
-        try:
-            class_color = self._class_map[self.class_selector]
-            logger.info(f"Setting poly fill color: {class_color}")
-            self.poly_draw_stream.styles.update( fill_color = [ class_color ]  )
-        except Exception:
-            logger.error(traceback.format_exc())
+    # @param.depends('class_selector', watch=True)
+    # def update_selection(self):
+    #     try:
+    #         class_color = self._class_map[self.class_selector]
+    #         logger.info(f"Setting poly fill color: {class_color}")
+    #         self.poly_draw_stream.styles.update( fill_color = [ class_color ]  )
+    #     except Exception:
+    #         logger.error(traceback.format_exc())
 
     def process_points(self, element ):
         logger.info( f" ** process_points: {element}" )
@@ -285,13 +281,15 @@ class SpectralLayer(param.Parameterized):
 
     @exception_handled
     def graph(self):
-        graph = hv.DynamicMap( self.dmap_graph, streams=[ self.tap_stream, self.double_tap_stream ] )
+        graph = hv.DynamicMap( self.dmap_graph, streams=[ self.tap_stream, self.double_tap_stream, self.poly_draw_stream, self.poly_edit_stream ] )
         return graph
 
     @exception_handled
     def plot(self):
         image = hv.DynamicMap( self.dmap_spectral_plot, streams=[ self.range_stream, self.point_stream ] )
-        return image
+        polys = self.polys.opts( opts.Polygons( fill_alpha=1.0, active_tools=['poly_draw'] ))
+        basemap = self.get_basemap()
+        return image * polys * basemap
 
 
 
