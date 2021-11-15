@@ -57,7 +57,8 @@ class SpectralLayer(param.Parameterized):
     color_range = param.Range()
     class_selector = param.ObjectSelector( objects=[] )
     cmap = param.ObjectSelector( objects=hv.plotting.util.list_cmaps(), default="jet" )
-    visible = param.Boolean(True)
+    bands_visible = param.Boolean(True)
+    basemap_visible = param.Boolean(True)
     rescale_colors = param.Boolean(False)
     classify_selection = param.Boolean(False)
     default_plot_args = dict(width=500, height=500)
@@ -118,7 +119,7 @@ class SpectralLayer(param.Parameterized):
     def _get_map_panel(self):
         rng, shp = self._raster_range, self.raster.shape
         map_panel = pn.Param(self.param, name="map",
-                             parameters=['band', 'cmap', 'color_range', 'rescale_colors', 'alpha', 'visible'],
+                             parameters=['band', 'cmap', 'color_range', 'rescale_colors', 'alpha', 'bands_visible', 'basemap_visible' ],
                              widgets={'band': {'widget_type': pn.widgets.IntSlider, 'start': 0, 'end': shp[0] - 1},
                                       'color_range': {'widget_type': pn.widgets.RangeSlider, 'start': rng[0], 'end': rng[1]},
                                       'rescale_colors': {'widget_type': pn.widgets.Button}})
@@ -170,7 +171,7 @@ class SpectralLayer(param.Parameterized):
     def image(self, **kwargs):
         self.update_clim(**kwargs)
         current_image = self.get_image()
-        image = current_image.opts(cmap=self.cmap, alpha=self.alpha, clim=self._color_range, visible=self.visible,
+        image = current_image.opts(cmap=self.cmap, alpha=self.alpha, clim=self._color_range, visible=self.bands_visible,
                                    tools=self.tools, **self._plot_args)
         self._current_band = self.band
         self.tap_stream.source = image
@@ -196,13 +197,15 @@ class SpectralLayer(param.Parameterized):
                 .redim( z=hv.Dimension( "spectra", label='Spectral Intensity', range=range ) )
         return self._graph
 
-    @param.depends( 'band', 'alpha', 'cmap', 'visible', 'rescale_colors', 'color_range', 'class_selector' )
-    def dmap_spectral_plot(self, **kwargs):
+    @param.depends( 'band', 'alpha', 'cmap', 'bands_visible', 'rescale_colors', 'color_range', 'class_selector', 'basemap_visible' )
+    def dmap_spectral_plot(self, **kwargs) -> hv.Overlay:
         logger.info(f"dmap_spectral_plot, args: {kwargs}")
         self.graph_selected_elements( **kwargs )
         image = self.image(**kwargs)
 #        class_selections = self.process_selection( **kwargs )
-        return image # class_selections *
+        layers = [ self.get_basemap() ] if self.basemap_visible else []
+        layers.append( image )
+        return hv.Overlay( layers )
 
     def dmap_graph(self, **kwargs):
         graph = self.graph_selection(**kwargs)
@@ -281,15 +284,15 @@ class SpectralLayer(param.Parameterized):
 
     @exception_handled
     def graph(self):
-        graph = hv.DynamicMap( self.dmap_graph, streams=[ self.tap_stream, self.double_tap_stream, self.poly_draw_stream, self.poly_edit_stream ] )
+        streams = [ self.tap_stream, self.double_tap_stream ]
+        graph = hv.DynamicMap( self.dmap_graph, streams=streams  )
         return graph
 
     @exception_handled
     def plot(self):
         image = hv.DynamicMap( self.dmap_spectral_plot, streams=[ self.range_stream, self.point_stream ] )
-        polys = self.polys.opts( opts.Polygons( fill_alpha=1.0, active_tools=['poly_draw'] ))
-        basemap = self.get_basemap()
-        return image * polys * basemap
+        polys = self.polys.opts( opts.Polygons( fill_alpha=0.8, active_tools=['poly_draw'] ))
+        return image * polys
 
 
 

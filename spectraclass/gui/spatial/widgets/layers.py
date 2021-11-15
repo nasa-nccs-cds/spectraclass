@@ -42,7 +42,7 @@ class Layer(param.Parameterized):
         self.name = name
 
     def panel(self):
-        return pn.Param(self.param, parameters=[ 'alpha', 'visible'], name=self.name )
+        return pn.Param(self.param, parameters=[ 'alpha', 'bands_visible'], name=self.name )
 
 
 class ImageLayer( Layer ):

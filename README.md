@@ -6,11 +6,12 @@ Jupyterlab workbench supporting visual exploration and classification of high di
 Conda CPU Versioned Setup
 ---------------
 
-    > conda create --name spectraclass
+    > conda create -n spectraclass 
     > conda activate spectraclass
     > conda install -c conda-forge conda nb_conda_kernels nodejs jupyterlab jupytext jupyterlab_server ipywidgets ipycanvas ipyevents itkwidgets numpy pynndescent xarray rasterio umap-learn scipy scikit-learn dask netcdf4 keras tensorflow gdal owslib pyepsg hvplot bokeh regionmask rioxarray cartopy shapely pandas geoviews hvplot utm bottleneck geopandas
 
-   > conda install -c conda-forge jupyter_bokeh nb_conda_kernels jupyterlab jupytext jupyterlab_server  ipywidgets ipycanvas ipyevents  pynndescent xarray rasterio umap-learn scipy scikit-learn dask netcdf4 scikit-image gdal owslib pyepsg rioxarray cartopy shapely bottleneck geopandas geoviews hvplot utm
+   > conda install -c conda-forge conda nb_conda_kernels nodejs jupyterlab jupytext jupyterlab_server ipywidgets ipycanvas ipyevents bokeh=2.3.3 jupyter_bokeh kdtree numpy pynndescent xarray rasterio umap-learn scipy scikit-learn dask netcdf4 scikit-image gdal owslib pyepsg rioxarray cartopy shapely bottleneck geopandas geoviews hvplot utm 
+   > conda install -c conda-forge conda nb_conda_kernels nodejs jupyterlab jupytext jupyterlab_server ipywidgets ipycanvas ipyevents ipympl matplotlib contextily kdtree numpy pynndescent xarray rasterio umap-learn scipy scikit-learn dask netcdf4 scikit-image gdal owslib pyepsg rioxarray cartopy shapely bottleneck geopandas utm keras tensorflow
 
 Legacy:
 

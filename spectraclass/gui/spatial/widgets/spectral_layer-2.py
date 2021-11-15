@@ -108,7 +108,7 @@ class SpectralLayer(param.Parameterized):
     def _get_map_panel(self):
         rng, shp = self._raster_range, self.raster.shape
         map_panel = pn.Param(self.param, name="map",
-                             parameters=['band', 'cmap', 'color_range', 'rescale_colors', 'alpha', 'visible'],
+                             parameters=['band', 'cmap', 'color_range', 'rescale_colors', 'alpha', 'bands_visible'],
                              widgets={'band': {'widget_type': pn.widgets.IntSlider, 'start': 0, 'end': shp[0] - 1},
                                       'color_range': {'widget_type': pn.widgets.RangeSlider, 'start': rng[0], 'end': rng[1]},
                                       'rescale_colors': {'widget_type': pn.widgets.Button}})
@@ -165,7 +165,7 @@ class SpectralLayer(param.Parameterized):
         self._current_band = self.band
         return image
 
-    @param.depends( 'band', 'alpha', 'cmap', 'visible', 'rescale_colors', 'color_range', 'class_selector', 'classify_selection' )
+    @param.depends( 'band', 'alpha', 'cmap', 'bands_visible', 'rescale_colors', 'color_range', 'class_selector', 'classify_selection' )
     def dmap_spectral_plot(self, **kwargs):
         logger.info(f"dmap_spectral_plot, args: {kwargs}")
         #        self.graph_selected_elements( **kwargs )
