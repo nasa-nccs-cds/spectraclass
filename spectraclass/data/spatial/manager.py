@@ -259,6 +259,7 @@ class SpatialDataManager(ModeDataManager):
     @exception_handled
     def prepare_inputs(self, *args, **kwargs ):
         tile_data = self.tiles.getTileData()
+        crs = "+a=6378137.0 +b=6378137.0 +nadgrids=@null +proj=merc +lon_0=0.0 +x_0=0.0 +y_0=0.0 +units=m +no_defs"
         for block in self.tiles.tile.getBlocks():
             block.clearBlockCache()
 #           block.addTextureBands( )
@@ -274,8 +275,8 @@ class SpatialDataManager(ModeDataManager):
                     for ( reduced_spectra, reproduction, point_data ) in blocks_reduction:
                         file_name = point_data.attrs['file_name']
                         model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
-                        raw_data: xa.DataArray = block.data
-                        try: raw_data.attrs['wkt'] = tile_data.spatial_ref.crs_wkt
+                        raw_data: xa.DataArray = block.data.rio.reproject(crs)
+                        try: raw_data.attrs['wkt'] = crs
                         except: pass
                         data_vars = dict( raw=raw_data, norm=point_data )
                         reduced_dataArray =  xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
@@ -284,16 +285,16 @@ class SpatialDataManager(ModeDataManager):
                         result_dataset = xa.Dataset( data_vars )
                         self.dataset = self.reduced_dataset_name( file_name )
                         output_file = os.path.join( self.datasetDir, self.dataset + ".nc" )
-                        self._reduced_raster_file = os.path.join(self.datasetDir, self.dataset + ".tif")
+#                       self._reduced_raster_file = os.path.join(self.datasetDir, self.dataset + ".tif")
                         lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file} with {blocks_point_data.size} samples, dset attrs:")
                         for varname, da in result_dataset.data_vars.items():
                             da.attrs['long_name'] = f"{file_name}.{varname}"
                         print( f"Writing output file: '{output_file}' with {blocks_point_data.size} samples")
                         os.makedirs( os.path.dirname( output_file ), exist_ok=True )
                         result_dataset.to_netcdf( output_file )
-                        print(f"Writing raster file: '{self._reduced_raster_file}' with dims={reduced_dataArray.dims}, attrs = {reduced_dataArray.attrs}")
+#                        print(f"Writing raster file: '{self._reduced_raster_file}' with dims={reduced_dataArray.dims}, attrs = {reduced_dataArray.attrs}")
 #                        reduced_dataArray.rio.set_spatial_dims()
-                        raw_data.rio.to_raster( self._reduced_raster_file )
+#                        raw_data.rio.to_raster( self._reduced_raster_file )
 
 
     @property

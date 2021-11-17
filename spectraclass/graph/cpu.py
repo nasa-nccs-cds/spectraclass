@@ -6,7 +6,7 @@ import numba as nb
 from typing import List, Union, Tuple, Optional, Dict
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.util.logs import LogManager, lgm
-import os, time, traceback, torch
+import os, time, traceback
 
 @nb.njit( fastmath=True,
     locals={
@@ -96,14 +96,14 @@ class cpActivationFlow(ActivationFlow):
             self._knn_graph = NNDescent( self.nodes.values, **kwargs )
         return self._knn_graph
 
-    def getEdgeIndex(self) -> torch.tensor:
+    def getEdgeIndex(self) -> Tuple[np.ndarray,np.ndarray]:
         graph: NNDescent = self.getGraph()
         dI: np.ndarray = graph.neighbor_graph[0]  # shape [nsamples,n_neighbors]
         n_neighbors = dI.shape[1]
         n_samples = dI.shape[0]
         sIf = np.vstack([np.arange(0, n_samples)] * n_neighbors).transpose().flatten()
         dIf = dI.flatten()
-        return torch.tensor([sIf, dIf], dtype=torch.long)
+        return (sIf, dIf)
 
     def spread( self, sample_data: np.ndarray, nIter: int = 1, **kwargs ) -> Optional[bool]:
         sample_mask = sample_data == 0
