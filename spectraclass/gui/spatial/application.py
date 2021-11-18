@@ -11,7 +11,6 @@ class Spectraclass(SpectraclassController):
         self.set_parent_instances()
 
     def gui( self, embed: bool = False ):
-        plt.ioff()
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.points import PointCloudManager, pcm
@@ -24,8 +23,8 @@ class Spectraclass(SpectraclassController):
         css_border = '1px solid blue'
         lgm().log(f"Creating app gui using class {str(self.__class__)}")
 
-        plot_collapsibles = ipw.Accordion(children = [dm().gui(), pcm().gui(), spm().gui() ], layout=ipw.Layout(width='100%'))     #
-        for iT, title in enumerate(['data', 'embedding', 'satellite']): plot_collapsibles.set_title(iT, title)
+        plot_collapsibles = ipw.Accordion( children = [ dm().gui(), pcm().gui() ], layout=ipw.Layout(width='100%'))     #
+        for iT, title in enumerate(['data', 'embedding']): plot_collapsibles.set_title(iT, title)
         plot_collapsibles.selected_index = 1
         plot = ipw.VBox([ ufm().gui(), plot_collapsibles ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
         lgm().log("Created panel 1")
@@ -40,7 +39,6 @@ class Spectraclass(SpectraclassController):
         if embed: self.embed()
         dm().save_config()
         lgm().log("Created app gui")
-        plt.ion()
         return gui
 
     def mark(self):

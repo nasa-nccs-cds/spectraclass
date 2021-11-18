@@ -30,12 +30,14 @@ class mplGraphPlot:
 
     def init_figure(self):
         if self.fig is None:
+            plt.ioff()
             self.fig: plt.Figure = plt.figure( self.index, figsize = (6, 4) )
             if len(self.fig.axes) == 0: self.fig.add_subplot(111)
             self.ax = self.fig.axes[0]
             self.ax.grid(True)
             self.ax.set_autoscaley_on(True)
             self.ax.set_title(f'Point Spectra {self.index}', fontsize=12)
+            plt.ion()
 
     def gui(self):
         self.plot()
