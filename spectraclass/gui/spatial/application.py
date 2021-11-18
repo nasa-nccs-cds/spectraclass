@@ -16,7 +16,6 @@ class Spectraclass(SpectraclassController):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
         from spectraclass.gui.spatial.map import MapManager, mm
-        from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
         print( f"Initializing GUI using controller {str(self.__class__)}")
 
         self.set_spectraclass_theme()

@@ -146,7 +146,6 @@ class MapManager(SCSingletonConfigurable):
         self.currentClass = 0
         self.nFrames = None
         self._adding_marker = False
-        self.figure: Figure = plt.figure(100, figsize = (6, 6))
         self.labels_image: Optional[AxesImage] = None
         self.flow_iterations = kwargs.get( 'flow_iterations', 1 )
         self.frame_marker: Optional[Line2D] = None
@@ -224,11 +223,9 @@ class MapManager(SCSingletonConfigurable):
         self.update_canvas()
 
     def on_overlay_alpha_change(self, *args ):
-        from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
         self.overlay_image.set_alpha( self.overlay_alpha )
         lgm().log(f" image overlay set alpha = {self.overlay_alpha}" )
         self.update_canvas()
-        spm().plot_overlay_image( alpha = self.overlay_alpha )
 
     def setBlock( self, **kwargs ) -> Block:
         from spectraclass.data.spatial.tile.manager import TileManager
@@ -361,6 +358,8 @@ class MapManager(SCSingletonConfigurable):
         return result
 
     def setup_plot(self, **kwargs):
+        plt.ioff()
+        self.figure: Figure = plt.figure(100, figsize=(6, 6))
         self.figure.suptitle("Band Image")
         self.plot_axes:   Axes = self.figure.add_axes([0.01, 0.07, 0.98, 0.93])  # [left, bottom, width, height]
         self.plot_axes.xaxis.set_visible( False ); self.plot_axes.yaxis.set_visible( False )
@@ -371,11 +370,12 @@ class MapManager(SCSingletonConfigurable):
         lgm().log( f"Canvas.manager class = {self.figure.canvas.manager.__class__}")
         items = self.figure.canvas.trait_values().items()
         for k,v in items: lgm().log(f" ** {k}: {v}")
-        toolbar = self.figure.canvas.toolbar
-        tool_items = list(toolbar.toolitems)
-        tool_items.append( ("TM", "Toggle Marker Visibility", "map-marker-alt", "toggle_markers") )                   # icons:  https://fontawesome.com/icons?d=gallery&p=2&m=free
-        toolbar.toolitems = tool_items
-        toolbar.toggle_markers = types.MethodType( partial( toggle_markers, self ), toolbar )
+        # toolbar = self.figure.canvas.toolbar
+        # tool_items = list(toolbar.toolitems)
+        # tool_items.append( ("TM", "Toggle Marker Visibility", "map-marker-alt", "toggle_markers") )                   # icons:  https://fontawesome.com/icons?d=gallery&p=2&m=free
+        # toolbar.toolitems = tool_items
+        # toolbar.toggle_markers = types.MethodType( partial( toggle_markers, self ), toolbar )
+        plt.ion()
 
     def invert_yaxis(self):
         self.plot_axes.invert_yaxis()
@@ -444,9 +444,7 @@ class MapManager(SCSingletonConfigurable):
                 self.plot_axes.title.set_fontsize( 8 )
 
                 if self.overlay_image is not None:
-                    from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
                     self.clear_overlay_image()
-                    spm().clear_overlay_image()
                 self.update_canvas()
 
     def clear_overlay_image(self):

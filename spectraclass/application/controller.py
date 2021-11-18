@@ -94,11 +94,9 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.model.labels import LabelsManager, lm
-        from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> CLEAR ")
         lm().clearMarkers()
         pcm().clear()
-        spm().clear_overlay_image()
         gpm().clear()
 
     @exception_handled
@@ -126,14 +124,13 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.model.labels import LabelsManager, Action, lm
-        from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
 
         embedding: xa.DataArray = dm().getModelData()
         classification: xa.DataArray = cm().apply_classification( embedding )
         pcm().color_by_index( classification.data, lm().colors )
         overlay_image = classification.data.reshape( mm().image_template.shape )
         mm().plot_overlay_image( overlay_image )
-        spm().plot_overlay_image( mm().image_template.copy( data=overlay_image ), mm().overlay_alpha )
+       # spm().plot_overlay_image( mm().image_template.copy( data=overlay_image ), mm().overlay_alpha )
         lm().addAction("color", "points")
         return classification
 
