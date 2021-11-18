@@ -17,27 +17,16 @@ class Spectraclass(SpectraclassController):
         from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
         from spectraclass.gui.spatial.map import MapManager, mm
         print( f"Initializing GUI using controller {str(self.__class__)}")
-
         self.set_spectraclass_theme()
         css_border = '1px solid blue'
-        lgm().log(f"Creating app gui using class {str(self.__class__)}")
-
-        plot_collapsibles = ipw.Accordion( children = [ dm().gui(), pcm().gui() ], layout=ipw.Layout(width='100%'))     #
-        for iT, title in enumerate(['data', 'embedding']): plot_collapsibles.set_title(iT, title)
+        plot_collapsibles = ipw.Accordion( children = [ dm().gui(), pm().gui(), pcm().gui() ], layout=ipw.Layout(width='100%'))     #
+        for iT, title in enumerate(['data', 'controls', 'embedding']): plot_collapsibles.set_title(iT, title)
         plot_collapsibles.selected_index = 1
         plot = ipw.VBox([ ufm().gui(), plot_collapsibles ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
-        lgm().log("Created panel 1")
-
-        control_collapsibles = ipw.Accordion(children=[gpm().gui(), pm().gui()], layout=ipw.Layout(width='100%'))  # , lm.gui()
-        for iT, title in enumerate(['graph', 'controls']): control_collapsibles.set_title(iT, title)   # , 'logs'
-        control_collapsibles.selected_index = 0
-        control = ipw.VBox( [ am().gui(), mm().gui(), control_collapsibles ], layout=ipw.Layout( flex='0 0 700px'), border=css_border )
-        lgm().log("Created panel 2")
-
+        control = ipw.VBox( [ am().gui(), mm().gui(), gpm().gui() ], layout=ipw.Layout( flex='0 0 700px'), border=css_border )
         gui = ipw.HBox( [control, plot ], layout=ipw.Layout( width='100%' ) )
         if embed: self.embed()
         dm().save_config()
-        lgm().log("Created app gui")
         return gui
 
     def mark(self):

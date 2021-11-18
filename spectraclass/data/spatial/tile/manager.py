@@ -29,13 +29,14 @@ class TileManager(SCSingletonConfigurable):
 
     def __init__(self):
         super(TileManager, self).__init__()
-        self._tiles: Dict[List, Tile] = {}
+        self._tiles: Dict[Tuple,Tile] = {}
         self.cacheTileData = True
         self.tile_dims = None
         self.tile_shape = [ self.tile_size ] * 2
         self.block_shape = [ self.block_size ] * 2
         self.block_dims = [ self.tile_size//self.block_size ] * 2
-        self._tile_data = None
+        self._tile_data: xa.DataArray = None
+        self.crs = "+a=6378137.0 +b=6378137.0 +nadgrids=@null +proj=merc +lon_0=0.0 +x_0=0.0 +y_0=0.0 +units=m +no_defs"
 
     @property
     def image_name(self):
@@ -126,7 +127,13 @@ class TileManager(SCSingletonConfigurable):
                 if isinstance(band_names, (list, tuple)):
                     tile_data.attrs['long_name'] = sum( [ list(band_names[valid_band[0]:valid_band[1]]) for valid_band in valid_bands ], [] )
                 lgm().log( f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
-            result = self.rescale(tile_data)
+            result = self.rescale(tile_data).rio.reproject(self.crs)
+            result.attrs['wkt'] = result.spatial_ref.crs_wkt
+            gt = [ float(tv) for tv in result.spatial_ref.GeoTransform.split() ]
+            result.attrs['wkt'] = result.spatial_ref.crs_wkt
+            result.attrs['transform'] = [ gt[1], gt[2], gt[0], gt[4], gt[5], gt[3], 0.0, 0.0, 1.0 ]
+            result.attrs['long_name'] = tile_data.attrs.get( 'long_name', None )
+            lgm().log( f" BLOCK attrs: {result.attrs}" )
             self._tile_data = result
         return self._tile_data
 

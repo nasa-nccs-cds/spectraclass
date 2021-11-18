@@ -258,8 +258,6 @@ class SpatialDataManager(ModeDataManager):
 
     @exception_handled
     def prepare_inputs(self, *args, **kwargs ):
-        tile_data = self.tiles.getTileData()
-        crs = "+a=6378137.0 +b=6378137.0 +nadgrids=@null +proj=merc +lon_0=0.0 +x_0=0.0 +y_0=0.0 +units=m +no_defs"
         for block in self.tiles.tile.getBlocks():
             block.clearBlockCache()
 #           block.addTextureBands( )
@@ -275,9 +273,7 @@ class SpatialDataManager(ModeDataManager):
                     for ( reduced_spectra, reproduction, point_data ) in blocks_reduction:
                         file_name = point_data.attrs['file_name']
                         model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
-                        raw_data: xa.DataArray = block.data.rio.reproject(crs)
-                        try: raw_data.attrs['wkt'] = crs
-                        except: pass
+                        raw_data: xa.DataArray = block.data
                         data_vars = dict( raw=raw_data, norm=point_data )
                         reduced_dataArray =  xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
                         data_vars['reduction'] = reduced_dataArray

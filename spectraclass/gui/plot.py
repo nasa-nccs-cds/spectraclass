@@ -67,19 +67,19 @@ class mplGraphPlot:
     def select_items(self, idxs: List[int] ):
         self._selected_pids = idxs
 
-    def plot(self):
+    def plot( self, **kwargs ):
         self.ax.title.text = self.title
         lgm().log(f"Plotting lines, nselected={len(self._selected_pids)}")
         if len(self._selected_pids) == 1:
-            self.update_graph( self.x2, self.y2 )
+            self.update_graph( self.x2, self.y2, **kwargs )
         elif len(self._selected_pids) > 1:
-            self.update_graph( self.x, self.y )
+            self.update_graph( self.x, self.y, **kwargs )
 
-    def update_graph(self, xs: List[ np.ndarray ], ys: List[ np.ndarray ] ):
+    def update_graph(self, xs: List[ np.ndarray ], ys: List[ np.ndarray ], **kwargs ):
         self.clear()
         for x, y in zip(xs,ys):
             lgm().log( f"Plotting line, xs = {x.shape}, ys = {y.shape}, xrange = {[x.min(),x.max()]}, yrange = {[y.min(),y.max()]}")
-            line, = self.ax.plot( x, y )
+            line, = self.ax.plot( x, y, **kwargs )
             self.lines.append(line)
         self.fig.canvas.draw()
 
@@ -157,9 +157,10 @@ class GraphPlotManager(SCSingletonConfigurable):
     def plot_graph( self, pids: List[int] = None ):
         from spectraclass.model.labels import LabelsManager, lm
         if pids is None: pids = lm().getPids()
-        # current_graph: mplGraphPlot = self.current_graph()
-        # current_graph.select_items( pids )
-        # current_graph.plot()
+        current_graph: mplGraphPlot = self.current_graph()
+        current_graph.select_items( pids )
+        lmc = lm().current_color
+        current_graph.plot( ) # color='black' if (lmc=='white') else lmc )
 
     def _createGui( self, **kwargs ) -> ipw.Tab():
         wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 500px' ) )

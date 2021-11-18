@@ -2,7 +2,8 @@ from collections import OrderedDict
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.model.base import SCSingletonConfigurable, Marker
 from functools import partial
-import numpy.ma as ma
+from cartopy.mpl.geoaxes import GeoAxes
+from spectraclass.gui.spatial.basemap import TileServiceBasemap
 import traitlets as tl
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.util.logs import LogManager, lgm, exception_handled
@@ -138,7 +139,6 @@ class MapManager(SCSingletonConfigurable):
         self.use_model_data: bool = False
         self.label_map: Optional[xa.DataArray]  = None
         self.transients = []
-        self.plot_axes: Optional[Axes] = None
         self.marker_plot: Optional[PathCollection] = None
         self.dataLims = {}
         self.key_mode = None
@@ -149,6 +149,7 @@ class MapManager(SCSingletonConfigurable):
         self.flow_iterations = kwargs.get( 'flow_iterations', 1 )
         self.frame_marker: Optional[Line2D] = None
         self.control_axes = {}
+        self.base = TileServiceBasemap()
         self.setup_plot(**kwargs)
 
 #        google_actions = [[maptype, None, None, partial(self.run_task, self.download_google_map, "Accessing Landsat Image...", maptype, task_context='newfig')] for maptype in ['satellite', 'hybrid', 'terrain', 'roadmap']]
@@ -256,7 +257,6 @@ class MapManager(SCSingletonConfigurable):
             self.plot_axes.set_xlim( self.block.xlim )
             self.plot_axes.set_ylim( self.block.ylim )
 
-
     # def computeMixingSpace(self, *args, **kwargs):
     #     labels: xa.DataArray = self.getExtendedLabelPoints()
     #     umapManager.computeMixingSpace( self.block, labels, **kwargs )
@@ -354,25 +354,20 @@ class MapManager(SCSingletonConfigurable):
         result: xa.DataArray =  xa.concat( data_arrays, dim=merge_coord )
         return result
 
+    @property
+    def figure(self) -> Figure:
+        return self.base.figure
+
+    @property
+    def plot_axes(self) -> GeoAxes:
+        return self.base.gax
+
+    @property
+    def slider_axes(self) -> Axes:
+        return self.base.sax
+
     def setup_plot(self, **kwargs):
-        plt.ioff()
-        self.figure: Figure = plt.figure(100, figsize=(6, 6))
-        self.figure.suptitle("Band Image")
-        self.plot_axes:   Axes = self.figure.add_axes([0.01, 0.07, 0.98, 0.93])  # [left, bottom, width, height]
-        self.plot_axes.xaxis.set_visible( False ); self.plot_axes.yaxis.set_visible( False )
-        self.slider_axes: Axes = self.figure.add_axes([0.01, 0.01, 0.85, 0.05])  # [left, bottom, width, height]
-        self.figure.canvas.toolbar_visible = True
-        self.figure.canvas.header_visible = False
-        lgm().log( f"Canvas class = {self.figure.canvas.__class__}" )
-        lgm().log( f"Canvas.manager class = {self.figure.canvas.manager.__class__}")
-        items = self.figure.canvas.trait_values().items()
-        for k,v in items: lgm().log(f" ** {k}: {v}")
-        # toolbar = self.figure.canvas.toolbar
-        # tool_items = list(toolbar.toolitems)
-        # tool_items.append( ("TM", "Toggle Marker Visibility", "map-marker-alt", "toggle_markers") )                   # icons:  https://fontawesome.com/icons?d=gallery&p=2&m=free
-        # toolbar.toolitems = tool_items
-        # toolbar.toggle_markers = types.MethodType( partial( toggle_markers, self ), toolbar )
-        plt.ion()
+        self.base.setup_plot( **kwargs )
 
     def invert_yaxis(self):
         self.plot_axes.invert_yaxis()
@@ -417,7 +412,7 @@ class MapManager(SCSingletonConfigurable):
              (y0, y1) = ax.get_ylim()
              print(f"ZOOM Event: Updated bounds: ({x0},{x1}), ({y0},{y1})")
 
-    def frame_color_pointcloud( self, **kwargs ) -> Optional[xa.DataArray]:
+    def get_frame_data(self, **kwargs) -> Optional[xa.DataArray]:
         from spectraclass.application.controller import app
         if self.currentFrame >= self.data.shape[0]: return None
         frame_data: xa.DataArray = self.data[ self.currentFrame ]
@@ -429,7 +424,7 @@ class MapManager(SCSingletonConfigurable):
     def update_plots(self):
         if self.image is not None:
             from spectraclass.data.base import DataManager, dm
-            frame_data: xa.DataArray = self.frame_color_pointcloud()
+            frame_data: xa.DataArray = self.get_frame_data()
             if frame_data is not None:
                 self.image.set_data( frame_data.values  )
                 drange = dms().get_color_bounds( frame_data )
@@ -465,8 +460,8 @@ class MapManager(SCSingletonConfigurable):
                 pid = self.block.coords2pindex( event.ydata, event.xdata )
                 if pid >= 0:
                     cid = lm().current_cid
-                    lgm().log( f"Adding marker for pid = {pid}, cid = {cid}")
                     ptindices = self.block.pindex2indices(pid)
+                    lgm().log(f"Adding marker for pid = {pid}, cid = {cid}, ptindices= {ptindices}, coords = {[event.xdata,event.ydata]}")
                     classification = self.label_map.values[ ptindices['iy'], ptindices['ix'] ] if (self.label_map is not None) else -1
                     self.add_marker( Marker( [pid], cid, classification = classification ) )
                     self.dataLims = event.inaxes.dataLim

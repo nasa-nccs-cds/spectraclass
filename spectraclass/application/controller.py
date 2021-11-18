@@ -36,6 +36,7 @@ class SpectraclassController(SCSingletonConfigurable):
     def __init__(self):
         super(SpectraclassController, self).__init__()
         self._action_events = []
+        self.pcm_active = False
 
     def addActionEvent(self, event: ActionEvent ):
         self._action_events.append( event )
@@ -55,7 +56,7 @@ class SpectraclassController(SCSingletonConfigurable):
     @property
     def color_map(self) -> str:
         from spectraclass.gui.points import PointCloudManager, pcm
-        return pcm().color_map
+        if self.pcm_active: return pcm().color_map
 
     @exception_handled
     def update_current_class(self, iclass: int ):
@@ -96,8 +97,8 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, lm
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> CLEAR ")
         lm().clearMarkers()
-        pcm().clear()
         gpm().clear()
+        if self.pcm_active: pcm().clear()
 
     @exception_handled
     def embed(self):
@@ -106,7 +107,7 @@ class SpectraclassController(SCSingletonConfigurable):
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> EMBED ")
         ufm().show( "Computing 3D embedding")
         embedding = rm().umap_embedding()
-        pcm().reembed(embedding)
+        if self.pcm_active: pcm().reembed(embedding)
         ufm().clear()
 
     @exception_handled
@@ -127,7 +128,7 @@ class SpectraclassController(SCSingletonConfigurable):
 
         embedding: xa.DataArray = dm().getModelData()
         classification: xa.DataArray = cm().apply_classification( embedding )
-        pcm().color_by_index( classification.data, lm().colors )
+        if self.pcm_active: pcm().color_by_index( classification.data, lm().colors )
         overlay_image = classification.data.reshape( mm().image_template.shape )
         mm().plot_overlay_image( overlay_image )
        # spm().plot_overlay_image( mm().image_template.copy( data=overlay_image ), mm().overlay_alpha )
@@ -157,7 +158,7 @@ class SpectraclassController(SCSingletonConfigurable):
         lm().log_markers("pre-spread")
         self._flow_class_map: np.ndarray = lm().labels_data().data
         catalog_pids = np.arange(0, self._flow_class_map.shape[0])
-        pcm().clear_bins()
+        if self.pcm_active: pcm().clear_bins()
         converged = flow.spread( self._flow_class_map, niters )
 
         if converged is not None:
@@ -169,7 +170,7 @@ class SpectraclassController(SCSingletonConfigurable):
                     if new_indices.size > 0:
                         lgm().log(f" @@@ spread_selection: cid={cid}, label={label}, new_indices={new_indices}" )
                         lm().mark_points( new_indices, cid )
-                        pcm().update_marked_points(cid)
+                        if self.pcm_active: pcm().update_marked_points(cid)
             gpm().plot_graph()
         lm().log_markers("post-spread")
         return converged
@@ -183,7 +184,7 @@ class SpectraclassController(SCSingletonConfigurable):
         seed_points: xa.DataArray = lm().getSeedPointMask()
         flow: ActivationFlow = afm().getActivationFlow()
         if flow.spread( seed_points.data, niters, bidirectional=True ) is not None:
-            pcm().color_by_value( flow.get_distances(), distance=True )
+            if self.pcm_active: pcm().color_by_value( flow.get_distances(), distance=True )
             lm().addAction("color", "points")
 
     @exception_handled
@@ -195,13 +196,14 @@ class SpectraclassController(SCSingletonConfigurable):
         pids = marker.pids[np.where(marker.pids >= 0)]
         lgm().log(f"  ----> Controller[{self.__class__.__name__}] -> ADD MARKER, pids = {pids} ")
         gpm().plot_graph(pids)
-        pcm().update_marked_points(marker.cid)
+        if self.pcm_active: pcm().update_marked_points(marker.cid)
         lm().log_markers("post-add_marker")
 
     @exception_handled
     def color_pointcloud( self, color_data: np.ndarray = None, **kwargs ):
         from spectraclass.gui.points import PointCloudManager, pcm
-        pcm().color_by_value( color_data, **kwargs )
+        if self.pcm_active: pcm().color_by_value( color_data, **kwargs )
+
 
 
 
