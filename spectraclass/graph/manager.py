@@ -28,7 +28,7 @@ class ActivationFlow():
     def getGraph(self):
         raise NotImplementedError()
 
-    def getEdgeIndex(self) -> torch.tensor:
+    def getEdgeIndex(self) -> Tuple[np.ndarray,np.ndarray]:
         raise NotImplementedError()
 
     @classmethod

@@ -122,7 +122,6 @@ class Block:
         pt: ProjectiveTransform = tm().get_block_transform(*self.block_coords)
         block_raster.attrs['transform'] = pt.params.flatten().tolist()
         block_raster.name = self.file_name
-        block_raster['crs'] = block_raster.spatial_ref.crs_wkt
         return block_raster
 
     def _apply_mask(self, block_array: xa.DataArray ) -> xa.DataArray:

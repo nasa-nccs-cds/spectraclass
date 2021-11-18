@@ -26,22 +26,20 @@ class mplGraphPlot:
         self.ax : plt.Axes = None
         self.fig : plt.Figure = None
         self.lines: List[plt.Line2D] = []
-        self.output = ipw.Output()
         self.init_figure()
 
     def init_figure(self):
         if self.fig is None:
-            with self.output:
-                self.fig: plt.Figure = plt.figure( self.index, figsize = (6, 4) )
-                if len(self.fig.axes) == 0: self.fig.add_subplot(111)
-                self.ax = self.fig.axes[0]
+            self.fig: plt.Figure = plt.figure( self.index, figsize = (6, 4) )
+            if len(self.fig.axes) == 0: self.fig.add_subplot(111)
+            self.ax = self.fig.axes[0]
             self.ax.grid(True)
             self.ax.set_autoscaley_on(True)
             self.ax.set_title(f'Point Spectra {self.index}', fontsize=12)
 
     def gui(self):
         self.plot()
-        return self.output
+        return self.fig.canvas
 
     @classmethod
     def refresh(cls):

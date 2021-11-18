@@ -1,5 +1,6 @@
 from spectraclass.util.logs import LogManager, lgm
 import ipywidgets as ipw
+import matplotlib.pyplot as plt
 from spectraclass.application.controller import SpectraclassController
 from spectraclass.model.base import Marker
 
@@ -10,6 +11,7 @@ class Spectraclass(SpectraclassController):
         self.set_parent_instances()
 
     def gui( self, embed: bool = False ):
+        plt.ioff()
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.points import PointCloudManager, pcm
@@ -38,6 +40,7 @@ class Spectraclass(SpectraclassController):
         if embed: self.embed()
         dm().save_config()
         lgm().log("Created app gui")
+        plt.ion()
         return gui
 
     def mark(self):
