@@ -5,7 +5,6 @@ from functools import partial
 import numpy.ma as ma
 import traitlets as tl
 from spectraclass.data.spatial.tile.tile import Block
-from .satellite import SatellitePlotManager
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import types, pandas as pd
 import xarray as xa
@@ -249,7 +248,6 @@ class MapManager(SCSingletonConfigurable):
                 self.update_plot_axis_bounds()
                 self.plot_markers_image()
                 self.update_plots()
-                SatellitePlotManager.instance().setBlock(self.block)
 
         return self.block
 
@@ -257,7 +255,6 @@ class MapManager(SCSingletonConfigurable):
         if self.plot_axes is not None:
             self.plot_axes.set_xlim( self.block.xlim )
             self.plot_axes.set_ylim( self.block.ylim )
-            SatellitePlotManager.instance().set_axis_limits(self.block.xlim, self.block.ylim)
 
 
     # def computeMixingSpace(self, *args, **kwargs):
