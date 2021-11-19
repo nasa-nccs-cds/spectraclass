@@ -131,7 +131,7 @@ class SpectraclassController(SCSingletonConfigurable):
         if self.pcm_active: pcm().color_by_index( classification.data, lm().colors )
         overlay_image = classification.data.reshape( mm().image_template.shape )
         mm().plot_overlay_image( overlay_image )
-       # spm().plot_overlay_image( mm().image_template.copy( data=overlay_image ), mm().overlay_alpha )
+       # spm().plot_overlay_image( mm().image_template.copy( data=labels_image ), mm().overlay_alpha )
         lm().addAction("color", "points")
         return classification
 

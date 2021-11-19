@@ -91,16 +91,7 @@ class ParametersManager(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         widgets = []
         if title == "layers":
-            overlay_alpha   = self.getFloatSlider( "Overlay: Opacity", (0.0, 1.0), mm(), "overlay_alpha" )
-            overlay_visible = self.getCheckBox( "Visible", mm(), "overlay_visible" )
-            overlay_layer = ipw.HBox( [overlay_alpha, overlay_visible] )
-            widgets.append( overlay_layer )
-
-            map_alpha   = self.getFloatSlider( "Map: Opacity", (0.0, 1.0), mm(), "map_alpha" )
-            map_visible = self.getCheckBox( "Visible", mm(), "map_visible" )
-            map_layer = ipw.HBox( [map_alpha, map_visible] )
-            widgets.append( map_layer )
-
+            widgets.append( mm().layers.gui() )
         elif title == "reduction":
             widgets.append( dm().modal.getCreationPanel() )
         elif title == "embedding":

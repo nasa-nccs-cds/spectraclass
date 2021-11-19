@@ -3,6 +3,7 @@ from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.model.base import SCSingletonConfigurable, Marker
 from functools import partial
 from cartopy.mpl.geoaxes import GeoAxes
+from spectraclass.gui.spatial.widgets.layers import LayersManager, Layer
 from spectraclass.gui.spatial.basemap import TileServiceBasemap
 import traitlets as tl
 from spectraclass.data.spatial.tile.tile import Block
@@ -113,19 +114,10 @@ class PageSlider(Slider):
         self._colorize(i)
 
 def mm() -> "MapManager":
-    is_initialized = MapManager.initialized()
-    mgr = MapManager.instance()
-    if not is_initialized:
-        mgr.observe( mgr.on_overlay_alpha_change, names=["overlay_alpha","overlay_visible"] )
-        mgr.observe( mgr.on_map_alpha_change,     names=["map_alpha","map_visible"] )
-    return mgr
+    return MapManager.instance()
 
 class MapManager(SCSingletonConfigurable):
     init_band = tl.Int(10).tag(config=True, sync=True)
-    overlay_alpha = tl.Float(0.8).tag(config=True, sync=True)
-    map_alpha = tl.Float(0.8).tag(config=True, sync=True)
-    map_visible = tl.Bool(True).tag(config=True, sync=True)
-    overlay_visible = tl.Bool(False).tag(config=True, sync=True)
 
     RIGHT_BUTTON = 3
     MIDDLE_BUTTON = 2
@@ -134,12 +126,15 @@ class MapManager(SCSingletonConfigurable):
     def __init__( self, **kwargs ):   # class_labels: [ [label, RGBA] ... ]
         super(MapManager, self).__init__()
         self._debug = False
+        self.layers = LayersManager( self.on_layer_change )
         self.currentFrame = 0
         self.block: Block = None
         self.slider: Optional[PageSlider] = None
         self.image: Optional[AxesImage] = None
+        self.layers.add('bands', 1.0, True )
         self.image_template: Optional[xa.DataArray]  = None
-        self.overlay_image: Optional[AxesImage] = None
+        self.labels_image: Optional[AxesImage] = None
+        self.layers.add('labels', 0.5, False )
         self._classification_data: Optional[np.ndarray] = None
         self.use_model_data: bool = False
         self.label_map: Optional[xa.DataArray]  = None
@@ -165,12 +160,6 @@ class MapManager(SCSingletonConfigurable):
 
         atexit.register(self.exit)
         self._update(0)
-
-    def alpha( self, layer: str ) -> float:
-        assert layer in ["map","overlay"], f"Unknown Layer: {layer}"
-        if   (layer == "map") and self.map_visible:          return self.map_alpha
-        elif (layer == "overlay") and self.overlay_visible:  return self.overlay_alpha
-        return 0.0
 
     def labels_dset(self):
         return xa.Dataset( self.label_map )
@@ -229,18 +218,20 @@ class MapManager(SCSingletonConfigurable):
         if image_data is not None:
             lgm().log( f" plot image overlay, shape = {image_data.shape}, vrange = {[ image_data.min(), image_data.max() ]}, dtype = {image_data.dtype}" )
             self._classification_data = image_data
-            self.overlay_image.set_data( image_data )
-        self.overlay_image.set_alpha( self.alpha('overlay') )
+            self.labels_image.set_data(image_data)
+        self.labels_image.set_alpha(self.layers('overlay').visibility)
         self.update_canvas()
 
-    def on_overlay_alpha_change(self, *args ):
-        self.overlay_image.set_alpha( self.alpha('overlay') )
-        lgm().log(f" image overlay set alpha = {self.alpha('overlay')}" )
-        self.update_canvas()
+    def layer_image( self, name: str ):
+        if name   == "labels": img = self.labels_image
+        elif name == "bands":  img = self.image
+        else: raise Exception( f"Unknown Layer: {name}")
+        return img
 
-    def on_map_alpha_change(self, *args ):
-        self.image.set_alpha(self.alpha('map'))
-        lgm().log(f" map overlay set alpha = {self.alpha('map')}" )
+    def on_layer_change( self, layer: Layer ):
+        image = self.layer_image( layer.name )
+        image.set_alpha( layer.visibility )
+        lgm().log(f" image {layer.name} set alpha = {layer.visibility}" )
         self.update_canvas()
 
     def setBlock( self, **kwargs ) -> Block:
@@ -404,20 +395,21 @@ class MapManager(SCSingletonConfigurable):
         lgm().log( f"\n ********* Creating Map Image, nValid={nValid}, data shape = {self.data.shape}, image shape = {self.image_template.shape}, band = {self.init_band}, data range = [ {self.data.min().values}, {self.data.max().values} ]")
         assert nValid > 0, "No valid pixels in image"
         colorbar = kwargs.pop( 'colorbar', False )
-        image: AxesImage =  dms().plotRaster( self.image_template, ax=self.plot_axes, colorbar=colorbar, alpha=self.alpha('map'), **kwargs )
+        image: AxesImage =  dms().plotRaster( self.image_template, ax=self.plot_axes, colorbar=colorbar, **kwargs )
         self._cidpress = image.figure.canvas.mpl_connect('button_press_event', self.onMouseClick)
         self._cidrelease = image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
      #   self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
-        image.set_alpha(self.alpha('map'))
+        image.set_alpha( self.layers('bands').visibility )
         overlays = kwargs.get( "overlays", {} )
         for color, overlay in overlays.items():
             overlay.plot( ax=self.plot_axes, color=color, linewidth=2 )
         return image
 
     @exception_handled
-    def create_overlay_image( self ) -> AxesImage:
+    def create_labels_image(self) -> AxesImage:
         assert self.image is not None, "Must create base image before overlay"
-        overlay_image: AxesImage =  dms().plotRaster( self.image_template, itype='overlay', colorbar=False, alpha=self.alpha('overlay'), ax=self.plot_axes, zeros=True )
+        overlay_image: AxesImage =  dms().plotRaster( self.image_template, itype='labels', colorbar=False, ax=self.plot_axes, zeros=True )
+        overlay_image.set_alpha( self.layers('labels').visibility )
         return overlay_image
 
     # def on_lims_change(self, ax ):
@@ -444,20 +436,20 @@ class MapManager(SCSingletonConfigurable):
                 drange = dms().get_color_bounds( frame_data )
                 self.image.set_norm( Normalize( **drange ) )
                 self.image.set_extent( self.block.extent() )
-                self.image.set_alpha( self.alpha('map') )
+                self.image.set_alpha( self.layers('bands').visibility )
                 plot_name = os.path.basename( dm().dsid() )
                 lgm().log( f" Update Map: data shape = {frame_data.shape}, range = {drange}, extent = {self.block.extent()}")
                 self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
                 self.plot_axes.title.set_fontsize( 8 )
 
-                if self.overlay_image is not None:
+                if self.labels_image is not None:
                     self.clear_overlay_image( False )
                 self.update_canvas()
 
     def clear_overlay_image(self, update=True ):
-        self.overlay_image.set_extent(self.block.extent())
+        self.labels_image.set_extent(self.block.extent())
         self.overlay_visible = False
-        self.overlay_image.set_alpha(self.alpha('overlay'))
+        self.labels_image.set_alpha(self.layers("labels").visibility)
         if update: self.update_canvas()
 
     def onMouseRelease(self, event):
@@ -536,35 +528,8 @@ class MapManager(SCSingletonConfigurable):
 # #        event = dict( event="gui", type="update" )
 # #        self.submitEvent(event, EventMode.Gui)
 
-    def show_labels(self):
-        if self.labels_image is not None:
-            self.labels_image.set_alpha(1.0)
-            self.update_canvas()
-
-    def toggle_labels(self):
-        if self.labels_image is not None:
-            new_alpha = 1.0 if (self.labels_image.get_alpha() == 0.0) else 0.0
-            self.labels_image.set_alpha( new_alpha )
-            self.update_canvas()
-
-    def get_layer(self, layer_id: str ):
-        if layer_id == "bands": return self.image
-        if layer_id == "labels": return self.labels_image
-        raise Exception( f"Unrecognized layer: {layer_id}")
-
     def update_image_alpha( self, layer: str, increase: bool, *args, **kwargs ):
-        image = self.get_layer( layer )
-        if image is not None:
-            current = image.get_alpha()
-            if increase:   new_alpha = min( 1.0, current + 0.1 )
-            else:          new_alpha = max( 0.0, current - 0.1 )
-            print( f"Update Image Alpha: {new_alpha}")
-            image.set_alpha( new_alpha )
-            self.figure.canvas.draw_idle()
-
-    # def clear_unlabeled(self):
-    #     if self.marker_list:
-    #         self.marker_list = [ marker for marker in self.marker_list if marker['c'] > 0 ]
+        self.layers(layer).increment( increase )
 
     def get_markers( self ) -> Tuple[ List[float], List[float], List[List[float]] ]:
         ycoords, xcoords, colors, markers = [], [], [], lm().markers
@@ -627,7 +592,7 @@ class MapManager(SCSingletonConfigurable):
     def initPlots(self, **kwargs) -> Optional[AxesImage]:
         if self.image is None:
             self.image = self.create_image(**kwargs)
-            self.overlay_image = self.create_overlay_image()
+            self.labels_image = self.create_labels_image()
             if self.image is not None: self.initMarkersPlot()
         return self.image
 
@@ -644,7 +609,7 @@ class MapManager(SCSingletonConfigurable):
 
     def initMarkersPlot(self):
         print( "Init Markers Plot")
-        self.marker_plot: PathCollection = self.plot_axes.scatter([], [], s=50, zorder=3, alpha=self.alpha('overlay'), picker=True)
+        self.marker_plot: PathCollection = self.plot_axes.scatter([], [], s=50, zorder=3, alpha=self.layers("labels").visibility, picker=True)
         self.marker_plot.set_edgecolor([0, 0, 0])
         self.marker_plot.set_linewidth(2)
         self.figure.canvas.mpl_connect('pick_event', self.mpl_pick_marker)
