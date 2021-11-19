@@ -1,109 +1,60 @@
-import param
-import os, time, traceback
-import numpy as np
-import xarray as xa
-import hvplot.xarray
-from holoviews.plotting.links import RangeToolLink
-import panel as pn
-import geoviews as gv
-import geoviews.tile_sources as gts
-from geoviews.element import WMTS
-import rioxarray as rio
-import rasterio
-from holoviews import streams
-import pandas as pd
-from holoviews.element import Dataset as hvDataset
-from holoviews.core.boundingregion import BoundingRegion, BoundingBox
-from holoviews.plotting.links import DataLink
-from spectraclass.gui.spatial.widgets.tiles import TileSelector, TileManager
-from holoviews.core import Dimension
-import cartopy.crs as ccrs
-from holoviews.core.spaces import DynamicMap
-from bokeh.events import RangesUpdate, Pan
-from holoviews.streams import RangeXY
-import holoviews as hv
-from bokeh.io import push_notebook, show, output_notebook
-from holoviews import opts
-from bokeh.layouts import column
-from hvplot.plotting.core import hvPlot
-from typing import List, Dict, Tuple, Optional
-from spectraclass.xext.xgeo import XGeo
-import logging
-from bokeh.models.tools import BoxSelectTool
-hv.extension('bokeh')
+from typing import List, Union, Tuple, Optional, Dict, Callable
+from matplotlib.figure import Figure
+from functools import partial
+from collections import OrderedDict
+import ipywidgets as ipw
+import traitlets.config as tlc
+from spectraclass.util.logs import LogManager, lgm, exception_handled
+import traitlets as tl
 
-class Layer(param.Parameterized):
-    alpha = param.Magnitude()
-    visible = param.Boolean(True)
-    default_layer_args = dict( width=500, height=500 )
+class LayerPanel:
 
-    def __init__(self, name: str ):
-        param.Parameterized.__init__(self)
+    def __init__(self, figure: Figure, name: str, ival: float, active: bool, handle_alpha_change: Callable[[str,float],None] ):
         self.name = name
+        self.figure: Figure = figure
+        self._label = ipw.Label( value=name, layout = ipw.Layout( width = "100px" ) )
+        self._slider = ipw.SelectionSlider( options=[("%.1f" % (i*0.1), i*0.1) for i in range(11)], value=ival, readout=False  )
+        self._checkbox = ipw.Checkbox( active, description='' )
+        self._slider.observe( self.on_value_change, names='value', type='change' )
+        self._handle_alpha_change = handle_alpha_change
+        self._checkbox.observe( self.on_value_change, names='value', type='change' )
 
-    def panel(self):
-        return pn.Param(self.param, parameters=[ 'alpha', 'bands_visible'], name=self.name )
+    def on_value_change(self, event ):
+        event_value = event["new"]
+        if isinstance( event_value, bool ):   alpha = self._slider.value if event_value else 0.0
+        else:                                 alpha = event_value if self._checkbox.value else 0.0
+        self._handle_alpha_change( self.name, alpha )
 
+    def update(self, alpha: float, enabled: bool ):
+        self._slider.value = alpha
+        self._checkbox.value = enabled
 
-class ImageLayer( Layer ):
-    band = param.Integer( default=0 )
-    color_range = param.Range()
-    cmap = param.Selector( objects=hv.plotting.util.list_cmaps(), default="jet" )
-    rescale_colors = param.Boolean(False)
+    def gui(self) -> ipw.Box:
+        buttonBox = ipw.HBox( [ self._label, self._slider, self._checkbox ] ) # , layout = ipw.Layout( width = "150px" ) )
+        return buttonBox
 
-    def __init__(self, raster: xa.DataArray, **kwargs ):
-        Layer.__init__(self)
-        self.raster = raster
-        self.bounds = self.raster.xgeo.bounds()
-        self._raster_range = ( float(self.raster.min(skipna=True)), float(self.raster.max(skipna=True)) )
-        self.tools = ['box_zoom', 'hover', 'box_select', 'lasso_select', 'poly_select', 'pan', 'wheel_zoom', 'tap', 'undo', 'redo', 'reset']
-        self._current_band = -1
-        self.range_stream: streams.RangeXY = streams.RangeXY( )
-        self._image: hv.Image = None
-        self._plot_args = dict( **self.default_layer_args )
-        self._plot_args.update( **kwargs )
-        self._color_range = ( float(raster.values.min()), float(raster.values.max()) )
+class LayersManager(object):
 
-    @property
-    def decreasing_y(self):
-        return ( self.raster.y[0] > self.raster.y[-1] )
+    def __init__(self, figure: Figure, handle_alpha_change: Callable[[str,float],None] ):
+        super(LayersManager, self).__init__()
+        self.figure: Figure = figure
+        self._change_handler = handle_alpha_change
+        self._wGui: ipw.Box = None
+        self._layers: OrderedDict[str,LayerPanel] = OrderedDict()
 
-    def colors_panel(self):
-        color_range_specs = { 'widget_type': pn.widgets.RangeSlider, 'start': self._raster_range[0], 'end': self._raster_range[1]  }
-        panel = pn.Param( self.param, parameters=[ 'cmap', 'color_range', 'rescale_colors'], name="colors",
-             widgets={  'color_range': color_range_specs, 'rescale_colors': {'widget_type': pn.widgets.Button } } )
-        return panel
+    def gui( self ) -> ipw.Box:
+        if self._wGui is None:
+            self._wGui = self._createGui( )
+        return self._wGui
 
-    @property
-    def layer(self) -> xa.DataArray:
-        return self.raster[ self.band ]
+    def add_layer( self, name, ival: float, active: bool ):
+        self._layers[name] = LayerPanel( self.figure, name, ival, active, self._change_handler )
 
-    def get_image(self):
-        if (self._image is None) or (self.band != self._current_band):
-            self._image = hv.Image( self.layer )
-            self.range_stream.source = self._image
-        return self._image
+    def layer( self, name: str ) -> Optional[LayerPanel]:
+        return self._layers.get( name, None )
 
-    def update_clim( self, **kwargs ):
-        try:
-            yr = list(kwargs.get('y_range',[]))
-            xr = list(kwargs.get('x_range',[]))
-            if self.rescale_colors:
-                if self.decreasing_y: (yr[1],yr[0]) = (yr[0],yr[1])
-                subimage = self.layer.loc[ yr[0]:yr[1], xr[0]:xr[1] ]
-                self._color_range = (float(subimage.min(skipna=True)), float(subimage.max(skipna=True)))
-                self.color_range = self._color_range
-                self.rescale_colors = False
-                push_notebook()
-            elif self.color_range:
-                self._color_range =  self.color_range
-        except Exception as err:
-            print( f"ERROR: {err}")
+    def _createGui( self ) -> ipw.Box:
+        buttonBox =  ipw.VBox( [ layer.gui() for layer in self._layers.values() ] )
+        buttonBox.layout = ipw.Layout( width = "100%" )
+        return buttonBox
 
-    def plot( self, **kwargs ):
-        self.update_clim( **kwargs )
-        current_image = self.get_image()
-        image = current_image.opts( cmap=self.cmap, alpha=self.alpha, clim=self._color_range, visible=self.visible, tools=self.tools, **self._plot_args )
-        basemap = self.get_basemap( )
-        self._current_band = self.band
-        return ( image * basemap )

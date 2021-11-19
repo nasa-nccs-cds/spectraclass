@@ -150,7 +150,8 @@ class GraphPlotManager(SCSingletonConfigurable):
         mplGraphPlot.refresh()
         lgm().log(f" GraphPlotManager refresh ")
 
-    def current_graph(self) -> mplGraphPlot:
+    def current_graph(self) -> Optional[mplGraphPlot]:
+        if self._wGui is None: return None
         return self._graphs[ self._wGui.selected_index ]
 
     @exception_handled
@@ -158,9 +159,10 @@ class GraphPlotManager(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, lm
         if pids is None: pids = lm().getPids()
         current_graph: mplGraphPlot = self.current_graph()
-        current_graph.select_items( pids )
-        lmc = lm().current_color
-        current_graph.plot( ) # color='black' if (lmc=='white') else lmc )
+        if current_graph is not None:
+            current_graph.select_items( pids )
+            lmc = lm().current_color
+            current_graph.plot( ) # color='black' if (lmc=='white') else lmc )
 
     def _createGui( self, **kwargs ) -> ipw.Tab():
         wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 500px' ) )

@@ -78,7 +78,7 @@ class ParametersManager(SCSingletonConfigurable):
 
     def _createGui( self, **kwargs ) -> ipw.Box:
         wTab = ipw.Tab()
-        tabNames = [ "reduction", "embedding", "classification" ]
+        tabNames = [ "reduction", "embedding", "layers" ]
         children = []
         for iT, title in enumerate( tabNames ):
             wTab.set_title( iT, title )
@@ -90,8 +90,17 @@ class ParametersManager(SCSingletonConfigurable):
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.data.base import DataManager, dm
         widgets = []
-        if title == "classification":
-            widgets.append( self.getFloatSlider( "Overlay Opacity", (0.0,1.0), mm(), "overlay_alpha" ) )
+        if title == "layers":
+            overlay_alpha   = self.getFloatSlider( "Overlay: Opacity", (0.0, 1.0), mm(), "overlay_alpha" )
+            overlay_visible = self.getCheckBox( "Visible", mm(), "overlay_visible" )
+            overlay_layer = ipw.HBox( [overlay_alpha, overlay_visible] )
+            widgets.append( overlay_layer )
+
+            map_alpha   = self.getFloatSlider( "Map: Opacity", (0.0, 1.0), mm(), "map_alpha" )
+            map_visible = self.getCheckBox( "Visible", mm(), "map_visible" )
+            map_layer = ipw.HBox( [map_alpha, map_visible] )
+            widgets.append( map_layer )
+
         elif title == "reduction":
             widgets.append( dm().modal.getCreationPanel() )
         elif title == "embedding":
@@ -103,6 +112,10 @@ class ParametersManager(SCSingletonConfigurable):
         tl.link((slider, "value"), (observer, linked_trait) )
         return slider
 
+    def getCheckBox(self, label: str, observer: tlc.Configurable, linked_trait: str ):
+        checkbox = ipw.Checkbox( getattr(observer,linked_trait), description=label )
+        tl.link((checkbox, "value"), (observer, linked_trait) )
+        return checkbox
 
 def ufm() -> "UserFeedbackManager":
     return UserFeedbackManager.instance()

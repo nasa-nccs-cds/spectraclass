@@ -82,9 +82,9 @@ class DataManager(SCSingletonConfigurable):
         self.name = name
         cfg_file = self.config_file( name, mode )
         if os.path.isfile(cfg_file):
+            print(f"Using config file: '{cfg_file}'")
             (self.config_dir, fname) = os.path.split(cfg_file)
             self.config_files = [ fname ]
-            print(f"Loading config files: {self.config_files} from dir {self.config_dir}")
             self._config = load_pyconfig_files(self.config_files, self.config_dir)
             self.update_config( self._config )
         else:
@@ -144,7 +144,7 @@ class DataManager(SCSingletonConfigurable):
 
     @classmethod
     def register_mode(cls, manager_type: Type[ModeDataManager] ):
-        print( f"DataManager registering ModeDataManager[{manager_type.MODE.lower()}]: {manager_type}")
+#        print( f"DataManager registering ModeDataManager[{manager_type.MODE.lower()}]: {manager_type}")
         cls._mode_data_managers_[ manager_type.MODE.lower() ] = manager_type
 
     @classmethod

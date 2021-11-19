@@ -1,30 +1,24 @@
-
-from typing import List, Union, Tuple, Optional, Dict, Callable
 from cartopy.mpl.geoaxes import GeoAxes
 from collections import OrderedDict
 import cartopy.crs as ccrs
-from spectraclass.model.labels import LabelsManager, lm
+from spectraclass.model.labels import lm
 from spectraclass.model.base import SCSingletonConfigurable, Marker
-from spectraclass.gui.spatial.widgets.events import em
 from functools import partial
 import traitlets as tl
 import ipywidgets as ipw
 import rioxarray as rio
 from shapely.geometry.base import BaseGeometry
-from rioxarray.raster_dataset import RasterDataset
 from shapely import geometry
 from spectraclass.gui.spatial.widgets.tools import PageSlider
 from spectraclass.gui.spatial.widgets.selection import *
 from spectraclass.data.spatial.tile.tile import Block
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import lgm, exception_handled
 from spectraclass.gui.spatial.widgets.layers import LayersManager
-import types, pandas as pd
+import pandas as pd
 import xarray as xa
 import numpy as np
-import math, atexit, os, traceback
-import pathlib
-from spectraclass.gui.spatial.widgets.controls import am, ufm
-from  ipympl.backend_nbagg import Toolbar
+import atexit, os
+from gui.spatial.widgets.scrap_heap.controls import am, ufm
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
 from matplotlib.lines import Line2D
@@ -33,7 +27,7 @@ from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
 from matplotlib.colors import Normalize
 from matplotlib.backend_bases import PickEvent, MouseButton
-from spectraclass.gui.control import UserFeedbackManager, ufm
+from spectraclass.gui.control import ufm
 
 class RegionTypes:
     Polygon = "Polygon"
@@ -333,7 +327,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
             self._label_files_stack.append( dset_name )
 
     def get_raster_file_name(self, dset_name: str ) -> str:
-        from spectraclass.data.base import DataManager, dm
+        from spectraclass.data.base import dm
         return f"{dm().modal.data_dir}/{dset_name}.tif"
 
     def read_labels( self ) -> xa.Dataset:
@@ -354,7 +348,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
 
     @property
     def data(self) -> Optional[xa.DataArray]:
-        from spectraclass.data.base import DataManager, dm
+        from spectraclass.data.base import dm
         if self.block is None: return None
         block_data: xa.DataArray = self.block.data
         if self.use_model_data:
@@ -416,7 +410,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
 
     @exception_handled
     def create_image(self, **kwargs ) -> AxesImage:
-        from spectraclass.data.base import DataManager, dm
+        from spectraclass.data.base import dm
         from spectraclass.data.spatial.manager import SpatialDataManager
         dms: SpatialDataManager = dm().modal
         self.image_template: xa.DataArray =  self.data[ self.init_band, :, : ]
@@ -438,7 +432,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
 
     @exception_handled
     def create_overlay_image( self ) -> AxesImage:
-        from spectraclass.data.base import DataManager, dm
+        from spectraclass.data.base import dm
         from spectraclass.data.spatial.manager import SpatialDataManager
         dms: SpatialDataManager = dm().modal
         assert self.image is not None, "Must create base image before overlay"
@@ -458,7 +452,7 @@ class TrainingSetSelection(SCSingletonConfigurable):
 
     @exception_handled
     def update_plots(self):
-        from spectraclass.data.base import DataManager, dm
+        from spectraclass.data.base import dm
         from spectraclass.data.spatial.manager import SpatialDataManager
         dms: SpatialDataManager = dm().modal
         if self.image is not None:
