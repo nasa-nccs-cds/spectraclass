@@ -3,6 +3,7 @@ from typing import List, Optional, Dict, Type
 import os, warnings
 from enum import Enum
 import ipywidgets as ip
+from spectraclass.application.controller import SpectraclassController
 import xarray as xa
 import traitlets as tl
 from inspect import isclass
@@ -75,7 +76,7 @@ class DataManager(SCSingletonConfigurable):
         lgm().log("Logging configured")
         return dataManager
 
-    def app(self):
+    def app(self) -> SpectraclassController:
         return self.modal.application.instance()
 
     def _configure_(self, name: str, mode: str ):

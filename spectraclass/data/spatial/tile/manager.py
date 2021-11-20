@@ -5,7 +5,8 @@ from typing import List, Union, Tuple, Optional, Dict
 from pyproj import Proj
 from spectraclass.data.base import DataManager, DataType
 from spectraclass.util.logs import LogManager, lgm
-import os, math, pickle
+import os, math, pickle, json
+import cartopy.crs as ccrs
 import traitlets.config as tlc
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable, Marker
@@ -24,6 +25,8 @@ class TileManager(SCSingletonConfigurable):
     block_index = tl.List( tl.Int, (0, 0), 2, 2).tag(config=True, sync=True)
     mask_class = tl.Int(0).tag(config=True, sync=True)
     image_attrs = {}
+    crs = ccrs.epsg(3857) # "+a=6378137.0 +b=6378137.0 +nadgrids=@null +proj=merc +lon_0=0.0 +x_0=0.0 +y_0=0.0 +units=m +no_defs"
+#    crs = # ccrs.PlateCarree() #  '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'  # +pm=-360 for 0->360
 
     def __init__(self):
         super(TileManager, self).__init__()
@@ -34,8 +37,8 @@ class TileManager(SCSingletonConfigurable):
         self._tile_data: xa.DataArray = None
         self._tile_metadata = None
         self._tile_size = None
+        self._tile_shape = None
         self._transform = None
-        self.crs = "+a=6378137.0 +b=6378137.0 +nadgrids=@null +proj=merc +lon_0=0.0 +x_0=0.0 +y_0=0.0 +units=m +no_defs"
 
     @property
     def tile_metadata(self):
@@ -47,21 +50,29 @@ class TileManager(SCSingletonConfigurable):
     def block_dims(self) -> Tuple[int,int]:
         if self._block_dims is None:
             if 'block_dims' in self.tile_metadata:
-                self._block_dims = self.tile_metadata.get('block_dims')
+                self._block_dims = json.loads( self.tile_metadata.get('block_dims') )
             else:
-                idata: xa.DataArray = self.getTileData()
-                image_shape = idata.shape if (idata.ndim == 2) else  idata.shape[1:]
-                self._block_dims = [ math.ceil(image_shape[i]/self.block_shape[i]) for i in (0,1) ]
+                self._block_dims = [ math.ceil(self.tile_shape[i]/self.block_shape[i]) for i in (0,1) ]
         return self._block_dims
 
     @property
     def tile_size(self) -> Tuple[int,int]:
         if self._tile_size is None:
             if 'tile_size' in self.tile_metadata:
-                self._tile_size = self.tile_metadata.get('tile_size')
+                self._tile_size = json.loads( self.tile_metadata.get('tile_size') )
             else:
                 self._tile_size = [ (self._block_dims[i] * self.block_shape[i]) for i in (0,1) ]
         return self._tile_size
+
+    @property
+    def tile_shape(self) -> Tuple[int,int]:
+        if self._tile_shape is None:
+            if 'tile_shape' in self.tile_metadata:
+                self._tile_shape = json.loads( self.tile_metadata.get('tile_shape') )
+            else:
+                idata: xa.DataArray = self.getTileData()
+                self._tile_shape = idata.shape if (idata.ndim == 2) else  idata.shape[1:]
+        return self._tile_shape
 
     @property
     def image_name(self):
@@ -137,7 +148,7 @@ class TileManager(SCSingletonConfigurable):
     def transform(self):
         if self._transform is None:
             if 'transform' in self.tile_metadata:
-                self._transform = self.tile_metadata.get('transform')
+                self._transform = json.loads( self.tile_metadata.get('transform') )
             else:
                 gt = [float(tv) for tv in self._tile_data.spatial_ref.GeoTransform.split()]
                 self._transform = [gt[1], gt[2], gt[0], gt[4], gt[5], gt[3], 0.0, 0.0, 1.0]
@@ -147,11 +158,16 @@ class TileManager(SCSingletonConfigurable):
         file_path = DataManager.instance().modal.getMetadataFilePath()
         print( f"Loading metadata from file: {file_path}")
         mdata = {}
-        if os.path.isfile( file_path ):
-            with open( file_path, "w" ) as mdfile:
+        try:
+            with open( file_path, "r" ) as mdfile:
                 for line in mdfile.readlines():
-                    aid,aiv = line.split("=")
-                    mdata[aid] = aiv
+                    try:
+                        toks = line.split("=")
+                        mdata[toks[0]] = "=".join(toks[1:])
+                    except Exception as err:
+                        lgm().log( f"\nLoadMetadata: Error '{err}' reading line '{line}'" )
+        except Exception as err:
+            lgm().log( f"\nWarning: can't read config file '{file_path}': {err}\n")
         return mdata
 
     def saveMetadata(self ):

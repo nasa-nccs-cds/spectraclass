@@ -7,11 +7,6 @@ from spectraclass.model.base import Marker
 import numpy as np
 import xarray as xa
 
-def app():
-    from spectraclass.data.base import DataManager, dm
-    rv = dm().app()
-    return rv
-
 class ActionEvent(object):
 
     def __init__( self, type: str ):
@@ -203,6 +198,12 @@ class SpectraclassController(SCSingletonConfigurable):
     def color_pointcloud( self, color_data: np.ndarray = None, **kwargs ):
         from spectraclass.gui.points import PointCloudManager, pcm
         if self.pcm_active: pcm().color_by_value( color_data, **kwargs )
+
+
+def app() -> SpectraclassController:
+    from spectraclass.data.base import DataManager, dm
+    rv = dm().app()
+    return rv
 
 
 

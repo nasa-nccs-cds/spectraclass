@@ -6,6 +6,8 @@ from cartopy.mpl.geoaxes import GeoAxes
 from spectraclass.gui.spatial.widgets.layers import LayersManager, Layer
 from spectraclass.gui.spatial.basemap import TileServiceBasemap
 import traitlets as tl
+from types import MethodType
+from ipympl.backend_nbagg import Canvas, Toolbar
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import types, pandas as pd
@@ -15,7 +17,6 @@ from typing import List, Dict, Tuple, Optional
 from spectraclass.data.spatial.manager import SpatialDataManager
 import math, atexit, os, traceback
 import pathlib
-from  ipympl.backend_nbagg import Toolbar
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -173,7 +174,7 @@ class MapManager(SCSingletonConfigurable):
         self.update_canvas()
 
     @property
-    def toolbar(self):   #     -> NavigationToolbar2:
+    def toolbar(self) -> Toolbar:
         return self.figure.canvas.toolbar
 
     @property
@@ -463,10 +464,12 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def onMouseClick(self, event):
         if event.xdata != None and event.ydata != None:
-            lgm().log(f"\nMouseClick event = {event}")
-            if not self.toolbarMode and (event.inaxes == self.plot_axes) and (self.key_mode == None):
+            inaxes = (event.inaxes == self.plot_axes)
+            lgm().log(f" MouseClick event: toolbarMode={self.toolbarMode}, inaxes = {inaxes}, key_mode={self.key_mode}, event = {event}")
+            if not self.toolbarMode and inaxes and (self.key_mode == None):
                 rightButton: bool = int(event.button) == self.RIGHT_BUTTON
                 pid = self.block.coords2pindex( event.ydata, event.xdata )
+                lgm().log( f" --> selected pid = {pid}" )
                 if pid >= 0:
                     cid = lm().current_cid
                     ptindices = self.block.pindex2indices(pid)
@@ -642,3 +645,18 @@ class MapManager(SCSingletonConfigurable):
 
     def exit(self):
         pass
+
+
+#        for etype, cb in self.figure.canvas.callbacks.callbacks.items():
+#            print( f"  *** {etype}: {cb}" )
+#        print( self.figure.canvas.callbacks.callbacks )
+#        for cid, func_ref in self.figure.canvas.callbacks.callbacks['motion_notify_event'].items():
+#            print( cid, func_ref() )
+#        self.figure.canvas.mpl_disconnect(6)
+#        self.figure.canvas.mpl_disconnect(19)
+#        self.figure.canvas.mpl_disconnect(16)
+#        self.figure.canvas.mpl_disconnect(22)
+#        canvas: Canvas = self.figure.canvas
+#        toolbar: Toolbar = canvas.toolbar
+#        def new_mouse_move(self,event): print( event )
+#        self.figure.canvas.toolbar.mouse_move = MethodType( new_mouse_move, self.figure.canvas.toolbar )
