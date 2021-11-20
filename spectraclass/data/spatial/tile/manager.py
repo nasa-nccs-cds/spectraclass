@@ -118,7 +118,7 @@ class TileManager(SCSingletonConfigurable):
             result.attrs['long_name'] = tile_data.attrs.get( 'long_name', None )
             lgm().log( f" BLOCK attrs: {result.attrs}" )
             self._tile_data = result
-            self.saveMetadata()
+            self.saveMetadata( )
         return self._tile_data
 
     def saveMetadata(self ):
