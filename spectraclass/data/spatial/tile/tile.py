@@ -36,16 +36,13 @@ class Tile:
         return self.data.attrs['tilename']
 
     def getBlock(self, iy: int, ix: int, **kwargs ) -> Optional["Block"]:
-#        if self.data is None: return None
         block = Block( self, iy, ix, **kwargs )
         return block
 
     def getBlocks(self, **kwargs ) -> List["Block"]:
         from spectraclass.data.spatial.tile.manager import TileManager
         tm = TileManager.instance()
-        (nx,ny) = tm.block_dims
-        if self.data is None: return []
-        return [ Block( self, iy, ix, **kwargs ) for ix in range(0,nx) for iy in range(0,ny) ]
+        return [ Block( self, iy, ix, **kwargs ) for iy in range(0,tm.block_dims[0]) for ix in range(0,tm.block_dims[1]) ]
 
     def coords2index(self, cy, cx ) -> Tuple[int,int]:     # -> iy, ix
         coords = self.transform.inverse(np.array([[cx, cy], ]))

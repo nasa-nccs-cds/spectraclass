@@ -45,10 +45,5 @@ class DesisDataManager(SpatialDataManager):
     def __init__(self):
         super(DesisDataManager, self).__init__()
 
-    def getFilePath(self, use_tile: bool ) -> str:
-        if use_tile:
-            mode_dir = f"{self.cache_dir}/{self.MODE}"
-            os.makedirs( mode_dir, 0o777, exist_ok=True )
-            return f"{mode_dir}/{self.tiles.getTileFileName()}"
-        else:
-            return f"{self.data_dir}/{self.tiles.image_name}-SPECTRAL_IMAGE.tif"
+    def getFilePath(self ) -> str:
+        return f"{self.data_dir}/{self.tiles.image_name}-SPECTRAL_IMAGE.tif"

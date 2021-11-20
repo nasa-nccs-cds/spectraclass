@@ -292,21 +292,24 @@ class SpatialDataManager(ModeDataManager):
 #                        reduced_dataArray.rio.set_spatial_dims()
 #                        raw_data.rio.to_raster( self._reduced_raster_file )
 
-
-    @property
-    def reduced_raster_file(self):
-        return self._reduced_raster_file
-
-    def getFilePath(self, use_tile: bool ) -> str:
+    def getFilePath(self) -> str:
         base_dir = dm().modal.data_dir
-        base_file = self.tiles.tileName() if use_tile else self.tiles.image_name
+        base_file = self.tiles.image_name
         if base_file.endswith(".mat") or base_file.endswith(".tif"):
             return f"{base_dir}/{base_file}"
         else:
             return f"{base_dir}/{base_file}.tif"
 
+    def getMetadataFilePath(self) -> str:
+        base_dir = dm().modal.data_dir
+        base_file = self.tiles.image_name
+        if base_file.endswith(".mat") or base_file.endswith(".tif"):
+            return f"{base_dir}/{base_file[:-4]}.mdata.txt"
+        else:
+            return f"{base_dir}/{base_file}.mdata.txt"
+
     def writeGeotiff(self, raster_data: xa.DataArray ) -> Optional[str]:
-        output_file = self.getFilePath(True)
+        output_file = self.getFilePath()
         try:
             if os.path.exists(output_file): os.remove(output_file)
             lgm().log(f"Writing (raster) tile file {output_file}")
@@ -316,10 +319,11 @@ class SpatialDataManager(ModeDataManager):
             lgm().log(f"Unable to write raster file to {output_file}: {err}")
             return None
 
-    def readSpectralData(self, read_tile: bool) -> xa.DataArray:
-        input_file_path = self.getFilePath( read_tile )
+    def readSpectralData(self) -> xa.DataArray:
+        input_file_path = self.getFilePath()
         assert os.path.isfile( input_file_path ), f"Input file does not exist: {input_file_path}"
-        return self.readDataFile( input_file_path )
+        spectral_data = self.readDataFile( input_file_path )
+        return spectral_data
 
     def readDataFile(self, file_path: str ):
         if file_path.endswith(".mat"):
