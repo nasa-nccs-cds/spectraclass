@@ -2,7 +2,7 @@ from skimage.transform import ProjectiveTransform
 import numpy as np
 import xarray as xa
 from typing import List, Union, Tuple, Optional, Dict
-from pyproj import Proj, transform
+from pyproj import Proj
 from spectraclass.data.base import DataManager, DataType
 from spectraclass.util.logs import LogManager, lgm
 import os, math, pickle
@@ -29,24 +29,38 @@ class TileManager(SCSingletonConfigurable):
         super(TileManager, self).__init__()
         self._tiles: Dict[Tuple,Tile] = {}
         self.cacheTileData = True
-        self._tile_size = None
-        self._block_dims = None
         self.block_shape = [ self.block_size ] * 2
+        self._block_dims = None
         self._tile_data: xa.DataArray = None
+        self._tile_metadata = None
+        self._tile_size = None
+        self._transform = None
         self.crs = "+a=6378137.0 +b=6378137.0 +nadgrids=@null +proj=merc +lon_0=0.0 +x_0=0.0 +y_0=0.0 +units=m +no_defs"
+
+    @property
+    def tile_metadata(self):
+        if self._tile_metadata is None:
+            self._tile_metadata = self.loadMetadata()
+        return self._tile_metadata
 
     @property
     def block_dims(self) -> Tuple[int,int]:
         if self._block_dims is None:
-            idata: xa.DataArray = self.getTileData()
-            image_shape = idata.shape if (idata.ndim == 2) else  idata.shape[1:]
-            self._block_dims = [ math.ceil(image_shape[i]/self.block_shape[i]) for i in (0,1) ]
+            if 'block_dims' in self.tile_metadata:
+                self._block_dims = self.tile_metadata.get('block_dims')
+            else:
+                idata: xa.DataArray = self.getTileData()
+                image_shape = idata.shape if (idata.ndim == 2) else  idata.shape[1:]
+                self._block_dims = [ math.ceil(image_shape[i]/self.block_shape[i]) for i in (0,1) ]
         return self._block_dims
 
     @property
     def tile_size(self) -> Tuple[int,int]:
         if self._tile_size is None:
-            self._tile_size = [ (self._block_dims[i] * self.block_shape[i]) for i in (0,1) ]
+            if 'tile_size' in self.tile_metadata:
+                self._tile_size = self.tile_metadata.get('tile_size')
+            else:
+                self._tile_size = [ (self._block_dims[i] * self.block_shape[i]) for i in (0,1) ]
         return self._tile_size
 
     @property
@@ -112,21 +126,42 @@ class TileManager(SCSingletonConfigurable):
                 lgm().log( f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
             result = self.rescale(tile_data).rio.reproject(self.crs)
             result.attrs['wkt'] = result.spatial_ref.crs_wkt
-            gt = [ float(tv) for tv in result.spatial_ref.GeoTransform.split() ]
-            result.attrs['wkt'] = result.spatial_ref.crs_wkt
-            result.attrs['transform'] = [ gt[1], gt[2], gt[0], gt[4], gt[5], gt[3], 0.0, 0.0, 1.0 ]
             result.attrs['long_name'] = tile_data.attrs.get( 'long_name', None )
             lgm().log( f" BLOCK attrs: {result.attrs}" )
             self._tile_data = result
+            self._tile_data.attrs['transform'] = self.transform
             self.saveMetadata( )
         return self._tile_data
+
+    @property
+    def transform(self):
+        if self._transform is None:
+            if 'transform' in self.tile_metadata:
+                self._transform = self.tile_metadata.get('transform')
+            else:
+                gt = [float(tv) for tv in self._tile_data.spatial_ref.GeoTransform.split()]
+                self._transform = [gt[1], gt[2], gt[0], gt[4], gt[5], gt[3], 0.0, 0.0, 1.0]
+        return self._transform
+
+    def loadMetadata(self) -> Dict:
+        file_path = DataManager.instance().modal.getMetadataFilePath()
+        print( f"Loading metadata from file: {file_path}")
+        mdata = {}
+        if os.path.isfile( file_path ):
+            with open( file_path, "w" ) as mdfile:
+                for line in mdfile.readlines():
+                    aid,aiv = line.split("=")
+                    mdata[aid] = aiv
+        return mdata
 
     def saveMetadata(self ):
         file_path = DataManager.instance().modal.getMetadataFilePath()
         print( f"Writing metadata file: {file_path}")
         with open( file_path, "w" ) as mdfile:
-            mdfile.write( f"tile_shape={self._tile_data.shape}\n")
-            for aid,aiv in self._tile_data.attrs.items():
+            mdfile.write( f"tile_shape={self._tile_data.shape}\n" )
+            mdfile.write( f"block_dims={self.block_dims}\n" )
+            mdfile.write( f"tile_size={self.tile_size}\n" )
+            for (aid,aiv) in self._tile_data.attrs.items():
                 mdfile.write(f"{aid}={aiv}\n")
 
 #     def getPointData( self ) -> Tuple[xa.DataArray,xa.DataArray]:
@@ -159,7 +194,7 @@ class TileManager(SCSingletonConfigurable):
         return f"global_norm.pkl"
 
     def get_block_transform( self, iy, ix ) -> ProjectiveTransform:
-        tr0 = self.tile.data.attrs['transform']
+        tr0 = self.transform
         iy0, ix0 = iy * self.block_shape[0], ix * self.block_shape[1]
         y0, x0 = tr0[5] + iy0 * tr0[4], tr0[2] + ix0 * tr0[0]
         tr1 = [ tr0[0], tr0[1], x0, tr0[3], tr0[4], y0, 0, 0, 1  ]
