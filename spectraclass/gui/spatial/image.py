@@ -1,9 +1,9 @@
-import hvplot.xarray
+
 import xarray as xa
 import numpy as np
 from typing import List, Optional, Dict, Tuple
-import holoviews as hv
-import panel as pn
+from matplotlib.image import AxesImage
+import matplotlib.artist
 
 def toXA( vname: str, nparray: np.ndarray, format="np", transpose = False ):
     gs: List[int] = [*nparray.shape]
@@ -20,13 +20,50 @@ def toXA( vname: str, nparray: np.ndarray, format="np", transpose = False ):
     return xa.DataArray( nparray, coords, dims, vname, dict(transform=[1, 0, 0, 0, 1, 0], fileformat=format))
 
 
-def plot_results( class_map: xa.DataArray, pred_class_map: xa.DataArray, feature_maps: xa.DataArray, reliability_map: xa.DataArray ):
-    class_plot = class_map.hvplot.image(cmap='Category20')
-    pred_class_plot = pred_class_map.hvplot.image( cmap='Category20' )
-    kwargs = {} if (feature_maps.ndim < 3) else dict( groupby=feature_maps.dims[0], widget_type='scrubber', widget_location='bottom' )
-    feature_plot = feature_maps.hvplot.image( cmap='jet', **kwargs )
-    reliability_plot = reliability_map.hvplot.image(cmap='jet')
-    pn.Row( pn.Column( class_plot, pred_class_plot ), pn.Column( feature_plot, reliability_plot) ).show( str(class_map.name) )
+class TileServiceImage(AxesImage):
+
+    def __init__(self, ax, raster_source, **kwargs):
+        self.raster_source = raster_source
+        # This artist fills the Axes, so should not influence layout.
+        kwargs.setdefault('in_layout', False)
+        super().__init__(ax, **kwargs)
+        self.cache = []
+
+        ax.figure.canvas.mpl_connect('button_press_event', self.on_press)
+        ax.figure.canvas.mpl_connect('button_release_event', self.on_release)
+
+        self.on_release()
+
+    def on_press(self, event=None):
+        self.user_is_interacting = True
+
+    def on_release(self, event=None):
+        self.user_is_interacting = False
+        self.stale = True
+
+    def get_window_extent(self, renderer=None):
+        return self.axes.get_window_extent(renderer=renderer)
+
+    @matplotlib.artist.allow_rasterization
+    def draw(self, renderer, *args, **kwargs):
+        if not self.get_visible():
+            return
+
+        ax = self.axes
+        window_extent = ax.get_window_extent()
+        [x1, y1], [x2, y2] = ax.viewLim.get_points()
+        if not self.user_is_interacting:
+            located_images = self.raster_source.fetch_raster( ax.projection, extent=[x1, x2, y1, y2], target_resolution=(window_extent.width, window_extent.height))
+            self.cache = located_images
+
+        for img, extent in self.cache:
+            self.set_array(img)
+            with ax.hold_limits():
+                self.set_extent(extent)
+            super().draw(renderer, *args, **kwargs)
+
+    def can_composite(self):
+        return False
 
 # class LabelingWidget(QWidget):
 #     def __init__(self, parent, **kwargs):
