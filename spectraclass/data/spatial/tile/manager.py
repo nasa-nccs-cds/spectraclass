@@ -156,10 +156,10 @@ class TileManager(SCSingletonConfigurable):
 
     def loadMetadata(self) -> Dict:
         file_path = DataManager.instance().modal.getMetadataFilePath()
-        print( f"Loading metadata from file: {file_path}")
         mdata = {}
         try:
             with open( file_path, "r" ) as mdfile:
+                print(f"Loading metadata from file: {file_path}")
                 for line in mdfile.readlines():
                     try:
                         toks = line.split("=")
