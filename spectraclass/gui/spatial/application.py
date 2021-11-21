@@ -19,7 +19,7 @@ class Spectraclass(SpectraclassController):
         print( f"Initializing GUI using controller {str(self.__class__)}")
         self.set_spectraclass_theme()
         css_border = '1px solid blue'
-        plot_collapsibles = ipw.Accordion( children = [ dm().gui(), pm().gui(), pcm().gui() ], layout=ipw.Layout(width='100%'))     #
+        plot_collapsibles = ipw.Accordion( children = [ dm().gui(), pm().gui() ], layout=ipw.Layout(width='100%'))     # , pcm().gui()
         for iT, title in enumerate(['data', 'controls', 'embedding']): plot_collapsibles.set_title(iT, title)
         plot_collapsibles.selected_index = 1
         plot = ipw.VBox([ ufm().gui(), plot_collapsibles ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
