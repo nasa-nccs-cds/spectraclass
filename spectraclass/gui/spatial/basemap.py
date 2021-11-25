@@ -18,12 +18,14 @@ from spectraclass.data.spatial.tile.manager import TileManager, tm
 
 class TileServiceBasemap(SCSingletonConfigurable):
 
-    def __init__(self):
+    def __init__(self, basemapid: str ):
         super(TileServiceBasemap, self).__init__()
+        self.basemapid= basemapid
         self.tile_server_url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/WMTS'
         self.crs: str = TileManager.crs
-        self.tile_service = WebMapTileService( self.tile_server_url )
-        self.layer: str = list(self.tile_service.contents.keys())[0]
+        self.tile_service: WebMapTileService = None
+        self.layer: str = None
+        self.basemap: AxesImage = None
 
     # def set_extent(self, xr: List[float], yr: List[float], **kwargs):
     #     crs = kwargs.get( 'crs', self.crs )
@@ -40,9 +42,14 @@ class TileServiceBasemap(SCSingletonConfigurable):
         lgm().log( f"Projection = {self.crs}")
 
         self.figure.suptitle(title)
-        self.gax:   GeoAxes = self.figure.add_axes( [0.01, 0.07, 0.98, 0.93], projection=self.crs, **kwargs )  # [left, bottom, width, height]  projection=self.crs,
+        self.gax: Axes = self.figure.add_axes( [0.01, 0.07, 0.98, 0.93], **kwargs )  # [left, bottom, width, height] GeoAxes: projection=self.crs,
+        print( f"gax class: {self.gax.__class__}" )
         self.gax.xaxis.set_visible( False ); self.gax.yaxis.set_visible( False )
-        self.basemap: AxesImage = self.gax.add_wmts( self.tile_service, self.layer )
+        if self.basemapid is not None:
+            print(f"Adding WMTS basemap")
+            self.tile_service = WebMapTileService(self.tile_server_url)
+            self.layer: str = list(self.tile_service.contents.keys())[0]
+            self.basemap: AxesImage = self.add_wmts() # self.gax.add_wmts( self.tile_service, self.layer )
         self.sax: Axes = self.figure.add_axes([0.01, 0.01, 0.85, 0.05])  # [left, bottom, width, height]
         self.figure.canvas.toolbar_visible = True
         self.figure.canvas.header_visible = False

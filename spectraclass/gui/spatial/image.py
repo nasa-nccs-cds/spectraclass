@@ -1,6 +1,8 @@
 
 import xarray as xa
 import numpy as np
+from matplotlib.axes import Axes
+import contextlib
 from typing import List, Optional, Dict, Tuple
 from matplotlib.image import AxesImage
 import matplotlib.artist
@@ -22,17 +24,23 @@ def toXA( vname: str, nparray: np.ndarray, format="np", transpose = False ):
 
 class TileServiceImage(AxesImage):
 
-    def __init__(self, ax, raster_source, **kwargs):
+    def __init__(self, ax: Axes, raster_source, projection, **kwargs):
         self.raster_source = raster_source
-        # This artist fills the Axes, so should not influence layout.
+        xrange = kwargs.pop('xrange',None)
+        yrange = kwargs.pop('yrange', None)
         kwargs.setdefault('in_layout', False)
         super().__init__(ax, **kwargs)
+        self.projection = projection
         self.cache = []
 
-        ax.figure.canvas.mpl_connect('button_press_event', self.on_press)
-        ax.figure.canvas.mpl_connect('button_release_event', self.on_release)
-
+        self.axes.figure.canvas.mpl_connect('button_press_event', self.on_press)
+        self.axes.figure.canvas.mpl_connect('button_release_event', self.on_release)
         self.on_release()
+        if xrange is not None: self.axes.set_xbound( xrange[0], xrange[1] )
+        if yrange is not None: self.axes.set_ybound( yrange[0], yrange[1] )
+
+        with self.hold_limits():
+            self.axes.add_image( self )
 
     def on_press(self, event=None):
         self.user_is_interacting = True
@@ -49,21 +57,32 @@ class TileServiceImage(AxesImage):
         if not self.get_visible():
             return
 
-        ax = self.axes
-        window_extent = ax.get_window_extent()
-        [x1, y1], [x2, y2] = ax.viewLim.get_points()
+        window_extent = self.axes.get_window_extent()
+        [x1, y1], [x2, y2] = self.axes.viewLim.get_points()
         if not self.user_is_interacting:
-            located_images = self.raster_source.fetch_raster( ax.projection, extent=[x1, x2, y1, y2], target_resolution=(window_extent.width, window_extent.height))
+            located_images = self.raster_source.fetch_raster( self.projection, extent=[x1, x2, y1, y2], target_resolution=(window_extent.width, window_extent.height))
             self.cache = located_images
 
         for img, extent in self.cache:
             self.set_array(img)
-            with ax.hold_limits():
+            with self.hold_limits():
                 self.set_extent(extent)
             super().draw(renderer, *args, **kwargs)
 
     def can_composite(self):
         return False
+
+    @contextlib.contextmanager
+    def hold_limits( self ):
+        data_lim = self.axes.dataLim.frozen().get_points()
+        view_lim = self.axes.viewLim.frozen().get_points()
+        other = (self.axes.ignore_existing_data_limits, self.axes._autoscaleXon, self.axes._autoscaleYon)
+        try:
+            yield
+        finally:
+            self.axes.dataLim.set_points(data_lim)
+            self.axes.viewLim.set_points(view_lim)
+            (self.axes.ignore_existing_data_limits, self.axes._autoscaleXon, self.axes._autoscaleYon) = other
 
 # class LabelingWidget(QWidget):
 #     def __init__(self, parent, **kwargs):

@@ -23,7 +23,8 @@ class Spectraclass(SpectraclassController):
         for iT, title in enumerate(['data', 'controls', 'embedding']): plot_collapsibles.set_title(iT, title)
         plot_collapsibles.selected_index = 1
         plot = ipw.VBox([ ufm().gui(), plot_collapsibles ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
-        control = ipw.VBox( [ am().gui(), mm().gui(), gpm().gui() ], layout=ipw.Layout( flex='0 0 700px'), border=css_border )
+        smap = mm().gui( basemap=None )
+        control = ipw.VBox( [ am().gui(), smap, gpm().gui() ], layout=ipw.Layout( flex='0 0 700px'), border=css_border )
         gui = ipw.HBox( [control, plot ], layout=ipw.Layout( width='100%' ) )
         if embed: self.embed()
         dm().save_config()

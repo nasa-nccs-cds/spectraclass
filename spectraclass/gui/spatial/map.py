@@ -114,8 +114,8 @@ class PageSlider(Slider):
         self.set_val(i)
         self._colorize(i)
 
-def mm() -> "MapManager":
-    return MapManager.instance()
+def mm(**kwargs) -> "MapManager":
+    return MapManager.instance(**kwargs)
 
 class MapManager(SCSingletonConfigurable):
     init_band = tl.Int(10).tag(config=True, sync=True)
@@ -150,8 +150,8 @@ class MapManager(SCSingletonConfigurable):
         self.flow_iterations = kwargs.get( 'flow_iterations', 1 )
         self.frame_marker: Optional[Line2D] = None
         self.control_axes = {}
-        self.base = TileServiceBasemap()
-        self.setup_plot(**kwargs)
+        self.base = None
+
 
 #        google_actions = [[maptype, None, None, partial(self.run_task, self.download_google_map, "Accessing Landsat Image...", maptype, task_context='newfig')] for maptype in ['satellite', 'hybrid', 'terrain', 'roadmap']]
         self.menu_actions = OrderedDict( Layers = [ [ "Increase Labels Alpha", 'Ctrl+>', None, partial( self.update_image_alpha, "labels", True ) ],
@@ -165,7 +165,10 @@ class MapManager(SCSingletonConfigurable):
     def labels_dset(self):
         return xa.Dataset( self.label_map )
 
-    def gui(self):
+    def gui(self,**kwargs):
+        basemapid = kwargs.get('basemap', 'esri')
+        self.base = TileServiceBasemap( basemapid )
+        self.setup_plot(**kwargs)
         self.setBlock()
         return self.figure.canvas
 
@@ -334,7 +337,7 @@ class MapManager(SCSingletonConfigurable):
     @property
     def data(self) -> Optional[xa.DataArray]:
         from spectraclass.data.base import DataManager, dm
-        if self.block is None: return None
+        if self.block is None: self.setBlock()
         block_data: xa.DataArray = self.block.data
         if self.use_model_data:
             reduced_data: xa.DataArray = dm().getModelData().transpose()

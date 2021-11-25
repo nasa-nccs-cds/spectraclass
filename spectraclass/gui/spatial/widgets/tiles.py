@@ -12,7 +12,6 @@ from matplotlib.backend_bases import MouseEvent
 from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
-from geoviews.util import  proj_to_cartopy, process_crs
 
 class TileSelector:
     INIT_POS = ( sys.float_info.max, sys.float_info.max )
