@@ -61,6 +61,9 @@ class PolyRec:
         self.poly.xy = np.insert( self.poly.xy, len(self.poly.xy), [x, y], axis=0 )
         self.line.set_data(zip(*self.poly.xy))
 
+    def complete( self ):
+        xy0 = self.poly.xy[0]
+        self.insert_point( xy0[0], xy0[1] )
 
 class PolygonInteractor:
 
@@ -120,16 +123,22 @@ class PolygonInteractor:
             return
 
         logger.info( f"on_button_press: button={event.button}")
+        idx_poly: PolyRec = self.get_ind_under_point( event )
 
         if event.button == 1:
             if self.prec is None:
                 self.add_poly( event.xdata, event.ydata )
                 self.mode = PolyMode.CREATING
             else:
-                idx = self.get_ind_under_point( )
-                self.prec.insert_point( event.xdata, event.ydata )
+                if (id( idx_poly ) == id( self.prec )) and (idx_poly.indx == 0):
+                    self.prec.complete()
+                    self.prec = None
+                    self.mode = PolyMode.NONE
+                else:
+                    self.prec.insert_point( event.xdata, event.ydata )
+
         elif event.button == 3:
-            self._ind = self.get_ind_under_point(event)
+            pass
 
     def on_button_release(self, event):
         """Callback for mouse button releases."""
