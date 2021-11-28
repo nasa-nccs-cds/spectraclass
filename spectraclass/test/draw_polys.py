@@ -43,7 +43,10 @@ def dist_point_to_segment(p, s0, s1):
 
 class PolyRec:
 
-    def __init__(self, ax,  x, y, on_change: Callable = None ):
+    def __init__(self, pid, ax,  x, y, on_change: Callable = None ):
+        self.ax = ax
+        self.canvas = ax.figure.canvas
+        self.pid = pid
         xs, ys = np.array( [x,x] ), np.array( [y,y] )
         self.poly = Polygon( np.column_stack([xs,ys]), animated=True )
         x, y = zip(*self.poly.xy)
@@ -59,11 +62,18 @@ class PolyRec:
 
     def insert_point(self, x, y ):
         self.poly.xy = np.insert( self.poly.xy, len(self.poly.xy), [x, y], axis=0 )
-        self.line.set_data(zip(*self.poly.xy))
+        self.draw()
 
     def complete( self ):
-        xy0 = self.poly.xy[0]
-        self.insert_point( xy0[0], xy0[1] )
+        self.poly.xy[-1] = self.poly.xy[0]
+        self.line.set_visible(False)
+        self.draw()
+
+    def draw(self):
+        self.line.set_data(zip(*self.poly.xy))
+        self.ax.draw_artist(self.poly)
+        self.ax.draw_artist(self.line)
+
 
 class PolygonInteractor:
 
@@ -72,20 +82,22 @@ class PolygonInteractor:
 
     def __init__(self, ax):
         self.ax = ax
-        self.polys = []
+        self.polys: List[PolyRec] = []
         self.prec: PolyRec = None
         self.mode = PolyMode.NONE
 
         canvas = ax.figure.canvas
         canvas.mpl_connect('draw_event', self.on_draw)
         canvas.mpl_connect('button_press_event', self.on_button_press)
-        canvas.mpl_connect('key_press_event', self.on_key_press)
         canvas.mpl_connect('button_release_event', self.on_button_release)
+        canvas.mpl_connect('key_press_event', self.on_key_press)
+        canvas.mpl_connect('key_release_event', self.on_key_release)
         canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
         self.canvas = canvas
 
     def add_poly( self, x, y ):
-        self.prec = PolyRec( ax, x, y, self.poly_changed )
+        pid = len(self.polys)
+        self.prec = PolyRec( pid, ax, x, y, self.poly_changed )
         self.polys.append( self.prec )
         return self.prec
 
@@ -109,6 +121,8 @@ class PolygonInteractor:
             d = np.hypot(xt - event.x, yt - event.y)
             indseq, = np.nonzero(d == d.min())
             ind = indseq[0]
+            logger.info( f" get_ind_under_point-> {prec.pid}:{prec.indx}, d={d} xt=[{xt},{yt}] et=[{event.x},{event.y}], ind={ind}")
+
             if d[ind] < self.epsilon:
                 prec.indx = ind
                 return prec
@@ -116,26 +130,27 @@ class PolygonInteractor:
         return None
 
     def on_button_press(self, event):
-        """Callback for mouse button presses."""
+        dblclick = event['dblclick']
         if not self.showverts:
             return
         if event.inaxes is None:
             return
 
-        logger.info( f"on_button_press: button={event.button}")
-        idx_poly: PolyRec = self.get_ind_under_point( event )
+ #       idx_poly: PolyRec = self.get_ind_under_point( event )
+ #       if self.prec is not None:
+        logger.info(f" ** on_button_press: event={event}, mode={self.mode}")
+ #       if idx_poly: logger.info(f" ----> idx_poly={idx_poly}, indx={idx_poly.indx}" )
 
         if event.button == 1:
-            if self.prec is None:
-                self.add_poly( event.xdata, event.ydata )
-                self.mode = PolyMode.CREATING
-            else:
-                if (id( idx_poly ) == id( self.prec )) and (idx_poly.indx == 0):
-                    self.prec.complete()
-                    self.prec = None
-                    self.mode = PolyMode.NONE
+            if self.mode == PolyMode.CREATING:
+                if self.prec is None:
+                    self.add_poly( event.xdata, event.ydata )
+                    if dblclick:
+
                 else:
-                    self.prec.insert_point( event.xdata, event.ydata )
+     #               if (id( idx_poly ) == id( self.prec )) and (idx_poly.indx == 0):
+                    self.prec.insert_point(event.xdata, event.ydata)
+
 
         elif event.button == 3:
             pass
@@ -148,11 +163,21 @@ class PolygonInteractor:
             return
         self._ind = None
 
+    def on_key_release(self, event):
+        if (self.mode == PolyMode.CREATING) and (self.prec != None):
+            self.prec.complete()
+            self.prec = None
+            self.canvas.draw_idle()
+        self.mode = None
+
     def on_key_press(self, event):
         """Callback for key presses."""
         if not event.inaxes:
             return
-        self.mode = event.key
+        if event.key == 'c':
+            self.mode = PolyMode.CREATING
+        elif event.key == 'e':
+            self.mode = PolyMode.EDITING
         #     self.showverts = not self.showverts
         #     self.line.set_visible(self.showverts)
         #     if not self.showverts:
@@ -181,19 +206,19 @@ class PolygonInteractor:
         #     self.canvas.draw_idle()
 
     def on_mouse_move(self, event):
-        """Callback for mouse movements."""
         if not self.showverts:
             return
         if event.inaxes is None:
             return
-        if self.mode == PolyMode.CREATING:
-            x, y = event.xdata, event.ydata
-            self.prec.poly.xy[-1] = x, y
-            self.prec.line.set_data(zip(*self.prec.poly.xy))
-            self.canvas.restore_region(self.background)
-            self.ax.draw_artist(self.prec.poly)
-            self.ax.draw_artist(self.prec.line)
-            self.canvas.blit(self.ax.bbox)
+        if self.prec is not None:
+            if self.mode == PolyMode.CREATING:
+                x, y = event.xdata, event.ydata
+                self.prec.poly.xy[-1] = x, y
+                self.canvas.restore_region(self.background)
+                for prec in self.polys: prec.draw()
+                self.canvas.blit(self.ax.bbox)
+            elif self.mode == PolyMode.EDITING:
+                pass
 
 
 if __name__ == '__main__':
