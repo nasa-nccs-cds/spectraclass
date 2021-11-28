@@ -1,6 +1,7 @@
 import numpy as np
 from matplotlib.lines import Line2D
 from matplotlib.artist import Artist
+from matplotlib.backend_bases import MouseEvent
 import logging, os
 from typing import List, Union, Tuple, Optional, Dict, Callable
 
@@ -43,12 +44,13 @@ def dist_point_to_segment(p, s0, s1):
 
 class PolyRec:
 
-    def __init__(self, pid, ax,  x, y, on_change: Callable = None ):
+    def __init__(self, pid, ax,  x, y, c, on_change: Callable = None ):
         self.ax = ax
+        self.color = c
         self.canvas = ax.figure.canvas
         self.pid = pid
         xs, ys = np.array( [x,x] ), np.array( [y,y] )
-        self.poly = Polygon( np.column_stack([xs,ys]), animated=True )
+        self.poly = Polygon( np.column_stack([xs,ys]), animated=True, facecolor=self.color )
         x, y = zip(*self.poly.xy)
         self.line = Line2D(x, y, marker='o', markerfacecolor='r', animated=True)
         if on_change: self.cid = self.poly.add_callback( on_change )
@@ -85,6 +87,7 @@ class PolygonInteractor:
         self.polys: List[PolyRec] = []
         self.prec: PolyRec = None
         self.mode = PolyMode.NONE
+        self.fill_color = "black"
 
         canvas = ax.figure.canvas
         canvas.mpl_connect('draw_event', self.on_draw)
@@ -97,7 +100,7 @@ class PolygonInteractor:
 
     def add_poly( self, x, y ):
         pid = len(self.polys)
-        self.prec = PolyRec( pid, ax, x, y, self.poly_changed )
+        self.prec = PolyRec( pid, ax, x, y, self.fill_color, self.poly_changed )
         self.polys.append( self.prec )
         return self.prec
 
@@ -122,41 +125,32 @@ class PolygonInteractor:
             indseq, = np.nonzero(d == d.min())
             ind = indseq[0]
             logger.info( f" get_ind_under_point-> {prec.pid}:{prec.indx}, d={d} xt=[{xt},{yt}] et=[{event.x},{event.y}], ind={ind}")
-
             if d[ind] < self.epsilon:
                 prec.indx = ind
                 return prec
-
         return None
 
-    def on_button_press(self, event):
-        dblclick = event['dblclick']
-        if not self.showverts:
-            return
-        if event.inaxes is None:
-            return
+    def close_poly(self):
+        self.prec.complete()
+        self.prec = None
+        self.canvas.draw_idle()
 
- #       idx_poly: PolyRec = self.get_ind_under_point( event )
- #       if self.prec is not None:
-        logger.info(f" ** on_button_press: event={event}, mode={self.mode}")
- #       if idx_poly: logger.info(f" ----> idx_poly={idx_poly}, indx={idx_poly.indx}" )
+    def on_button_press(self, event: MouseEvent ):
+        if not self.showverts: return
+        if event.inaxes is None: return
 
         if event.button == 1:
             if self.mode == PolyMode.CREATING:
                 if self.prec is None:
-                    self.add_poly( event.xdata, event.ydata )
-                    if dblclick:
-
+                    self.add_poly(event.xdata, event.ydata)
                 else:
-     #               if (id( idx_poly ) == id( self.prec )) and (idx_poly.indx == 0):
-                    self.prec.insert_point(event.xdata, event.ydata)
-
-
+                    self.prec.insert_point( event.xdata, event.ydata )
+                    if event.dblclick:
+                        self.close_poly()
         elif event.button == 3:
             pass
 
     def on_button_release(self, event):
-        """Callback for mouse button releases."""
         if not self.showverts:
             return
         if event.button != 1:
@@ -171,13 +165,16 @@ class PolygonInteractor:
         self.mode = None
 
     def on_key_press(self, event):
-        """Callback for key presses."""
         if not event.inaxes:
             return
-        if event.key == 'c':
-            self.mode = PolyMode.CREATING
-        elif event.key == 'e':
-            self.mode = PolyMode.EDITING
+        if   event.key == 'c':  self.mode = PolyMode.CREATING
+        elif event.key == 'e':  self.mode = PolyMode.EDITING
+        elif event.key == 'r':  self.fill_color = "red"
+        elif event.key == 'g':  self.fill_color = "green"
+        elif event.key == 'b':  self.fill_color = "blue"
+        elif event.key == 'p':  self.fill_color = "purple"
+
+
         #     self.showverts = not self.showverts
         #     self.line.set_visible(self.showverts)
         #     if not self.showverts:
