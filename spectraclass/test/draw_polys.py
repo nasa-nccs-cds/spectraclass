@@ -43,14 +43,16 @@ def dist_point_to_segment(p, s0, s1):
     return dist(p, pb)
 
 class PolyRec:
+    epsilon = 5  # max pixel distance to count as a vertex hit
 
-    def __init__(self, pid, ax,  x, y, c, on_change: Callable = None ):
+    def __init__(self, pid, ax,  x, y, c="grey", on_change: Callable = None ):
         self.ax = ax
         self.color = c
         self.canvas = ax.figure.canvas
         self.pid = pid
+        self.selected = False
         xs, ys = np.array( [x,x] ), np.array( [y,y] )
-        self.poly = Polygon( np.column_stack([xs,ys]), animated=True, facecolor=self.color )
+        self.poly = Polygon( np.column_stack([xs,ys]), animated=True, facecolor=self.color, closed=False )
         x, y = zip(*self.poly.xy)
         self.line = Line2D(x, y, marker='o', markerfacecolor='r', animated=True)
         if on_change: self.cid = self.poly.add_callback( on_change )
@@ -58,22 +60,35 @@ class PolyRec:
         ax.add_patch(self.poly)
         ax.add_line(self.line)
         self.indx = None
+        print(f"   ---->   CREATE\n{self.poly.xy}")
 
     def contains_point(self, event: MouseEvent ) -> bool:
         return self.poly.contains_point( (event.x,event.y) )
+
+    def vertex_selected( self, event: MouseEvent ) -> int:
+        xy = np.asarray(self.poly.xy)
+        xyt = self.poly.get_transform().transform(xy)
+        xt, yt = xyt[:, 0], xyt[:, 1]
+        d = np.hypot(xt - event.x, yt - event.y)
+        indseq, = np.nonzero(d == d.min())
+        if d[ indseq[0] ] < self.epsilon:   return indseq[0]
+        else:                               return -1
 
     def _update(self):
         self.line.set_data(zip(*self.poly.xy))
 
     def insert_point(self, x, y ):
-        self.poly.xy = np.insert( self.poly.xy, len(self.poly.xy), [x, y], axis=0 )
+        arrays = [ self.poly.xy, np.array( [x, y] ).reshape([1,2]) ]
+        self.poly.xy = np.row_stack( arrays )
         self.draw()
+        print( f"   ---->   INSERT\n{self.poly.xy}")
 
     def complete( self ):
         self.poly.xy[-1] = self.poly.xy[0]
         self.line.set_visible(False)
         self.poly.set_closed(True)
         self.ax.draw_artist(self.line)
+        print( f"   ---->   COMPLETE\n{self.poly.xy}")
 
     def update(self):
         self.line.set_data(zip(*self.poly.xy))
@@ -84,13 +99,14 @@ class PolyRec:
         self.canvas.draw_idle()
 
     def set_selected(self, selected: bool ):
+        self.selected = selected
         self.line.set_visible(selected)
         self.ax.draw_artist(self.line)
 
 class PolygonInteractor:
 
     showverts = True
-    epsilon = 5  # max pixel distance to count as a vertex hit
+
 
     def __init__(self, ax):
         self.ax = ax
@@ -132,20 +148,6 @@ class PolygonInteractor:
                 return prec
         return None
 
-    def get_ind_under_point( self, event ) -> Optional[PolyRec]:
-        for prec in self.polys:
-            xy = np.asarray(prec.poly.xy)
-            xyt = prec.poly.get_transform().transform(xy)
-            xt, yt = xyt[:, 0], xyt[:, 1]
-            d = np.hypot(xt - event.x, yt - event.y)
-            indseq, = np.nonzero(d == d.min())
-            ind = indseq[0]
-            logger.info( f" get_ind_under_point-> {prec.pid}:{prec.indx}, d={d} xt=[{xt},{yt}] et=[{event.x},{event.y}], ind={ind}")
-            if d[ind] < self.epsilon:
-                prec.indx = ind
-                return prec
-        return None
-
     def close_poly(self):
         self.prec.complete()
         self.prec = None
@@ -159,15 +161,21 @@ class PolygonInteractor:
                 if self.prec is None:
                     self.add_poly(event.xdata, event.ydata)
                 else:
-                    self.prec.insert_point( event.xdata, event.ydata )
                     if event.dblclick:
                         self.close_poly()
+                    else:
+                        self.prec.insert_point(event.xdata, event.ydata)
             else:
-                selection = self.get_selected_poly( event )
-                if selection is not None:
-                    for prec in self.polys:
-                        prec.set_selected( prec.pid == selection.pid )
-                    self.draw()
+                if event.dblclick:
+                    self.prec = self.get_selected_poly( event )
+                    if self.prec is not None:
+                        self.mode = PolyMode.EDITING
+                        for prec in self.polys:
+                            prec.set_selected( prec.pid == self.prec.pid )
+                        self.draw()
+                elif self.mode == PolyMode.EDITING:
+                    vertex_selected = self.prec.vertex_selected( event )
+                    print( vertex_selected )
         elif event.button == 3:
             pass
 
