@@ -60,7 +60,6 @@ class PolyRec:
         ax.add_patch(self.poly)
         ax.add_line(self.line)
         self.indx = None
-        print(f"   ---->   CREATE\n{self.poly.xy}")
 
     def contains_point(self, event: MouseEvent ) -> bool:
         return self.poly.contains_point( (event.x,event.y) )
@@ -78,17 +77,14 @@ class PolyRec:
         self.line.set_data(zip(*self.poly.xy))
 
     def insert_point(self, x, y ):
-        arrays = [ self.poly.xy, np.array( [x, y] ).reshape([1,2]) ]
-        self.poly.xy = np.row_stack( arrays )
+        self.poly.xy = np.row_stack( [ self.poly.xy, np.array( [x, y] ) ] )
         self.draw()
-        print( f"   ---->   INSERT\n{self.poly.xy}")
 
     def complete( self ):
         self.poly.xy[-1] = self.poly.xy[0]
         self.line.set_visible(False)
         self.poly.set_closed(True)
         self.ax.draw_artist(self.line)
-        print( f"   ---->   COMPLETE\n{self.poly.xy}")
 
     def update(self):
         self.line.set_data(zip(*self.poly.xy))
