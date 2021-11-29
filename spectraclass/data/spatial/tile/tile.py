@@ -165,17 +165,17 @@ class Block:
         return result.unstack()
 
     @property
-    def xlim(self):
+    def xlim(self) -> Tuple[float,float]:
         if self._xlim is None:
             tr = self.transform.params.flatten()
-            self._xlim = [tr[2], tr[2] + tr[0] * (self._data.shape[2])]
+            self._xlim = (tr[2], tr[2] + tr[0] * (self._data.shape[2]))
         return self._xlim
 
     @property
-    def ylim(self):
+    def ylim(self) -> Tuple[float,float]:
         if self._ylim is None:
             tr = self.transform.params.flatten()
-            self._ylim = [tr[5] + tr[4] * (self._data.shape[1]), tr[5]]
+            self._ylim = (tr[5] + tr[4] * (self._data.shape[1]), tr[5])
         return self._ylim
 
     def extent(self, epsg: int = None ) -> List[float]:   # left, right, bottom, top

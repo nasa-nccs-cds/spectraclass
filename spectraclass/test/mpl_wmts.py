@@ -3,9 +3,10 @@ from owslib.wmts import WebMapTileService
 import cartopy.crs as ccrs
 import os, conda, numbers, time, contextlib
 from typing import List, Union, Tuple, Optional, Dict, Callable
+from cartopy.io.ogc_clients import WMTSRasterSource
+from spectraclass.gui.spatial.image import TileServiceImage
 import numpy as np
 from spectraclass.data.spatial.tile.manager import TileManager, tm
-from spectraclass.gui.spatial.image import TileServiceImage
 from spectraclass.data.base import DataManager, dm
 import xarray as xa
 from matplotlib.image import AxesImage
@@ -13,7 +14,7 @@ from matplotlib.collections import QuadMesh
 from matplotlib.figure import Figure
 from cartopy.mpl.geoaxes import GeoAxes
 from spectraclass.xext.xgeo import XGeo
-from cartopy.io.ogc_clients import WMTSRasterSource
+
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 import rioxarray as rio

@@ -166,10 +166,10 @@ class MapManager(SCSingletonConfigurable):
         return xa.Dataset( self.label_map )
 
     def gui(self,**kwargs):
-        basemapid = kwargs.get('basemap', 'esri')
-        self.base = TileServiceBasemap( basemapid )
-        self.setup_plot(**kwargs)
         self.setBlock()
+        self.base = TileServiceBasemap()
+        self.base.setup_plot( self.block.xlim, self.block.ylim, **kwargs )
+#        self.init_map( **kwargs )
         return self.figure.canvas
 
     def refresh(self):
@@ -238,10 +238,9 @@ class MapManager(SCSingletonConfigurable):
         lgm().log(f" image {layer.name} set alpha = {layer.visibility}" )
         self.update_canvas()
 
-    def setBlock( self, **kwargs ) -> Block:
+    def setBlock( self, **kwargs ):
         from spectraclass.data.spatial.tile.manager import TileManager
         self.clearLabels()
-        reset = kwargs.get( 'reset', False )
         tm = TileManager.instance()
         self.block: Block = tm.getBlock()
         if self.block is not None:
@@ -253,6 +252,7 @@ class MapManager(SCSingletonConfigurable):
             self.y_axis = kwargs.pop('y', 1)
             self.y_axis_name = self.data.dims[self.y_axis]
 
+    def init_map( self, **kwargs ):
             image = self.initPlots(**kwargs)
             if image is not None:
                 self.add_slider(**kwargs)
@@ -260,8 +260,6 @@ class MapManager(SCSingletonConfigurable):
                 self.update_plot_axis_bounds()
                 self.plot_markers_image()
                 self.update_plots()
-
-        return self.block
 
     def update_plot_axis_bounds( self ):
         if self.plot_axes is not None:
@@ -376,9 +374,6 @@ class MapManager(SCSingletonConfigurable):
     @property
     def slider_axes(self) -> Axes:
         return self.base.sax
-
-    def setup_plot(self, **kwargs):
-        self.base.setup_plot( **kwargs )
 
     def invert_yaxis(self):
         self.plot_axes.invert_yaxis()
