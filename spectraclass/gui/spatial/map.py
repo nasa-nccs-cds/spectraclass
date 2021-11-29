@@ -169,7 +169,7 @@ class MapManager(SCSingletonConfigurable):
         self.setBlock()
         self.base = TileServiceBasemap()
         self.base.setup_plot( self.block.xlim, self.block.ylim, **kwargs )
-#        self.init_map( **kwargs )
+        self.init_map( **kwargs )
         return self.figure.canvas
 
     def refresh(self):
@@ -257,8 +257,8 @@ class MapManager(SCSingletonConfigurable):
             if image is not None:
                 self.add_slider(**kwargs)
                 self.initLabels()
-                self.update_plot_axis_bounds()
-                self.plot_markers_image()
+#                self.update_plot_axis_bounds()
+#                self.plot_markers_image()
                 self.update_plots()
 
     def update_plot_axis_bounds( self ):
@@ -389,19 +389,21 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def create_image(self, **kwargs ) -> AxesImage:
+        from matplotlib.collections import QuadMesh
         self.image_template: xa.DataArray =  self.data[ self.init_band, :, : ]
         nValid = np.count_nonzero(~np.isnan(self.image_template))
         lgm().log( f"\n ********* Creating Map Image, nValid={nValid}, data shape = {self.data.shape}, image shape = {self.image_template.shape}, band = {self.init_band}, data range = [ {self.data.min().values}, {self.data.max().values} ]")
         assert nValid > 0, "No valid pixels in image"
         colorbar = kwargs.pop( 'colorbar', False )
-        image: AxesImage =  dms().plotRaster( self.image_template, ax=self.plot_axes, colorbar=colorbar, **kwargs )
+#        mesh: QuadMesh = self.image_template.plot( ax=self.plot_axes )
+        image: AxesImage =  dms().plotRaster( self.image_template, ax=self.plot_axes, xlim=self.block.xlim, ylim=self.block.ylim, colorbar=colorbar, **kwargs )
         self._cidpress = image.figure.canvas.mpl_connect('button_press_event', self.onMouseClick)
         self._cidrelease = image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
      #   self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
         image.set_alpha( self.layers('bands').visibility )
-        overlays = kwargs.get( "overlays", {} )
-        for color, overlay in overlays.items():
-            overlay.plot( ax=self.plot_axes, color=color, linewidth=2 )
+#        overlays = kwargs.get( "overlays", {} )
+#        for color, overlay in overlays.items():
+ #           overlay.plot( ax=self.plot_axes, color=color, linewidth=2 )
         return image
 
     @exception_handled
@@ -428,22 +430,24 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def update_plots(self):
         if self.image is not None:
+            print( "UPDATE PLOTS START")
             from spectraclass.data.base import DataManager, dm
             frame_data: xa.DataArray = self.get_frame_data()
             if frame_data is not None:
                 self.image.set_data( frame_data.values  )
                 drange = dms().get_color_bounds( frame_data )
                 self.image.set_norm( Normalize( **drange ) )
-                self.image.set_extent( self.block.extent() )
+#               self.image.set_extent( self.block.extent() )
                 self.image.set_alpha( self.layers('bands').visibility )
                 plot_name = os.path.basename( dm().dsid() )
                 lgm().log( f" Update Map: data shape = {frame_data.shape}, range = {drange}, extent = {self.block.extent()}")
                 self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
                 self.plot_axes.title.set_fontsize( 8 )
 
-                if self.labels_image is not None:
-                    self.clear_overlay_image( False )
+#                if self.labels_image is not None:
+#                    self.clear_overlay_image( False )
                 self.update_canvas()
+            print("UPDATE PLOTS DONE")
 
     def clear_overlay_image(self, update=True ):
         self.labels_image.set_extent(self.block.extent())
@@ -593,8 +597,8 @@ class MapManager(SCSingletonConfigurable):
     def initPlots(self, **kwargs) -> Optional[AxesImage]:
         if self.image is None:
             self.image = self.create_image(**kwargs)
-            self.labels_image = self.create_labels_image()
-            if self.image is not None: self.initMarkersPlot()
+#           self.labels_image = self.create_labels_image()
+#           if self.image is not None: self.initMarkersPlot()
         return self.image
 
     def clearMarkersPlot( self ):

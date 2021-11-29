@@ -182,6 +182,7 @@ class SpatialDataManager(ModeDataManager):
 
     @classmethod
     def plotRaster(cls, raster: xa.DataArray, **kwargs ):
+        from spectraclass.xext.xgeo import XGeo
         from matplotlib.colorbar import Colorbar
         from spectraclass.application.controller import app
         ax = kwargs.pop( 'ax', None )
@@ -190,18 +191,8 @@ class SpatialDataManager(ModeDataManager):
         itype = kwargs.pop('itype', 'base' )
         title = kwargs.pop( 'title', raster.name )
         zeros = kwargs.pop('zeros', False)
-        rescale = kwargs.pop( 'rescale', None )
+#        rescale = kwargs.pop( 'rescale', None )
         colorbar = kwargs.pop( 'colorbar', True )
-        x = raster.coords[ raster.dims[1] ].values
-        y = raster.coords[ raster.dims[0] ].values
-        try:
-            xstep = (x[1] - x[0]) / 2.0
-        except IndexError: xstep = .1
-        try:
-            ystep = (y[1] - y[0]) / 2.0
-        except IndexError: ystep = .1
-        left, right = x[0] - xstep, x[-1] + xstep
-        bottom, top = y[-1] + ystep, y[0] - ystep
         defaults = dict( origin= 'upper', interpolation= 'nearest' )
         defaults["alpha"] = kwargs.get( "alpha", 1.0 )
         cbar_kwargs = {}
@@ -218,11 +209,14 @@ class SpatialDataManager(ModeDataManager):
             defaults['vmax'] = vrange[1]
         if (itype ==  'base') and ("vmax" not in defaults):
             defaults.update( cls.get_color_bounds( raster ) )
+        xlim = kwargs.pop('xlim', [] )
+        ylim = kwargs.pop('ylim', [] )
+        defaults['extent'] = xlim + ylim
         defaults.update(kwargs)
-        if defaults['origin'] == 'upper':   defaults['extent'] = [left, right, bottom, top]
-        else:                               defaults['extent'] = [left, right, top, bottom]
-        if rescale is not None:
-            raster = cls.scale_to_bounds(raster, rescale)
+#        if defaults['origin'] == 'upper':   defaults['extent'] = [left, right, bottom, top]
+#        else:                               defaults['extent'] = [left, right, top, bottom]
+#        if rescale is not None:
+#            raster = cls.scale_to_bounds(raster, rescale)
         lgm().log( f"$$$COLOR: Plotting tile image with parameters: {defaults}")
         img_data = raster.data if not zeros else np.zeros( raster.shape, np.int )
         img = ax.imshow( img_data, zorder=1, **defaults )
