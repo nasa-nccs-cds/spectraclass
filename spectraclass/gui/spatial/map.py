@@ -6,7 +6,7 @@ from cartopy.mpl.geoaxes import GeoAxes
 from spectraclass.gui.spatial.widgets.layers import LayersManager, Layer
 from spectraclass.gui.spatial.basemap import TileServiceBasemap
 import traitlets as tl
-from types import MethodType
+import os, ipywidgets as ipw
 from ipympl.backend_nbagg import Canvas, Toolbar
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.util.logs import LogManager, lgm, exception_handled
@@ -151,8 +151,7 @@ class MapManager(SCSingletonConfigurable):
         self.frame_marker: Optional[Line2D] = None
         self.control_axes = {}
         self.base = None
-
-
+        self.create_selection_panel()
 #        google_actions = [[maptype, None, None, partial(self.run_task, self.download_google_map, "Accessing Landsat Image...", maptype, task_context='newfig')] for maptype in ['satellite', 'hybrid', 'terrain', 'roadmap']]
         self.menu_actions = OrderedDict( Layers = [ [ "Increase Labels Alpha", 'Ctrl+>', None, partial( self.update_image_alpha, "labels", True ) ],
                                                     [ "Decrease Labels Alpha", 'Ctrl+<', None, partial( self.update_image_alpha, "labels", False ) ],
@@ -161,6 +160,10 @@ class MapManager(SCSingletonConfigurable):
 
         atexit.register(self.exit)
         self._update(0)
+
+    def create_selection_panel(self):
+        self.selection_label = ipw.Label(value='Selection Operation:')
+        self.selection = ipw.RadioButtons(  options=['spectral graph', 'select point', 'select region'], disabled=False, layout={'width': 'max-content'} )
 
     def labels_dset(self):
         return xa.Dataset( self.label_map )
@@ -171,6 +174,13 @@ class MapManager(SCSingletonConfigurable):
         self.base.setup_plot( self.block.xlim, self.block.ylim, **kwargs )
         self.init_map( **kwargs )
         return self.figure.canvas
+
+    def getSelectionPanel(self):
+        return ipw.Box( [ self.selection_label, self.selection ] )
+
+    @property
+    def selectionMode(self) -> str:
+        return self.selection.value
 
     def refresh(self):
         self.setBlock()
@@ -467,7 +477,7 @@ class MapManager(SCSingletonConfigurable):
     def onMouseClick(self, event):
         if event.xdata != None and event.ydata != None:
             inaxes = (event.inaxes == self.plot_axes)
-            lgm().log(f" MouseClick event: toolbarMode={self.toolbarMode}, inaxes = {inaxes}, key_mode={self.key_mode}, event = {event}")
+            lgm().log(f" MouseClick event: toolbarMode={self.toolbarMode}, inaxes = {inaxes}, key_mode={self.key_mode}, event = {event}, selection mode = {self.selectionMode}")
             if not self.toolbarMode and inaxes and (self.key_mode == None):
                 rightButton: bool = int(event.button) == self.RIGHT_BUTTON
                 pid = self.block.coords2pindex( event.ydata, event.xdata )
