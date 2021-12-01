@@ -10,20 +10,22 @@ class Spectraclass(SpectraclassController):
         super(Spectraclass, self).__init__()
         self.set_parent_instances()
 
-    def gui( self, embed: bool = False ):
+    def gui( self, **kwargs ):
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
         from spectraclass.gui.spatial.map import MapManager, mm
         print( f"Initializing GUI using controller {str(self.__class__)}")
+        basemap: bool = kwargs.pop('basemap',False)
+        embed: bool = kwargs.pop('embed',False)
         self.set_spectraclass_theme()
         css_border = '1px solid blue'
         plot_collapsibles = ipw.Accordion( children = [ dm().gui(), pm().gui() ], layout=ipw.Layout(width='100%'))     # , pcm().gui()
         for iT, title in enumerate(['data', 'controls']): plot_collapsibles.set_title(iT, title) # , 'embedding'
         plot_collapsibles.selected_index = 1
         plot = ipw.VBox([ ufm().gui(), plot_collapsibles, gpm().gui() ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
-        smap = mm().gui()
+        smap = mm().gui( basemap=basemap )
         control = ipw.VBox( [ am().gui(), smap ], layout=ipw.Layout( flex='0 0 700px'), border=css_border )
         gui = ipw.HBox( [control, plot ], layout=ipw.Layout( width='100%' ) )
         if embed: self.embed()

@@ -1,13 +1,13 @@
-import qgrid, logging
-from typing import List, Union, Tuple, Optional, Dict, Callable, Set
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+import qgrid
+from typing import List, Dict, Set
+from spectraclass.util.logs import lgm
 from functools import partial
 import xarray as xa
 import numpy as np
 import pandas as pd
 import ipywidgets as ipw
-from spectraclass.gui.widgets import ToggleButton
-from spectraclass.data.base import DataManager, dm
+from widgets.widgets import ToggleButton
+from spectraclass.data.base import dm
 import traitlets as tl
 from spectraclass.model.labels import LabelsManager
 from spectraclass.model.base import SCSingletonConfigurable
@@ -51,7 +51,7 @@ class TableManager(SCSingletonConfigurable):
         table._update_table( triggered_by='update_table', fire_data_change_event=fire_event )
 
     def update_selection(self):
-        from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.model.labels import lm
  #       self._broadcast_selection_events = False
         label_map: Dict[int,Set[int]] = lm().getLabelMap()
         directory = self._tables[0]
@@ -203,7 +203,7 @@ class TableManager(SCSingletonConfigurable):
 
     def broadcast_selection_event(self, pids: List[int] ):
         from spectraclass.application.controller import app
-        from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.model.labels import lm
         from spectraclass.model.base import Marker
 # if self._broadcast_selection_events:
         item_str = "" if len(pids) > 8 else f",  pids={pids}"

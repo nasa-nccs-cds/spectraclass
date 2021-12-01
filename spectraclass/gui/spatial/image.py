@@ -39,8 +39,8 @@ class TileServiceImage(AxesImage):
         if xrange is not None: self.axes.set_xbound( xrange[0], xrange[1] )
         if yrange is not None: self.axes.set_ybound( yrange[0], yrange[1] )
 
-        with self.hold_limits():
-            self.axes.add_image( self )
+#        with self.hold_limits():
+        self.axes.add_image( self )
 
     def on_press(self, event=None):
         self.user_is_interacting = True

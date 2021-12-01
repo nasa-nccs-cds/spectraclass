@@ -1,20 +1,17 @@
-import logging, traceback
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import lgm, exception_handled
 from functools import partial
 import numpy as np
 import pandas as pd
 import ipywidgets as ipw
-from spectraclass.gui.widgets import ToggleButton
-from bokeh.models.widgets import TextInput
-from spectraclass.data.base import DataManager, dm
+from widgets.widgets import ToggleButton
+from spectraclass.data.base import dm
 from spectraclass.model.labels import LabelsManager
 from spectraclass.model.base import SCSingletonConfigurable
 from jupyter_bokeh.widgets import BokehModel
 import math, xarray as xa
-from bokeh.models import ColumnDataSource, DataTable, CustomJS, TableColumn
-from bokeh.core.property.container import ColumnData, Seq
-from typing import List, Union, Tuple, Optional, Dict, Callable, Set, Any, Iterable
-from enum import Enum
+from bokeh.models import ColumnDataSource, DataTable, TableColumn
+from typing import List, Union, Dict, Callable, Set, Any
+
 
 class bkSpreadsheet:
 
@@ -220,7 +217,7 @@ class TableManager(SCSingletonConfigurable):
         return self._tables[ self.selected_table_index ]
 
     def mark_points(self):
-        from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.model.labels import lm
         dtable = self._tables[ 0 ]
         pids: np.ndarray = dtable.get_selection()
         self.edit_table(0, pids, "cid", lm().current_cid )
@@ -249,10 +246,7 @@ class TableManager(SCSingletonConfigurable):
         return False
 
     def broadcast_selection_event(self, pids: np.ndarray ):
-        from spectraclass.application.controller import app
-        from spectraclass.model.labels import LabelsManager, lm
-        from spectraclass.gui.plot import GraphPlotManager, gpm
-        from spectraclass.model.base import Marker
+        from spectraclass.gui.plot import gpm
         item_str = "" if pids.size > 8 else f",  pids={pids}"
         lgm().log(f" **TABLE-> gui.selection_changed, nitems={pids.size}{item_str}")
         gpm().plot_graph(pids)

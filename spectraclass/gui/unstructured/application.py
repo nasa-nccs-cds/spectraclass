@@ -22,7 +22,7 @@ class Spectraclass(SpectraclassController):
                 css = f.read().replace(';', ' !important;')
             display(HTML('<style type="text/css">%s</style>Customized changes loaded.' % css))
 
-    def gui( self, embed: bool = False ):
+    def gui( self, **kwargs ):
         from bokeh.io import output_notebook
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.gui.points import PointCloudManager, pcm
@@ -30,6 +30,7 @@ class Spectraclass(SpectraclassController):
         from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
         from spectraclass.data.base import DataManager, dm
         output_notebook()
+        embed: bool = kwargs.pop('embed',False)
 
         self.set_spectraclass_theme()
         css_border = '1px solid blue'

@@ -57,8 +57,10 @@ class SpectraclassController(SCSingletonConfigurable):
     def update_current_class(self, iclass: int ):
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.gui.spatial.map import MapManager, mm
         pids = lm().getPids( iclass )
         gpm().plot_graph(pids)
+        mm().set_region_color( lm().current_color )
 
     @classmethod
     def set_spectraclass_theme(cls):
@@ -69,7 +71,7 @@ class SpectraclassController(SCSingletonConfigurable):
                 css = f.read().replace(';', ' !important;')
             display(HTML('<style type="text/css">%s</style>Customized changes loaded.' % css))
 
-    def gui( self, embed: bool = False ):
+    def gui( self, **kwargs ):
         raise NotImplementedError()
 
     @exception_handled

@@ -38,6 +38,7 @@ class TileServiceBasemap(SCSingletonConfigurable):
         fig_index = kwargs.pop('index',100)
         fig_size = kwargs.pop('size', (6, 6))
         title = kwargs.pop('title', 'Selection Region')
+        use_basemap = kwargs.pop('basemap', True)
         self.figure: Figure = plt.figure( fig_index, figsize=fig_size )
         plt.ion()
         lgm().log( f"Projection = {self.crs}")
@@ -45,7 +46,11 @@ class TileServiceBasemap(SCSingletonConfigurable):
         self.figure.suptitle(title)
         self.gax: Axes = self.figure.add_axes( [0.01, 0.07, 0.98, 0.93], **kwargs )  # [left, bottom, width, height] GeoAxes: projection=self.crs,
         self.gax.xaxis.set_visible( False ); self.gax.yaxis.set_visible( False )
-        self.set_basemap( xlim, ylim ) # self.gax.add_wmts( self.tile_service, self.layer )
+        if use_basemap:
+            self.set_basemap( xlim, ylim ) # self.gax.add_wmts( self.tile_service, self.layer )
+        else:
+            self.gax.set_xbound( xlim[0], xlim[1] )
+            self.gax.set_ybound( ylim[0], ylim[1] )
         self.sax: Axes = self.figure.add_axes([0.01, 0.01, 0.85, 0.05])  # [left, bottom, width, height]
         self.figure.canvas.toolbar_visible = True
         self.figure.canvas.header_visible = False

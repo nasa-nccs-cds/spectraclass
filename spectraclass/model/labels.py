@@ -75,7 +75,7 @@ class LabelsManager(SCSingletonConfigurable):
 
     def __init__(self):
         super(LabelsManager, self).__init__()
-        self._colors = None
+        self._colors: List[str] = None
         self._labels = None
         self._flow: ActivationFlow = None
         self._actions: List[Action] = []
@@ -100,7 +100,7 @@ class LabelsManager(SCSingletonConfigurable):
         return self._selected_class
 
     @property
-    def current_color(self) -> int:
+    def current_color(self) -> str:
         return self._colors[ self._selected_class ]
 
     def set_selected_class(self, iclass, *args ):
@@ -294,12 +294,12 @@ class LabelsManager(SCSingletonConfigurable):
     def selectedLabel(self):
         return self._labels[ self.current_cid ]
 
-    def selectedColor(self, mark: bool ) -> Tuple[int,List[float]]:
+    def selectedColor(self, mark: bool ) -> Tuple[int,str]:
         icolor = self.current_cid if mark else 0
         return icolor, self._colors[ icolor ]
 
     @property
-    def colors(self)-> List[Tuple]:
+    def colors(self)-> List[str]:
         return self._colors
 
     @property
