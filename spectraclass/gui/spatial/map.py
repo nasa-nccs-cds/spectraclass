@@ -169,7 +169,7 @@ class MapManager(SCSingletonConfigurable):
         self.selection = ipw.RadioButtons(  options=['spectral graph', 'select point', 'select region'], disabled=False, layout={'width': 'max-content'} )
         self.selection.observe( self.set_selection_mode, "value" )
 
-    def set_selection_mode(self, event: Dict ):
+    def set_selection_mode( self, event: Dict ):
         smode = event['new']
         region_selection = (smode == 'select region')
         mm().enable_region_selection( region_selection )
