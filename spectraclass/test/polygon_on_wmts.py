@@ -1,6 +1,7 @@
 import numpy as np
 from matplotlib.lines import Line2D
 from matplotlib.artist import Artist
+import xarray as xa
 from matplotlib.backend_bases import MouseEvent
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import logging, os
@@ -89,9 +90,6 @@ class PolyRec:
 
 class PolygonInteractor:
 
-    showverts = True
-
-
     def __init__(self, ax):
         self.ax = ax
         self.polys: List[PolyRec] = []
@@ -109,7 +107,6 @@ class PolygonInteractor:
     def update_callbacks(self):
         self.update_navigation()
         if self.enabled:
-#            self.cids.append( self.canvas.mpl_connect('draw_event', self.on_draw) )
             self.cids.append( self.canvas.mpl_connect('button_press_event', self.on_button_press) )
             self.cids.append( self.canvas.mpl_connect('button_release_event', self.on_button_release) )
             self.cids.append( self.canvas.mpl_connect('motion_notify_event', self.on_mouse_move) )
@@ -224,17 +221,29 @@ class PolygonInteractor:
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from matplotlib.patches import Polygon
+    from matplotlib.collections import QuadMesh
     from spectraclass.data.base import DataManager, ModeDataManager
+    from spectraclass.data.spatial.tile.manager import TileManager, tm
     from spectraclass.model.labels import LabelsManager, lm
+    import rioxarray as rio
+    from matplotlib.collections import QuadMesh
+    from spectraclass.xext.xgeo import XGeo
 
     dm: DataManager = DataManager.initialize("demo2", 'desis')
     dm.loadCurrentProject("main")
     classes = [ ('Class-1', "cyan"), ('Class-2', "green"), ('Class-3', "magenta"), ('Class-4', "blue") ]
     lm().setLabels(classes)
-    xbnds = ( -8542199.547, -8538333.685 )
-    ybnds = (  4732692.184,  4736558.046 )
+
+    band_index = 100
+    dmi: DataManager = DataManager.initialize("demo2", 'desis')
+    project_data: xa.Dataset = dmi.loadCurrentProject("main")
+    block = tm().getBlock()
+    tile: xa.DataArray = block.data[band_index]
+    [ x0, x1, y0, y1 ] = block.extent()
 
     base = TileServiceBasemap()
-    base.setup_plot( xbnds, ybnds, basemap=True, standalone=True )
+    base.setup_plot( (x0,x1), (y0,y1), basemap=True, standalone=True )
+    qmesh: QuadMesh = tile.plot.imshow( ax=base.gax, alpha=0.3 ) # 'band', ax=
     p = PolygonInteractor( base.gax )
+
     plt.show()

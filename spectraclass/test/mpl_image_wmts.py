@@ -9,14 +9,14 @@ from spectraclass.gui.spatial.image import TileServiceImage
 from spectraclass.data.base import DataManager, dm
 import xarray as xa
 from matplotlib.image import AxesImage
-from matplotlib.collections import QuadMesh
 from matplotlib.figure import Figure
 from cartopy.mpl.geoaxes import GeoAxes
-from spectraclass.xext.xgeo import XGeo
 from cartopy.io.ogc_clients import WMTSRasterSource
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 import rioxarray as rio
+from matplotlib.collections import QuadMesh
+from spectraclass.xext.xgeo import XGeo
 
 log_file = os.path.expanduser('~/.spectraclass/logging/geospatial.log')
 file_handler = logging.FileHandler(filename=log_file, mode='w')
