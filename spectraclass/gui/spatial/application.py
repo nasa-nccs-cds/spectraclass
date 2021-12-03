@@ -17,7 +17,7 @@ class Spectraclass(SpectraclassController):
         from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
         from spectraclass.gui.spatial.map import MapManager, mm
         print( f"Initializing GUI using controller {str(self.__class__)}")
-        basemap: bool = kwargs.pop('basemap',False)
+        basemap: bool = kwargs.pop('basemap',True)
         embed: bool = kwargs.pop('embed',False)
         self.set_spectraclass_theme()
         css_border = '1px solid blue'
