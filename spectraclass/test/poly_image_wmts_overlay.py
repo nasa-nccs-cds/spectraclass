@@ -5,47 +5,11 @@ from typing import List, Union, Tuple, Optional, Dict, Callable
 from spectraclass.gui.spatial.basemap import TileServiceBasemap
 from widgets.polygons import PolygonInteractor, Polygon
 import matplotlib.pyplot as plt
-from matplotlib.collections import QuadMesh
 from spectraclass.data.base import DataManager, ModeDataManager
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.model.labels import LabelsManager, lm
-import rioxarray as rio
-from matplotlib.collections import QuadMesh
-from spectraclass.xext.xgeo import XGeo
-from collections import OrderedDict
-from spectraclass.model.labels import LabelsManager, lm
-from spectraclass.model.base import SCSingletonConfigurable, Marker
-from functools import partial
-from cartopy.mpl.geoaxes import GeoAxes
-from spectraclass.widgets.polygons import PolygonInteractor
-from spectraclass.gui.spatial.widgets.layers import LayersManager, Layer
-from spectraclass.gui.spatial.basemap import TileServiceBasemap
-import traitlets as tl
-import os, time, ipywidgets as ipw
-from ipympl.backend_nbagg import Canvas, Toolbar
-from spectraclass.data.spatial.tile.tile import Block
-from spectraclass.util.logs import LogManager, lgm, exception_handled
-import types, pandas as pd
-import xarray as xa
-import numpy as np
-from typing import List, Dict, Tuple, Optional
-from spectraclass.data.spatial.manager import SpatialDataManager
-import math, atexit, os, traceback
-import pathlib
-from spectraclass.widgets.slider import PageSlider
-import matplotlib.pyplot as plt
-from matplotlib.collections import PathCollection
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.lines import Line2D
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
-from matplotlib.colors import Normalize
-from matplotlib.backend_bases import PickEvent, MouseButton  # , NavigationToolbar2
-from spectraclass.gui.control import UserFeedbackManager, ufm
-from matplotlib.patches import Rectangle
-from matplotlib.widgets import Button, Slider
-
+from spectraclass.xext.xgeo import XGeo
 
 log_file = os.path.expanduser('~/.spectraclass/logging/geospatial.log')
 file_handler = logging.FileHandler(filename=log_file, mode='w')
@@ -58,71 +22,16 @@ dm.loadCurrentProject("main")
 classes = [ ('Class-1', "cyan"), ('Class-2', "green"), ('Class-3', "magenta"), ('Class-4', "blue") ]
 lm().setLabels(classes)
 
-# qmesh: QuadMesh = tile.plot.imshow( ax=base.gax, alpha=0.3 ) # 'band', ax=
+band_index = 100
+block = tm().getBlock()
+tile: xa.DataArray = block.data[band_index].squeeze( drop=True )
+[ x0, x1, y0, y1 ] = block.extent()
 
-class MapManager(SCSingletonConfigurable):
-    init_band = tl.Int(10).tag(config=True, sync=True)
+base = TileServiceBasemap()
+base.setup_plot( (x0,x1), (y0,y1), basemap=True, standalone=True )
+image: AxesImage = tile.plot.imshow( ax=base.gax, alpha=0.3 )
+p = PolygonInteractor( base.gax )
 
-    RIGHT_BUTTON = 3
-    MIDDLE_BUTTON = 2
-    LEFT_BUTTON = 1
-
-    def __init__( self, **kwargs ):   # class_labels: [ [label, RGBA] ... ]
-        super(MapManager, self).__init__()
-        self._debug = False
-        self.currentFrame = 0
-        self.block: Block = None
-        self.use_model_data = False
-        self.slider: Optional[PageSlider] = None
-        self.image: Optional[AxesImage] = None
-
-    @property
-    def data(self) -> Optional[xa.DataArray]:
-        from spectraclass.data.base import DataManager, dm
-        if self.block is None: self.setBlock()
-        block_data: xa.DataArray = self.block.data
-        if self.use_model_data:
-            reduced_data: xa.DataArray = dm().getModelData().transpose()
-            dims = [reduced_data.dims[0], block_data.dims[1], block_data.dims[2]]
-            coords = [(dims[0], reduced_data[dims[0]]), (dims[1], block_data[dims[1]]), (dims[2], block_data[dims[2]])]
-            shape = [c[1].size for c in coords]
-            raster_data = reduced_data.data.reshape(shape)
-            return xa.DataArray(raster_data, coords, dims, reduced_data.name, reduced_data.attrs)
-        else:
-            return block_data
-
-    @property
-    def frame_data(self) -> np.ndarray:
-        return self.data[ :, self.currentFrame].flatten().values()
-
-    def setBlock( self, **kwargs ):
-        from spectraclass.data.spatial.tile.manager import TileManager
-        tm = TileManager.instance()
-        self.block: Block = tm.getBlock()
-        if self.block is not None:
-            self.nFrames = self.data.shape[0]
-            self.band_axis = kwargs.pop('band', 0)
-            self.z_axis_name = self.data.dims[self.band_axis]
-            self.x_axis = kwargs.pop('x', 2)
-            self.x_axis_name = self.data.dims[self.x_axis]
-            self.y_axis = kwargs.pop('y', 1)
-            self.y_axis_name = self.data.dims[self.y_axis]
-
-    def gui(self,**kwargs):
-        self.setBlock()
-        basemap = kwargs.pop('basemap', True)
-        self.base = TileServiceBasemap()
-        self.base.setup_plot( self.block.xlim, self.block.ylim, basemap=basemap, **kwargs )
-        self.init_map()
-        self.region_selection = PolygonInteractor( self.base.gax )
-        return self.base.gax.figure
-
-    def init_map(self):
-        self.image_data: xa.DataArray = self.data[self.init_band, :, :].squeeze( drop=True )
-        self.image: AxesImage = self.image_data.plot.imshow(ax=self.base.gax, alpha=0.3)
-
-mm = MapManager()
-app = mm.gui()
 plt.show()
 
 # def dist(x, y):

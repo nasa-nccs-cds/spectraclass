@@ -28,6 +28,7 @@ class LogManager(SCSingletonConfigurable):
         self._wGui = None
         self._level = logging.INFO
         self._log_file = None
+        self.log_dir = None
 
     @classmethod
     def pid(cls):
@@ -37,11 +38,11 @@ class LogManager(SCSingletonConfigurable):
         self._level = level
 
     def init_logging(self, name: str, mode: str, **kwargs ):
-        log_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "logging", mode )
-        os.makedirs( log_dir, 0o777, exist_ok=True )
+        self.log_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "logging", mode )
+        os.makedirs( self.log_dir, 0o777, exist_ok=True )
         overwrite = kwargs.get( 'overwrite', True )
         lid = "" if overwrite else f"-{os.getpid()}"
-        log_file = f'{log_dir}/{name}{lid}.log'
+        log_file = f'{self.log_dir}/{name}{lid}.log'
         self._log_file = open( log_file, 'w' )
         print( f"Opening log file:  '{log_file}'" )
 

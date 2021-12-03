@@ -35,13 +35,13 @@ class TileServiceBasemap(SCSingletonConfigurable):
     @exception_handled
     def setup_plot( self, xlim: Tuple[float,float], ylim: Tuple[float,float], **kwargs ):
         standalone = kwargs.pop( 'standalone', False )
-        if not standalone: plt.ioff()
+#        if not standalone: plt.ioff()
         fig_index = kwargs.pop('index',100)
         fig_size = kwargs.pop('size', (6, 6))
         title = kwargs.pop('title', 'Selection Region')
         use_basemap = kwargs.pop('basemap', True)
         self.figure: Figure = plt.figure( fig_index, figsize=fig_size )
-        if not standalone: plt.ion()
+#        if not standalone: plt.ion()
         lgm().log( f"Projection = {self.crs}")
 
         self.figure.suptitle(title)
