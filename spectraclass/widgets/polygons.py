@@ -2,6 +2,7 @@ import numpy as np
 from matplotlib.lines import Line2D
 from matplotlib.artist import Artist
 from matplotlib.patches import Polygon
+from spectraclass.util.logs import LogManager, lgm, exception_handled
 from matplotlib.backend_bases import MouseEvent
 import logging, os
 from typing import List, Union, Tuple, Optional, Dict, Callable
@@ -15,7 +16,6 @@ logger.setLevel(logging.DEBUG)
 def dist(x, y):
     d = x - y
     return np.sqrt(np.dot(d, d))
-
 class PolyRec:
     epsilon = 5  # max pixel distance to count as a vertex hit
 
@@ -58,6 +58,7 @@ class PolyRec:
     def insert_point(self, event ):
         x, y = event.xdata, event.ydata
         self.poly.xy = np.row_stack( [ self.poly.xy, np.array( [x, y] ) ] )
+        self.draw()
 
     def complete( self ):
         self.poly.xy[-1] = self.poly.xy[0]
@@ -69,6 +70,9 @@ class PolyRec:
         self.line.set_data(zip(*self.poly.xy))
         self.ax.draw_artist(self.poly)
         self.ax.draw_artist(self.line)
+
+    def draw(self):
+        self.canvas.draw_idle()
 
     def set_selected(self, selected: bool ):
         self.selected = selected
@@ -92,29 +96,38 @@ class PolygonInteractor:
         self.editing = False
         self.creating = False
         self._fill_color = "grey"
+        self.background = None
+        self.canvas = ax.figure.canvas
+        self.canvas.mpl_connect('key_press_event', self.on_key_press)
+        self.canvas.mpl_connect('draw_event', self.on_draw)
+        self.cids = []
 
-        canvas = ax.figure.canvas
-        canvas.mpl_connect('draw_event', self.on_draw)
-        canvas.mpl_connect('button_press_event', self.on_button_press)
-        canvas.mpl_connect('button_release_event', self.on_button_release)
-        canvas.mpl_connect('key_press_event', self.on_key_press)
-        canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
-        self.canvas = canvas
+    def update_callbacks(self):
+        self.update_navigation()
+        if self.enabled:
+            self.cids.append(self.canvas.mpl_connect('button_press_event', self.on_button_press))
+            self.cids.append(self.canvas.mpl_connect('button_release_event', self.on_button_release))
+            self.cids.append(self.canvas.mpl_connect('motion_notify_event', self.on_mouse_move))
+        else:
+            for cid in self.cids:  self.canvas.mpl_disconnect(cid)
+            self.cids = []
 
-    @property
-    def artists(self) -> List:
-        artist_list = []
-        for prec in self.polys:
-            artist_list.append( prec.poly )
-            artist_list.append( prec.line )
-        return artist_list
+    def update_navigation(self):
+        from matplotlib.backend_bases import NavigationToolbar2, _Mode
+        tbar: NavigationToolbar2 = self.canvas.toolbar
+        for cid in [tbar._id_press, tbar._id_release, tbar._id_drag]:
+            self.canvas.mpl_disconnect(cid)
+        if not self.enabled:
+            tbar._id_press   = self.canvas.mpl_connect( 'button_press_event', tbar._zoom_pan_handler )
+            tbar._id_release = self.canvas.mpl_connect( 'button_release_event', tbar._zoom_pan_handler )
+            tbar._id_drag    = self.canvas.mpl_connect( 'motion_notify_event', tbar.mouse_move )
 
+    @exception_handled
     def set_enabled(self, enabled ):
-        self.enabled = enabled
-        if not enabled and (self.prec != None):
-            self.prec.complete()
-            self.prec = None
-            self.update()
+        if enabled != self.enabled:
+            self.enabled = enabled
+            lgm().log(f"set_enabled: {self.enabled}")
+            self.update_callbacks()
 
     def set_color(self, color: str ):
         self._fill_color = color
@@ -128,23 +141,14 @@ class PolygonInteractor:
             self.creating = True
         return self.prec
 
+    @exception_handled
     def on_draw(self, event):
-        """Callback to register with 'draw_event'."""
-        cv = self.canvas
-        if event is not None:
-            if event.canvas != cv:
-                raise RuntimeError
-        self.background = cv.copy_from_bbox(cv.figure.bbox)
-        self._draw_animated()
-
-    def _draw_animated(self):
-        """Draw all of the animated artists."""
-        fig = self.canvas.figure
-        for a in self.artists:
-            fig.draw_artist(a)
+        self.background = self.canvas.copy_from_bbox(self.ax.bbox)
+        for prec in self.polys:
+            self.ax.draw_artist(prec.poly)
+            self.ax.draw_artist(prec.line)
 
     def poly_changed(self, poly):
-        fig = self.canvas.figure
         if self.prec is not None:
             vis = self.prec.line.get_visible()
             Artist.update_from(self.prec.line, poly)
@@ -161,14 +165,15 @@ class PolygonInteractor:
         selected_pid = self.prec.pid if (self.prec is not None) else -1
         for prec in self.polys:
             prec.set_selected( prec.pid == selected_pid )
-        self.update()
+        self.draw()
 
     def close_poly(self):
         self.prec.complete()
         self.prec = None
         self.creating = False
-        self.update()
+        self.draw()
 
+    @exception_handled
     def on_button_press(self, event: MouseEvent ):
         if event.inaxes is None: return
         print( event )
@@ -181,53 +186,38 @@ class PolygonInteractor:
                 else:
                     if self.prec is None:  self.add_poly( event )
                     else:
-                        if self.creating:
-                            self.prec.insert_point( event )
-                            self.update()
-                        else:
-                            self.editing = self.prec.vertex_selected( event )
+                        if self.creating:  self.prec.insert_point( event )
+                        else:              self.editing = self.prec.vertex_selected( event )
 
         elif event.button == 3:
             pass
 
+    @exception_handled
     def on_button_release(self, event):
         if self.prec is not None:
             self.prec.clear_vertex_selection()
             self.editing = False
 
+    @exception_handled
     def on_key_press(self, event):
         if not event.inaxes:
             return
-        if   event.key == 'c':  self.set_enabled( True )
-        elif event.key == 'd':  self.set_enabled( False )
-        elif event.key == 'r':  self._fill_color = "red"
-        elif event.key == 'g':  self._fill_color = "green"
-        elif event.key == 'b':  self._fill_color = "blue"
-        elif event.key == 'p':  self._fill_color = "purple"
+        if   event.key == 'w':  self.set_enabled( True )
+        elif event.key == 'x':  self.set_enabled( False )
 
+    @exception_handled
     def on_mouse_move(self, event):
         if event.inaxes is None: return
         if (self.editing or self.creating):
             self.prec.drag_vertex( event )
-            self.update()
+            self.draw()
 
-#     def draw(self):
-#         self.canvas.restore_region(self.background)
-#         for prec in self.polys: prec.update()
-# #        self.canvas.draw_idle()
-#         self.canvas.blit(self.ax.bbox)
-
-    def update(self):
-        """Update the screen with animated artists."""
-        cv = self.canvas
-        fig = cv.figure
-        if self.background is None:
-            self.on_draw(None)
-        else:
-            cv.restore_region(self.background)
-            self._draw_animated()
-            cv.blit(fig.bbox)
-        cv.flush_events()
+    @exception_handled
+    def draw(self):
+        if self.background is not None:
+            self.canvas.restore_region(self.background)
+        for prec in self.polys: prec.update()
+        self.canvas.blit(self.ax.bbox)
 
     # import matplotlib.pyplot as plt
     # from matplotlib.patches import Polygon
