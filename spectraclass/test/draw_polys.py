@@ -209,30 +209,3 @@ if __name__ == '__main__':
     ax.set_xlim((-2, 2))
     ax.set_ylim((-2, 2))
     plt.show()
-
-#     self.showverts = not self.showverts
-#     self.line.set_visible(self.showverts)
-#     if not self.showverts:
-#         self._ind = None
-# elif event.key == 'd':
-#     ind = self.get_ind_under_point(event)
-#     if ind is not None:
-#         self.poly.xy = np.delete(self.poly.xy,
-#                                  ind, axis=0)
-#         self.line.set_data(zip(*self.poly.xy))
-# elif event.key == 'i':
-#     xys = self.poly.get_transform().transform(self.poly.xy)
-#     p = event.x, event.y  # display coords
-#     for i in range(len(xys) - 1):
-#         s0 = xys[i]
-#         s1 = xys[i + 1]
-#         d = dist_point_to_segment(p, s0, s1)
-#         if d <= self.epsilon:
-#             self.poly.xy = np.insert(
-#                 self.poly.xy, i+1,
-#                 [event.xdata, event.ydata],
-#                 axis=0)
-#             self.line.set_data(zip(*self.poly.xy))
-#             break
-# if self.line.stale:
-#     self.canvas.draw_idle()

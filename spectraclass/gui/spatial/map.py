@@ -16,16 +16,22 @@ from spectraclass.model.labels import LabelsManager, lm
 from matplotlib.image import AxesImage
 from spectraclass.xext.xgeo import XGeo
 from spectraclass.widgets.slider import PageSlider
+import traitlets as tl
+from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.data.spatial.tile.tile import Block, Tile
 
+def mm(**kwargs) -> "MapManager":
+    return MapManager.instance(**kwargs)
 
-class MapManager:
+class MapManager(SCSingletonConfigurable):
+    init_band = tl.Int(10).tag(config=True, sync=True)
 
     RIGHT_BUTTON = 3
     MIDDLE_BUTTON = 2
     LEFT_BUTTON = 1
 
     def __init__( self, **kwargs ):   # class_labels: [ [label, RGBA] ... ]
+        super(MapManager, self).__init__()
         self._debug = False
         self.currentFrame = 0
         self.block: Block = None
@@ -142,10 +148,10 @@ class MapManager:
         self.setBlock()
         self.base = TileServiceBasemap()
         [x0, x1, y0, y1] = self.block.extent()
-        self.base.setup_plot( (x0,x1), (y0,y1), basemap=True, standalone=True )
+        self.base.setup_plot( (x0,x1), (y0,y1), **kwargs )
         self.init_map(**kwargs)
         self.region_selection = PolygonInteractor( self.base.gax )
-        return self.base.gax.figure
+        return self.base.gax.figure.canvas
 
     def init_map(self,**kwargs):
         self.image: AxesImage = self.frame_data.plot.imshow( ax=self.base.gax, alpha=0.3)
@@ -158,7 +164,7 @@ if __name__ == '__main__':
     lm().setLabels(classes)
 
     mm = MapManager()
-    app = mm.gui()
+    panel = mm.gui()
     plt.show( )
 
 
