@@ -26,9 +26,9 @@ class PolyRec:
         self.pid = pid
         self.selected = False
         xs, ys = np.array( [x,x] ), np.array( [y,y] )
-        self.poly = Polygon( np.column_stack([xs,ys]), animated=True, facecolor=self.color, closed=False )
+        self.poly = Polygon( np.column_stack([xs,ys]), facecolor=self.color, closed=False )
         x, y = zip(*self.poly.xy)
-        self.line = Line2D(x, y, marker='o', markerfacecolor='r', animated=True)
+        self.line = Line2D(x, y, marker='o', markerfacecolor='r' )
         if on_change: self.cid = self.poly.add_callback( on_change )
         else: self.cid = None
         ax.add_patch(self.poly)
@@ -96,7 +96,6 @@ class PolygonInteractor:
         self.editing = False
         self.creating = False
         self._fill_color = "grey"
-        self.background = None
         self.canvas = ax.figure.canvas
         self.canvas.mpl_connect('key_press_event', self.on_key_press)
         self.canvas.mpl_connect('draw_event', self.on_draw)
@@ -143,7 +142,6 @@ class PolygonInteractor:
 
     @exception_handled
     def on_draw(self, event):
-        self.background = self.canvas.copy_from_bbox(self.ax.bbox)
         for prec in self.polys:
             self.ax.draw_artist(prec.poly)
             self.ax.draw_artist(prec.line)
@@ -176,21 +174,23 @@ class PolygonInteractor:
     @exception_handled
     def on_button_press(self, event: MouseEvent ):
         if event.inaxes is None: return
-        print( event )
+        logger.info( event )
 
         if event.button == 1:
             if self.enabled:
-                if event.dblclick:
-                    if self.creating:   self.close_poly()
-                    else:               self.select_poly( event )
+                if self.prec is None:
+                    self.add_poly( event )
                 else:
-                    if self.prec is None:  self.add_poly( event )
+                    if self.creating:
+                        self.prec.insert_point( event )
                     else:
-                        if self.creating:  self.prec.insert_point( event )
-                        else:              self.editing = self.prec.vertex_selected( event )
-
+                        self.editing = self.prec.vertex_selected( event )
         elif event.button == 3:
-            pass
+            if self.creating:
+                self.prec.insert_point( event )
+                self.close_poly()
+            else:
+                self.select_poly( event )
 
     @exception_handled
     def on_button_release(self, event):
@@ -214,10 +214,8 @@ class PolygonInteractor:
 
     @exception_handled
     def draw(self):
-        if self.background is not None:
-            self.canvas.restore_region(self.background)
         for prec in self.polys: prec.update()
-        self.canvas.blit(self.ax.bbox)
+        self.canvas.draw_idle()
 
     # import matplotlib.pyplot as plt
     # from matplotlib.patches import Polygon
