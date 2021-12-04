@@ -3,6 +3,7 @@ import numpy as np
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import logging, os
 from matplotlib.figure import Figure
+from functools import partial
 from matplotlib.image import AxesImage
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from matplotlib.axes import Axes
@@ -11,7 +12,9 @@ from spectraclass.gui.spatial.basemap import TileServiceBasemap
 from spectraclass.widgets.polygons import PolygonInteractor, Polygon
 import matplotlib.pyplot as plt
 import ipywidgets as ipw
-from spectraclass.data.base import DataManager
+import math, atexit, os, traceback
+from collections import OrderedDict
+from spectraclass.gui.spatial.widgets.layers import LayersManager, Layer
 from spectraclass.model.labels import LabelsManager, lm
 from matplotlib.image import AxesImage
 from spectraclass.xext.xgeo import XGeo
@@ -36,10 +39,39 @@ class MapManager(SCSingletonConfigurable):
         self.currentFrame = 0
         self.block: Block = None
         self.use_model_data = False
+        self.layers = LayersManager( self.on_layer_change )
         self.slider: Optional[PageSlider] = None
         self.image: Optional[AxesImage] = None
         self.region_selection: PolygonInteractor = None
+        self.labels_image: Optional[AxesImage] = None
         self.point_selection_enabled = False
+        self.layers.add('bands', 1.0, True)
+        self.layers.add('labels', 0.5, False)
+        self.create_selection_panel()
+        self.menu_actions = OrderedDict( Layers = [ [ "Increase Labels Alpha", 'Ctrl+>', None, partial( self.update_image_alpha, "labels", True ) ],
+                                                    [ "Decrease Labels Alpha", 'Ctrl+<', None, partial( self.update_image_alpha, "labels", False ) ],
+                                                    [ "Increase Band Alpha",   'Alt+>',  None, partial( self.update_image_alpha, "bands", True ) ],
+                                                    [ "Decrease Band Alpha",   'Alt+<',  None, partial( self.update_image_alpha, "bands", False ) ] ] )
+
+        atexit.register(self.exit)
+
+    def getSelectionPanel(self):
+        return ipw.Box([self.selection_label, self.selection])
+
+    def initLabels(self):
+        nodata_value = -2
+        template = self.block.data[0].squeeze( drop=True )
+        self.label_map: xa.DataArray = xa.full_like( template, -1, dtype=np.dtype(np.int32) ).where( template.notnull(), nodata_value )
+        self.label_map.attrs['_FillValue'] = nodata_value
+        self.label_map.name = f"{self.block.data.name}_labels"
+        self.label_map.attrs[ 'long_name' ] = [ "labels" ]
+
+    def clearLabels( self):
+        if self.block is not None:
+             self.initLabels()
+     #        self.plot_markers_image()
+             if self.labels_image is not None:
+                self.labels_image.set_alpha(0.0)
 
     @exception_handled
     def create_selection_panel(self):
@@ -53,6 +85,10 @@ class MapManager(SCSingletonConfigurable):
         self.enable_region_selection( rselection )
         self.point_selection_enabled = (smode == 'select point')
 
+    @property
+    def selectionMode(self) -> str:
+        return self.selection.value
+
     def enable_region_selection(self, enabled: bool ):
         self.region_selection.set_enabled( enabled )
 
@@ -65,6 +101,27 @@ class MapManager(SCSingletonConfigurable):
             self.slider_cid = self.slider.on_changed(self._update)
 
     @exception_handled
+    def plot_overlay_image( self, image_data: np.ndarray = None ):
+        if image_data is not None:
+            lgm().log( f" plot image overlay, shape = {image_data.shape}, vrange = {[ image_data.min(), image_data.max() ]}, dtype = {image_data.dtype}" )
+            self._classification_data = image_data
+            self.labels_image.set_data(image_data)
+        self.labels_image.set_alpha(self.layers('overlay').visibility)
+        self.update_canvas()
+
+    def layer_image( self, name: str ):
+        if name   == "labels": img = self.labels_image
+        elif name == "bands":  img = self.image
+        else: raise Exception( f"Unknown Layer: {name}")
+        return img
+
+    def on_layer_change( self, layer: Layer ):
+        image = self.layer_image( layer.name )
+        image.set_alpha( layer.visibility )
+        lgm().log(f" image {layer.name} set alpha = {layer.visibility}" )
+        self.update_canvas()
+
+    @exception_handled
     def _update( self, val ):
         if self.slider is not None:
             tval = self.slider.val
@@ -74,12 +131,22 @@ class MapManager(SCSingletonConfigurable):
             self.update_plots()
 #            ufm().clear()
 
+    def update_image_alpha( self, layer: str, increase: bool, *args, **kwargs ):
+        self.layers(layer).increment( increase )
+
     @exception_handled
     def update_plots(self):
+        from spectraclass.data.base import DataManager, dm
         if self.image is not None:
             fdata: xa.DataArray = self.frame_data
             if fdata is not None:
                 self.image.set_data(fdata.values)
+                self.image.set_alpha(self.layers('bands').visibility)
+#                drange = dms().get_color_bounds( frame_data )
+#                self.image.set_norm( Normalize( **drange ) )
+                plot_name = os.path.basename(dm().dsid())
+                self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
+                self.plot_axes.title.set_fontsize( 8 )
                 self.update_canvas()
 
     def update_canvas(self):
@@ -154,12 +221,19 @@ class MapManager(SCSingletonConfigurable):
         return self.base.gax.figure.canvas
 
     def init_map(self,**kwargs):
-        self.image: AxesImage = self.frame_data.plot.imshow( ax=self.base.gax, alpha=0.3)
+        self.image: AxesImage = self.frame_data.plot.imshow( ax=self.base.gax, alpha=self.layers('bands').visibility )
         self.add_slider(**kwargs)
 
+    def __del__(self):
+        self.exit()
+
+    def exit(self):
+        pass
+
 if __name__ == '__main__':
-    dm: DataManager = DataManager.initialize("demo2", 'desis')
-    dm.loadCurrentProject("main")
+    from spectraclass.data.base import DataManager, dm
+    dmgr: DataManager = DataManager.initialize("demo2", 'desis')
+    dmgr.loadCurrentProject("main")
     classes = [('Class-1', "cyan"), ('Class-2', "green"), ('Class-3', "magenta"), ('Class-4', "blue")]
     lm().setLabels(classes)
 

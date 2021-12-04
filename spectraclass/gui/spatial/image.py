@@ -33,6 +33,7 @@ class TileServiceImage(AxesImage):
         super().__init__(ax, **kwargs)
         self.projection = projection
         self.cache = []
+        self.current_extent = []
 
         self.axes.figure.canvas.mpl_connect('button_press_event', self.on_press)
         self.axes.figure.canvas.mpl_connect('button_release_event', self.on_release)
@@ -62,11 +63,13 @@ class TileServiceImage(AxesImage):
 
         window_extent = self.axes.get_window_extent()
         [x1, y1], [x2, y2] = self.axes.viewLim.get_points()
-        if not self.user_is_interacting:
+        extent_changed = ( self.current_extent != [x1, y1, x2, y2] )
+        if (not self.user_is_interacting) and extent_changed:
             t1 = time.time()
             lgm().log("TileServiceImage.FETCH START")
             located_images = self.raster_source.fetch_raster( self.projection, extent=[x1, x2, y1, y2], target_resolution=(window_extent.width, window_extent.height))
             self.cache = located_images
+            self.current_extent = [x1, y1, x2, y2]
             lgm().log(f"TileServiceImage.FETCH END, time = {time.time()-t1}")
 
         for img, extent in self.cache:
