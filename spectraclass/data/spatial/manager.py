@@ -25,7 +25,7 @@ def dm():
 #         self.file_name = file_name
 #         self.names = None
 #         self.colors = None
-#         self.markers = None
+#         self.points_selection = None
 #         self.config = config
 #
 #     @property
@@ -38,15 +38,15 @@ def dm():
 #
 #     @property
 #     def hasData(self):
-#         return self.markers is not None
+#         return self.points_selection is not None
 #
-#     def writeMarkers(self, names, colors, markers ):
+#     def writeMarkers(self, names, colors, points_selection ):
 #         try:
 #             with open( self.file_path, 'wb' ) as f:
-#                 print( f"Saving {len(markers)} labeled points to file {self.file_path}")
-#                 pickle.dump( [ names, colors, markers ], f )
+#                 print( f"Saving {len(points_selection)} labeled points to file {self.file_path}")
+#                 pickle.dump( [ names, colors, points_selection ], f )
 #         except Exception as err:
-#             print( f" Can't save markers: {err}")
+#             print( f" Can't save points_selection: {err}")
 #
 #     def readMarkers(self):
 #         try:
@@ -57,9 +57,9 @@ def dm():
 #                     if label_data:
 #                         self.names = label_data[0]
 #                         self.colors = label_data[1]
-#                         self.markers = label_data[2]
+#                         self.points_selection = label_data[2]
 #         except Exception as err:
-#             print( f" Can't read markers: {err}" )
+#             print( f" Can't read points_selection: {err}" )
 
 
 class SpatialDataManager(ModeDataManager):

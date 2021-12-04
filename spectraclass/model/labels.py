@@ -236,13 +236,13 @@ class LabelsManager(SCSingletonConfigurable):
         for marker in self.markers: marker.deletePid( pid )
 
     # def clearMarkerConflicts(self, m: Marker):
-    #     markers = []
+    #     points_selection = []
     #     for marker in self._markers:
     #         if marker.cid != m.cid:
     #             marker.deletePids( marker.pids )
     #         if (not marker.isEmpty()):
-    #             markers.append( marker )
-    #     self._markers = markers
+    #             points_selection.append( marker )
+    #     self._markers = points_selection
 
     def clearTransientMarkers(self, m: Marker):
         if len(self.markers) > 0:

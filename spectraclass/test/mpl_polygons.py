@@ -37,7 +37,7 @@ class PolygonInteractor:
 
     Key-bindings
 
-      't' toggle vertex markers on and off.  When vertex markers are on,
+      't' toggle vertex points_selection on and off.  When vertex points_selection are on,
           you can move them, delete them
 
       'd' delete the vertex under point

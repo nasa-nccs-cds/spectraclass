@@ -3,7 +3,10 @@ import numpy as np
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import logging, os
 from matplotlib.figure import Figure
+from matplotlib.backend_bases import NavigationToolbar2, _Mode
+from matplotlib.backend_bases import PickEvent, MouseButton  # , NavigationToolbar2
 from functools import partial
+from spectraclass.gui.spatial.widgets.markers import MarkerManager
 from matplotlib.image import AxesImage
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from matplotlib.axes import Axes
@@ -12,7 +15,7 @@ from spectraclass.gui.spatial.basemap import TileServiceBasemap
 from spectraclass.widgets.polygons import PolygonInteractor, Polygon
 import matplotlib.pyplot as plt
 import ipywidgets as ipw
-import math, atexit, os, traceback
+import math, atexit, os, traceback, time
 from collections import OrderedDict
 from spectraclass.gui.spatial.widgets.layers import LayersManager, Layer
 from spectraclass.model.labels import LabelsManager, lm
@@ -20,7 +23,7 @@ from matplotlib.image import AxesImage
 from spectraclass.xext.xgeo import XGeo
 from spectraclass.widgets.slider import PageSlider
 import traitlets as tl
-from spectraclass.model.base import SCSingletonConfigurable
+from spectraclass.model.base import SCSingletonConfigurable, Marker
 from spectraclass.data.spatial.tile.tile import Block, Tile
 
 def mm(**kwargs) -> "MapManager":
@@ -38,13 +41,17 @@ class MapManager(SCSingletonConfigurable):
         self._debug = False
         self.currentFrame = 0
         self.block: Block = None
+        self._adding_marker = False
+        self.points_selection: MarkerManager = None
         self.use_model_data = False
+        self._cidpress = -1
+        self._cidrelease = -1
         self.layers = LayersManager( self.on_layer_change )
         self.slider: Optional[PageSlider] = None
         self.image: Optional[AxesImage] = None
+        self.label_map: Optional[xa.DataArray] = None     # Map of classification labels from ML
         self.region_selection: PolygonInteractor = None
         self.labels_image: Optional[AxesImage] = None
-        self.point_selection_enabled = False
         self.layers.add('bands', 1.0, True)
         self.layers.add('labels', 0.5, False)
         self.create_selection_panel()
@@ -52,11 +59,13 @@ class MapManager(SCSingletonConfigurable):
                                                     [ "Decrease Labels Alpha", 'Ctrl+<', None, partial( self.update_image_alpha, "labels", False ) ],
                                                     [ "Increase Band Alpha",   'Alt+>',  None, partial( self.update_image_alpha, "bands", True ) ],
                                                     [ "Decrease Band Alpha",   'Alt+<',  None, partial( self.update_image_alpha, "bands", False ) ] ] )
-
         atexit.register(self.exit)
 
     def getSelectionPanel(self):
         return ipw.Box([self.selection_label, self.selection])
+
+    def labels_dset(self):
+        return xa.Dataset( self.label_map )
 
     def initLabels(self):
         nodata_value = -2
@@ -69,28 +78,32 @@ class MapManager(SCSingletonConfigurable):
     def clearLabels( self):
         if self.block is not None:
              self.initLabels()
-     #        self.plot_markers_image()
+             self.points_selection.plot()
              if self.labels_image is not None:
                 self.labels_image.set_alpha(0.0)
+
+    @property
+    def toolbarMode(self) -> str:
+        return self.toolbar.mode
+
+    @property
+    def toolbar(self) -> NavigationToolbar2:
+        return self.figure.canvas.toolbar
 
     @exception_handled
     def create_selection_panel(self):
         self.selection_label = ipw.Label(value='Selection Operation:')
-        self.selection = ipw.RadioButtons(  options=['spectral graph', 'select point', 'select region'], disabled=False, layout={'width': 'max-content'} )
+        self.selection = ipw.RadioButtons(  options=['select point', 'select region'], disabled=False, layout={'width': 'max-content'} )
         self.selection.observe( self.set_selection_mode, "value" )
 
     def set_selection_mode( self, event: Dict ):
         smode = event['new']
-        rselection = (smode == 'select region')
-        self.enable_region_selection( rselection )
-        self.point_selection_enabled = (smode == 'select point')
+        self.region_selection.set_enabled( smode == 'select region' )
+        self.points_selection.set_enabled( smode == 'select point' )
 
     @property
     def selectionMode(self) -> str:
         return self.selection.value
-
-    def enable_region_selection(self, enabled: bool ):
-        self.region_selection.set_enabled( enabled )
 
     def set_region_color(self, color: str ):
         self.region_selection.set_color(color)
@@ -203,6 +216,8 @@ class MapManager(SCSingletonConfigurable):
         tm = TileManager.instance()
         self.block: Block = tm.getBlock()
         if self.block is not None:
+            if self.points_selection is not None:
+                self.points_selection.set_block(self.block)
             self.nFrames = self.data.shape[0]
             self.band_axis = kwargs.pop('band', 0)
             self.z_axis_name = self.data.dims[self.band_axis]
@@ -218,11 +233,18 @@ class MapManager(SCSingletonConfigurable):
         self.base.setup_plot( (x0,x1), (y0,y1), **kwargs )
         self.init_map(**kwargs)
         self.region_selection = PolygonInteractor( self.base.gax )
+        self.points_selection = MarkerManager( self.base.gax, self.block )
         return self.base.gax.figure.canvas
+
+    def plot_markers_image(self):
+        self.points_selection.plot()
 
     def init_map(self,**kwargs):
         self.image: AxesImage = self.frame_data.plot.imshow( ax=self.base.gax, alpha=self.layers('bands').visibility )
         self.add_slider(**kwargs)
+        self.initLabels()
+     #   self._cidrelease = self.image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
+     #   self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
 
     def __del__(self):
         self.exit()

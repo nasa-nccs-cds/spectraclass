@@ -270,7 +270,7 @@ class MapManager(SCSingletonConfigurable):
 
     # def updateLabelsFromMarkers(self):
     #     lm().clearTransient()
-    #     for marker in lm().markers:
+    #     for marker in lm().points_selection:
     #         for pid in marker.pids:
     #             coords = self.block.pindex2coords(pid)
     #             index = self.block.coords2indices( coords['y'], coords['x'] )
@@ -496,7 +496,7 @@ class MapManager(SCSingletonConfigurable):
     def update_image_alpha( self, layer: str, increase: bool, *args, **kwargs ):
         self.layers(layer).increment( increase )
 
-    def get_markers( self ) -> Tuple[ List[float], List[float], List[List[float]] ]:
+    def get_markers( self ) -> Tuple[ List[float], List[float], List[str] ]:
         ycoords, xcoords, colors, markers = [], [], [], lm().markers
         lgm().log(f" ** get_markers, #markers = {len(markers)}")
         for marker in markers:
@@ -544,15 +544,8 @@ class MapManager(SCSingletonConfigurable):
         lgm().log( "update_canvas" )
         self.figure.canvas.draw_idle()
 
-    def mpl_pick_marker( self, event: PickEvent ):
-        rightButton: bool = event.mouseevent.button == MouseButton.RIGHT
-        if ( event.name == "pick_event" ) and ( event.artist == self.marker_plot ) and rightButton: #  and ( self.key_mode == Qt.Key_Shift ):
-            self.delete_marker( event.mouseevent.ydata, event.mouseevent.xdata )
-            self.update_plots()
 
-    def delete_marker(self, y, x ):
-        pindex = self.block.coords2pindex( y, x )
-        lm().deletePid( pindex )
+
 
     def initPlots(self, **kwargs) -> Optional[AxesImage]:
         if self.image is None:
@@ -580,9 +573,9 @@ class MapManager(SCSingletonConfigurable):
 
     # def initMarkersPlot(self):
     #     print( "Init Markers Plot")
-    #     self.marker_plot: PathCollection = self.plot_axes.scatter([], [], s=50, zorder=3, alpha=self.layers("labels").visibility, picker=True)
-    #     self.marker_plot.set_edgecolor([0, 0, 0])
-    #     self.marker_plot.set_linewidth(2)
+    #     self.points: PathCollection = self.plot_axes.scatter([], [], s=50, zorder=3, alpha=self.layers("labels").visibility, picker=True)
+    #     self.points.set_edgecolor([0, 0, 0])
+    #     self.points.set_linewidth(2)
     #     self.figure.canvas.mpl_connect('pick_event', self.mpl_pick_marker)
     #     self.plot_markers_image()
 
