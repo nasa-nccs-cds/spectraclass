@@ -2,9 +2,10 @@
 import xarray as xa
 import numpy as np
 from matplotlib.axes import Axes
-import contextlib
+import contextlib, time
 from typing import List, Optional, Dict, Tuple
 from matplotlib.image import AxesImage
+from spectraclass.util.logs import LogManager, lgm, exception_handled
 import matplotlib.artist
 
 def toXA( vname: str, nparray: np.ndarray, format="np", transpose = False ):
@@ -54,20 +55,26 @@ class TileServiceImage(AxesImage):
 
     @matplotlib.artist.allow_rasterization
     def draw(self, renderer, *args, **kwargs):
+        lgm().log("TileServiceImage.DRAW START")
+        t0 = time.time()
         if not self.get_visible():
             return
 
         window_extent = self.axes.get_window_extent()
         [x1, y1], [x2, y2] = self.axes.viewLim.get_points()
         if not self.user_is_interacting:
+            t1 = time.time()
+            lgm().log("TileServiceImage.FETCH START")
             located_images = self.raster_source.fetch_raster( self.projection, extent=[x1, x2, y1, y2], target_resolution=(window_extent.width, window_extent.height))
             self.cache = located_images
+            lgm().log(f"TileServiceImage.FETCH END, time = {time.time()-t1}")
 
         for img, extent in self.cache:
             self.set_array(img)
             with self.hold_limits():
                 self.set_extent(extent)
             super().draw(renderer, *args, **kwargs)
+        lgm().log(f"TileServiceImage.DRAW END, time = {time.time()-t0}")
 
     def can_composite(self):
         return False
