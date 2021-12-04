@@ -93,7 +93,7 @@ class ParametersManager(SCSingletonConfigurable):
         if title == "layers":
             widgets.append( mm().layers.gui() )
         if title == "selection":
-            widgets.append( mm().getSelectionPanel() )
+            widgets.append(mm().get_selection_panel())
         elif title == "reduction":
             widgets.append( dm().modal.getCreationPanel() )
         elif title == "embedding":

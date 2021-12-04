@@ -33,7 +33,7 @@ class PointsInteractor:
 
     def disable_callbacks(self):
         for cid in [ self._cidkey, self._cidpick, self._cidmouse ]:
-            self.canvas.mpl_diconnect( cid )
+            self.canvas.mpl_disconnect( cid )
 
     def get_points( self ) -> Tuple[ List[float], List[float], List[str] ]:
         lgm().log( f"Attempt to call unimplemented method PointsInteractor.get_markers")

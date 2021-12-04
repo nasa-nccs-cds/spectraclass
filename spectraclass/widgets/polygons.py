@@ -122,10 +122,9 @@ class PolygonInteractor:
             tbar._id_drag    = self.canvas.mpl_connect( 'motion_notify_event', tbar.mouse_move )
 
     @exception_handled
-    def set_enabled(self, enabled ):
+    def set_enabled(self, enabled: bool ):
         if enabled != self.enabled:
             self.enabled = enabled
-            lgm().log(f"set_enabled: {self.enabled}")
             self.update_callbacks()
 
     def set_color(self, color: str ):

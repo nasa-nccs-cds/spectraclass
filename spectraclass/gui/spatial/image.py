@@ -56,7 +56,7 @@ class TileServiceImage(AxesImage):
 
     @matplotlib.artist.allow_rasterization
     def draw(self, renderer, *args, **kwargs):
-        lgm().log("TileServiceImage.DRAW START")
+     #   lgm().log("TileServiceImage.DRAW START")
         t0 = time.time()
         if not self.get_visible():
             return
@@ -66,18 +66,18 @@ class TileServiceImage(AxesImage):
         extent_changed = ( self.current_extent != [x1, y1, x2, y2] )
         if (not self.user_is_interacting) and extent_changed:
             t1 = time.time()
-            lgm().log("TileServiceImage.FETCH START")
+    #        lgm().log("TileServiceImage.FETCH START")
             located_images = self.raster_source.fetch_raster( self.projection, extent=[x1, x2, y1, y2], target_resolution=(window_extent.width, window_extent.height))
             self.cache = located_images
             self.current_extent = [x1, y1, x2, y2]
-            lgm().log(f"TileServiceImage.FETCH END, time = {time.time()-t1}")
+    #        lgm().log(f"TileServiceImage.FETCH END, time = {time.time()-t1}")
 
         for img, extent in self.cache:
             self.set_array(img)
             with self.hold_limits():
                 self.set_extent(extent)
             super().draw(renderer, *args, **kwargs)
-        lgm().log(f"TileServiceImage.DRAW END, time = {time.time()-t0}")
+    #    lgm().log(f"TileServiceImage.DRAW END, time = {time.time()-t0}")
 
     def can_composite(self):
         return False

@@ -39,6 +39,7 @@ class MapManager(SCSingletonConfigurable):
     def __init__( self, **kwargs ):   # class_labels: [ [label, RGBA] ... ]
         super(MapManager, self).__init__()
         self._debug = False
+        self.base = None
         self.currentFrame = 0
         self.block: Block = None
         self._adding_marker = False
@@ -54,14 +55,14 @@ class MapManager(SCSingletonConfigurable):
         self.labels_image: Optional[AxesImage] = None
         self.layers.add('bands', 1.0, True)
         self.layers.add('labels', 0.5, False)
-        self.create_selection_panel()
         self.menu_actions = OrderedDict( Layers = [ [ "Increase Labels Alpha", 'Ctrl+>', None, partial( self.update_image_alpha, "labels", True ) ],
                                                     [ "Decrease Labels Alpha", 'Ctrl+<', None, partial( self.update_image_alpha, "labels", False ) ],
                                                     [ "Increase Band Alpha",   'Alt+>',  None, partial( self.update_image_alpha, "bands", True ) ],
                                                     [ "Decrease Band Alpha",   'Alt+<',  None, partial( self.update_image_alpha, "bands", False ) ] ] )
         atexit.register(self.exit)
 
-    def getSelectionPanel(self):
+    def get_selection_panel(self):
+        self.gui()
         return ipw.Box([self.selection_label, self.selection])
 
     def labels_dset(self):
@@ -93,13 +94,16 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def create_selection_panel(self):
         self.selection_label = ipw.Label(value='Selection Operation:')
-        self.selection = ipw.RadioButtons(  options=['select point', 'select region'], disabled=False, layout={'width': 'max-content'} )
+        self.select_modes = ['select point', 'select region']
+        self.selection = ipw.RadioButtons(  options=self.select_modes, disabled=False, layout={'width': 'max-content'} )
         self.selection.observe( self.set_selection_mode, "value" )
+        self.points_selection.set_enabled( True )
 
+    @exception_handled
     def set_selection_mode( self, event: Dict ):
         smode = event['new']
-        self.region_selection.set_enabled( smode == 'select region' )
-        self.points_selection.set_enabled( smode == 'select point' )
+        self.points_selection.set_enabled( smode == self.select_modes[0] )
+        self.region_selection.set_enabled( smode == self.select_modes[1] )
 
     @property
     def selectionMode(self) -> str:
@@ -227,13 +231,15 @@ class MapManager(SCSingletonConfigurable):
             self.y_axis_name = self.data.dims[self.y_axis]
 
     def gui(self,**kwargs):
-        self.setBlock()
-        self.base = TileServiceBasemap()
-        [x0, x1, y0, y1] = self.block.extent()
-        self.base.setup_plot( (x0,x1), (y0,y1), **kwargs )
-        self.init_map(**kwargs)
-        self.region_selection = PolygonInteractor( self.base.gax )
-        self.points_selection = MarkerManager( self.base.gax, self.block )
+        if self.base is None:
+            self.setBlock()
+            self.base = TileServiceBasemap()
+            [x0, x1, y0, y1] = self.block.extent()
+            self.base.setup_plot( (x0,x1), (y0,y1), **kwargs )
+            self.init_map(**kwargs)
+            self.region_selection = PolygonInteractor( self.base.gax )
+            self.points_selection = MarkerManager( self.base.gax, self.block )
+            self.create_selection_panel()
         return self.base.gax.figure.canvas
 
     def plot_markers_image(self):
