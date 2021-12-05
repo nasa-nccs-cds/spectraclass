@@ -204,7 +204,7 @@ class TableManager(SCSingletonConfigurable):
     def broadcast_selection_event(self, pids: List[int] ):
         from spectraclass.application.controller import app
         from spectraclass.model.labels import lm
-        from spectraclass.model.base import Marker
+        from spectraclass.gui.spatial.widgets.markers import Marker
 # if self._broadcast_selection_events:
         item_str = "" if len(pids) > 8 else f",  pids={pids}"
         lgm().log(f" **TABLE-> gui.selection_changed, nitems={len(pids)}{item_str}")

@@ -199,7 +199,7 @@ class LabelsManager(SCSingletonConfigurable):
             self.template.attrs = point_data.attrs
 
     @property
-    def markers(self):
+    def markers(self) -> List[Marker]:
         return [ a["marker"] for a in self._actions if a.type == "mark" ]
 
     def getMarker( self, pid: int ) -> Optional[Marker]:

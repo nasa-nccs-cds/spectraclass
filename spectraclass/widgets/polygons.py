@@ -210,7 +210,6 @@ class PolygonInteractor:
     @exception_handled
     def on_key_press(self, event: KeyEvent ):
         if event.inaxes:
-            lgm().log( f'on_key_press: {event.key}')
             if event.key == 'backspace':  self.delete_selection()
 
     @exception_handled

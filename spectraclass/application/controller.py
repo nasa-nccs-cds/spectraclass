@@ -3,7 +3,7 @@ from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 from typing import List, Union, Tuple, Optional, Dict, Callable
 from spectraclass.gui.control import UserFeedbackManager, ufm
-from spectraclass.model.base import Marker
+from spectraclass.gui.spatial.widgets.markers import Marker
 import numpy as np
 import xarray as xa
 

@@ -8,7 +8,7 @@ from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import xarray as xa
 import traitlets as tl
-from spectraclass.model.base import SCSingletonConfigurable, Marker
+from spectraclass.model.base import SCSingletonConfigurable
 
 def invert( X: np.ndarray ) -> np.ndarray:
     return X.max() - X

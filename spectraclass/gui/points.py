@@ -7,7 +7,7 @@ import numpy.ma as ma
 import ipywidgets as ip
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import traitlets as tl
-from spectraclass.model.base import SCSingletonConfigurable, Marker
+from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.model.labels import LabelsManager, lm
 
 def pcm() -> "PointCloudManager":

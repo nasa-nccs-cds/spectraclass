@@ -1,56 +1,8 @@
 import traitlets.config as tlc
 import os, logging, numpy as np
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type, Iterable
+from spectraclass.util.logs import LogManager, lgm, exception_handled
 from traitlets.config.loader import Config
-
-def pid( instance ): return hex(id(instance))[-4:]
-
-class Marker:
-    def __init__(self, pids: Union[np.ndarray,Iterable], cid: int, **kwargs ):
-        self.cid = cid
-        self.args = kwargs
-        self._pids: np.ndarray = pids if isinstance( pids, np.ndarray ) else np.array(pids)
-
-    @property
-    def pids(self) -> np.ndarray:
-        return self._pids
-
-    def isTransient(self):
-        return self.cid == 0
-
-    def __eq__(self, m ):
-        return isinstance( m, Marker ) and ( m.cid == self.cid ) and ( m.pids.tolist() == self._pids.tolist() )
-
-    def __ne__(self, m ):
-        return not self.__eq__( m )
-
-    @property
-    def size(self):
-        return self._pids.size
-
-    def isEmpty(self):
-        return self._pids.size == 0
-
-    def deletePid( self, pid: int ) -> bool:
-        try:
-            self._pids = self._pids[ self._pids != pid ]
-            return True
-        except: return False
-
-    def deletePids( self, dpids: np.ndarray ) -> bool:
-        try:
-            self._pids = np.setdiff1d( self._pids, dpids )
-            return True
-        except: return False
-
-    def tostr(self):
-        return self.__repr__()
-
-    def __repr__(self):
-        if self.size > 10:
-            return f"Marker[{self.cid}]-{self.size} )"
-        else:
-            return f"Marker[{self.cid}]: {self._pids.tolist()} )"
 
 class SCSingletonConfigurable(tlc.Configurable):
     config_instances: List["SCSingletonConfigurable"] = []

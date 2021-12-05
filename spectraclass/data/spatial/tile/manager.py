@@ -9,7 +9,8 @@ import os, math, pickle, json
 import cartopy.crs as ccrs
 import traitlets.config as tlc
 import traitlets as tl
-from spectraclass.model.base import SCSingletonConfigurable, Marker
+from spectraclass.model.base import SCSingletonConfigurable
+from spectraclass.gui.spatial.widgets.markers import Marker
 from .tile import Tile, Block
 
 def get_rounded_dims( master_shape: List[int], subset_shape: List[int] ) -> List[int]:

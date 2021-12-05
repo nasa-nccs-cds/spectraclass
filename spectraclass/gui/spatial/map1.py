@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from spectraclass.model.labels import LabelsManager, lm
-from spectraclass.model.base import SCSingletonConfigurable, Marker
+from spectraclass.model.base import SCSingletonConfigurable
+from spectraclass.gui.spatial.widgets.markers import Marker
 from functools import partial
 from cartopy.mpl.geoaxes import GeoAxes
 from spectraclass.widgets.polygons import PolygonInteractor

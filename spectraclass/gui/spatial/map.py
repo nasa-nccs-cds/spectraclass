@@ -23,7 +23,7 @@ from matplotlib.image import AxesImage
 from spectraclass.xext.xgeo import XGeo
 from spectraclass.widgets.slider import PageSlider
 import traitlets as tl
-from spectraclass.model.base import SCSingletonConfigurable, Marker
+from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.data.spatial.tile.tile import Block, Tile
 
 def mm(**kwargs) -> "MapManager":

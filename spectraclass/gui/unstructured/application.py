@@ -2,7 +2,7 @@ import os, ipywidgets as ipw
 import traitlets.config as tlc
 from spectraclass.util.logs import LogManager, lgm
 from spectraclass.application.controller import SpectraclassController
-from spectraclass.model.base import  Marker
+from spectraclass.gui.spatial.widgets.markers import Marker
 
 class Spectraclass(SpectraclassController):
 

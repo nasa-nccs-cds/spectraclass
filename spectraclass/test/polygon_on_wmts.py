@@ -14,7 +14,7 @@ from matplotlib.collections import QuadMesh
 from spectraclass.xext.xgeo import XGeo
 from collections import OrderedDict
 from spectraclass.model.labels import LabelsManager, lm
-from spectraclass.model.base import SCSingletonConfigurable, Marker
+from spectraclass.model.base import SCSingletonConfigurable
 from functools import partial
 from cartopy.mpl.geoaxes import GeoAxes
 from spectraclass.widgets.polygons import PolygonInteractor

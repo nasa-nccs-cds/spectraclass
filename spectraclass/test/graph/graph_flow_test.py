@@ -2,7 +2,7 @@ from spectraclass.data.base import DataManager
 from spectraclass.gui.spatial.application import Spectraclass
 from spectraclass.gui.points import PointCloudManager
 from spectraclass.model.labels import LabelsManager
-from spectraclass.model.base import Marker
+from spectraclass.gui.spatial.widgets.markers import Marker
 import xarray as xa
 
 app = Spectraclass.instance()
