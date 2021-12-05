@@ -3,7 +3,7 @@ from matplotlib.lines import Line2D
 from matplotlib.artist import Artist
 from matplotlib.patches import Polygon
 from spectraclass.util.logs import LogManager, lgm, exception_handled
-from matplotlib.backend_bases import MouseEvent
+from matplotlib.backend_bases import MouseEvent, KeyEvent
 import logging, os
 from typing import List, Union, Tuple, Optional, Dict, Callable
 
@@ -99,6 +99,7 @@ class PolygonInteractor:
         self.canvas = ax.figure.canvas
         self.canvas.mpl_connect('key_press_event', self.on_key_press)
         self.canvas.mpl_connect('draw_event', self.on_draw)
+        self.poly_index = 0
         self.cids = []
 
     def update_callbacks(self):
@@ -106,6 +107,7 @@ class PolygonInteractor:
         if self.enabled:
             self.cids.append(self.canvas.mpl_connect('button_press_event', self.on_button_press))
             self.cids.append(self.canvas.mpl_connect('button_release_event', self.on_button_release))
+            self.cids.append(self.canvas.mpl_connect('key_press_event', self.on_key_press))
             self.cids.append(self.canvas.mpl_connect('motion_notify_event', self.on_mouse_move))
         else:
             for cid in self.cids:  self.canvas.mpl_disconnect(cid)
@@ -133,8 +135,8 @@ class PolygonInteractor:
     def add_poly( self, event ):
         if not self.in_poly(event):
             x, y = event.xdata, event.ydata
-            pid = len(self.polys)
-            self.prec = PolyRec( pid, self.ax, x, y, self._fill_color, self.poly_changed )
+            self.poly_index = self.poly_index + 1
+            self.prec = PolyRec( self.poly_index, self.ax, x, y, self._fill_color, self.poly_changed )
             self.polys.append( self.prec )
             self.creating = True
         return self.prec
@@ -163,6 +165,14 @@ class PolygonInteractor:
         for prec in self.polys:
             prec.set_selected( prec.pid == selected_pid )
         self.draw()
+
+    def delete_selection(self):
+        if self.prec is not None:
+            self.polys.remove( self.prec )
+            self.prec.poly.remove()
+            self.prec.line.remove()
+            self.prec = None
+            self.canvas.draw_idle()
 
     def close_poly(self):
         self.prec.complete()
@@ -198,11 +208,10 @@ class PolygonInteractor:
             self.editing = False
 
     @exception_handled
-    def on_key_press(self, event):
-        if not event.inaxes:
-            return
-        if   event.key == 'w':  self.set_enabled( True )
-        elif event.key == 'x':  self.set_enabled( False )
+    def on_key_press(self, event: KeyEvent ):
+        if event.inaxes:
+            lgm().log( f'on_key_press: {event.key}')
+            if event.key == 'backspace':  self.delete_selection()
 
     @exception_handled
     def on_mouse_move(self, event):
