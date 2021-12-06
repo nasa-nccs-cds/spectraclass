@@ -78,7 +78,7 @@ class mplGraphPlot:
     def update_graph(self, xs: List[ np.ndarray ], ys: List[ np.ndarray ], **kwargs ):
         self.clear()
         for x, y in zip(xs,ys):
-            lgm().log( f"Plotting line, xs = {x.shape}, ys = {y.shape}, xrange = {[x.min(),x.max()]}, yrange = {[y.min(),y.max()]}")
+            lgm().log( f"Plotting line, xs = {x.shape}, ys = {y.shape}, xrange = {[x.min(),x.max()]}, yrange = {[y.min(),y.max()]}, args = {kwargs}")
             line, = self.ax.plot( x, y, **kwargs )
             self.lines.append(line)
         self.fig.canvas.draw()
@@ -155,13 +155,13 @@ class GraphPlotManager(SCSingletonConfigurable):
         return self._graphs[ self._wGui.selected_index ]
 
     @exception_handled
-    def plot_graph( self, pids: List[int] = None ):
+    def plot_graph( self, pids: List[int] = None, **kwargs ):
         from spectraclass.model.labels import LabelsManager, lm
         if pids is None: pids = lm().getPids()
         current_graph: mplGraphPlot = self.current_graph()
         if current_graph is not None:
             current_graph.select_items( pids )
-            current_graph.plot( )
+            current_graph.plot( **kwargs )
 
     def _createGui( self, **kwargs ) -> ipw.Tab():
         wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 500px' ) )

@@ -192,7 +192,7 @@ class SpectraclassController(SCSingletonConfigurable):
         lm().addMarkerAction( "app", marker )
         pids: List[int] = np.concatenate( [ marker.pids[np.where(marker.pids >= 0)] for marker in lm().markers ] ).tolist()
         lgm().log(f"  ----> Controller[{self.__class__.__name__}] -> ADD MARKER, pids = {pids} ")
-        gpm().plot_graph(pids)
+        gpm().plot_graph( pids, color=lm().current_color )
         if self.pcm_active: pcm().update_marked_points(marker.cid)
         lm().log_markers("post-add_marker")
 

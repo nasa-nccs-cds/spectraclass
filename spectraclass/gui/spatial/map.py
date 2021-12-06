@@ -2,6 +2,7 @@ import xarray as xa
 import numpy as np
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import logging, os
+from matplotlib.colors import Normalize
 from matplotlib.figure import Figure
 from matplotlib.backend_bases import NavigationToolbar2, _Mode
 from matplotlib.backend_bases import PickEvent, MouseButton  # , NavigationToolbar2
@@ -35,6 +36,7 @@ class MapManager(SCSingletonConfigurable):
     RIGHT_BUTTON = 3
     MIDDLE_BUTTON = 2
     LEFT_BUTTON = 1
+    colorstretch = 1.5
 
     def __init__( self, **kwargs ):   # class_labels: [ [label, RGBA] ... ]
         super(MapManager, self).__init__()
@@ -156,12 +158,18 @@ class MapManager(SCSingletonConfigurable):
             tval = self.slider.val
             self.currentFrame = int( tval )
             lgm().log(f"Slider Update, frame = {self.currentFrame}")
-#            ufm().show( f"Loading frame {self.currentFrame}", "yellow" )
             self.update_plots()
-#            ufm().clear()
 
     def update_image_alpha( self, layer: str, increase: bool, *args, **kwargs ):
         self.layers(layer).increment( increase )
+
+    def get_color_bounds( self, raster: xa.DataArray ):
+        ave = raster.mean(skipna=True).values
+        std = raster.std(skipna=True).values
+        if std == 0.0:
+            msg =  "This block does not appear to contain any data.  Suggest trying a different tile/block."
+            ufm().show( msg, "red" ); lgm().log( "\n" +  msg + "\n"  )
+        return dict( vmin= ave - std * self.colorstretch, vmax= ave + std * self.colorstretch  )
 
     @exception_handled
     def update_plots(self):
@@ -171,8 +179,8 @@ class MapManager(SCSingletonConfigurable):
             if fdata is not None:
                 self.image.set_data(fdata.values)
                 self.image.set_alpha(self.layers('bands').visibility)
-#                drange = dms().get_color_bounds( frame_data )
-#                self.image.set_norm( Normalize( **drange ) )
+                drange = self.get_color_bounds( fdata )
+                self.image.set_norm( Normalize( **drange ) )
                 plot_name = os.path.basename(dm().dsid())
                 self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
                 self.plot_axes.title.set_fontsize( 8 )
@@ -258,7 +266,7 @@ class MapManager(SCSingletonConfigurable):
         self.points_selection.plot()
 
     def init_map(self,**kwargs):
-        self.image: AxesImage = self.frame_data.plot.imshow( ax=self.base.gax, alpha=self.layers('bands').visibility )
+        self.image: AxesImage = self.frame_data.plot.imshow( ax=self.base.gax, alpha=self.layers('bands').visibility, cmap='jet' )
         self.add_slider(**kwargs)
         self.initLabels()
      #   self._cidrelease = self.image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
