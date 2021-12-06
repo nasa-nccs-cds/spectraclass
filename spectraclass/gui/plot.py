@@ -161,8 +161,7 @@ class GraphPlotManager(SCSingletonConfigurable):
         current_graph: mplGraphPlot = self.current_graph()
         if current_graph is not None:
             current_graph.select_items( pids )
-            lmc = lm().current_color
-            current_graph.plot( ) # color='black' if (lmc=='white') else lmc )
+            current_graph.plot( )
 
     def _createGui( self, **kwargs ) -> ipw.Tab():
         wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 500px' ) )

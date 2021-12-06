@@ -190,7 +190,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.gui.points import PointCloudManager, pcm
         lm().addMarkerAction( "app", marker )
-        pids = marker.pids[np.where(marker.pids >= 0)]
+        pids: List[int] = np.concatenate( [ marker.pids[np.where(marker.pids >= 0)] for marker in lm().markers ] ).tolist()
         lgm().log(f"  ----> Controller[{self.__class__.__name__}] -> ADD MARKER, pids = {pids} ")
         gpm().plot_graph(pids)
         if self.pcm_active: pcm().update_marked_points(marker.cid)
