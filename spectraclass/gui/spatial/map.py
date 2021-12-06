@@ -94,16 +94,28 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def create_selection_panel(self):
         self.selection_label = ipw.Label(value='Selection Operation:')
-        self.select_modes = ['select point', 'select region']
+        self.select_modes = [ 'explore', 'select point', 'select region' ]
         self.selection = ipw.RadioButtons(  options=self.select_modes, disabled=False, layout={'width': 'max-content'} )
         self.selection.observe( self.set_selection_mode, "value" )
-        self.points_selection.set_enabled( True )
+        self.points_selection.set_enabled( False )
+        self.region_selection.set_enabled( False )
 
     @exception_handled
     def set_selection_mode( self, event: Dict ):
         smode = event['new']
-        self.points_selection.set_enabled( smode == self.select_modes[0] )
-        self.region_selection.set_enabled( smode == self.select_modes[1] )
+        self.set_navigation_enabled(       smode == self.select_modes[0] )
+        self.points_selection.set_enabled( smode == self.select_modes[1] )
+        self.region_selection.set_enabled( smode == self.select_modes[2] )
+
+    def set_navigation_enabled(self, enabled: bool ):
+        from matplotlib.backend_bases import NavigationToolbar2, _Mode
+        tbar: NavigationToolbar2 = self.toolbar
+        canvas = self.figure.canvas
+        for cid in [tbar._id_press, tbar._id_release, tbar._id_drag]: canvas.mpl_disconnect(cid)
+        if enabled:
+            tbar._id_press   = canvas.mpl_connect( 'button_press_event', tbar._zoom_pan_handler )
+            tbar._id_release = canvas.mpl_connect( 'button_release_event', tbar._zoom_pan_handler )
+            tbar._id_drag    = canvas.mpl_connect( 'motion_notify_event', tbar.mouse_move )
 
     @property
     def selectionMode(self) -> str:

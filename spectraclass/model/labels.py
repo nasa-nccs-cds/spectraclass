@@ -7,7 +7,8 @@ import matplotlib.colors as mcolors
 from ..graph.manager import ActivationFlow
 import traitlets.config as tlc
 from spectraclass.util.logs import LogManager, lgm, exception_handled
-from spectraclass.model.base import SCSingletonConfigurable, Marker
+from spectraclass.model.base import SCSingletonConfigurable
+from spectraclass.gui.spatial.widgets.markers import Marker
 import xarray as xa
 import numpy as np
 

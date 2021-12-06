@@ -207,7 +207,7 @@ class TableManager(SCSingletonConfigurable):
         from spectraclass.gui.spatial.widgets.markers import Marker
 # if self._broadcast_selection_events:
         item_str = "" if len(pids) > 8 else f",  pids={pids}"
-        lgm().log(f" **TABLE-> gui.selection_changed, nitems={len(pids)}{item_str}")
+        lgm().log( f" **TABLE-> gui.selection_changed, nitems={len(pids)}{item_str}" )
         cid = lm().current_cid if self.mark_on_selection else 0
         app().add_marker( "table", Marker( pids, cid ) )
 

@@ -15,11 +15,11 @@ class PointsInteractor:
 
     def set_enabled(self, enable: bool ):
         self._enabled = enable
+        lgm().log(f"PointsInteractor.set_enabled: {enable}")
         if enable:  self.enable_callbacks()
         else:       self.disable_callbacks()
 
     def init_plot(self):
-        print( "Init Markers Plot")
         self.points: PathCollection = self.ax.scatter([], [], s=50, zorder=3, alpha=1.0, picker=True)
         self.points.set_edgecolor([0, 0, 0])
         self.points.set_linewidth(2)

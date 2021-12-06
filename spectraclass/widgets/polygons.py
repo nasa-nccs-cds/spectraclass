@@ -103,7 +103,6 @@ class PolygonInteractor:
         self.cids = []
 
     def update_callbacks(self):
-        self.update_navigation()
         if self.enabled:
             self.cids.append(self.canvas.mpl_connect('button_press_event', self.on_button_press))
             self.cids.append(self.canvas.mpl_connect('button_release_event', self.on_button_release))
@@ -112,16 +111,6 @@ class PolygonInteractor:
         else:
             for cid in self.cids:  self.canvas.mpl_disconnect(cid)
             self.cids = []
-
-    def update_navigation(self):
-        from matplotlib.backend_bases import NavigationToolbar2, _Mode
-        tbar: NavigationToolbar2 = self.canvas.toolbar
-        for cid in [tbar._id_press, tbar._id_release, tbar._id_drag]:
-            self.canvas.mpl_disconnect(cid)
-        if not self.enabled:
-            tbar._id_press   = self.canvas.mpl_connect( 'button_press_event', tbar._zoom_pan_handler )
-            tbar._id_release = self.canvas.mpl_connect( 'button_release_event', tbar._zoom_pan_handler )
-            tbar._id_drag    = self.canvas.mpl_connect( 'motion_notify_event', tbar.mouse_move )
 
     @exception_handled
     def set_enabled(self, enabled: bool ):

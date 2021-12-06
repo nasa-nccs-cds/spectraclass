@@ -1,7 +1,6 @@
 from spectraclass.widgets.points import PointsInteractor
 from matplotlib.backend_bases import PickEvent, MouseButton  # , NavigationToolbar2
 from spectraclass.data.spatial.tile.tile import Block
-from spectraclass.model.labels import LabelsManager, lm
 import os, logging, numpy as np
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type, Iterable
 from spectraclass.util.logs import LogManager, lgm, exception_handled
@@ -72,13 +71,14 @@ class MarkerManager( PointsInteractor ):
         self._block = block
 
     def delete_marker(self, y, x ):
+        from spectraclass.model.labels import LabelsManager, lm
         pindex = self._block.coords2pindex( y, x )
         lgm().log( f" delete_marker: pid = {pindex}" )
         lm().deletePid( pindex )
 
     def get_points( self ) -> Tuple[ List[float], List[float], List[str] ]:
+        from spectraclass.model.labels import LabelsManager, lm
         ycoords, xcoords, colors, markers = [], [], [], lm().markers
-        lgm().log(f" ** get_markers, #markers = {len(markers)}")
         for marker in markers:
             for pid in marker.pids:
                 coords = self._block.pindex2coords( pid )
@@ -88,11 +88,12 @@ class MarkerManager( PointsInteractor ):
                     colors.append( lm().colors[marker.cid] )
         return ycoords, xcoords, colors
 
-    def on_pick( self, event: PickEvent ):
-        rightButton: bool = event.mouseevent.button == MouseButton.RIGHT
-        if ( event.name == "pick_event" ) and ( event.artist == self.points ) and rightButton: #  and ( self.key_mode == Qt.Key_Shift ):
-            self.delete_marker( event.mouseevent.ydata, event.mouseevent.xdata )
-            self.plot()
+    # def on_pick( self, event: PickEvent ):
+    #     rightButton: bool = event.mouseevent.button == MouseButton.RIGHT
+    #     lgm().log(f"\n ** on_pick, rightButton = {rightButton}, inpoints = {( event.artist == self.points )}")
+    #     if ( event.name == "pick_event" ) and ( event.artist == self.points ) and rightButton: #  and ( self.key_mode == Qt.Key_Shift ):
+    #         self.delete_marker( event.mouseevent.ydata, event.mouseevent.xdata )
+    #         self.plot()
 
     @exception_handled
     def add( self, marker: Marker ):
@@ -107,17 +108,19 @@ class MarkerManager( PointsInteractor ):
 
     @exception_handled
     def on_button_press(self, event):
-        if event.xdata != None and event.ydata != None:
-            inaxes = (event.inaxes == self.ax)
-            if inaxes and self._enabled:
-                rightButton: bool = int(event.button) == self.RIGHT_BUTTON
-                pid = self._block.coords2pindex( event.ydata, event.xdata )
-                lgm().log( f" --> selected pid = {pid}" )
-                if pid >= 0:
+        from spectraclass.model.labels import LabelsManager, lm
+        if (event.xdata != None) and (event.ydata != None) and (event.inaxes == self.ax) and self._enabled:
+            pid = self._block.coords2pindex(event.ydata, event.xdata)
+            lgm().log(f"\n on_button_press --> selected pid = {pid}, button = {event.button}" )
+            if pid >= 0:
+                if int(event.button) == self.RIGHT_BUTTON:
+                    lm().deletePid( pid )
+                else:
                     cid = lm().current_cid
         #           ptindices = self._block.pindex2indices(pid)
          #           lgm().log(f"Adding marker for pid = {pid}, cid = {cid}, ptindices= {ptindices}, coords = {[event.xdata,event.ydata]}")
          #           classification = self.label_map.values[ ptindices['iy'], ptindices['ix'] ] if (self.label_map is not None) else -1
                     self.add( Marker( [pid], cid )) #, classification = classification ) )
-                else:
-                    lgm().log(f"Can't add marker, pid = {pid}")
+                self.plot()
+
+

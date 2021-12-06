@@ -2,7 +2,7 @@ from spectraclass.util.logs import LogManager, lgm
 import ipywidgets as ipw
 import matplotlib.pyplot as plt
 from spectraclass.application.controller import SpectraclassController
-from spectraclass.model.base import Marker
+from spectraclass.gui.spatial.widgets.markers import Marker
 
 class Spectraclass(SpectraclassController):
 

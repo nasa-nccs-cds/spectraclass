@@ -1,7 +1,6 @@
 import traitlets.config as tlc
 import os, logging, numpy as np
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type, Iterable
-from spectraclass.util.logs import LogManager, lgm, exception_handled
 from traitlets.config.loader import Config
 
 class SCSingletonConfigurable(tlc.Configurable):
