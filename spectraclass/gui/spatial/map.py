@@ -13,7 +13,7 @@ from spectraclass.gui.control import UserFeedbackManager, ufm
 from matplotlib.axes import Axes
 from typing import List, Union, Tuple, Optional, Dict, Callable
 from spectraclass.gui.spatial.basemap import TileServiceBasemap
-from spectraclass.widgets.polygons import PolygonInteractor, Polygon
+from spectraclass.widgets.polygons import PolygonInteractor
 import matplotlib.pyplot as plt
 import ipywidgets as ipw
 import math, atexit, os, traceback, time
@@ -123,8 +123,8 @@ class MapManager(SCSingletonConfigurable):
     def selectionMode(self) -> str:
         return self.selection.value
 
-    def set_region_color(self, color: str ):
-        self.region_selection.set_color(color)
+    def set_region_color(self, cid: int, color: str ):
+        self.region_selection.set_color(cid,color)
 
     def add_slider(self,  **kwargs ):
         if self.slider is None:

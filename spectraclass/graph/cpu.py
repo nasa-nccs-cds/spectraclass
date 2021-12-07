@@ -24,7 +24,7 @@ def getFilteredLabels( labels: np.ndarray ) -> np.ndarray:
 @nb.njit( fastmath=True,
     locals={
         "iN": nb.types.int32,
-        "pid": nb.types.int32,
+        "polyId": nb.types.int32,
         "pid1": nb.types.int64,
         "I": nb.types.Array(nb.types.int64, 2, 'C'),
         "label_spec": nb.types.Array(nb.types.int32, 1, 'A'),

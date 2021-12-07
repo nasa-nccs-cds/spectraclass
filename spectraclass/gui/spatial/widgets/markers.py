@@ -78,7 +78,7 @@ class MarkerManager( PointsInteractor ):
     def delete_marker(self, y, x ):
         from spectraclass.model.labels import LabelsManager, lm
         pindex = self._block.coords2pindex( y, x )
-        lgm().log( f" delete_marker: pid = {pindex}" )
+        lgm().log( f" delete_marker: polyId = {pindex}" )
         lm().deletePid( pindex )
 
     def get_points( self ) -> Tuple[ List[float], List[float], List[str] ]:
@@ -116,14 +116,14 @@ class MarkerManager( PointsInteractor ):
         from spectraclass.model.labels import LabelsManager, lm
         if (event.xdata != None) and (event.ydata != None) and (event.inaxes == self.ax) and self._enabled:
             pid = self._block.coords2pindex(event.ydata, event.xdata)
-            lgm().log(f"\n on_button_press --> selected pid = {pid}, button = {event.button}" )
+            lgm().log(f"\n on_button_press --> selected polyId = {pid}, button = {event.button}" )
             if pid >= 0:
                 if int(event.button) == self.RIGHT_BUTTON:
                     lm().deletePid( pid )
                 else:
                     cid = lm().current_cid
-        #           ptindices = self._block.pindex2indices(pid)
-         #           lgm().log(f"Adding marker for pid = {pid}, cid = {cid}, ptindices= {ptindices}, coords = {[event.xdata,event.ydata]}")
+        #           ptindices = self._block.pindex2indices(polyId)
+         #           lgm().log(f"Adding marker for polyId = {polyId}, cid = {cid}, ptindices= {ptindices}, coords = {[event.xdata,event.ydata]}")
          #           classification = self.label_map.values[ ptindices['iy'], ptindices['ix'] ] if (self.label_map is not None) else -1
                     self.add( Marker( [pid], cid )) #, classification = classification ) )
                 self.plot()

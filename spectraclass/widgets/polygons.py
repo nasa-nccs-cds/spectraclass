@@ -1,90 +1,14 @@
 import numpy as np
 from matplotlib.lines import Line2D
 from matplotlib.artist import Artist
-from matplotlib.patches import Polygon
+from spectraclass.widgets.polygon import PolyRec
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 from matplotlib.backend_bases import MouseEvent, KeyEvent
-import logging, os
 from typing import List, Union, Tuple, Optional, Dict, Callable
-
-log_file = os.path.expanduser('~/.spectraclass/logging/geospatial.log')
-file_handler = logging.FileHandler(filename=log_file, mode='w')
-logger = logging.getLogger(__name__)
-logger.addHandler(file_handler)
-logger.setLevel(logging.DEBUG)
 
 def dist(x, y):
     d = x - y
     return np.sqrt(np.dot(d, d))
-class PolyRec:
-    epsilon = 5  # max pixel distance to count as a vertex hit
-
-    def __init__(self, pid, ax,  x, y, c="grey", on_change: Callable = None ):
-        self.ax = ax
-        self.color = c
-        self.canvas = ax.figure.canvas
-        self.pid = pid
-        self.selected = False
-        xs, ys = np.array( [x,x] ), np.array( [y,y] )
-        self.poly = Polygon( np.column_stack([xs,ys]), facecolor=self.color, closed=False )
-        x, y = zip(*self.poly.xy)
-        self.line = Line2D(x, y, marker='o', markerfacecolor='r' )
-        if on_change: self.cid = self.poly.add_callback( on_change )
-        else: self.cid = None
-        ax.add_patch(self.poly)
-        ax.add_line(self.line)
-        self.indx = -1
-
-    def contains_point(self, event: MouseEvent ) -> bool:
-        return self.poly.contains_point( (event.x,event.y) )
-
-    def vertex_selected( self, event: MouseEvent ):
-        xy = np.asarray(self.poly.xy)
-        xyt = self.poly.get_transform().transform(xy)
-        xt, yt = xyt[:, 0], xyt[:, 1]
-        d = np.hypot(xt - event.x, yt - event.y)
-        indseq, = np.nonzero(d == d.min())
-        d0 = d[ indseq[0] ]
-        selected = (d0 < self.epsilon)
-        self.indx = indseq[0] if selected else -1
-        return ( self.indx > -1 )
-
-    def clear_vertex_selection(self):
-        self.indx = -1
-
-    def _update(self):
-        self.line.set_data(zip(*self.poly.xy))
-
-    def insert_point(self, event ):
-        x, y = event.xdata, event.ydata
-        self.poly.xy = np.row_stack( [ self.poly.xy, np.array( [x, y] ) ] )
-        self.draw()
-
-    def complete( self ):
-        self.poly.xy[-1] = self.poly.xy[0]
-        self.line.set_visible(False)
-        self.poly.set_closed(True)
-        self.ax.draw_artist(self.line)
-
-    def update(self):
-        self.line.set_data(zip(*self.poly.xy))
-        self.ax.draw_artist(self.poly)
-        self.ax.draw_artist(self.line)
-
-    def draw(self):
-        self.canvas.draw_idle()
-
-    def set_selected(self, selected: bool ):
-        self.selected = selected
-        self.line.set_visible(selected)
-        self.ax.draw_artist(self.line)
-
-    def drag_vertex(self, event ):
-        x, y = event.xdata, event.ydata
-        self.poly.xy[ self.indx ] = x, y
-        indx1 = self.poly.xy.shape[0]-1
-        if self.indx == 0:     self.poly.xy[indx1] = self.poly.xy[0]
-        if self.indx == indx1: self.poly.xy[0]     = self.poly.xy[indx1]
 
 class PolygonInteractor:
 
@@ -95,6 +19,7 @@ class PolygonInteractor:
         self.enabled = False
         self.editing = False
         self.creating = False
+        self._cid = 0
         self._fill_color = "grey"
         self.canvas = ax.figure.canvas
         self.canvas.mpl_connect('key_press_event', self.on_key_press)
@@ -118,14 +43,15 @@ class PolygonInteractor:
             self.enabled = enabled
             self.update_callbacks()
 
-    def set_color(self, color: str ):
+    def set_color(self, cid: int, color: str ):
+        self._cid = cid
         self._fill_color = color
 
     def add_poly( self, event ):
         if not self.in_poly(event):
             x, y = event.xdata, event.ydata
             self.poly_index = self.poly_index + 1
-            self.prec = PolyRec( self.poly_index, self.ax, x, y, self._fill_color, self.poly_changed )
+            self.prec = PolyRec( self.poly_index, self.ax, x, y, self._fill_color, self._cid, self.poly_changed )
             self.polys.append( self.prec )
             self.creating = True
         return self.prec
@@ -150,9 +76,9 @@ class PolygonInteractor:
 
     def select_poly(self, event):
         self.prec = self.in_poly( event )
-        selected_pid = self.prec.pid if (self.prec is not None) else -1
+        selected_pid = self.prec.polyId if (self.prec is not None) else -1
         for prec in self.polys:
-            prec.set_selected( prec.pid == selected_pid )
+            prec.set_selected(prec.polyId == selected_pid)
         self.draw()
 
     def delete_selection(self):
@@ -164,16 +90,16 @@ class PolygonInteractor:
             self.canvas.draw_idle()
 
     def close_poly(self):
+        from spectraclass.gui.plot import GraphPlotManager, gpm
         self.prec.complete()
-        self.prec = None
         self.creating = False
         self.draw()
+        gpm().plot_region(self.prec)
+        self.prec = None
 
     @exception_handled
     def on_button_press(self, event: MouseEvent ):
         if event.inaxes is None: return
-        logger.info( event )
-
         if event.button == 1:
             if self.enabled:
                 if self.prec is None:

@@ -60,7 +60,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.spatial.map import MapManager, mm
         pids = lm().getPids( iclass )
         gpm().plot_graph( Marker( pids, iclass ) )
-        mm().set_region_color( lm().current_color )
+        mm().set_region_color( lm().current_cid, lm().current_color )
 
     @classmethod
     def set_spectraclass_theme(cls):

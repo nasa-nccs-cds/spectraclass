@@ -80,7 +80,7 @@ class TableManager(SCSingletonConfigurable):
         if n_changes > 0:
             lgm().log(f" TM----> edit directory[ {changed_pids} ]")
             for (pid,cid) in changed_pids.items():
-                directory.edit_cell( pid, "cid", cid ) # self.edit_table( 0, pid, "Class", cid )
+                directory.edit_cell( pid, "cid", cid ) # self.edit_table( 0, polyId, "Class", cid )
 #            directory.change_selection([])
 
 #        self._broadcast_selection_events = True
@@ -91,10 +91,10 @@ class TableManager(SCSingletonConfigurable):
         # for (cid, pids) in label_map.items():
         #     table = self._tables[cid]
         #     if cid > 0:
-        #         for pid in pids:
-        #             directory_table.edit_cell( pid, "Class", cid )
-        #             self._class_map[pid] = cid
-        #             row = directory_table.df.loc[pid]
+        #         for polyId in pids:
+        #             directory_table.edit_cell( polyId, "Class", cid )
+        #             self._class_map[polyId] = cid
+        #             row = directory_table.df.loc[polyId]
         #             table.add_row( row )
         #
         #         index_list: List[int] = selection_table.index.tolist()
@@ -122,28 +122,28 @@ class TableManager(SCSingletonConfigurable):
 #                     if n_changes:         lgm().log(f"\n TM----> update_selection[{cid}]" )
 #                     if len(deleted_pids): lgm().log(f"    ######## deleted: {deleted_pids} ")
 #                     if len(added_pids):   lgm().log(f"    ######## added: {added_pids} ")
-#                     for pid in added_pids: changed_pids[pid] = cid
-#                     for pid in deleted_pids:
-#                         if pid not in  changed_pids.keys(): changed_pids[pid] = 0
+#                     for polyId in added_pids: changed_pids[polyId] = cid
+#                     for polyId in deleted_pids:
+#                         if polyId not in  changed_pids.keys(): changed_pids[polyId] = 0
 #                     table._remove_rows( deleted_pids )
-#                     for pid in added_pids:
-#                         row = directory.df.loc[pid].to_dict()
-#                         row.update( dict( class=cid, Index=pid ) )
-# #                        lgm().log(f" TableManager.update_selection[{cid},{pid}]: row = {row}")
+#                     for polyId in added_pids:
+#                         row = directory.df.loc[polyId].to_dict()
+#                         row.update( dict( class=cid, Index=polyId ) )
+# #                        lgm().log(f" TableManager.update_selection[{cid},{polyId}]: row = {row}")
 #                         table._add_row( row.items() )
 #         if n_changes > 0:
-#             for (pid,cid) in changed_pids.items():
-#                 directory.edit_cell( pid, "cid", cid )
+#             for (polyId,cid) in changed_pids.items():
+#                 directory.edit_cell( polyId, "cid", cid )
 # #        self._broadcast_selection_events = True
 #
 #         # directory_table = self._tables[0]
 #         # for (cid, pids) in label_map.items():
 #         #     table = self._tables[cid]
 #         #     if cid > 0:
-#         #         for pid in pids:
-#         #             directory_table.edit_cell( pid, "cid", cid )
-#         #             self._class_map[pid] = cid
-#         #             row = directory_table.df.loc[pid]
+#         #         for polyId in pids:
+#         #             directory_table.edit_cell( polyId, "cid", cid )
+#         #             self._class_map[polyId] = cid
+#         #             row = directory_table.df.loc[polyId]
 #         #             table.add_row( row )
 #         #
 #         #         index_list: List[int] = selection_table.index.tolist()

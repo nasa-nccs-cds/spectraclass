@@ -132,11 +132,11 @@ plt.show()
 # class PolyRec:
 #     epsilon = 5  # max pixel distance to count as a vertex hit
 #
-#     def __init__(self, pid, ax,  x, y, c="grey", on_change: Callable = None ):
+#     def __init__(self, polyId, ax,  x, y, c="grey", on_change: Callable = None ):
 #         self.ax = ax
 #         self.color = c
 #         self.canvas = ax.figure.canvas
-#         self.pid = pid
+#         self.polyId = polyId
 #         self.selected = False
 #         xs, ys = np.array( [x,x] ), np.array( [y,y] )
 #         self.poly = Polygon( np.column_stack([xs,ys]), animated=True, facecolor=self.color, closed=False )
@@ -244,8 +244,8 @@ plt.show()
 #     def add_poly( self, event ):
 #         if not self.in_poly(event):
 #             x, y = event.xdata, event.ydata
-#             pid = len(self.polys)
-#             self.prec = PolyRec( pid, self.ax, x, y, self.fill_color, self.poly_changed )
+#             polyId = len(self.polys)
+#             self.prec = PolyRec( polyId, self.ax, x, y, self.fill_color, self.poly_changed )
 #             self.polys.append( self.prec )
 #             self.creating = True
 #         return self.prec
@@ -271,9 +271,9 @@ plt.show()
 #
 #     def select_poly(self, event):
 #         self.prec = self.in_poly( event )
-#         selected_pid = self.prec.pid if (self.prec is not None) else -1
+#         selected_pid = self.prec.polyId if (self.prec is not None) else -1
 #         for prec in self.polys:
-#             prec.set_selected( prec.pid == selected_pid )
+#             prec.set_selected( prec.polyId == selected_pid )
 #         self.draw()
 #
 #     def close_poly(self):
