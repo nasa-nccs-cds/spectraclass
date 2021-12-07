@@ -19,8 +19,8 @@ class PolygonInteractor:
         self.enabled = False
         self.editing = False
         self.creating = False
-        self._cid = 0
         self._fill_color = "grey"
+        self._cid = 0
         self.canvas = ax.figure.canvas
         self.canvas.mpl_connect('key_press_event', self.on_key_press)
         self.canvas.mpl_connect('draw_event', self.on_draw)
@@ -43,15 +43,16 @@ class PolygonInteractor:
             self.enabled = enabled
             self.update_callbacks()
 
-    def set_color(self, cid: int, color: str ):
+    def set_class(self, cid: int ):
+        from spectraclass.model.labels import LabelsManager, lm
         self._cid = cid
-        self._fill_color = color
+        self._fill_color = lm().colors[ self._cid ]
 
     def add_poly( self, event ):
         if not self.in_poly(event):
             x, y = event.xdata, event.ydata
             self.poly_index = self.poly_index + 1
-            self.prec = PolyRec( self.poly_index, self.ax, x, y, self._fill_color, self._cid, self.poly_changed )
+            self.prec = PolyRec( self.poly_index, self.ax, x, y, self._fill_color, self.poly_changed )
             self.polys.append( self.prec )
             self.creating = True
         return self.prec
@@ -94,7 +95,7 @@ class PolygonInteractor:
         self.prec.complete()
         self.creating = False
         self.draw()
-        gpm().plot_region(self.prec)
+        gpm().plot_region( self.prec, self._cid )
         self.prec = None
 
     @exception_handled

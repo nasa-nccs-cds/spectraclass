@@ -2,7 +2,7 @@ import ipywidgets as ip
 from typing import List, Union, Tuple, Optional, Dict, Callable, Set
 import xarray as xa
 import numpy as np
-import rioxarray as rio
+import shapely.vectorized as svect
 from spectraclass.data.base import DataManager
 from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.util.logs import LogManager, lgm, exception_handled
@@ -68,17 +68,21 @@ class mplGraphPlot:
             cls._mdata: List[np.ndarray] = [ project_data[mdv].values for mdv in table_cols ]
 
     @exception_handled
-    def get_region_marker(self, prec: PolyRec ) -> Marker:
+    def get_region_marker(self, prec: PolyRec, cid: int ) -> Marker:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        bands: xa.DataArray = tm().getBlock().data
-        region: xa.DataArray = bands.rio.clip( prec.geometry )
-        lgm().log("\nget_region:")
-        lgm().log( str(region) )
-        pids = []
-        return Marker( pids, prec.cid )
+        from shapely.geometry import Polygon
+        raster:  xa.DataArray = tm().getBlock().data[0].squeeze()
+        X, Y = raster.x.values, raster.y.values
+        polygon = Polygon(prec.poly.get_xy())
+        MX, MY = np.meshgrid(X, Y)
+        PID = np.array(range(raster.size))
+        mask = svect.contains(polygon, MX, MY)
+        pids = PID[mask.flatten()].tolist()
+        lgm().log( f"\nGET REGION[{cid}]: {pids}" )
+        return Marker( pids, cid )
 
-    def plot_region(self, prec: PolyRec ):
-        self.plot( self.get_region_marker( prec ) )
+    def plot_region(self, prec: PolyRec, cid: int ):
+        self.plot( self.get_region_marker( prec, cid ) )
 
     def clear_transients( self, m: Marker ):
         has_transient = (len(self._markers) == 1) and (self._markers[0].cid == 0)
@@ -102,7 +106,7 @@ class mplGraphPlot:
         self.addMarker( marker )
         nsel = len(self._selected_pids)
         if nsel > 0:
-            lgm().log( f"Plotting lines, nselected={nsel}" )
+            lgm().log( f"Plotting lines, nselected={nsel}, cid = {marker.cid}" )
             if marker.cid == 0:
                 self.update_graph( self.x2, self.y2 )
             else:
@@ -194,10 +198,10 @@ class GraphPlotManager(SCSingletonConfigurable):
             current_graph.plot( marker )
 
     @exception_handled
-    def plot_region( self, region: PolyRec ):
+    def plot_region( self, region: PolyRec, cid: int ):
         current_graph: mplGraphPlot = self.current_graph()
         if current_graph is not None:
-            current_graph.plot_region( region )
+            current_graph.plot_region( region, cid )
 
     def _createGui( self, **kwargs ) -> ipw.Tab():
         wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 500px' ) )

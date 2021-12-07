@@ -2,6 +2,8 @@ import numpy as np
 from matplotlib.lines import Line2D
 from matplotlib.patches import Polygon
 from spectraclass.util.logs import LogManager, lgm, exception_handled
+from shapely.geometry import Polygon as SPolygon
+import regionmask
 from matplotlib.backend_bases import MouseEvent, KeyEvent
 from typing import List, Union, Tuple, Optional, Dict, Callable
 
@@ -12,10 +14,9 @@ def dist(x, y):
 class PolyRec:
     epsilon = 5  # max pixel distance to count as a vertex hit
 
-    def __init__(self, polyId, ax, x, y, c="grey", cid=0, on_change: Callable = None ):
+    def __init__(self, polyId, ax, x, y, c="grey", on_change: Callable = None ):
         self.ax = ax
         self.color = c
-        self.cid: int = cid
         self.canvas = ax.figure.canvas
         self.polyId = polyId
         self.selected = False
@@ -32,6 +33,9 @@ class PolyRec:
     @property
     def geometry(self) -> List[Dict]:
         return [ dict( type='Polygon', coordinates=[ self.poly.get_xy().tolist() ] ) ]
+
+    def to_shapely(self) -> SPolygon:
+        return SPolygon( self.poly.get_xy() )
 
     def contains_point(self, event: MouseEvent ) -> bool:
         return self.poly.contains_point( (event.x,event.y) )

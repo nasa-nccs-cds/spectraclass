@@ -123,8 +123,8 @@ class MapManager(SCSingletonConfigurable):
     def selectionMode(self) -> str:
         return self.selection.value
 
-    def set_region_color(self, cid: int, color: str ):
-        self.region_selection.set_color(cid,color)
+    def set_region_class(self, cid: int ):
+        self.region_selection.set_class( cid )
 
     def add_slider(self,  **kwargs ):
         if self.slider is None:
