@@ -1,7 +1,7 @@
 import os, ipywidgets as ipw
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.util.logs import LogManager, lgm, exception_handled
-from typing import List, Union, Tuple, Optional, Dict, Callable
+from typing import List, Union, Tuple, Optional, Dict, Callable, Set
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.gui.spatial.widgets.markers import Marker
 import numpy as np
@@ -59,7 +59,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.map import MapManager, mm
         pids = lm().getPids( iclass )
-        gpm().plot_graph(pids)
+        gpm().plot_graph( Marker( pids, iclass ) )
         mm().set_region_color( lm().current_color )
 
     @classmethod
@@ -168,7 +168,7 @@ class SpectraclassController(SCSingletonConfigurable):
                         lgm().log(f" @@@ spread_selection: cid={cid}, label={label}, new_indices={new_indices}" )
                         lm().mark_points( new_indices, cid )
                         if self.pcm_active: pcm().update_marked_points(cid)
-            gpm().plot_graph()
+ #           gpm().plot_graph()
         lm().log_markers("post-spread")
         return converged
 
@@ -190,11 +190,18 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.gui.points import PointCloudManager, pcm
         lm().addMarkerAction( "app", marker )
-        pids: List[int] = np.concatenate( [ marker.pids[np.where(marker.pids >= 0)] for marker in lm().markers ] ).tolist()
-        lgm().log(f"  ----> Controller[{self.__class__.__name__}] -> ADD MARKER, pids = {pids} ")
-        gpm().plot_graph( pids, color=lm().current_color )
+        gpm().plot_graph( marker )
         if self.pcm_active: pcm().update_marked_points(marker.cid)
         lm().log_markers("post-add_marker")
+
+    def get_marked_pids(self) -> Dict[int,Set[int]]:
+        from spectraclass.model.labels import LabelsManager, Action, lm
+        marked_pids = {}
+        for marker in lm().markers:
+            new_pids = marker.pids[ np.where(marker.pids >= 0) ].tolist()
+            current_pids = marked_pids.get( marker.cid, set() )
+            marked_pids[ marker.cid ] = current_pids.union( set(new_pids) )
+        return marked_pids
 
     @exception_handled
     def color_pointcloud( self, color_data: np.ndarray = None, **kwargs ):

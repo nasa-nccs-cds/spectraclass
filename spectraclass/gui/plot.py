@@ -1,8 +1,9 @@
 import ipywidgets as ip
-from typing import List, Union, Tuple, Optional, Dict, Callable
+from typing import List, Union, Tuple, Optional, Dict, Callable, Set
 import xarray as xa
 import numpy as np
 from spectraclass.data.base import DataManager
+from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.util.logs import LogManager, lgm, exception_handled
 import matplotlib.pyplot as plt
 import ipywidgets as ipw
@@ -26,7 +27,9 @@ class mplGraphPlot:
         self.ax : plt.Axes = None
         self.fig : plt.Figure = None
         self.lines: List[plt.Line2D] = []
+        self._markers: List[Marker] = []
         self.init_figure()
+
 
     def init_figure(self):
         if self.fig is None:
@@ -40,7 +43,6 @@ class mplGraphPlot:
             plt.ion()
 
     def gui(self):
-        self.plot()
         return self.fig.canvas
 
     @classmethod
@@ -64,19 +66,34 @@ class mplGraphPlot:
             lgm().log( f" mplGraphPlot init, using cols {table_cols} from {list(project_data.variables.keys())}, ploty shape = {cls._ploty.shape}, rploty shape = {cls._rploty.shape}" )
             cls._mdata: List[np.ndarray] = [ project_data[mdv].values for mdv in table_cols ]
 
-    def select_items(self, idxs: List[int] ):
-        self._selected_pids = idxs
+    def clear_transients( self, m: Marker ):
+        has_transient = (len(self._markers) == 1) and (self._markers[0].cid == 0)
+        if has_transient or (m.cid == 0):
+            self._markers = []
+            self.clear()
 
-    def plot( self, **kwargs ):
+    def addMarker( self, m: Marker ):
+        self.clear_transients( m )
+        self._markers.append( m )
+        self._selected_pids = self.get_pids()
+
+    def get_colors(self):
+        return sum( [m.colors for m in self._markers], [] )
+
+    def get_pids( self ):
+        return sum( [m.pids.tolist() for m in self._markers], [] )
+
+    def plot( self, marker: Marker ):
         self.ax.title.text = self.title
+        self.addMarker( marker )
         lgm().log(f"Plotting lines, nselected={len(self._selected_pids)}")
-        if len(self._selected_pids) == 1:
-            self.update_graph( self.x2, self.y2, **kwargs )
-        elif len(self._selected_pids) > 1:
-            self.update_graph( self.x, self.y, **kwargs )
+        if marker.cid == 0:
+            self.update_graph( self.x2, self.y2 )
+        else:
+            self.ax.set_prop_cycle( color=self.get_colors() )
+            self.update_graph( self.x, self.y )
 
     def update_graph(self, xs: List[ np.ndarray ], ys: List[ np.ndarray ], **kwargs ):
-        self.clear()
         for x, y in zip(xs,ys):
             lgm().log( f"Plotting line, xs = {x.shape}, ys = {y.shape}, xrange = {[x.min(),x.max()]}, yrange = {[y.min(),y.max()]}, args = {kwargs}")
             line, = self.ax.plot( x, y, **kwargs )
@@ -155,13 +172,10 @@ class GraphPlotManager(SCSingletonConfigurable):
         return self._graphs[ self._wGui.selected_index ]
 
     @exception_handled
-    def plot_graph( self, pids: List[int] = None, **kwargs ):
-        from spectraclass.model.labels import LabelsManager, lm
-        if pids is None: pids = lm().getPids()
+    def plot_graph( self, marker: Marker ):
         current_graph: mplGraphPlot = self.current_graph()
         if current_graph is not None:
-            current_graph.select_items( pids )
-            current_graph.plot( **kwargs )
+            current_graph.plot( marker )
 
     def _createGui( self, **kwargs ) -> ipw.Tab():
         wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 500px' ) )
@@ -171,8 +185,3 @@ class GraphPlotManager(SCSingletonConfigurable):
         wTab.children = [ g.gui() for g in self._graphs ]
         return wTab
 
-    def on_selection(self, selection_event: Dict ):
-        selection = selection_event['pids']
-        if len( selection ) > 0:
-            lgm().log(f" GRAPH.on_selection: nitems = {len(selection)}, pid={selection[0]}")
-            self.plot_graph( selection )

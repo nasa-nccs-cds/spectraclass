@@ -339,6 +339,7 @@ class LabelsManager(SCSingletonConfigurable):
     @exception_handled
     def mark_points( self, point_ids: np.ndarray = None, cid: int = -1 ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
+        from spectraclass.gui.spatial.widgets.markers import Marker
         icid: int = cid if cid > -1 else self.current_cid
         if point_ids is None:
             if self.currentMarker is None:

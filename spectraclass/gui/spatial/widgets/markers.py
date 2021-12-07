@@ -17,6 +17,11 @@ class Marker:
     def pids(self) -> np.ndarray:
         return self._pids
 
+    @property
+    def colors(self) -> List[str]:
+        from spectraclass.model.labels import LabelsManager, lm
+        return [ lm().colors[ self.cid ] ] * self._pids.size
+
     def isTransient(self):
         return self.cid == 0
 
