@@ -11,7 +11,7 @@ import xarray as xa
 from matplotlib.image import AxesImage
 from matplotlib.figure import Figure
 from cartopy.mpl.geoaxes import GeoAxes
-from cartopy.io.ogc_clients import WMTSRasterSource
+from spectraclass.gui.spatial.source import WMTSRasterSource
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 import rioxarray as rio

@@ -36,7 +36,7 @@ class MapManager(SCSingletonConfigurable):
     RIGHT_BUTTON = 3
     MIDDLE_BUTTON = 2
     LEFT_BUTTON = 1
-    colorstretch = 1.5
+    colorstretch = 2.0
 
     def __init__( self, **kwargs ):   # class_labels: [ [label, RGBA] ... ]
         super(MapManager, self).__init__()
@@ -149,7 +149,7 @@ class MapManager(SCSingletonConfigurable):
     def on_layer_change( self, layer: Layer ):
         image = self.layer_image( layer.name )
         image.set_alpha( layer.visibility )
-        lgm().log(f" image {layer.name} set alpha = {layer.visibility}" )
+#        lgm().log(f" image {layer.name} set alpha = {layer.visibility}" )
         self.update_canvas()
 
     @exception_handled

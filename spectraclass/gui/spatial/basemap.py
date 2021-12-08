@@ -5,7 +5,7 @@ from matplotlib.image import AxesImage
 import xarray as xa
 from spectraclass.util.logs import LogManager, lgm
 from spectraclass.data.spatial.tile.manager import TileManager
-from cartopy.io.ogc_clients import WMTSRasterSource
+from spectraclass.gui.spatial.source import WMTSRasterSource
 from spectraclass.gui.spatial.image import TileServiceImage
 from typing import List, Optional, Dict, Tuple
 from spectraclass.util.logs import LogManager, lgm, exception_handled

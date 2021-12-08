@@ -30,6 +30,8 @@ class mplGraphPlot:
         self.fig : plt.Figure = None
         self.lines: List[plt.Line2D] = []
         self._markers: List[Marker] = []
+        self._regions: Dict[int,Marker] = {}
+        self._points = Dict[int, Marker]
         self.init_figure()
 
     def init_figure(self):
@@ -76,13 +78,21 @@ class mplGraphPlot:
         polygon = Polygon(prec.poly.get_xy())
         MX, MY = np.meshgrid(X, Y)
         PID = np.array(range(raster.size))
-        mask = svect.contains(polygon, MX, MY)
+        mask = svect.contains( polygon, MX, MY )
         pids = PID[mask.flatten()].tolist()
         lgm().log( f"\nGET REGION[{cid}]: {pids}" )
-        return Marker( pids, cid )
+        marker =  Marker( pids, cid )
+        self._regions[ prec.polyId ] = marker
+        return marker
 
     def plot_region(self, prec: PolyRec, cid: int ):
-        self.plot( self.get_region_marker( prec, cid ) )
+        self.addMarker( self.get_region_marker( prec, cid ) )
+
+    def remove_region(self, prec: PolyRec ):
+        marker = self._regions.pop( prec.polyId, None )
+        if marker is not None: self._markers.remove(marker)
+        self._selected_pids = self.get_pids()
+        self.plot()
 
     def clear_transients( self, m: Marker ):
         has_transient = (len(self._markers) == 1) and (self._markers[0].cid == 0)
@@ -94,6 +104,7 @@ class mplGraphPlot:
         self.clear_transients( m )
         self._markers.append( m )
         self._selected_pids = self.get_pids()
+        self.plot()
 
     def get_colors(self):
         return sum( [m.colors for m in self._markers], [] )
@@ -101,17 +112,14 @@ class mplGraphPlot:
     def get_pids( self ):
         return sum( [m.pids.tolist() for m in self._markers], [] )
 
-    def plot( self, marker: Marker ):
+    def plot( self ):
         self.ax.title.text = self.title
-        self.addMarker( marker )
         nsel = len(self._selected_pids)
-        if nsel > 0:
-            lgm().log( f"Plotting lines, nselected={nsel}, cid = {marker.cid}" )
-            if marker.cid == 0:
-                self.update_graph( self.x2, self.y2 )
-            else:
-                self.ax.set_prop_cycle( color=self.get_colors() )
-                self.update_graph( self.x, self.y )
+        if nsel == 1:
+            self.update_graph( self.x2, self.y2 )
+        elif nsel > 1:
+            self.ax.set_prop_cycle( color=self.get_colors() )
+            self.update_graph( self.x, self.y )
 
     def update_graph(self, xs: List[ np.ndarray ], ys: List[ np.ndarray ], **kwargs ):
         for x, y in zip(xs,ys):
@@ -195,13 +203,16 @@ class GraphPlotManager(SCSingletonConfigurable):
     def plot_graph( self, marker: Marker ):
         current_graph: mplGraphPlot = self.current_graph()
         if current_graph is not None:
-            current_graph.plot( marker )
+            current_graph.addMarker( marker )
 
     @exception_handled
     def plot_region( self, region: PolyRec, cid: int ):
         current_graph: mplGraphPlot = self.current_graph()
         if current_graph is not None:
             current_graph.plot_region( region, cid )
+
+    def remove_region(self, region: PolyRec ):
+        for graph in self._graphs: graph.remove_region( region )
 
     def _createGui( self, **kwargs ) -> ipw.Tab():
         wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 500px' ) )

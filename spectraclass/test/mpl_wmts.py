@@ -3,7 +3,7 @@ from owslib.wmts import WebMapTileService
 import cartopy.crs as ccrs
 import os, conda, numbers, time, contextlib
 from typing import List, Union, Tuple, Optional, Dict, Callable
-from cartopy.io.ogc_clients import WMTSRasterSource
+from spectraclass.gui.spatial.source import WMTSRasterSource
 from spectraclass.gui.spatial.image import TileServiceImage
 import numpy as np
 from spectraclass.data.spatial.tile.manager import TileManager, tm

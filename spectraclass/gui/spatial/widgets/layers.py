@@ -24,7 +24,7 @@ class Layer(tlc.Configurable):
         self.observe( self.on_alpha_change, names=["alpha","visible"] )
 
     def on_alpha_change( self, *args ):
-        lgm().log( f' ** on_alpha_change[{self.name}]: alpha={self.alpha}, visible={self.visible}, args={args}' )
+#        lgm().log( f' ** on_alpha_change[{self.name}]: alpha={self.alpha}, visible={self.visible}, args={args}' )
         self.callback( self )
 
     @property
