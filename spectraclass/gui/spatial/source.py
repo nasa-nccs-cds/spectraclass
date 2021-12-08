@@ -1,5 +1,8 @@
 import collections, io, math, time, warnings, weakref
 from xml.etree import ElementTree
+from multiprocessing import cpu_count, get_context, Pool
+from typing import List, Union, Tuple, Optional, Dict, Callable, Set
+from functools import partial
 from spectraclass.util.logs import lgm, exception_handled
 from PIL import Image
 import numpy as np
@@ -193,6 +196,7 @@ class WMTSRasterSource(RasterSource):
             service's gettile method.
 
         """
+        self.image_cache = {}
         if WebMapService is None:
             raise ImportError(_OWSLIB_REQUIRED)
 
@@ -329,6 +333,15 @@ class WMTSRasterSource(RasterSource):
             max_row = min(max_row, tile_matrix_limits.maxtilerow)
         return min_col, max_col, min_row, max_row
 
+    def get_image(self, wmts, layer, matrix_set_name, tile_matrix_id, img_key ):
+        img: Image = self.image_cache.get(img_key)
+        if img is None:
+            tile = wmts.gettile( layer=layer.id, tilematrixset=matrix_set_name, tilematrix=str(tile_matrix_id),
+                                    row=str(img_key[0]), column=str(img_key[1]), **self.gettile_extra_kwargs )
+            img = Image.open( io.BytesIO( tile.read() ) )
+            self.image_cache[img_key] = img
+        return (img_key, img)
+
     def _wmts_images(self, wmts, layer, matrix_set_name, extent, max_pixel_span):
         """
         Add images from the specified WMTS layer and matrix set to cover
@@ -372,40 +385,24 @@ class WMTSRasterSource(RasterSource):
         tile_matrix_id = tile_matrix.identifier
         cache_by_wmts = WMTSRasterSource._shared_image_cache
         cache_by_layer_matrix = cache_by_wmts.setdefault(wmts, {})
-        image_cache = cache_by_layer_matrix.setdefault((layer.id, tile_matrix_id), {})
-
-        # To avoid nasty seams between the individual tiles, we
-        # accumulate the tile images into a single image.
+        self.image_cache = cache_by_layer_matrix.setdefault((layer.id, tile_matrix_id), {})
         big_img = None
         n_rows = 1 + max_row - min_row
         n_cols = 1 + max_col - min_col
-        lgm().log(f" ***** Fetch image extent {extent}, (n_rows,n_cols) = {[n_rows,n_cols]}")
-        # Ignore out-of-range errors if the current version of OWSLib
-        # doesn't provide the regional information.
-        ignore_out_of_range = tile_matrix_set_links is None
-        for row in range(min_row, max_row + 1):
-            for col in range(min_col, max_col + 1):
-                # Get the tile's Image from the cache if possible.
-                img_key = (row, col)
-                img = image_cache.get(img_key)
-                if img is None:
-                    try:
-                        t0 = time.time()
-                        tile = wmts.gettile( layer=layer.id, tilematrixset=matrix_set_name, tilematrix=str(tile_matrix_id),
-                                             row=str(row), column=str(col), **self.gettile_extra_kwargs)
-                        t1 = time.time()
-                        lgm().log( f" ***** Fetch tile {[row,col]} in time {t1-t0:.2f}")
-                    except owslib.util.ServiceException as exception:
-                        if ('TileOutOfRange' in exception.message and ignore_out_of_range): continue
-                        raise exception
-                    img = Image.open(io.BytesIO(tile.read()))
-                    image_cache[img_key] = img
-                if big_img is None:
-                    size = (img.size[0] * n_cols, img.size[1] * n_rows)
-                    big_img = Image.new('RGBA', size, (255, 255, 255, 255))
-                top = (row - min_row) * tile_matrix.tileheight
-                left = (col - min_col) * tile_matrix.tilewidth
-                big_img.paste(img, (left, top))
+        nproc = 4 # cpu_count()
+        lgm().log(f" ***** Fetch image extent {extent}, (n_rows,n_cols) = {[n_rows,n_cols]}, nproc={nproc} ")
+        image_ids = [ (row, col) for row in range(min_row, max_row + 1) for col in range(min_col, max_col + 1) ]
+        image_processor =  partial( self.get_image, wmts, layer, matrix_set_name, tile_matrix_id )
+        with get_context("spawn").Pool( processes=nproc ) as p:
+            image_tiles = p.map( image_processor, image_ids )
+
+        for ((row,col),img) in image_tiles:
+            if big_img is None:
+                size = (img.size[0] * n_cols, img.size[1] * n_rows)
+                big_img = Image.new('RGBA', size, (255, 255, 255, 255))
+            top = (row - min_row) * tile_matrix.tileheight
+            left = (col - min_col) * tile_matrix.tilewidth
+            big_img.paste(img, (left, top))
 
         if big_img is None:
             img_extent = None
