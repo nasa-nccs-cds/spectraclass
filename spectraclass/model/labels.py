@@ -155,7 +155,7 @@ class LabelsManager(SCSingletonConfigurable):
 
     def addMarkerAction(self, source: str, marker: Marker, **kwargs ):
         top_marker = self.topMarker
-        if not marker.isEmpty() and ( marker != top_marker ):
+        if not marker.empty and (marker != top_marker):
             self.clearTransientMarkers(marker)
             lgm().log( f"LabelsManager[{source}].addMarker: {marker}")
             self.addAction("mark", source, marker=marker )
@@ -234,7 +234,17 @@ class LabelsManager(SCSingletonConfigurable):
         self.clearMarkers()
 
     def deletePid(self, pid: int ):
-        for marker in self.markers: marker.deletePid( pid )
+        empty_actions = []
+        for a in self._actions:
+            if a.type == "mark":
+                marker: Marker = a["marker"]
+                marker.deletePid(pid)
+                if marker.empty:
+                    empty_actions.append( a )
+        for a in empty_actions:
+            lgm().log( f"Removing marker action: {a['marker']}")
+            self._actions.remove( a )
+
 
     # def clearMarkerConflicts(self, m: Marker):
     #     points_selection = []
@@ -248,7 +258,7 @@ class LabelsManager(SCSingletonConfigurable):
     def clearTransientMarkers(self, m: Marker):
         if len(self.markers) > 0:
             top_marker = self.topMarker
-            if (top_marker.cid == 0) and (not m.isEmpty()):
+            if (top_marker.cid == 0) and (not m.empty):
                 self.clearMarker( top_marker )
 
     def clearMarker( self, m ):

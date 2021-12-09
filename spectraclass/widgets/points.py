@@ -12,6 +12,8 @@ class PointsInteractor:
         self.ax = ax
         self.init_plot()
         self._enabled = False
+        self.axis_to_data = ax.transAxes + ax.transData.inverted()
+        self.data_to_axis = self.axis_to_data.inverted()
 
     def set_enabled(self, enable: bool ):
         self._enabled = enable
@@ -20,27 +22,23 @@ class PointsInteractor:
         else:       self.disable_callbacks()
 
     def init_plot(self):
-        self.points: PathCollection = self.ax.scatter([], [], s=50, zorder=3, alpha=1.0, picker=True)
+        self.points: PathCollection = self.ax.scatter([], [], s=50, zorder=3, alpha=1.0 )
         self.points.set_edgecolor([0, 0, 0])
         self.points.set_linewidth(2)
-        self._cidkey, self._cidpick, self._cidmouse = -1, -1, -1
+        self._cidkey, self._cidmouse = -1, -1
         self.plot()
 
     def enable_callbacks(self):
         self._cidkey = self.canvas.mpl_connect( 'key_press_event', self.on_key_press )
-        self._cidpick = self.canvas.mpl_connect( 'pick_event', self.on_pick )
         self._cidmouse = self.canvas.mpl_connect('button_press_event', self.on_button_press)
 
     def disable_callbacks(self):
-        for cid in [ self._cidkey, self._cidpick, self._cidmouse ]:
+        for cid in [ self._cidkey, self._cidmouse ]:
             self.canvas.mpl_disconnect( cid )
 
     def get_points( self ) -> Tuple[ List[float], List[float], List[str] ]:
         lgm().log( f"Attempt to call unimplemented method PointsInteractor.get_markers")
         return [], [], []
-
-    def on_pick(self, event: PickEvent):
-        lgm().log( f"Attempt to call unimplemented method PointsInteractor.on_pick")
 
     def on_key_press(self, event: KeyEvent ):
         lgm().log( f"Attempt to call unimplemented method PointsInteractor.on_key_press")

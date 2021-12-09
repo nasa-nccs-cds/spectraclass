@@ -88,17 +88,25 @@ class mplGraphPlot:
     def plot_region(self, prec: PolyRec, cid: int ):
         self.addMarker( self.get_region_marker( prec, cid ) )
 
+    def removeMarker(self, marker: Marker ):
+        if marker is not None:
+            self._markers.remove(marker)
+            self._selected_pids = self.get_pids()
+            self.plot()
+
     def remove_region(self, prec: PolyRec ):
         marker = self._regions.pop( prec.polyId, None )
-        if marker is not None: self._markers.remove(marker)
-        self._selected_pids = self.get_pids()
-        self.plot()
+        self.removeMarker( marker )
+
+    def remove_point(self, pid: int):
+        for marker in self._markers:
+            if marker.empty or (marker.pids[0] == pid):
+                self.removeMarker(marker)
 
     def clear_transients( self, m: Marker ):
         has_transient = (len(self._markers) == 1) and (self._markers[0].cid == 0)
         if has_transient or (m.cid == 0):
             self._markers = []
-            self.clear()
 
     def addMarker( self, m: Marker ):
         self.clear_transients( m )
@@ -113,6 +121,7 @@ class mplGraphPlot:
         return sum( [m.pids.tolist() for m in self._markers], [] )
 
     def plot( self ):
+        self.clear()
         self.ax.title.text = self.title
         nsel = len(self._selected_pids)
         if nsel == 1:
@@ -123,7 +132,7 @@ class mplGraphPlot:
 
     def update_graph(self, xs: List[ np.ndarray ], ys: List[ np.ndarray ], **kwargs ):
         for x, y in zip(xs,ys):
-            lgm().log( f"Plotting line, xs = {x.shape}, ys = {y.shape}, xrange = {[x.min(),x.max()]}, yrange = {[y.min(),y.max()]}, args = {kwargs}")
+#            lgm().log( f"Plotting line, xs = {x.shape}, ys = {y.shape}, xrange = {[x.min(),x.max()]}, yrange = {[y.min(),y.max()]}, args = {kwargs}")
             line, = self.ax.plot( x, y, **kwargs )
             self.lines.append(line)
         self.fig.canvas.draw()
@@ -213,6 +222,9 @@ class GraphPlotManager(SCSingletonConfigurable):
 
     def remove_region(self, region: PolyRec ):
         for graph in self._graphs: graph.remove_region( region )
+
+    def remove_point( self, pid: int ):
+        for graph in self._graphs: graph.remove_point( pid )
 
     def _createGui( self, **kwargs ) -> ipw.Tab():
         wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 500px' ) )

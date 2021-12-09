@@ -1,5 +1,6 @@
 from spectraclass.widgets.points import PointsInteractor
-from matplotlib.backend_bases import PickEvent, MouseButton  # , NavigationToolbar2
+from matplotlib.backend_bases import PickEvent, MouseButton, MouseEvent  # , NavigationToolbar2
+from matplotlib.path import Path
 from spectraclass.data.spatial.tile.tile import Block
 import os, logging, numpy as np
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type, Iterable
@@ -10,7 +11,7 @@ def pid( instance ): return hex(id(instance))[-4:]
 class Marker:
     def __init__(self, pids: Union[np.ndarray,Iterable], cid: int, **kwargs ):
         self.cid = cid
-        self.args = kwargs
+        self.props = kwargs
         self._pids: np.ndarray = pids if isinstance( pids, np.ndarray ) else np.array(pids)
 
     @property
@@ -31,11 +32,15 @@ class Marker:
     def __ne__(self, m ):
         return not self.__eq__( m )
 
+    def __str__(self):
+        return f"Marker[{self.cid}]-{self._pids.tolist()}"
+
     @property
     def size(self):
         return self._pids.size
 
-    def isEmpty(self):
+    @property
+    def empty(self):
         return self._pids.size == 0
 
     def deletePid( self, pid: int ) -> bool:
@@ -66,20 +71,26 @@ class MarkerManager( PointsInteractor ):
     RIGHT_BUTTON = 3
     MIDDLE_BUTTON = 2
     LEFT_BUTTON = 1
+    PICK_DIST = 5
 
     def __init__(self, ax, block: Block ):
         super(MarkerManager, self).__init__( ax )
         self._block: Block = block
         self._adding_marker = False
+        self._markers = {}
 
     def set_block(self, block ):
         self._block = block
 
-    def delete_marker(self, y, x ):
-        from spectraclass.model.labels import LabelsManager, lm
-        pindex = self._block.coords2pindex( y, x )
-        lgm().log( f" delete_marker: polyId = {pindex}" )
-        lm().deletePid( pindex )
+    @exception_handled
+    def delete_marker(self, x, y ):
+        apx, apy = self.ax.transData.transform( (x, y) )
+        for (pid, marker) in self._markers.items():
+            (mx,my) = marker.props['point']
+            amx, amy = self.ax.transData.transform( (mx, my) )
+            if (abs(apx-amx)<self.PICK_DIST) and (abs(apy-amy)<self.PICK_DIST):
+                self.remove( pid )
+        self.plot()
 
     def get_points( self ) -> Tuple[ List[float], List[float], List[str] ]:
         from spectraclass.model.labels import LabelsManager, lm
@@ -105,27 +116,33 @@ class MarkerManager( PointsInteractor ):
         from spectraclass.application.controller import app
         if not self._adding_marker:
             self._adding_marker = True
-            if marker is None:
+            if (marker is None) or (len(marker.pids) == 0):
                 lgm().log("NULL Marker: point select is probably out of bounds.")
             else:
                 app().add_marker("map", marker)
+                self._markers[ marker.pids[0] ] = marker
         self._adding_marker = False
 
+    def remove( self, pid: int ):
+        from spectraclass.gui.plot import GraphPlotManager, gpm
+        from spectraclass.model.labels import LabelsManager, lm
+        marker = self._markers.pop( pid, None )
+        if marker is not None:
+            lm().deletePid( pid )
+            gpm().remove_point( pid )
+
     @exception_handled
-    def on_button_press(self, event):
+    def on_button_press(self, event: MouseEvent ):
         from spectraclass.model.labels import LabelsManager, lm
         if (event.xdata != None) and (event.ydata != None) and (event.inaxes == self.ax) and self._enabled:
-            pid = self._block.coords2pindex(event.ydata, event.xdata)
-            lgm().log(f"\n on_button_press --> selected polyId = {pid}, button = {event.button}" )
-            if pid >= 0:
-                if int(event.button) == self.RIGHT_BUTTON:
-                    lm().deletePid( pid )
-                else:
-                    cid = lm().current_cid
-        #           ptindices = self._block.pindex2indices(polyId)
-         #           lgm().log(f"Adding marker for polyId = {polyId}, cid = {cid}, ptindices= {ptindices}, coords = {[event.xdata,event.ydata]}")
-         #           classification = self.label_map.values[ ptindices['iy'], ptindices['ix'] ] if (self.label_map is not None) else -1
-                    self.add( Marker( [pid], cid )) #, classification = classification ) )
-                self.plot()
+            if int(event.button) == self.RIGHT_BUTTON:
+                self.delete_marker( event.xdata, event.ydata )
+            elif int(event.button) == self.LEFT_BUTTON:
+                pid = self._block.coords2pindex(event.ydata, event.xdata)
+                lgm().log(f"\n on_button_press --> selected pid = {pid}, button = {event.button}")
+                if pid >= 0:
+                    m = Marker( [pid], lm().current_cid, point=(event.xdata,event.ydata) )
+                    self.add( m )
+            self.plot()
 
 
