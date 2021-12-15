@@ -167,15 +167,21 @@ class Block:
     @property
     def xlim(self) -> Tuple[float,float]:
         if self._xlim is None:
-            tr = self.transform.params.flatten()
-            self._xlim = (tr[2], tr[2] + tr[0] * (self._data.shape[2]))
+#            tr = self.transform.params.flatten()
+#            self._xlim = (tr[2], tr[2] + tr[0] * (self._data.shape[2]))
+            xc: np.ndarray = self.data.coords[ self.data.dims[2] ].values
+            dx0, dx1 = (xc[1]-xc[0]), (xc[-1]-xc[-2])
+            self._xlim = ( xc[0]-dx0/2, xc[-1]+dx1/2 )
         return self._xlim
 
     @property
     def ylim(self) -> Tuple[float,float]:
         if self._ylim is None:
-            tr = self.transform.params.flatten()
-            self._ylim = (tr[5] + tr[4] * (self._data.shape[1]), tr[5])
+#            tr = self.transform.params.flatten()
+#            self._ylim = (tr[5] + tr[4] * (self._data.shape[1]), tr[5])
+            yc: np.ndarray = self.data.coords[ self.data.dims[1] ].values
+            dy0, dy1 = (yc[1] - yc[0]), (yc[-1] - yc[-2])
+            self._ylim = ( yc[0]-dy0/2, yc[-1]+dy1/2 )
         return self._ylim
 
     def extent(self, epsg: int = None ) -> List[float]:   # left, right, bottom, top

@@ -2,6 +2,7 @@ import collections, io, math, time, warnings, weakref
 from xml.etree import ElementTree
 from multiprocessing import cpu_count, get_context, Pool
 from typing import List, Union, Tuple, Optional, Dict, Callable, Set
+from owslib.wmts import WebMapTileService
 from functools import partial
 from spectraclass.util.logs import lgm, exception_handled
 from PIL import Image
@@ -183,46 +184,21 @@ class WMTSRasterSource(RasterSource):
 
     """
 
-    def __init__(self, wmts, layer_name, gettile_extra_kwargs=None):
-        """
-        Parameters
-        ----------
-        wmts
-            The URL of the WMTS, or an owslib.wmts.WebMapTileService instance.
-        layer_name
-            The name of the layer to use.
-        gettile_extra_kwargs: dict, optional
-            Extra keywords (e.g. time) to pass through to the
-            service's gettile method.
+    def __init__(self, wmts: WebMapTileService, layer_name: str, gettile_extra_kwargs=None):
+        try:                layer = wmts.contents[ layer_name ]
+        except KeyError:    raise ValueError( f'Invalid layer name {layer_name!r} for WMTS at {wmts.url!r}')
 
-        """
         self.image_cache = {}
-        if WebMapService is None:
-            raise ImportError(_OWSLIB_REQUIRED)
-
-        if not (hasattr(wmts, 'tilematrixsets') and
-                hasattr(wmts, 'contents') and
-                hasattr(wmts, 'gettile')):
-            wmts = owslib.wmts.WebMapTileService(wmts)
-
-        try:
-            layer = wmts.contents[layer_name]
-        except KeyError:
-            raise ValueError(
-                f'Invalid layer name {layer_name!r} for WMTS at {wmts.url!r}')
-
-        #: The OWSLib WebMapTileService instance.
-        self.wmts = wmts
-
-        #: The layer to fetch.
+        self.wmts: WebMapTileService = wmts
         self.layer = layer
-
-        #: Extra kwargs passed through to the service's gettile request.
-        if gettile_extra_kwargs is None:
-            gettile_extra_kwargs = {}
+        if gettile_extra_kwargs is None: gettile_extra_kwargs = {}
         self.gettile_extra_kwargs = gettile_extra_kwargs
-
         self._matrix_set_name_map = {}
+        self._current_extent = None
+
+    @property
+    def extent(self):
+        return self._current_extent
 
     def _matrix_set_name(self, target_projection):
         key = id(target_projection)
@@ -285,6 +261,7 @@ class WMTSRasterSource(RasterSource):
             t1 = time.time()
             located_image = LocatedImage(wmts_image, wmts_actual_extent)
             lgm().log( f" fetch_raster-> dt={t1-t0:.2f}: {wmts_desired_extent} -> {wmts_actual_extent} ")
+            self._current_extent = wmts_actual_extent
             located_images.append(located_image)
         return located_images
 
@@ -333,7 +310,7 @@ class WMTSRasterSource(RasterSource):
             max_row = min(max_row, tile_matrix_limits.maxtilerow)
         return min_col, max_col, min_row, max_row
 
-    def get_image(self, wmts, layer, matrix_set_name, tile_matrix_id, img_key ):
+    def _get_image(self, wmts, layer, matrix_set_name, tile_matrix_id, img_key):
         img: Image = self.image_cache.get(img_key)
         if img is None:
             tile = wmts.gettile( layer=layer.id, tilematrixset=matrix_set_name, tilematrix=str(tile_matrix_id),
@@ -392,7 +369,7 @@ class WMTSRasterSource(RasterSource):
         nproc = 4 # cpu_count()
         lgm().log(f" ***** Fetch image extent {extent}, (n_rows,n_cols) = {[n_rows,n_cols]}, nproc={nproc} ")
         image_ids = [ (row, col) for row in range(min_row, max_row + 1) for col in range(min_col, max_col + 1) ]
-        image_processor =  partial( self.get_image, wmts, layer, matrix_set_name, tile_matrix_id )
+        image_processor =  partial(self._get_image, wmts, layer, matrix_set_name, tile_matrix_id)
         with get_context("spawn").Pool( processes=nproc ) as p:
             image_tiles = p.map( image_processor, image_ids )
 
