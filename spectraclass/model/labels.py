@@ -78,6 +78,7 @@ class LabelsManager(SCSingletonConfigurable):
         super(LabelsManager, self).__init__()
         self._colors: List[str] = None
         self._labels = None
+        self._labels_data: xa.DataArray = None
         self._flow: ActivationFlow = None
         self._actions: List[Action] = []
         self._label_maps: List[np.ndarray] = []
@@ -160,6 +161,14 @@ class LabelsManager(SCSingletonConfigurable):
             lgm().log( f"LabelsManager[{source}].addMarker: {marker}")
             self.addAction("mark", source, marker=marker )
 
+    @property
+    def markers(self):
+        mlist = []
+        for action in self._actions:
+            if action.type == "mark":
+                mlist.append( action["marker"] )
+        return mlist
+
     def addAction(self, type: str, source: str, **kwargs ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
         ufm().clear()
@@ -194,14 +203,26 @@ class LabelsManager(SCSingletonConfigurable):
     def classification(self) -> np.ndarray:
         return self._flow.C
 
-    def initLabelsData( self, point_data: xa.DataArray = None ):
+    def _init_labels_data(self, point_data: xa.DataArray = None):
+        nodata_value = -1
         if point_data is not None:
             self.template = point_data[:,0].squeeze( drop=True )
             self.template.attrs = point_data.attrs
+        if self.template is not None:
+            lgm().log( f" *** Init Labels Data, dims = {self.template.dims}, shape = {self.template.shape}")
+            self._labels_data: xa.DataArray = xa.full_like( self.template, 0, dtype=np.int32 ).where( self.template.notnull(), nodata_value )
+            self._labels_data.attrs['_FillValue'] = nodata_value
+            self._labels_data.name = self.template.attrs['dsid'] + "_labels"
+            self._labels_data.attrs[ 'long_name' ] = [ "labels" ]
 
-    @property
-    def markers(self) -> List[Marker]:
-        return [ a["marker"] for a in self._actions if a.type == "mark" ]
+    def _init_data(self):
+        from ..graph.manager import ActivationFlowManager
+        from spectraclass.data.base import DataManager
+        if self._flow is None:
+            project_data: xa.Dataset = DataManager.instance().loadCurrentProject("graph")
+            point_data: xa.DataArray = project_data["plot-y"]
+            self._init_labels_data( point_data )
+            self._flow = ActivationFlowManager.instance().getActivationFlow()
 
     def getMarker( self, pid: int ) -> Optional[Marker]:
         lgm().log( f" ^^^^^^^^^ getMarker[{pid}] -> markers = {self.markers}")
@@ -214,6 +235,19 @@ class LabelsManager(SCSingletonConfigurable):
         for m in self.markers:
             log_strs.append( f"[{m.cid}:{m.pids[0]}]" if m.size == 1 else  f"M{m.cid}-{m.size}" )
         lgm().log( f"  ----------------------------> log_markers[{msg}]: {' '.join(log_strs)}")
+
+    def updateLabels(self):
+        self._init_data()
+        mks: List[Marker] = self.markers
+        lgm().log( f" NMarkers = {len(mks)}")
+        for marker in mks:
+            lgm().log(f" MARKER[{marker.cid}]: #pids = {len(marker.pids)}")
+            for pid in marker.pids:
+                self._labels_data[ pid ] = marker.cid
+
+    def getLabelsArray(self) -> xa.DataArray:
+        self.updateLabels()
+        return self._labels_data.copy()
 
     @classmethod
     def getSortedLabels(self, labels_dset: xa.Dataset ) -> Tuple[np.ndarray,np.ndarray]:
@@ -228,7 +262,7 @@ class LabelsManager(SCSingletonConfigurable):
 
     def clearMarkers(self):
         self._actions = []
-        self.initLabelsData()
+        self._init_labels_data()
 
     def refresh(self):
         self.clearMarkers()
@@ -299,6 +333,13 @@ class LabelsManager(SCSingletonConfigurable):
                         label_map[cid] = lmap.difference(common_items)
             if update_directory_table:
                 tm().edit_table( 0, m.pids, "cid", m.cid )
+        return label_map
+
+    def get_label_data( self ) -> Dict[int,Set[int]]:
+        label_map = {}
+        for m in self.markers:
+            pids = label_map.get( m.cid, set() )
+            label_map[m.cid] = pids.union( set(m.pids) )
         return label_map
 
     @property

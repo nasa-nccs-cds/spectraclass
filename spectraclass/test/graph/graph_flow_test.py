@@ -13,7 +13,7 @@ lm = LabelsManager.instance()
 lm.setLabels( [ ('Class-1', "cyan"),  ('Class-2', "green"),  ('Class-3', "magenta"),  ('Class-4', "blue")] )
 pcm.init_data()
 model_data: xa.DataArray = dm.getModelData()
-LabelsManager.instance().initLabelsData( model_data )
+LabelsManager.instance()._init_labels_data(model_data)
 lm.addMarker( Marker([250],1) )
 
 dm.graph_flow(1)

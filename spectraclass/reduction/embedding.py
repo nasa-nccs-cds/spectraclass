@@ -148,7 +148,7 @@ class ReductionManager(SCSingletonConfigurable):
         from .cpu import UMAP
         self._state = self.NEW_DATA
         self._dsid = point_data.attrs['dsid']
-        LabelsManager.instance().initLabelsData(point_data)
+        LabelsManager.instance()._init_labels_data(point_data)
         mapper: UMAP = self.getUMapper(self._dsid, self.ndim)
         mapper.scoord = point_data.coords['samples']
         mapper.input_data = point_data.values
@@ -161,7 +161,7 @@ class ReductionManager(SCSingletonConfigurable):
                 mapper.init_embedding(reduction)
             mapper.init = self.init
             kwargs['nepochs'] = 1
-            labels_data: np.ndarray = LabelsManager.instance().labels_data().values
+            labels_data: np.ndarray = LabelsManager.instance().getLabelsArray().values
             range = [ mapper.input_data.min(), mapper.input_data.max() ]
             mapper.embed( mapper.input_data, labels_data, **kwargs)
         return mapper.embedding
@@ -172,7 +172,7 @@ class ReductionManager(SCSingletonConfigurable):
         if 'nepochs' not in kwargs.keys():   kwargs['nepochs'] = self.nepochs
         if 'alpha' not in kwargs.keys():   kwargs['alpha'] = self.alpha
         self._state = self.PROCESSED
-        labels_data: xa.DataArray = kwargs.get( 'labels', LabelsManager.instance().labels_data() )
+        labels_data: xa.DataArray = kwargs.get( 'labels', LabelsManager.instance().getLabelsArray())
         lgm().log( f"Executing UMAP embedding with input data shape = {mapper.input_data.shape}, parms: {kwargs}")
         mapper.embed( mapper.input_data, labels_data.values, **kwargs )
         return mapper.embedding

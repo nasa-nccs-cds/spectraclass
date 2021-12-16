@@ -85,8 +85,10 @@ class mplGraphPlot:
         self._regions[ prec.polyId ] = marker
         return marker
 
-    def plot_region(self, prec: PolyRec, cid: int ):
-        self.addMarker( self.get_region_marker( prec, cid ) )
+    def plot_region(self, prec: PolyRec, cid: int ) -> Marker:
+        marker = self.get_region_marker( prec, cid )
+        self.addMarker( marker )
+        return marker
 
     def removeMarker(self, marker: Marker ):
         if marker is not None:
@@ -215,10 +217,10 @@ class GraphPlotManager(SCSingletonConfigurable):
             current_graph.addMarker( marker )
 
     @exception_handled
-    def plot_region( self, region: PolyRec, cid: int ):
+    def plot_region( self, region: PolyRec, cid: int ) -> Marker:
         current_graph: mplGraphPlot = self.current_graph()
         if current_graph is not None:
-            current_graph.plot_region( region, cid )
+            return current_graph.plot_region( region, cid )
 
     def remove_region(self, region: PolyRec ):
         for graph in self._graphs: graph.remove_region( region )

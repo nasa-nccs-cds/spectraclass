@@ -111,6 +111,7 @@ class cpActivationFlow(ActivationFlow):
         label_count = np.count_nonzero(self.C)
         if label_count == 0:
             ufm().show( "Workflow violation: Must label some points before this algorithm can be applied", "red" )
+            lgm().log(" ----> No Labeled points in spread()")
             return None
         P_init = np.full( self.C.shape, float('inf'), dtype=np.float32 )
         self.P = np.where( sample_mask, P_init, 0.0 )

@@ -82,7 +82,7 @@ class GCNLearningModel(LearningModel):
             self._gcn = GCN( X.shape[1], nHidden, nClasses )
         t0 = time.time()
         model_data: xa.DataArray = dm().getModelData()
-        class_data: xa.DataArray = lm().labels_data()
+        class_data: xa.DataArray = lm().getLabelsArray()
         train_mask: torch.tensor = torch.from_numpy( class_data.values > 0 )
         test_mask:  torch.tensor = torch.from_numpy( class_data.values == 0 )
         nodata_mask:  torch.tensor = torch.from_numpy( class_data.values == class_data.attrs['_FillValue'] )

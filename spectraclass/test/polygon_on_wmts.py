@@ -3,7 +3,7 @@ from spectraclass.util.logs import LogManager, lgm, exception_handled
 import logging, os
 from typing import List, Union, Tuple, Optional, Dict, Callable
 from spectraclass.gui.spatial.basemap import TileServiceBasemap
-from widgets.polygons import PolygonInteractor, Polygon
+from widgets.polygons import PolygonInteractor
 import matplotlib.pyplot as plt
 from matplotlib.collections import QuadMesh
 from spectraclass.data.base import DataManager, ModeDataManager

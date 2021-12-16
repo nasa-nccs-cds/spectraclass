@@ -94,10 +94,12 @@ class PolygonInteractor:
 
     def close_poly(self):
         from spectraclass.gui.plot import GraphPlotManager, gpm
+        from spectraclass.application.controller import app
         self.prec.complete()
         self.creating = False
         self.draw()
-        gpm().plot_region( self.prec, self._cid )
+        marker = gpm().plot_region( self.prec, self._cid )
+        app().add_marker("map", marker )
         self.prec = None
 
     @exception_handled

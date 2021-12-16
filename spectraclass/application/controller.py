@@ -138,7 +138,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.model.labels import LabelsManager, Action, lm
         embedding: xa.DataArray = dm().getModelData()
-        labels_data: xa.DataArray = lm().labels_data()
+        labels_data: xa.DataArray = lm().getLabelsArray()
         labels_mask = (labels_data > 0)
         filtered_labels: np.ndarray = labels_data.where(labels_mask, drop=True).astype(np.int32).values
         filtered_point_data: np.ndarray = embedding.where(labels_mask, drop=True).values
@@ -153,7 +153,7 @@ class SpectraclassController(SCSingletonConfigurable):
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> SPREAD ")
         flow: ActivationFlow = afm().getActivationFlow()
         lm().log_markers("pre-spread")
-        self._flow_class_map: np.ndarray = lm().labels_data().data
+        self._flow_class_map: np.ndarray = lm().getLabelsArray().data
         catalog_pids = np.arange(0, self._flow_class_map.shape[0])
         if self.pcm_active: pcm().clear_bins()
         converged = flow.spread( self._flow_class_map, niters )
@@ -189,10 +189,10 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.gui.points import PointCloudManager, pcm
-        lm().addMarkerAction( "app", marker )
-        gpm().plot_graph( marker )
-        if self.pcm_active: pcm().update_marked_points(marker.cid)
-        lm().log_markers("post-add_marker")
+        if marker is not None:
+            lm().addMarkerAction( "app", marker )
+            gpm().plot_graph( marker )
+            if self.pcm_active: pcm().update_marked_points(marker.cid)
 
     def get_marked_pids(self) -> Dict[int,Set[int]]:
         from spectraclass.model.labels import LabelsManager, Action, lm
