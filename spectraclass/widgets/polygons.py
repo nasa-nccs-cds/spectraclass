@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib.lines import Line2D
 from matplotlib.artist import Artist
 from spectraclass.widgets.polygon import PolyRec
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from matplotlib.backend_bases import MouseEvent, KeyEvent
 from typing import List, Union, Tuple, Optional, Dict, Callable
 

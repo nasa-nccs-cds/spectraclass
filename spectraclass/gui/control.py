@@ -7,7 +7,7 @@ import numpy as np
 import ipywidgets as ipw
 import traitlets.config as tlc
 from spectraclass.model.base import SCSingletonConfigurable
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import traitlets as tl
 
 def am() -> "ActionsManager":

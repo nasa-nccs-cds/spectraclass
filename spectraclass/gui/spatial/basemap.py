@@ -8,7 +8,7 @@ from spectraclass.data.spatial.tile.manager import TileManager
 from spectraclass.gui.spatial.source import WMTSRasterSource
 from spectraclass.gui.spatial.image import TileServiceImage
 from typing import List, Optional, Dict, Tuple
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from cartopy.mpl.geoaxes import GeoAxes
 from matplotlib.axes import Axes
 from owslib.wmts import WebMapTileService

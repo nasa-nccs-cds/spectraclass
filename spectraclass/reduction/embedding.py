@@ -7,7 +7,7 @@ import numpy as np, time, traceback
 from ..model.labels import LabelsManager
 import traitlets as tl
 import traitlets.config as tlc
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from spectraclass.model.base import SCSingletonConfigurable
 
 def norm( x: xa.DataArray, axis = 0 ) -> xa.DataArray:

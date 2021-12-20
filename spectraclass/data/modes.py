@@ -5,7 +5,7 @@ import ipywidgets as ip
 from collections import OrderedDict
 from pathlib import Path
 from spectraclass.gui.control import UserFeedbackManager, ufm
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import xarray as xa
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable

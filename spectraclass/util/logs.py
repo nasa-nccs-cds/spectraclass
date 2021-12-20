@@ -2,13 +2,11 @@ import numpy as np
 from typing import List, Optional, Dict, Type
 import os
 from enum import Enum
-import ipywidgets as ip
-import xarray as xa
-import traitlets as tl
+from functools import wraps
+from time import time
 from inspect import isclass
 from pkgutil import iter_modules
 from pathlib import Path
-from importlib import import_module
 from spectraclass.model.base import SCSingletonConfigurable
 import threading, time, logging, sys, traceback
 
@@ -20,6 +18,16 @@ def exception_handled(func):
         try:        return func( *args, **kwargs )
         except:     lgm().exception( f" Error in {func}:")
     return wrapper
+
+def log_timing(f):
+    @wraps(f)
+    def wrap(*args, **kw):
+        ts = time()
+        result = f(*args, **kw)
+        te = time()
+        lgm().log( 'EXEC %r args:[%r, %r] took: %2.4f sec' %  (f.__name__, args, kw, te-ts) )
+        return result
+    return wrap
 
 class LogManager(SCSingletonConfigurable):
 

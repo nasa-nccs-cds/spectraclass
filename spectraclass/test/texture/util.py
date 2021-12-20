@@ -8,7 +8,7 @@ import xarray as xa
 TEST_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 from pynndescent import NNDescent
 from sklearn.decomposition import PCA, FastICA
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from pywt import dwt2
 
 def scale(x, out_range=(-1, 1)):

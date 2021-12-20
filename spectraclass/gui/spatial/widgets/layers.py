@@ -4,7 +4,7 @@ from functools import partial
 from collections import OrderedDict
 import ipywidgets as ipw
 import traitlets.config as tlc
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import traitlets as tl
 
 

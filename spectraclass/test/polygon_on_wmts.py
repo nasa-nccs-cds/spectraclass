@@ -1,5 +1,5 @@
 import xarray as xa
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import logging, os
 from typing import List, Union, Tuple, Optional, Dict, Callable
 from spectraclass.gui.spatial.basemap import TileServiceBasemap
@@ -24,7 +24,7 @@ import traitlets as tl
 import os, time, ipywidgets as ipw
 from ipympl.backend_nbagg import Canvas, Toolbar
 from spectraclass.data.spatial.tile.tile import Block
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import types, pandas as pd
 import xarray as xa
 import numpy as np

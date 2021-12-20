@@ -8,7 +8,7 @@ import os, traitlets as tl
 import xarray as xa
 import requests, traceback
 from spectraclass.model.base import SCSingletonConfigurable
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 from matplotlib.image import AxesImage

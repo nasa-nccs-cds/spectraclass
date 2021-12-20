@@ -7,7 +7,7 @@ from ..model.labels import LabelsManager
 import traitlets as tl
 import traitlets.config as tlc
 from spectraclass.gui.control import UserFeedbackManager, ufm
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from spectraclass.model.base import SCSingletonConfigurable
 
 def cm():

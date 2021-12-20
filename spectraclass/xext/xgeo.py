@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 from osgeo import osr, gdalconst, gdal
 from pyproj import Proj, transform
 from .grid import GDALGrid
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from shapely.geometry import Polygon
 import xarray as xr
 from .xextension import XExtension

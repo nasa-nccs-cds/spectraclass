@@ -1,6 +1,6 @@
 from skimage.transform import ProjectiveTransform
 import numpy as np
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import xarray as xa
 from typing import List, Union, Tuple, Optional, Dict
 from pyproj import Proj, transform
@@ -73,6 +73,9 @@ class Block:
         if self._data is None:
             self._data = self._getData()
         return self._data
+
+    def classmap(self, default_value: int =0 ) -> xa.DataArray:
+        return xa.full_like( self.data[0].squeeze(drop=True), default_value, dtype=np.int )
 
     @property
     def index_array(self):

@@ -6,7 +6,7 @@ import ipywidgets as ipw
 import matplotlib.colors as mcolors
 from ..graph.manager import ActivationFlow
 import traitlets.config as tlc
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.gui.spatial.widgets.markers import Marker
 import xarray as xa
@@ -78,6 +78,7 @@ class LabelsManager(SCSingletonConfigurable):
         super(LabelsManager, self).__init__()
         self._colors: List[str] = None
         self._labels = None
+        self._markers: List[Marker] = []
         self._labels_data: xa.DataArray = None
         self._flow: ActivationFlow = None
         self._actions: List[Action] = []
@@ -154,20 +155,15 @@ class LabelsManager(SCSingletonConfigurable):
             self._label_maps = self._label_maps[:1]
         return self._label_maps[-1]
 
-    def addMarkerAction(self, source: str, marker: Marker, **kwargs ):
+    def addMarker(self, marker: Marker ):
         top_marker = self.topMarker
         if not marker.empty and (marker != top_marker):
             self.clearTransientMarkers(marker)
-            lgm().log( f"LabelsManager[{source}].addMarker: {marker}")
-            self.addAction("mark", source, marker=marker )
+            self._markers.append( marker )
 
     @property
     def markers(self):
-        mlist = []
-        for action in self._actions:
-            if action.type == "mark":
-                mlist.append( action["marker"] )
-        return mlist
+        return self._markers
 
     def addAction(self, type: str, source: str, **kwargs ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
@@ -189,7 +185,7 @@ class LabelsManager(SCSingletonConfigurable):
 
     @property
     def topMarker(self) -> Optional[Marker]:
-        try:        return self.markers[-1]
+        try:        return self._markers[-1]
         except:     return None
 
     @exception_handled
@@ -243,7 +239,7 @@ class LabelsManager(SCSingletonConfigurable):
         for marker in mks:
             lgm().log(f" MARKER[{marker.cid}]: #pids = {len(marker.pids)}")
             for pid in marker.pids:
-                self._labels_data[ pid ] = marker.cid
+                self._labels_data[ pid ] = marker
 
     def getLabelsArray(self) -> xa.DataArray:
         self.updateLabels()
@@ -261,23 +257,20 @@ class LabelsManager(SCSingletonConfigurable):
         return filtered_labels, filtered_distance
 
     def clearMarkers(self):
-        self._actions = []
+        self._markers = []
         self._init_labels_data()
 
     def refresh(self):
         self.clearMarkers()
 
     def deletePid(self, pid: int ):
-        empty_actions = []
-        for a in self._actions:
-            if a.type == "mark":
-                marker: Marker = a["marker"]
-                marker.deletePid(pid)
-                if marker.empty:
-                    empty_actions.append( a )
-        for a in empty_actions:
-            lgm().log( f"Removing marker action: {a['marker']}")
-            self._actions.remove( a )
+        empty_markers = []
+        for marker in self._markers:
+            marker.deletePid(pid)
+            if marker.empty: empty_markers.append( marker )
+        for m in empty_markers:
+            lgm().log( f"Removing marker: {m}")
+            self._markers.remove( m )
 
 
     # def clearMarkerConflicts(self, m: Marker):
@@ -290,15 +283,14 @@ class LabelsManager(SCSingletonConfigurable):
     #     self._markers = points_selection
 
     def clearTransientMarkers(self, m: Marker):
-        if len(self.markers) > 0:
-            top_marker = self.topMarker
-            if (top_marker.cid == 0) and (not m.empty):
-                self.clearMarker( top_marker )
+        top_marker = self.topMarker
+        if top_marker and (top_marker.cid == 0) and (not m.empty):
+            self.clearMarker( top_marker )
 
     def clearMarker( self, m ):
-        for action in reversed(self._actions):
-            if m == action["marker"]:
-                self._actions.remove(action)
+        for marker in reversed(self._markers):
+            if m == marker:
+                self._markers.remove( marker )
                 return
 
     @property
@@ -388,7 +380,7 @@ class LabelsManager(SCSingletonConfigurable):
             return seed_points
 
     @exception_handled
-    def mark_points( self, point_ids: np.ndarray = None, cid: int = -1 ):
+    def mark_points( self, point_ids: np.ndarray, cid: int, type: str = "markers" ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
         from spectraclass.gui.spatial.widgets.markers import Marker
         icid: int = cid if cid > -1 else self.current_cid
@@ -402,7 +394,7 @@ class LabelsManager(SCSingletonConfigurable):
             lgm().log( f" LM: mark_points -> npts = {point_ids.size}, id range = {[point_ids.min(), point_ids.max()]}")
 
         new_pids: np.ndarray = self.getNewPids( point_ids, icid )
-        self.addMarkerAction(  "points", Marker( new_pids, cid ) )
+        self.addMarker( Marker( new_pids, cid, type=type ) )
         return self.current_cid
 
     def getNewPids(self, point_ids: np.ndarray, cid: int ) -> np.ndarray:

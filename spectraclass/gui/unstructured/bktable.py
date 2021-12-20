@@ -1,4 +1,4 @@
-from spectraclass.util.logs import lgm, exception_handled
+from spectraclass.util.logs import lgm, exception_handled, log_timing
 from functools import partial
 import numpy as np
 import pandas as pd

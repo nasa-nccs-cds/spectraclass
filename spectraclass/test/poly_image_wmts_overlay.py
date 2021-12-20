@@ -1,5 +1,5 @@
 import xarray as xa
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import logging, os
 from typing import List, Union, Tuple, Optional, Dict, Callable
 from spectraclass.gui.spatial.basemap import TileServiceBasemap

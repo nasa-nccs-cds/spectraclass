@@ -5,7 +5,7 @@ from matplotlib.axes import Axes
 import contextlib, time
 from typing import List, Optional, Dict, Tuple
 from matplotlib.image import AxesImage
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import matplotlib.artist
 
 def toXA( vname: str, nparray: np.ndarray, format="np", transpose = False ):

@@ -5,7 +5,7 @@ import numpy as np
 import shapely.vectorized as svect
 from spectraclass.data.base import DataManager
 from spectraclass.gui.spatial.widgets.markers import Marker
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import matplotlib.pyplot as plt
 import ipywidgets as ipw
 from spectraclass.model.base import SCSingletonConfigurable

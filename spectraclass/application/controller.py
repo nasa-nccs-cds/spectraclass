@@ -1,6 +1,6 @@
 import os, ipywidgets as ipw
 from spectraclass.model.base import SCSingletonConfigurable
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from typing import List, Union, Tuple, Optional, Dict, Callable, Set
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.gui.spatial.widgets.markers import Marker
@@ -127,7 +127,7 @@ class SpectraclassController(SCSingletonConfigurable):
         classification: xa.DataArray = cm().apply_classification( embedding )
         if self.pcm_active: pcm().color_by_index( classification.data, lm().colors )
         overlay_image = classification.data.reshape( mm().image_template.shape )
-        mm().plot_overlay_image( overlay_image )
+        mm().plot_labels_image( overlay_image )
        # spm().plot_overlay_image( mm().image_template.copy( data=labels_image ), mm().overlay_alpha )
         lm().addAction("color", "points")
         return classification
@@ -148,6 +148,7 @@ class SpectraclassController(SCSingletonConfigurable):
     def spread_selection(self, niters=1):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, Action, lm
+        from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> SPREAD ")
@@ -166,8 +167,10 @@ class SpectraclassController(SCSingletonConfigurable):
                     new_indices: np.ndarray = catalog_pids[ self._flow_class_map == cid ]
                     if new_indices.size > 0:
                         lgm().log(f" @@@ spread_selection: cid={cid}, label={label}, new_indices={new_indices}" )
-                        lm().mark_points( new_indices, cid )
+                        lm().mark_points( new_indices, cid, "labels" )
                         if self.pcm_active: pcm().update_marked_points(cid)
+            mm().plot_labels_image()
+
  #           gpm().plot_graph()
         lm().log_markers("post-spread")
         return converged
@@ -190,7 +193,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.gui.points import PointCloudManager, pcm
         if marker is not None:
-            lm().addMarkerAction( "app", marker )
+            lm().addMarker( marker )
             gpm().plot_graph( marker )
             if self.pcm_active: pcm().update_marked_points(marker.cid)
 

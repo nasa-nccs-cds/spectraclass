@@ -1,6 +1,6 @@
 import os, ipywidgets as ipw
 from spectraclass.model.base import SCSingletonConfigurable
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from typing import List, Union, Tuple, Optional, Dict, Callable
 from spectraclass.gui.control import UserFeedbackManager, ufm
 import numpy as np

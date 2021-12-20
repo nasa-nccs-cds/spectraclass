@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from typing import List, Union, Tuple, Optional, Dict, Callable
 from matplotlib.backend_bases import PickEvent, MouseEvent, KeyEvent,  MouseButton  # , NavigationToolbar2
 import numpy as np

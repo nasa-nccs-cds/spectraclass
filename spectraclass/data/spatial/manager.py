@@ -6,7 +6,7 @@ from spectraclass.reduction.embedding import ReductionManager, rm
 from spectraclass.data.base import ModeDataManager
 import matplotlib.pyplot as plt
 from collections import OrderedDict
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.data.spatial.tile.tile import Block
 import os, math, pickle

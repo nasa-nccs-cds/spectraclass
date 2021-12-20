@@ -5,7 +5,7 @@ import xarray as xa
 from matplotlib import colors
 import numpy.ma as ma
 import ipywidgets as ip
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.model.labels import LabelsManager, lm

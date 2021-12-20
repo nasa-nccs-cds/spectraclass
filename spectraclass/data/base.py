@@ -13,7 +13,7 @@ from importlib import import_module
 from spectraclass.model.base import SCSingletonConfigurable
 from traitlets.config.loader import load_pyconfig_files
 from .modes import ModeDataManager
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from traitlets.config.loader import Config
 import threading, time, logging, sys
 

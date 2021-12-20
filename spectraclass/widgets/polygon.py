@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib.lines import Line2D
 from matplotlib.patches import Polygon
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from shapely.geometry import Polygon as SPolygon
 import regionmask
 from matplotlib.backend_bases import MouseEvent, KeyEvent

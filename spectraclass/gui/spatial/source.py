@@ -4,7 +4,7 @@ from multiprocessing import cpu_count, get_context, Pool
 from typing import List, Union, Tuple, Optional, Dict, Callable, Set
 from owslib.wmts import WebMapTileService
 from functools import partial
-from spectraclass.util.logs import lgm, exception_handled
+from spectraclass.util.logs import lgm, exception_handled, log_timing
 from PIL import Image
 import numpy as np
 import shapely.geometry as sgeom

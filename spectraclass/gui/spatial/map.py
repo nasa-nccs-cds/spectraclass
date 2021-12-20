@@ -1,6 +1,6 @@
 import xarray as xa
 import numpy as np
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import logging, os
 from matplotlib.colors import Normalize
 from matplotlib.figure import Figure
@@ -55,8 +55,9 @@ class MapManager(SCSingletonConfigurable):
         self.label_map: Optional[xa.DataArray] = None     # Map of classification labels from ML
         self.region_selection: PolygonInteractor = None
         self.labels_image: Optional[AxesImage] = None
-        self.layers.add('bands', 1.0, True)
-        self.layers.add('labels', 0.5, False)
+        self.layers.add( 'bands', 1.0, True )
+        self.layers.add( 'markers', 0.5, False )
+        self.layers.add( 'labels', 0.5, False )
         self.menu_actions = OrderedDict( Layers = [ [ "Increase Labels Alpha", 'Ctrl+>', None, partial( self.update_image_alpha, "labels", True ) ],
                                                     [ "Decrease Labels Alpha", 'Ctrl+<', None, partial( self.update_image_alpha, "labels", False ) ],
                                                     [ "Increase Band Alpha",   'Alt+>',  None, partial( self.update_image_alpha, "bands", True ) ],
@@ -132,12 +133,11 @@ class MapManager(SCSingletonConfigurable):
             self.slider_cid = self.slider.on_changed(self._update)
 
     @exception_handled
-    def plot_overlay_image( self, image_data: np.ndarray = None ):
-        if image_data is not None:
-            lgm().log( f" plot image overlay, shape = {image_data.shape}, vrange = {[ image_data.min(), image_data.max() ]}, dtype = {image_data.dtype}" )
-            self._classification_data = image_data
-            self.labels_image.set_data(image_data)
-        self.labels_image.set_alpha(self.layers('overlay').visibility)
+    def plot_labels_image(self):
+        self._classification_data = self.points_selection.get_classmap().values
+        lgm().log( f" plot labels image, shape = {self._classification_data.shape}, vrange = {[ self._classification_data.min(), self._classification_data.max() ]}" )
+        self.labels_image.set_data( self._classification_data )
+        self.labels_image.set_alpha( self.layers( 'labels' ).visibility )
         self.update_canvas()
 
     def layer_image( self, name: str ):

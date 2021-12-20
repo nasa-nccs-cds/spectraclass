@@ -2,7 +2,7 @@ from spectraclass.data.base import ModeDataManager
 from collections import OrderedDict
 from spectraclass.reduction.embedding import ReductionManager, rm
 from pathlib import Path
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import xarray as xa
 import traitlets as tl
 import numpy as np
