@@ -78,6 +78,7 @@ class MapManager(SCSingletonConfigurable):
         self.label_map.attrs['_FillValue'] = nodata_value
         self.label_map.name = f"{self.block.data.name}_labels"
         self.label_map.attrs[ 'long_name' ] = [ "labels" ]
+        self.label_map.plot.imshow( ax=self.base.gax, alpha=self.layers('labels').visibility, cmap=lm().colors )
 
     def clearLabels( self):
         if self.block is not None:
