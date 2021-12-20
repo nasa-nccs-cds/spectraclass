@@ -10,8 +10,9 @@ from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timin
 def pid( instance ): return hex(id(instance))[-4:]
 
 class Marker:
-    def __init__(self, pids: Union[np.ndarray,Iterable], cid: int, **kwargs ):
+    def __init__(self, type: str, pids: Union[np.ndarray,Iterable], cid: int, **kwargs ):
         self.cid = cid
+        self.type = type
         self.props = kwargs
         self._pids: np.ndarray = pids if isinstance( pids, np.ndarray ) else np.array(pids)
 
@@ -40,7 +41,7 @@ class Marker:
         return not self.__eq__( m )
 
     def __str__(self):
-        return f"Marker[{self.cid}]-{self._pids.tolist()}"
+        return f"Marker[{self.cid}]: {self._pids.size()} pids"
 
     @property
     def size(self):
@@ -104,7 +105,7 @@ class MarkerManager( PointsInteractor ):
         from spectraclass.model.labels import LabelsManager, lm
         ycoords, xcoords, colors, markers = [], [], [], lm().markers
         for marker in markers:
-            if marker['type'] == "markers":
+            if marker.type == "marker":
                 for pid in marker.pids:
                     coords = self._block.pindex2coords( pid )
                     if (coords is not None) and self._block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
@@ -118,7 +119,7 @@ class MarkerManager( PointsInteractor ):
         from spectraclass.model.labels import LabelsManager, lm
         cmap: xa.DataArray = self._block.classmap()
         for marker in lm().markers:
-            if marker['type'] == "labels":
+            if marker.type == "label":
                 for pid in marker.pids:
                     idx = self._block.pindex2indices( pid )
                     cmap[ idx['iy'], idx['ix'] ] = marker.cid
@@ -162,7 +163,7 @@ class MarkerManager( PointsInteractor ):
                 pid = self._block.coords2pindex(event.ydata, event.xdata)
                 lgm().log(f"\n on_button_press --> selected pid = {pid}, button = {event.button}")
                 if pid >= 0:
-                    m = Marker( [pid], lm().current_cid, point=(event.xdata,event.ydata), type="marker" )
+                    m = Marker( "marker", [pid], lm().current_cid, point=(event.xdata,event.ydata) )
                     self.add( m )
             self.plot()
 

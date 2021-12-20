@@ -59,7 +59,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.map import MapManager, mm
         pids = lm().getPids( iclass )
-        gpm().plot_graph( Marker( pids, iclass ) )
+        gpm().plot_graph( Marker( "marker", pids, iclass ) )
         mm().set_region_class( iclass )
 
     @classmethod
@@ -166,7 +166,7 @@ class SpectraclassController(SCSingletonConfigurable):
                 if all_classes or ( lm().current_cid == cid ):
                     new_indices: np.ndarray = catalog_pids[ self._flow_class_map == cid ]
                     if new_indices.size > 0:
-                        lgm().log(f" @@@ spread_selection: cid={cid}, label={label}, new_indices={new_indices}" )
+                        lgm().log(f" @@@ spread_selection: cid={cid}, label={label}, #new_indices={len(new_indices)}" )
                         lm().mark_points( new_indices, cid, "labels" )
                         if self.pcm_active: pcm().update_marked_points(cid)
             mm().plot_labels_image()

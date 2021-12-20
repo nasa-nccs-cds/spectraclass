@@ -22,9 +22,9 @@ def exception_handled(func):
 def log_timing(f):
     @wraps(f)
     def wrap(*args, **kw):
-        ts = time()
+        ts = time.time()
         result = f(*args, **kw)
-        te = time()
+        te = time.time()
         lgm().log( 'EXEC %r args:[%r, %r] took: %2.4f sec' %  (f.__name__, args, kw, te-ts) )
         return result
     return wrap

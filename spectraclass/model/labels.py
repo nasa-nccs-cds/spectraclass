@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Set
+from spectraclass.data.spatial.tile.tile import Block
 import collections.abc
 from functools import partial
 import ipywidgets as ipw
@@ -236,10 +237,10 @@ class LabelsManager(SCSingletonConfigurable):
         self._init_data()
         mks: List[Marker] = self.markers
         lgm().log( f" NMarkers = {len(mks)}")
+        self._labels_data[:] = 0
         for marker in mks:
             lgm().log(f" MARKER[{marker.cid}]: #pids = {len(marker.pids)}")
-            for pid in marker.pids:
-                self._labels_data[ pid ] = marker
+            self._labels_data[ marker.pids ] = marker.cid
 
     def getLabelsArray(self) -> xa.DataArray:
         self.updateLabels()
@@ -334,6 +335,17 @@ class LabelsManager(SCSingletonConfigurable):
             label_map[m.cid] = pids.union( set(m.pids) )
         return label_map
 
+    @log_timing
+    def get_label_map(self, block: Block, type: str = None ) -> xa.DataArray:
+        cmap: xa.DataArray = block.classmap()
+        for marker in lm().markers:
+            if (type is None) or (marker.type == type):
+                lgm().log( f"\nSetting {marker.pids.size} labels for cid = {marker.cid}")
+                for pid in marker.pids:
+                    idx = block.pindex2indices( pid )
+                    cmap[ idx['iy'], idx['ix'] ] = marker.cid
+        return cmap
+
     @property
     def selectedLabel(self):
         return self._labels[ self.current_cid ]
@@ -394,7 +406,7 @@ class LabelsManager(SCSingletonConfigurable):
             lgm().log( f" LM: mark_points -> npts = {point_ids.size}, id range = {[point_ids.min(), point_ids.max()]}")
 
         new_pids: np.ndarray = self.getNewPids( point_ids, icid )
-        self.addMarker( Marker( new_pids, cid, type=type ) )
+        self.addMarker( Marker( type, new_pids, cid ) )
         return self.current_cid
 
     def getNewPids(self, point_ids: np.ndarray, cid: int ) -> np.ndarray:

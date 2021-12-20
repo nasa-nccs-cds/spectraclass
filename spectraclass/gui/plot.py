@@ -80,8 +80,7 @@ class mplGraphPlot:
         PID = np.array(range(raster.size))
         mask = svect.contains( polygon, MX, MY )
         pids = PID[mask.flatten()].tolist()
-        lgm().log( f"\nGET REGION[{cid}]: {pids}" )
-        marker =  Marker( pids, cid )
+        marker =  Marker( 'marker', pids, cid )
         self._regions[ prec.polyId ] = marker
         return marker
 
@@ -92,9 +91,12 @@ class mplGraphPlot:
 
     def removeMarker(self, marker: Marker ):
         if marker is not None:
-            self._markers.remove(marker)
-            self._selected_pids = self.get_pids()
-            self.plot()
+            try:
+                self._markers.remove(marker)
+                self._selected_pids = self.get_pids()
+                self.plot()
+            except:
+                lgm().log( f"Error in removeMarker: #markers={len(self._markers)}, marker = {marker}")
 
     def remove_region(self, prec: PolyRec ):
         marker = self._regions.pop( prec.polyId, None )

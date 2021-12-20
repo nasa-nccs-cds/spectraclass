@@ -107,7 +107,7 @@ class TileManager(SCSingletonConfigurable):
         pid = block.coords2pindex( y, x )
         assert pid >= 0, f"Marker selection error, no points for coord: {[y, x]}"
         ic = cid if (cid >= 0) else lm().current_cid
-        return Marker( [pid], ic, **kwargs )
+        return Marker( "marker", [pid], ic, **kwargs )
 
     @property
     def tile(self) -> Tile:

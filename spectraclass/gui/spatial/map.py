@@ -49,6 +49,7 @@ class MapManager(SCSingletonConfigurable):
         self.use_model_data = False
         self._cidpress = -1
         self._cidrelease = -1
+        self._classification_data = None
         self.layers = LayersManager( self.on_layer_change )
         self.slider: Optional[PageSlider] = None
         self.image: Optional[AxesImage] = None
@@ -74,11 +75,13 @@ class MapManager(SCSingletonConfigurable):
     def initLabels(self):
         nodata_value = -2
         template = self.block.data[0].squeeze( drop=True )
-        self.label_map: xa.DataArray = xa.full_like( template, -1, dtype=np.dtype(np.int32) ).where( template.notnull(), nodata_value )
+        self.label_map: xa.DataArray = xa.full_like( template, 0, dtype=np.dtype(np.int32) ).where( template.notnull(), nodata_value )
         self.label_map.attrs['_FillValue'] = nodata_value
         self.label_map.name = f"{self.block.data.name}_labels"
-        self.label_map.attrs[ 'long_name' ] = [ "labels" ]
-        self.label_map.plot.imshow( ax=self.base.gax, alpha=self.layers('labels').visibility, cmap=lm().colors )
+        self.label_map.attrs[ 'long_name' ] =  "labels"
+        cspecs = lm().get_labels_colormap()
+        self.labels_image = self.label_map.plot.imshow( ax=self.base.gax, alpha=self.layers('labels').visibility,
+                                                        cmap=cspecs['cmap'], add_colorbar=False, norm=cspecs['norm'] )
 
     def clearLabels( self):
         if self.block is not None:
@@ -135,8 +138,8 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def plot_labels_image(self):
-        self._classification_data = self.points_selection.get_classmap().values
-        lgm().log( f" plot labels image, shape = {self._classification_data.shape}, vrange = {[ self._classification_data.min(), self._classification_data.max() ]}" )
+        self._classification_data = lm().get_label_map( self.block )
+        lgm().log( f"\n plot labels image, shape = {self._classification_data.shape}, vrange = {[ self._classification_data.min(), self._classification_data.max() ]}\n" )
         self.labels_image.set_data( self._classification_data )
         self.labels_image.set_alpha( self.layers( 'labels' ).visibility )
         self.update_canvas()
