@@ -144,17 +144,16 @@ class MapManager(SCSingletonConfigurable):
         self.labels_image.set_alpha( self.layers( 'labels' ).visibility )
         self.update_canvas()
 
-    def layer_image( self, name: str ):
-        if name   == "labels":  img = self.labels_image
-        elif name == "bands":   img = self.image
-        elif name == "markers": img = self.points_selection.points
+    def layer_managers( self, name: str ) -> List:
+        if name   == "labels":  mgrs = [ self.labels_image ]
+        elif name == "bands":   mgrs = [ self.image ]
+        elif name == "markers": mgrs = [ self.points_selection, self.region_selection ]
         else: raise Exception( f"Unknown Layer: {name}")
-        return img
+        return mgrs
 
     def on_layer_change( self, layer: Layer ):
-        image = self.layer_image( layer.name )
-        image.set_alpha( layer.visibility )
-#        lgm().log(f" image {layer.name} set alpha = {layer.visibility}" )
+        for mgr in self.layer_managers( layer.name ):
+            mgr.set_alpha( layer.visibility )
         self.update_canvas()
 
     @exception_handled

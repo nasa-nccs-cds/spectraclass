@@ -30,6 +30,9 @@ class PolyRec:
         ax.add_line(self.line)
         self.indx = -1
 
+    def set_alpha(self, alpha: float ):
+        self.poly.set_alpha( alpha )
+
     @property
     def geometry(self) -> List[Dict]:
         return [ dict( type='Polygon', coordinates=[ self.poly.get_xy().tolist() ] ) ]

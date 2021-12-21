@@ -27,6 +27,10 @@ class PolygonInteractor:
         self.poly_index = 0
         self.cids = []
 
+    def set_alpha(self, alpha: float ):
+        for poly in self.polys:
+            poly.set_alpha( alpha )
+
     def update_callbacks(self):
         if self.enabled:
             self.cids.append(self.canvas.mpl_connect('button_press_event', self.on_button_press))
@@ -56,6 +60,8 @@ class PolygonInteractor:
             self.polys.append( self.prec )
             self.creating = True
         return self.prec
+
+
 
     @exception_handled
     def on_draw(self, event):

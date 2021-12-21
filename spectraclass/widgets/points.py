@@ -23,7 +23,6 @@ class PointsInteractor:
 
     def set_alpha(self, alpha: float ):
         self.points.set_alpha( alpha )
-        self.canvas.draw_idle()
 
     def init_plot(self):
         self.points: PathCollection = self.ax.scatter([], [], s=50, zorder=3, alpha=1.0 )
