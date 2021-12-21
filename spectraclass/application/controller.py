@@ -92,10 +92,12 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.gui.spatial.map import MapManager, mm
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> CLEAR ")
         lm().clearMarkers()
         gpm().clear()
         if self.pcm_active: pcm().clear()
+        mm().plot_labels_image()
 
     @exception_handled
     def embed(self):

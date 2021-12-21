@@ -112,7 +112,6 @@ class LabelsManager(SCSingletonConfigurable):
         from spectraclass.application.controller import app
         ufm().clear()
         self._selected_class = iclass
-        print(f"LabelsManager: set selected class = {iclass}")
         for iB, button in enumerate(self._buttons):
             if iB == self._selected_class:  button.layout = {'border': '3px solid #FFFF00'}
             else:                           button.layout = {'border': '1px solid darkkhaki'}

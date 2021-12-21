@@ -145,8 +145,9 @@ class MapManager(SCSingletonConfigurable):
         self.update_canvas()
 
     def layer_image( self, name: str ):
-        if name   == "labels": img = self.labels_image
-        elif name == "bands":  img = self.image
+        if name   == "labels":  img = self.labels_image
+        elif name == "bands":   img = self.image
+        elif name == "markers": img = self.points_selection.points
         else: raise Exception( f"Unknown Layer: {name}")
         return img
 

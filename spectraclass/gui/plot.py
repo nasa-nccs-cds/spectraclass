@@ -80,7 +80,7 @@ class mplGraphPlot:
         PID = np.array(range(raster.size))
         mask = svect.contains( polygon, MX, MY )
         pids = PID[mask.flatten()].tolist()
-        marker =  Marker( 'marker', pids, cid )
+        marker =  Marker( "label", pids, cid )
         self._regions[ prec.polyId ] = marker
         return marker
 

@@ -21,6 +21,10 @@ class PointsInteractor:
         if enable:  self.enable_callbacks()
         else:       self.disable_callbacks()
 
+    def set_alpha(self, alpha: float ):
+        self.points.set_alpha( alpha )
+        self.canvas.draw_idle()
+
     def init_plot(self):
         self.points: PathCollection = self.ax.scatter([], [], s=50, zorder=3, alpha=1.0 )
         self.points.set_edgecolor([0, 0, 0])
