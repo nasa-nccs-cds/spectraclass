@@ -126,10 +126,13 @@ class MapManager(SCSingletonConfigurable):
             tbar._id_drag    = canvas.mpl_connect( 'motion_notify_event', tbar.mouse_move )
             self._cidpress   = canvas.mpl_connect( 'button_press_event', self.on_button_press )
 
+    @exception_handled
     def on_button_press(self, event: MouseEvent ):
         from spectraclass.data.spatial.tile.manager import TileManager
-        lon,lat = TileManager.reproject_to_latlon( event.xdata, event.ydata )
-        ufm().show( f"[{event.x},{event.y}]: ({lon:.4f},{lat:.4f})", color="blue")
+        c: Dict = self.block.coords2indices( event.ydata, event.xdata )
+        by, bx = TileManager.reproject_to_latlon(self.block.xcoord[c['ix']], self.block.ycoord[c['iy']] )
+        lat,lon = TileManager.reproject_to_latlon( event.xdata, event.ydata )
+        ufm().show( f"[{event.y},{event.x}]: ({lat:.4f},{lon:.4f}), block[{c['iy']},{c['ix']}]: ({by:.4f},{bx:.4f})", color="blue")
 
     @property
     def selectionMode(self) -> str:
