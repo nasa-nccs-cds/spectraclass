@@ -70,6 +70,7 @@ class mplGraphPlot:
             cls._mdata: List[np.ndarray] = [ project_data[mdv].values for mdv in table_cols ]
 
     @exception_handled
+    @log_timing
     def get_region_marker(self, prec: PolyRec, cid: int ) -> Marker:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from shapely.geometry import Polygon
@@ -112,6 +113,7 @@ class mplGraphPlot:
         if has_transient or (m.cid == 0):
             self._markers = []
 
+    @log_timing
     def addMarker( self, m: Marker ):
         self.clear_transients( m )
         self._markers.append( m )
@@ -219,6 +221,7 @@ class GraphPlotManager(SCSingletonConfigurable):
             current_graph.addMarker( marker )
 
     @exception_handled
+    @log_timing
     def plot_region( self, region: PolyRec, cid: int ) -> Marker:
         current_graph: mplGraphPlot = self.current_graph()
         if current_graph is not None:

@@ -26,8 +26,8 @@ class TileManager(SCSingletonConfigurable):
     block_index = tl.List( tl.Int, (0, 0), 2, 2).tag(config=True, sync=True)
     mask_class = tl.Int(0).tag(config=True, sync=True)
     image_attrs = {}
-    crs = ccrs.epsg(3857) # "+a=6378137.0 +b=6378137.0 +nadgrids=@null +proj=merc +lon_0=0.0 +x_0=0.0 +y_0=0.0 +units=m +no_defs"
-#    crs = # ccrs.PlateCarree() #  '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'  # +pm=-360 for 0->360
+    ESPG = 3857
+    crs = ccrs.epsg(ESPG) # "+a=6378137.0 +b=6378137.0 +nadgrids=@null +proj=merc +lon_0=0.0 +x_0=0.0 +y_0=0.0 +units=m +no_defs"
 
     def __init__(self):
         super(TileManager, self).__init__()
@@ -46,6 +46,13 @@ class TileManager(SCSingletonConfigurable):
         if self._tile_metadata is None:
             self._tile_metadata = self.loadMetadata()
         return self._tile_metadata
+
+    @classmethod
+    def reproject_to_latlon( cls, x, y ):
+        from pyproj import Proj, transform
+        inProj = Proj(f'epsg:{cls.ESPG}')
+        outProj = Proj('epsg:4326')
+        return transform( inProj, outProj, x, y )
 
     @property
     def block_dims(self) -> Tuple[int,int]:

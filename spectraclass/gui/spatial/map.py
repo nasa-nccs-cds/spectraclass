@@ -2,6 +2,7 @@ import xarray as xa
 import numpy as np
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import logging, os
+from matplotlib.backend_bases import MouseEvent, KeyEvent
 from matplotlib.colors import Normalize
 from matplotlib.figure import Figure
 from matplotlib.backend_bases import NavigationToolbar2, _Mode
@@ -9,6 +10,7 @@ from matplotlib.backend_bases import PickEvent, MouseButton  # , NavigationToolb
 from functools import partial
 from spectraclass.gui.spatial.widgets.markers import MarkerManager
 from matplotlib.image import AxesImage
+# import mplcursors
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from matplotlib.axes import Axes
 from typing import List, Union, Tuple, Optional, Dict, Callable
@@ -48,7 +50,6 @@ class MapManager(SCSingletonConfigurable):
         self.points_selection: MarkerManager = None
         self.use_model_data = False
         self._cidpress = -1
-        self._cidrelease = -1
         self._classification_data = None
         self.layers = LayersManager( self.on_layer_change )
         self.slider: Optional[PageSlider] = None
@@ -118,11 +119,17 @@ class MapManager(SCSingletonConfigurable):
         from matplotlib.backend_bases import NavigationToolbar2, _Mode
         tbar: NavigationToolbar2 = self.toolbar
         canvas = self.figure.canvas
-        for cid in [tbar._id_press, tbar._id_release, tbar._id_drag]: canvas.mpl_disconnect(cid)
+        for cid in [tbar._id_press, tbar._id_release, tbar._id_drag, self._cidpress ]: canvas.mpl_disconnect(cid)
         if enabled:
             tbar._id_press   = canvas.mpl_connect( 'button_press_event', tbar._zoom_pan_handler )
             tbar._id_release = canvas.mpl_connect( 'button_release_event', tbar._zoom_pan_handler )
             tbar._id_drag    = canvas.mpl_connect( 'motion_notify_event', tbar.mouse_move )
+            self._cidpress   = canvas.mpl_connect( 'button_press_event', self.on_button_press )
+
+    def on_button_press(self, event: MouseEvent ):
+        from spectraclass.data.spatial.tile.manager import TileManager
+        lon,lat = TileManager.reproject_to_latlon( event.xdata, event.ydata )
+        ufm().show( f"[{event.x},{event.y}]: ({lon:.4f},{lat:.4f})", color="blue")
 
     @property
     def selectionMode(self) -> str:
@@ -264,7 +271,13 @@ class MapManager(SCSingletonConfigurable):
             self.region_selection = PolygonInteractor( self.base.gax )
             self.points_selection = MarkerManager( self.base.gax, self.block )
             self.create_selection_panel()
+            self.init_hover()
         return self.base.gax.figure.canvas
+
+    def init_hover(self):
+        def format_coord(x, y):
+            return "x: {}, y: {}".format(x, y)
+        self.base.gax.format_coord = format_coord
 
     def plot_markers_image(self):
         self.points_selection.plot()
@@ -273,6 +286,7 @@ class MapManager(SCSingletonConfigurable):
         self.image: AxesImage = self.frame_data.plot.imshow( ax=self.base.gax, alpha=self.layers('bands').visibility, cmap='jet' )
         self.add_slider(**kwargs)
         self.initLabels()
+        self._cidpress = self.figure.canvas.mpl_connect('button_press_event', self.on_button_press)
      #   self._cidrelease = self.image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
      #   self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
 
