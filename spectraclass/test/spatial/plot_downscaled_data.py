@@ -1,5 +1,5 @@
 import os
-import conda, numbers
+import conda
 
 conda_file_dir = conda.__file__
 conda_dir = conda_file_dir.split('lib')[0]
@@ -7,14 +7,10 @@ proj_lib = os.path.join(os.path.join(conda_dir, 'share'), 'proj')
 os.environ["PROJ_LIB"] = proj_lib
 
 import xarray as xa
-import rioxarray as rio
-from affine import Affine
-from matplotlib.backend_bases import MouseEvent
 from matplotlib.image import AxesImage
-import numpy as np
 from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
-from spectraclass.gui.spatial.widgets.tiles import TileSelector, TileManager
+from gui.spatial.widgets.scrap_heap.tiles import TileManager
 import cartopy.crs as ccrs
 
 iband = 0

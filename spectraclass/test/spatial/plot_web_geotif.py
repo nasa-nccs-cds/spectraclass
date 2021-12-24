@@ -1,6 +1,4 @@
-import rioxarray as rio
-import rasterio
-from spectraclass.gui.spatial.widgets.tiles import TileManager
+from gui.spatial.widgets.scrap_heap.tiles import TileManager
 import xarray as xa
 
 vindex = 2

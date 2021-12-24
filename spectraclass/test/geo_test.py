@@ -1,24 +1,13 @@
 #%%
 
-import numpy as np
 import xarray as xa
-import hvplot.xarray
 import panel as pn
-import rioxarray as rio
-import pandas as pd
 import geoviews as gv
-import geoviews.feature as gf
-import geoviews.tile_sources as gts
-from geoviews.element.geo import WMTS
-from holoviews.plotting.links import DataLink
-from spectraclass.gui.spatial.widgets.tiles import TileSelector, TileManager
+from gui.spatial.widgets.scrap_heap.tiles import TileManager
 import cartopy.crs as ccrs
 from holoviews.core.spaces import DynamicMap
 gv.extension('bokeh')
 import holoviews as hv
-from holoviews import opts
-from bokeh.layouts import column
-from bokeh.models import Slider
 
 #%%
 

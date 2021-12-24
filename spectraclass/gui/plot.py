@@ -24,6 +24,7 @@ class mplGraphPlot:
 
     def __init__( self, index: int, **kwargs ):
         self.index = index
+        self.standalone = kwargs.pop('standalone', False)
         self.init_data(**kwargs)
         self._selected_pids: List[int] = []
         self.ax : plt.Axes = None
@@ -32,18 +33,19 @@ class mplGraphPlot:
         self._markers: List[Marker] = []
         self._regions: Dict[int,Marker] = {}
         self._points = Dict[int, Marker]
-        self.init_figure()
+        self.init_figure( **kwargs )
 
-    def init_figure(self):
+    def init_figure(self, **kwargs):
+
         if self.fig is None:
-            plt.ioff()
+            if not self.standalone: plt.ioff()
             self.fig: plt.Figure = plt.figure( self.index, figsize = (6, 4) )
             if len(self.fig.axes) == 0: self.fig.add_subplot(111)
             self.ax = self.fig.axes[0]
             self.ax.grid(True)
             self.ax.set_autoscaley_on(True)
             self.ax.set_title(f'Point Spectra {self.index}', fontsize=12)
-            plt.ion()
+            if not self.standalone: plt.ion()
 
     def gui(self):
         return self.fig.canvas

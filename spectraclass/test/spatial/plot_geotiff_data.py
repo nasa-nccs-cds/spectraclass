@@ -1,6 +1,6 @@
 import os
-import conda, numbers, time
-from typing import List, Union, Tuple, Optional, Dict, Callable
+import conda, time
+from typing import List
 import numpy as np
 
 conda_file_dir = conda.__file__
@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import rioxarray as rio
 import rasterio.crs as rcrs
 from cartopy.io.shapereader import Reader as ShapeReader
-from spectraclass.gui.spatial.widgets.tiles import TileSelector, TileManager
+from gui.spatial.widgets.scrap_heap.tiles import TileManager
 import cartopy.crs as ccrs
 t0 = time.time()
 

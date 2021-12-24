@@ -1,10 +1,8 @@
 from cartopy.io.shapereader import Reader as ShapeReader
-from spectraclass.gui.spatial.widgets.tiles import TileManager
+from gui.spatial.widgets.scrap_heap.tiles import TileManager
 import matplotlib.pyplot as plt
-from osgeo import ogr, osr
 from cartopy.mpl.geoaxes import GeoAxes
 from cartopy import crs as ccrs
-import shapefile
 import numpy as np
 
 def get_extent( reader: ShapeReader, ssrs: ccrs.CRS, tsrs: ccrs.CRS ):

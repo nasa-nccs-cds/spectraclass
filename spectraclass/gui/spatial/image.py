@@ -30,6 +30,7 @@ class TileServiceImage(AxesImage):
         xrange = kwargs.pop('xrange',None)
         yrange = kwargs.pop('yrange', None)
         kwargs.setdefault('in_layout', False)
+        self.user_is_interacting = False
         super().__init__(ax, **kwargs)
         self.projection = projection
         self.cache = []

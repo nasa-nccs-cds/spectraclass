@@ -1,66 +1,19 @@
 import numpy as np
 import xarray as xa
-from typing import List, Union, Tuple, Optional, Dict
-from spectraclass.gui.control import UserFeedbackManager, ufm
-from spectraclass.reduction.embedding import ReductionManager, rm
+from spectraclass.gui.control import ufm
+from spectraclass.reduction.embedding import rm
 from spectraclass.data.base import ModeDataManager
+from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Set
 import matplotlib.pyplot as plt
+import os
 from collections import OrderedDict
-from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
-from spectraclass.model.labels import LabelsManager, lm
-from spectraclass.data.spatial.tile.tile import Block
-import os, math, pickle
+from spectraclass.util.logs import lgm, exception_handled
+from spectraclass.model.labels import lm
 import rioxarray as rio
-from .modes import *
-
 
 def dm():
     from spectraclass.data.base import DataManager
     return DataManager.instance()
-
-
-# class MarkerManager:
-#
-#     def __init__(self, file_name: str, config: QSettings, **kwargs ):
-#         self.file_name = file_name
-#         self.names = None
-#         self.colors = None
-#         self.points_selection = None
-#         self.config = config
-#
-#     @property
-#     def file_path(self):
-#         if self.file_name.startswith( "/" ):
-#             return self.file_name
-#         else:
-#             data_dir = self.config.value( 'data/cache', "" )
-#             return os.path.join( data_dir, self.file_name )
-#
-#     @property
-#     def hasData(self):
-#         return self.points_selection is not None
-#
-#     def writeMarkers(self, names, colors, points_selection ):
-#         try:
-#             with open( self.file_path, 'wb' ) as f:
-#                 print( f"Saving {len(points_selection)} labeled points to file {self.file_path}")
-#                 pickle.dump( [ names, colors, points_selection ], f )
-#         except Exception as err:
-#             print( f" Can't save points_selection: {err}")
-#
-#     def readMarkers(self):
-#         try:
-#             if os.path.isfile(self.file_path):
-#                 print(f"Reading Label data from file {self.file_path}")
-#                 with open(self.file_path, 'rb') as f:
-#                     label_data = pickle.load( f )
-#                     if label_data:
-#                         self.names = label_data[0]
-#                         self.colors = label_data[1]
-#                         self.points_selection = label_data[2]
-#         except Exception as err:
-#             print( f" Can't read points_selection: {err}" )
-
 
 class SpatialDataManager(ModeDataManager):
     colorstretch = 1.25
@@ -93,7 +46,7 @@ class SpatialDataManager(ModeDataManager):
         return data
 
     def setDatasetId(self, dsid: str):
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.data.spatial.tile.manager import tm
         toks = dsid.split("_b-")
         block_toks = toks[1].split("-")
         tm().block_shape = [ int(block_toks[0]), int(block_toks[1]) ]
@@ -101,7 +54,7 @@ class SpatialDataManager(ModeDataManager):
         lgm().log( f"Setting block index to {tm().block_index}, shape = {tm().block_shape}")
 
     def dsid(self, **kwargs) -> str:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.data.spatial.tile.manager import tm
         block = kwargs.get( 'block', tm().getBlock() )
         reduction_method = f"raw" if self.reduce_method.lower() == "none" else f"{self.reduce_method}-{self.model_dims}"
         file_name_base = "-".join( [block.file_name, reduction_method] )
@@ -168,7 +121,7 @@ class SpatialDataManager(ModeDataManager):
 
     @classmethod
     def addTextureBands(cls, base_raster: xa.DataArray ) -> xa.DataArray:   #  base_raster dims: [ band, y, x ]
-        from spectraclass.features.texture.manager import TextureManager, texm
+        from spectraclass.features.texture.manager import texm
         return texm().addTextureBands( base_raster )
 
     @classmethod
@@ -182,7 +135,6 @@ class SpatialDataManager(ModeDataManager):
 
     @classmethod
     def plotRaster(cls, raster: xa.DataArray, **kwargs ):
-        from spectraclass.xext.xgeo import XGeo
         from matplotlib.colorbar import Colorbar
         from spectraclass.application.controller import app
         ax = kwargs.pop( 'ax', None )
@@ -325,13 +277,15 @@ class SpatialDataManager(ModeDataManager):
         else:
             return self.readGeoTiff( file_path )
 
-    def readGeoTiff(self, input_file_path: str ) -> xa.DataArray:
-        input_bands = rio.open_rasterio(input_file_path)
-        if 'transform' not in input_bands.attrs.keys():
-            gts = input_bands.spatial_ref.GeoTransform.split()
-            input_bands.attrs['transform'] = [float(gts[i]) for i in [1, 2, 0, 4, 5, 3]]
-            input_bands.attrs['fileformat'] = "tif"
-        lgm().log(f"Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}")
+    def readGeoTiff(self, input_file_path: str, **kwargs ) -> xa.DataArray:
+        from spectraclass.data.spatial.tile.manager import TileManager
+        raster = rio.open_rasterio( input_file_path, driver='GTiff' )
+        input_bands: xa.DataArray  = raster.rio.reproject( TileManager.crs )
+        # if 'transform' not in input_bands.attrs.keys():
+        #     gts = input_bands.spatial_ref.GeoTransform.split()
+        #     input_bands.attrs['transform'] = [float(gts[i]) for i in [1, 2, 0, 4, 5, 3]]
+        #     input_bands.attrs['fileformat'] = "tif"
+        lgm().log( f"Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}", print=True )
         return input_bands
 
     def readMatlabFile(self, input_file_path: str ) -> xa.DataArray:
