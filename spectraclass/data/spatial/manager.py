@@ -1,11 +1,14 @@
+import traceback
+
 import numpy as np
 import xarray as xa
+from pathlib import Path
 from spectraclass.gui.control import ufm
 from spectraclass.reduction.embedding import rm
 from spectraclass.data.base import ModeDataManager
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Set
 import matplotlib.pyplot as plt
-import os
+import os, time
 from collections import OrderedDict
 from spectraclass.util.logs import lgm, exception_handled
 from spectraclass.model.labels import lm
@@ -204,6 +207,7 @@ class SpatialDataManager(ModeDataManager):
 
     @exception_handled
     def prepare_inputs(self, *args, **kwargs ):
+        lgm().log(f" Preparing inputs", print=True)
         for block in self.tiles.tile.getBlocks():
             block.clearBlockCache()
 #           block.addTextureBands( )
@@ -265,27 +269,35 @@ class SpatialDataManager(ModeDataManager):
             lgm().log(f"Unable to write raster file to {output_file}: {err}")
             return None
 
-    def readSpectralData(self) -> xa.DataArray:
+    def readSpectralData(self, **kwargs) -> xa.DataArray:
         input_file_path = self.getFilePath()
         assert os.path.isfile( input_file_path ), f"Input file does not exist: {input_file_path}"
-        spectral_data = self.readDataFile( input_file_path )
+        spectral_data = self.readDataFile( input_file_path, **kwargs )
         return spectral_data
 
-    def readDataFile(self, file_path: str ):
+    def readDataFile(self, file_path: str, **kwargs  ):
         if file_path.endswith(".mat"):
             return self.readMatlabFile( file_path )
         else:
-            return self.readGeoTiff( file_path )
+            return self.readGeoTiff( file_path, **kwargs )
 
+    @exception_handled
     def readGeoTiff(self, input_file_path: str, **kwargs ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager
+        bnds = kwargs.get( 'subset', None )
+        t0 = time.time()
         raster = rio.open_rasterio( input_file_path, driver='GTiff' )
-        input_bands: xa.DataArray  = raster.rio.reproject( TileManager.crs )
+        input_bands = raster
+#        reduced_raster = raster[:,bnds[2]:bnds[3],bnds[0]:bnds[1]] if bnds is not None else raster
+#        input_bands: xa.DataArray  = reduced_raster.rio.reproject( TileManager.crs )
+        input_bands.attrs['info'] = input_bands.attrs['long_name']
+        input_bands.attrs['long_name'] = Path(input_file_path).stem
         # if 'transform' not in input_bands.attrs.keys():
         #     gts = input_bands.spatial_ref.GeoTransform.split()
         #     input_bands.attrs['transform'] = [float(gts[i]) for i in [1, 2, 0, 4, 5, 3]]
         #     input_bands.attrs['fileformat'] = "tif"
-        lgm().log( f"Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}", print=True )
+        lgm().log( f"Completed Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}, time={time.time()-t0} sec", print=True )
+        lgm().log( "\n".join( traceback.format_stack() ) )
         return input_bands
 
     def readMatlabFile(self, input_file_path: str ) -> xa.DataArray:

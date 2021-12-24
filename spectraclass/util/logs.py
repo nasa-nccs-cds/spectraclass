@@ -55,7 +55,7 @@ class LogManager(SCSingletonConfigurable):
         print( f"Opening log file:  '{log_file}'" )
 
     def log( self,  msg, **kwargs ):
-        if kwargs.get( 'print', False ): print( msg )
+        if kwargs.get( 'print', False ): print( msg, flush=True )
         self._log_file.write( msg + "\n" )
         self._log_file.flush()
 

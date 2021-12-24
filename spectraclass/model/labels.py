@@ -209,7 +209,7 @@ class LabelsManager(SCSingletonConfigurable):
             self._labels_data: xa.DataArray = xa.full_like( self.template, 0, dtype=np.int32 ).where( self.template.notnull(), nodata_value )
             self._labels_data.attrs['_FillValue'] = nodata_value
             self._labels_data.name = self.template.attrs['dsid'] + "_labels"
-            self._labels_data.attrs[ 'long_name' ] = [ "labels" ]
+            self._labels_data.attrs[ 'long_name' ] =  "labels"
 
     def _init_data(self):
         from ..graph.manager import ActivationFlowManager
