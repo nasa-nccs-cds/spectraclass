@@ -93,7 +93,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def dsid(self, **kwargs) -> str:
         raise NotImplementedError()
 
-    def prepare_inputs(self, *args, **kwargs):
+    def prepare_inputs(self):
         raise NotImplementedError()
 
     def updateDatasetList(self):
@@ -236,6 +236,7 @@ class ModeDataManager(SCSingletonConfigurable):
         return self.filterCommonPrefix( filenames )
 
     def loadCurrentProject(self) -> xa.Dataset:
+        self.prepare_inputs( )
         return self.loadDataset( )
 
     @property

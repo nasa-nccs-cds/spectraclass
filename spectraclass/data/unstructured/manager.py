@@ -16,7 +16,7 @@ class UnstructuredDataManager(ModeDataManager):
         self._cached_data = {}
 
     @exception_handled
-    def prepare_inputs(self, *args, **kwargs):
+    def prepare_inputs(self):
         self.update_gui_parameters()
         self.set_progress(0.02)
         write = kwargs.get('write', True)

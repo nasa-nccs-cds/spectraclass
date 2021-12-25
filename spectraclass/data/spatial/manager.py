@@ -206,12 +206,14 @@ class SpatialDataManager(ModeDataManager):
         return f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
 
     @exception_handled
-    def prepare_inputs(self, *args, **kwargs ):
+    def prepare_inputs(self):
         lgm().log(f" Preparing inputs", print=True)
         for block in self.tiles.tile.getBlocks():
-            block.clearBlockCache()
+            lgm().log(f" Processing Block{block.block_coords}, shape = {block.shape}",  print=True)
+#            block.clearBlockCache()
 #           block.addTextureBands( )
             blocks_point_data: xa.DataArray = block.getPointData()[0]
+            lgm().log(f" Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}", print=True)
             if blocks_point_data.size == 0:
                lgm().log( f" Warning:  Block {block.block_coords} has no valid samples.", print=True )
             else:
@@ -283,21 +285,11 @@ class SpatialDataManager(ModeDataManager):
 
     @exception_handled
     def readGeoTiff(self, input_file_path: str, **kwargs ) -> xa.DataArray:
-        from spectraclass.data.spatial.tile.manager import TileManager
-        bnds = kwargs.get( 'subset', None )
         t0 = time.time()
         raster = rio.open_rasterio( input_file_path, driver='GTiff' )
         input_bands = raster
-#        reduced_raster = raster[:,bnds[2]:bnds[3],bnds[0]:bnds[1]] if bnds is not None else raster
-#        input_bands: xa.DataArray  = reduced_raster.rio.reproject( TileManager.crs )
-        input_bands.attrs['info'] = input_bands.attrs['long_name']
         input_bands.attrs['long_name'] = Path(input_file_path).stem
-        # if 'transform' not in input_bands.attrs.keys():
-        #     gts = input_bands.spatial_ref.GeoTransform.split()
-        #     input_bands.attrs['transform'] = [float(gts[i]) for i in [1, 2, 0, 4, 5, 3]]
-        #     input_bands.attrs['fileformat'] = "tif"
         lgm().log( f"Completed Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}, time={time.time()-t0} sec", print=True )
-        lgm().log( "\n".join( traceback.format_stack() ) )
         return input_bands
 
     def readMatlabFile(self, input_file_path: str ) -> xa.DataArray:

@@ -132,25 +132,27 @@ class TileManager(SCSingletonConfigurable):
 
     def getTileData(self) -> xa.DataArray:
         if self._tile_data is None:
-            tile_data: xa.DataArray = self._readTileFile()
-            tile_data = self.mask_nodata(tile_data)
-            init_shape = [*tile_data.shape]
-            valid_bands = DataManager.instance().valid_bands()
-            if valid_bands is not None:
-                band_names = tile_data.attrs.get( 'info', None )
-                dataslices = [ tile_data.isel(band=slice(valid_band[0], valid_band[1])) for valid_band in valid_bands ]
-                tile_data = xa.concat(dataslices, dim="band")
-                if isinstance(band_names, (list, tuple)):
-                    tile_data.attrs['long_name'] = sum( [ list(band_names[valid_band[0]:valid_band[1]]) for valid_band in valid_bands ], [] )
-                lgm().log( f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
-            result = self.rescale(tile_data).rio.reproject(self.crs)
-            result.attrs['wkt'] = result.spatial_ref.crs_wkt
-            result.attrs['long_name'] = tile_data.attrs.get( 'long_name', None )
-            lgm().log( f" BLOCK attrs: {result.attrs}" )
-            self._tile_data = result
-            self._tile_data.attrs['transform'] = self.transform
+            self._tile_data = self._readTileFile()
+#            self._tile_data.attrs['transform'] = self.transform
             self.saveMetadata( )
         return self._tile_data
+
+    @classmethod
+    def process_tile_data( cls, tile_data: xa.DataArray ) -> xa.DataArray:
+        tile_data = cls.mask_nodata(tile_data)
+        init_shape = [*tile_data.shape]
+        valid_bands = DataManager.instance().valid_bands()
+        if valid_bands is not None:
+            band_names = tile_data.attrs.get('bands', None)
+            dataslices = [tile_data.isel(band=slice(valid_band[0], valid_band[1])) for valid_band in valid_bands]
+            tile_data = xa.concat(dataslices, dim="band")
+            if isinstance(band_names, (list, tuple)):
+                tile_data.attrs['bands'] = sum( [list(band_names[valid_band[0]:valid_band[1]]) for valid_band in valid_bands], [])
+            lgm().log( f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
+        result = tile_data.rio.reproject(cls.crs)
+        result.attrs['wkt'] = result.spatial_ref.crs_wkt
+        result.attrs['long_name'] = tile_data.attrs.get('long_name', None)
+        return result
 
     @property
     def transform(self):
@@ -199,7 +201,7 @@ class TileManager(SCSingletonConfigurable):
 #         point_data.attrs['dsid'] = result.attrs['dsid']
 #         return ( point_data, point_coords)
 
-    def rescale(self, raster: xa.DataArray, **kwargs ) -> xa.DataArray:
+    def rescale( self, raster: xa.DataArray, **kwargs ) -> xa.DataArray:
         norm_type = kwargs.get( 'norm', 'spectral' )
         refresh = kwargs.get('refresh', False )
         if norm_type == "none":
@@ -240,6 +242,7 @@ class TileManager(SCSingletonConfigurable):
         tm = TileManager.instance()
         tile_raster: xa.DataArray = DataManager.instance().modal.readSpectralData()
         if tile_raster is not None:
+            tile_raster = self.rescale(tile_raster)
             tile_raster.name = self.tileName()
             tile_raster.attrs['tilename'] = tm.tileName()
             tile_raster.attrs['image'] = self.image_name

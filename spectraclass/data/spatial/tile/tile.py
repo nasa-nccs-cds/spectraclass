@@ -84,18 +84,12 @@ class Block:
         return self._index_array
 
     @property
-    def transform( self ):
-        from spectraclass.data.spatial.tile.manager import TileManager
+    def transform( self ) -> ProjectiveTransform:
         tr0 = self.data.attrs.get('transform')
-        if tr0 is None:
-            pt: ProjectiveTransform = TileManager.instance().get_block_transform( *self.block_coords )
-            self._data.attrs['transform'] = pt.params.flatten().tolist()
-            return pt
-        else:
-            tlist: List[float] = tr0.tolist() if isinstance( tr0, np.ndarray ) else tr0
-            if len( tlist ) == 6: tlist = tlist + [ 0, 0, 1 ]
-            projection = np.array( tlist ).reshape(3, 3)
-            return ProjectiveTransform( projection )
+        tlist: List[float] = tr0.tolist() if isinstance( tr0, np.ndarray ) else tr0
+        if len( tlist ) == 6: tlist = tlist + [ 0, 0, 1 ]
+        projection = np.array( tlist ).reshape(3, 3)
+        return ProjectiveTransform( projection )
 
     def dsid( self ):
         from spectraclass.data.spatial.tile.manager import TileManager
@@ -114,13 +108,14 @@ class Block:
         except Exception:
             if self.tile.data is None: return None
             ybounds, xbounds = self.getBounds()
-            raw_raster = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
+            raster_slice = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
+            pt: ProjectiveTransform = tm().get_block_transform(*self.block_coords)
+            raster_slice.attrs['transform'] = pt.params.flatten().tolist()
+            raw_raster = TileManager.process_tile_data( raster_slice )
         block_raster = self._apply_mask( raw_raster )
         block_raster.attrs['block_coords'] = self.block_coords
         block_raster.attrs['dsid'] = self.dsid()
         block_raster.attrs['file_name'] = self.file_name
-        pt: ProjectiveTransform = tm().get_block_transform(*self.block_coords)
-        block_raster.attrs['transform'] = pt.params.flatten().tolist()
         block_raster.name = self.file_name
         return block_raster
 
@@ -130,25 +125,25 @@ class Block:
         mask_array: Optional[xa.DataArray] = tm().getMask()
         return block_array if mask_array is None else block_array.where( mask_array, nodata_value )
 
-    def _loadTileData(self):
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        ybounds, xbounds = self.getBounds()
-        block_raster = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
-        block_raster.attrs['block_coords'] = self.block_coords
-        block_raster.attrs['dsid'] = self.dsid()
-        block_raster.attrs['file_name'] = self.file_name
-        block_raster.name = self.file_name
-        pt: ProjectiveTransform = tm().get_block_transform(*self.block_coords)
-        block_raster.attrs['transform'] = pt.params.flatten().tolist()
-        self._data = block_raster
+    # def _loadTileData(self):
+    #     from spectraclass.data.spatial.tile.manager import TileManager, tm
+    #     ybounds, xbounds = self.getBounds()
+    #     block_raster = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
+    #     block_raster.attrs['block_coords'] = self.block_coords
+    #     block_raster.attrs['dsid'] = self.dsid()
+    #     block_raster.attrs['file_name'] = self.file_name
+    #     block_raster.name = self.file_name
+    #     pt: ProjectiveTransform = tm().get_block_transform(*self.block_coords)
+    #     block_raster.attrs['transform'] = pt.params.flatten().tolist()
+    #     self._data = block_raster
 
-    def clearBlockCache(self):
-        from spectraclass.data.base import DataManager, dm
-        block_file = dm().modal.blockFilePath( block = self )
-        if os.path.exists(block_file):
-            lgm().log( f"Removing block file: {block_file} ")
-            os.remove( block_file )
-        self._loadTileData()
+    # def clearBlockCache(self):
+    #     from spectraclass.data.base import DataManager, dm
+    #     block_file = dm().modal.blockFilePath( block = self )
+    #     if os.path.exists(block_file):
+    #         lgm().log( f"Removing block file: {block_file} ")
+    #         os.remove( block_file )
+    #     self._loadTileData()
 
     def addTextureBands( self ):
         from spectraclass.features.texture.manager import TextureManager, texm

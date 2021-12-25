@@ -201,8 +201,8 @@ class DataManager(SCSingletonConfigurable):
         return project_data
 
     @exception_handled
-    def prepare_inputs( self, *args, **kwargs ) -> xa.Dataset:
-        return self._mode_data_manager_.prepare_inputs( *args, **kwargs )
+    def prepare_inputs( self ) -> xa.Dataset:
+        return self._mode_data_manager_.prepare_inputs( )
 
     def valid_bands(self) -> Optional[List]:
         return self._mode_data_manager_.valid_bands()
