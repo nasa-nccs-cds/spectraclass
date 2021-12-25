@@ -242,7 +242,6 @@ class TileManager(SCSingletonConfigurable):
         tm = TileManager.instance()
         tile_raster: xa.DataArray = DataManager.instance().modal.readSpectralData()
         if tile_raster is not None:
-            tile_raster = self.rescale(tile_raster)
             tile_raster.name = self.tileName()
             tile_raster.attrs['tilename'] = tm.tileName()
             tile_raster.attrs['image'] = self.image_name

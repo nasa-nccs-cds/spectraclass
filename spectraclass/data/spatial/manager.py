@@ -39,10 +39,14 @@ class SpatialDataManager(ModeDataManager):
         result.name = kwargs.get( "name", "")
         return result
 
+    def pnorm(self, data: xa.DataArray ) -> xa.DataArray:
+        dave, dmag = data.values.mean(0), 2.0 * data.values.std(0)
+        normed_data = (data.values - dave) / dmag
+        return data.copy( data=normed_data )
+
     def reduce(self, data: xa.DataArray):
         if self.reduce_method and (self.reduce_method.lower() != "none"):
-            dave, dmag =  data.values.mean(0), 2.0*data.values.std(0)
-            normed_data = ( data.values - dave ) / dmag
+            normed_data = self.pnorm( data )
             reduced_spectra, reproduction, _ = rm().reduce( normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )[0]
             coords = dict( samples=data.coords['samples'], band=np.arange( self.model_dims )  )
             return xa.DataArray( reduced_spectra, dims=['samples', 'band'], coords=coords )
@@ -112,13 +116,13 @@ class SpatialDataManager(ModeDataManager):
 
     @classmethod
     def raster2points(cls, base_raster: xa.DataArray ) -> xa.DataArray:   #  base_raster dims: [ band, y, x ]
-        stacked_raster = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
-        if np.issubdtype( base_raster.dtype, np.integer ):
-            nodata = stacked_raster.attrs.get('_FillValue',-2)
-            point_data = stacked_raster.where( stacked_raster != nodata, drop=True ).astype(np.int32)
-        else:
-            point_data = stacked_raster.dropna(dim='samples', how='any')
-        lgm().log(f" raster2points -> [{base_raster.name}]: Using {point_data.shape[0]} valid samples out of {stacked_raster.shape[0]} pixels")
+        point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
+        npts0 = point_data.shape[0]
+        if '_FillValue' in point_data.attrs:
+            nodata = point_data.attrs['_FillValue']
+            point_data = point_data.where( point_data != nodata, drop=True )
+        point_data = point_data.dropna( dim='samples', how='any')
+        lgm().log(f" raster2points -> [{base_raster.name}]: Using {point_data.shape[0]} valid samples out of {npts0} pixels")
         point_data.attrs['dsid'] = base_raster.name
         return point_data
 
@@ -206,43 +210,51 @@ class SpatialDataManager(ModeDataManager):
         return f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
 
     @exception_handled
-    def prepare_inputs(self):
+    def prepare_inputs(self) -> bool:
         lgm().log(f" Preparing inputs", print=True)
+        updated = False
         for block in self.tiles.tile.getBlocks():
-            lgm().log(f" Processing Block{block.block_coords}, shape = {block.shape}",  print=True)
-#            block.clearBlockCache()
-#           block.addTextureBands( )
-            blocks_point_data: xa.DataArray = block.getPointData()[0]
-            lgm().log(f" Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}", print=True)
-            if blocks_point_data.size == 0:
-               lgm().log( f" Warning:  Block {block.block_coords} has no valid samples.", print=True )
+            block_data_file =  dm().modal.dataFile(block=block)
+            if os.path.isfile( block_data_file ):
+                lgm().log(f" Skipping existing file {block_data_file}", print=True)
             else:
-                prange = [ blocks_point_data.values.min(), blocks_point_data.values.max() ]
-                lgm().log(f" Preparing point data with shape {blocks_point_data.shape} and range = {prange}", print=True)
-                blocks_reduction = rm().reduce( blocks_point_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
-                if blocks_reduction is not None:
-                    self.model_dims = blocks_reduction[0][0].shape[1]
-                    for ( reduced_spectra, reproduction, point_data ) in blocks_reduction:
-                        file_name = point_data.attrs['file_name']
-                        model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
-                        raw_data: xa.DataArray = block.data
-                        data_vars = dict( raw=raw_data, norm=point_data )
-                        reduced_dataArray =  xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
-                        data_vars['reduction'] = reduced_dataArray
-                        data_vars['reproduction'] = reproduction
-                        result_dataset = xa.Dataset( data_vars )
-                        self.dataset = self.reduced_dataset_name( file_name )
-                        output_file = os.path.join( self.datasetDir, self.dataset + ".nc" )
-#                       self._reduced_raster_file = os.path.join(self.datasetDir, self.dataset + ".tif")
-                        lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file} with {blocks_point_data.size} samples, dset attrs:")
-                        for varname, da in result_dataset.data_vars.items():
-                            da.attrs['long_name'] = f"{file_name}.{varname}"
-                        print( f"Writing output file: '{output_file}' with {blocks_point_data.size} samples")
-                        os.makedirs( os.path.dirname( output_file ), exist_ok=True )
-                        result_dataset.to_netcdf( output_file )
-#                        print(f"Writing raster file: '{self._reduced_raster_file}' with dims={reduced_dataArray.dims}, attrs = {reduced_dataArray.attrs}")
-#                        reduced_dataArray.rio.set_spatial_dims()
-#                        raw_data.rio.to_raster( self._reduced_raster_file )
+                lgm().log(f" Processing Block{block.block_coords}, shape = {block.shape}",  print=True)
+                updated = True
+    #            block.clearBlockCache()
+    #           block.addTextureBands( )
+                blocks_point_data: xa.DataArray = block.getPointData()[0]
+                lgm().log(f" Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}", print=True)
+                if blocks_point_data.size == 0:
+                   lgm().log( f" Warning:  Block {block.block_coords} has no valid samples.", print=True )
+                else:
+                    normed_data = self.pnorm(blocks_point_data)
+                    prange = ( normed_data.values.min(), normed_data.values.max(), normed_data.values.mean() )
+                    lgm().log(f" Preparing point data with shape {normed_data.shape}, range={prange}", print=True)
+                    blocks_reduction = rm().reduce( normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
+                    if blocks_reduction is not None:
+                        self.model_dims = blocks_reduction[0][0].shape[1]
+                        for ( reduced_spectra, reproduction, point_data ) in blocks_reduction:
+                            file_name = point_data.attrs['file_name']
+                            model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
+                            raw_data: xa.DataArray = block.data
+                            data_vars = dict( raw=raw_data, norm=point_data )
+                            reduced_dataArray =  xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
+                            data_vars['reduction'] = reduced_dataArray
+                            data_vars['reproduction'] = reproduction
+                            result_dataset = xa.Dataset( data_vars )
+                            self.dataset = self.reduced_dataset_name( file_name )
+                            output_file = os.path.join( self.datasetDir, self.dataset + ".nc" )
+    #                       self._reduced_raster_file = os.path.join(self.datasetDir, self.dataset + ".tif")
+                            lgm().log(f" Writing reduced[{self.reduce_scope}] output to {output_file} with {blocks_point_data.size} samples, dset attrs:")
+                            for varname, da in result_dataset.data_vars.items():
+                                da.attrs['long_name'] = f"{file_name}.{varname}"
+                            print( f"Writing output file: '{output_file}' with {blocks_point_data.size} samples")
+                            os.makedirs( os.path.dirname( output_file ), exist_ok=True )
+                            result_dataset.to_netcdf( output_file )
+    #                        print(f"Writing raster file: '{self._reduced_raster_file}' with dims={reduced_dataArray.dims}, attrs = {reduced_dataArray.attrs}")
+    #                        reduced_dataArray.rio.set_spatial_dims()
+    #                        raw_data.rio.to_raster( self._reduced_raster_file )
+        return updated
 
     def getFilePath(self) -> str:
         base_dir = dm().modal.data_dir

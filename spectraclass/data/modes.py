@@ -206,16 +206,12 @@ class ModeDataManager(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         return f"files/spectraclass/datasets/{self.MODE}/{dm().name}/{self.dsid(**kwargs)}.tif"
 
+    def dataFile( self, **kwargs ):
+        return os.path.join( self.datasetDir, self.dsid( **kwargs ) + ".nc" )
+
     def loadDataFile( self, **kwargs ) -> xa.Dataset:
-        from spectraclass.data.base import DataManager, dm
         data_file = os.path.join( self.datasetDir, self.dsid(**kwargs) + ".nc" )
-        if os.path.isfile( data_file ):
-            dataset: xa.Dataset = xa.open_dataset( data_file )
-        else:
-            print( f"Preparing input file: '{data_file}'" )
-            dm().prepare_inputs()
-            dm().save_config()
-            dataset: xa.Dataset = xa.open_dataset( data_file )
+        dataset: xa.Dataset = xa.open_dataset( data_file )
         dataset.attrs['data_file'] = data_file
         return dataset
 
@@ -236,7 +232,6 @@ class ModeDataManager(SCSingletonConfigurable):
         return self.filterCommonPrefix( filenames )
 
     def loadCurrentProject(self) -> xa.Dataset:
-        self.prepare_inputs( )
         return self.loadDataset( )
 
     @property

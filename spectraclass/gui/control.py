@@ -79,7 +79,7 @@ class ParametersManager(SCSingletonConfigurable):
 
     def _createGui( self, **kwargs ) -> ipw.Box:
         wTab = ipw.Tab()
-        tabNames = [  "layers", "selection", "reduction"  ]
+        tabNames = [  "layers", "selection"  ]
         children = []
         for iT, title in enumerate( tabNames ):
             wTab.set_title( iT, title )

@@ -4,7 +4,7 @@ import xarray as xa
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.gui.spatial.map import MapManager, mm
 
-dm: DataManager = DataManager.initialize( "demo2", 'desis' )
+dm: DataManager = DataManager.initialize( "demo2", 'aviris' )
 dm.loadCurrentProject("main")
 
 classes = [ ('Class-1', "cyan"),

@@ -74,6 +74,8 @@ class DataManager(SCSingletonConfigurable):
         if mode.lower() not in cls._mode_data_managers_: raise Exception( f"Mode {mode} is not defined, available modes = {cls._mode_data_managers_.keys()}")
         dataManager._mode_data_manager_ = cls._mode_data_managers_[ mode.lower() ].instance()
         lgm().log("Logging configured")
+        if dataManager.prepare_inputs( ):
+            dataManager.save_config()
         return dataManager
 
     def app(self) -> SpectraclassController:
