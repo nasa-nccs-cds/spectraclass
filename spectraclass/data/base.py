@@ -68,14 +68,16 @@ class DataManager(SCSingletonConfigurable):
 
     @classmethod
     def initialize(cls, name: str, mode: str ):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         dataManager = cls.instance()
         dataManager._configure_( name, mode )
         lgm().init_logging(name, mode)
         if mode.lower() not in cls._mode_data_managers_: raise Exception( f"Mode {mode} is not defined, available modes = {cls._mode_data_managers_.keys()}")
         dataManager._mode_data_manager_ = cls._mode_data_managers_[ mode.lower() ].instance()
         lgm().log("Logging configured")
-        if dataManager.prepare_inputs( ):
-            dataManager.save_config()
+        if not dm().modal.hasBlockData():
+            if dataManager.prepare_inputs( ):
+                dataManager.save_config()
         return dataManager
 
     def app(self) -> SpectraclassController:

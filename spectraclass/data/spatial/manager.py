@@ -40,7 +40,7 @@ class SpatialDataManager(ModeDataManager):
         return result
 
     def pnorm(self, data: xa.DataArray ) -> xa.DataArray:
-        dave, dmag = data.values.mean(0), 2.0 * data.values.std(0)
+        dave, dmag = data.values.mean(0), data.values.std(0)
         normed_data = (data.values - dave) / dmag
         return data.copy( data=normed_data )
 
@@ -220,8 +220,6 @@ class SpatialDataManager(ModeDataManager):
             else:
                 lgm().log(f" Processing Block{block.block_coords}, shape = {block.shape}",  print=True)
                 updated = True
-    #            block.clearBlockCache()
-    #           block.addTextureBands( )
                 blocks_point_data: xa.DataArray = block.getPointData()[0]
                 lgm().log(f" Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}", print=True)
                 if blocks_point_data.size == 0:

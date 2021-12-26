@@ -182,10 +182,11 @@ class ModeDataManager(SCSingletonConfigurable):
         raise NotImplementedError()
 
     @exception_handled
-    def loadDataset(self, **kwargs) -> xa.Dataset:
+    def loadDataset(self, **kwargs) -> Optional[xa.Dataset]:
         lgm().log(f"Load dataset {self.dsid()}, current datasets = {self.datasets.keys()}")
         if self.dsid() not in self.datasets:
             dataset: xa.Dataset = self.loadDataFile(**kwargs)
+            if dataset is None: return None
             vnames = dataset.variables.keys()
             vshapes = [f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
             lgm().log(f" ---> Opened Dataset {self.dsid()} from file {dataset.attrs['data_file']}\n\t -> variables: {' '.join(vshapes)}")
@@ -209,10 +210,17 @@ class ModeDataManager(SCSingletonConfigurable):
     def dataFile( self, **kwargs ):
         return os.path.join( self.datasetDir, self.dsid( **kwargs ) + ".nc" )
 
-    def loadDataFile( self, **kwargs ) -> xa.Dataset:
+    def hasBlockData(self) -> bool:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        block_data_file = self.dataFile(block=tm().getBlock())
+        return os.path.isfile( block_data_file )
+
+    def loadDataFile( self, **kwargs ) -> Optional[xa.Dataset]:
         data_file = os.path.join( self.datasetDir, self.dsid(**kwargs) + ".nc" )
-        dataset: xa.Dataset = xa.open_dataset( data_file )
-        dataset.attrs['data_file'] = data_file
+        dataset: Optional[xa.Dataset] = None
+        if os.path.isfile( data_file ):
+            dataset: xa.Dataset = xa.open_dataset( data_file )
+            dataset.attrs['data_file'] = data_file
         return dataset
 
     def filterCommonPrefix(self, paths: List[str])-> Tuple[str,List[str]]:

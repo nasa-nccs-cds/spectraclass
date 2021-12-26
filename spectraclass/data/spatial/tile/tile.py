@@ -102,10 +102,11 @@ class Block:
     def _getData( self ) -> Optional[xa.DataArray]:
         from spectraclass.data.base import DataManager, dm
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        try:
-            dataset = dm().modal.loadDataFile( block=self )
+        block_data_file = dm().modal.dataFile( block=self )
+        if os.path.isfile( block_data_file ):
+            dataset: Optional[xa.Dataset] = dm().modal.loadDataFile(block=self)
             raw_raster = dataset["raw"]
-        except Exception:
+        else:
             if self.tile.data is None: return None
             ybounds, xbounds = self.getBounds()
             raster_slice = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
