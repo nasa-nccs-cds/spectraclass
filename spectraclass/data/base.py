@@ -68,7 +68,6 @@ class DataManager(SCSingletonConfigurable):
 
     @classmethod
     def initialize(cls, name: str, mode: str ):
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         dataManager = cls.instance()
         dataManager._configure_( name, mode )
         lgm().init_logging(name, mode)

@@ -208,19 +208,19 @@ class ModeDataManager(SCSingletonConfigurable):
         return f"files/spectraclass/datasets/{self.MODE}/{dm().name}/{self.dsid(**kwargs)}.tif"
 
     def dataFile( self, **kwargs ):
-        return os.path.join( self.datasetDir, self.dsid( **kwargs ) + ".nc" )
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        block = kwargs.get('block', tm().getBlock() )
+        return os.path.join( self.datasetDir, block.file_name + ".nc" )
 
     def hasBlockData(self) -> bool:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        block_data_file = self.dataFile(block=tm().getBlock())
-        return os.path.isfile( block_data_file )
+        return os.path.isfile( self.dataFile() )
 
     def loadDataFile( self, **kwargs ) -> Optional[xa.Dataset]:
-        data_file = os.path.join( self.datasetDir, self.dsid(**kwargs) + ".nc" )
         dataset: Optional[xa.Dataset] = None
-        if os.path.isfile( data_file ):
-            dataset: xa.Dataset = xa.open_dataset( data_file )
-            dataset.attrs['data_file'] = data_file
+        dFile = self.dataFile()
+        if os.path.isfile( dFile ):
+            dataset: xa.Dataset = xa.open_dataset( dFile )
+            dataset.attrs['data_file'] = dFile
         return dataset
 
     def filterCommonPrefix(self, paths: List[str])-> Tuple[str,List[str]]:
