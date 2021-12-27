@@ -225,6 +225,7 @@ class SpatialDataManager(ModeDataManager):
                 if blocks_point_data.size == 0:
                    lgm().log( f" Warning:  Block {block.block_coords} has no valid samples.", print=True )
                    xa.Dataset().to_netcdf( block_data_file )
+                   lgm().log(f" Writing empty dataset: {block_data_file}", print=True )
                 else:
                     normed_data = self.pnorm(blocks_point_data)
                     prange = ( normed_data.values.min(), normed_data.values.max(), normed_data.values.mean() )
