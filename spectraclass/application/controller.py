@@ -33,6 +33,15 @@ class SpectraclassController(SCSingletonConfigurable):
         self._action_events = []
         self.pcm_active = False
 
+    @classmethod
+    def set_spectraclass_theme(cls):
+        from IPython.display import display, HTML
+        if cls.custom_theme:
+            theme_file = os.path.join( cls.HOME, "themes", "spectraclass.css" )
+            with open( theme_file ) as f:
+                css = f.read().replace(';', ' !important;')
+            display(HTML('<style type="text/css">%s</style>Customized changes loaded.' % css))
+
     def addActionEvent(self, event: ActionEvent ):
         self._action_events.append( event )
 

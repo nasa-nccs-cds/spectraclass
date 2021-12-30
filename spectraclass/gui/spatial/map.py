@@ -269,7 +269,7 @@ class MapManager(SCSingletonConfigurable):
             self.setBlock()
             self.base = TileServiceBasemap()
             [x0, x1, y0, y1] = self.block.extent()
-            self.base.setup_plot( (x0,x1), (y0,y1), **kwargs )
+            self.base.setup_plot( (x0,x1), (y0,y1), index=100, **kwargs )
             self.init_map(**kwargs)
             self.region_selection = PolygonInteractor( self.base.gax )
             self.points_selection = MarkerManager( self.base.gax, self.block )

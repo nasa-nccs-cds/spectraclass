@@ -42,9 +42,6 @@ class XGeo(XExtension):
         counts = ( [( self._obj == cval ).sum(dim=[self.x_coord,self.y_coord],keep_attrs=True) for cval in values] )
         return xr.concat( counts, 'counts' ).transpose()
 
-    def crop_to_poly(self, poly: Polygon, buffer: float = 0 ) -> xr.DataArray:
-        return self.crop( *poly.envelope.bounds, buffer )
-
     def crop(self, minx: float, miny: float, maxx: float, maxy: float, buffer: float = 0 ) -> xr.DataArray:
         xbnds = [ minx - buffer, maxx + buffer ]
         ybnds = [ maxy + buffer, miny - buffer ] # if self._y_inverted else  [ miny - buffer, maxy + buffer ]
@@ -57,16 +54,6 @@ class XGeo(XExtension):
         latitude =  (y_arr[0] + y_arr[-1]) / 2.0
         longitude = (x_arr[0] + x_arr[-1]) / 2.0
         return CRS.get_utm_sref( longitude, latitude )
-
-    def bounds(self, geographic = False, sref= None ):
-        min_x, x_step, _, max_y, _, y_step, _, _, _ = self.getTransform()
-        bnds = [ min_x, max_y + y_step*self._obj.shape[-2], min_x + x_step*self._obj.shape[-1], max_y ]
-        if geographic or sref:
-            if geographic: sref = self.geographic_sref
-            gbnds0 = self.project_coords( bnds[0], bnds[1], sref )
-            gbnds1 = self.project_coords( bnds[2], bnds[3], sref )
-            return gbnds0 + gbnds1
-        return bnds
 
     def to_utm( self, resolution: Tuple[float,float], **kwargs ) -> xr.DataArray:
         utm_sref: osr.SpatialReference = kwargs.get( 'sref', self.getUTMProj() )

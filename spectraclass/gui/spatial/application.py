@@ -29,7 +29,6 @@ class Spectraclass(SpectraclassController):
         control = ipw.VBox( [ am().gui(), smap ], layout=ipw.Layout( flex='0 0 700px'), border=css_border )
         gui = ipw.HBox( [control, plot ], layout=ipw.Layout( width='100%' ) )
         if embed: self.embed()
-        dm().save_config()
         return gui
 
     def mark(self):

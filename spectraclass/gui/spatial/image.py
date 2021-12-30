@@ -1,4 +1,4 @@
-
+from matplotlib.patches import Rectangle
 import xarray as xa
 import numpy as np
 from matplotlib.axes import Axes
@@ -30,14 +30,18 @@ class TileServiceImage(AxesImage):
         xrange = kwargs.pop('xrange',None)
         yrange = kwargs.pop('yrange', None)
         kwargs.setdefault('in_layout', False)
+        block_selection = kwargs.pop('block_selection', False)
         self.user_is_interacting = False
         super().__init__(ax, **kwargs)
         self.projection = projection
         self.cache = []
         self.current_extent = []
+        self._block_selection_callback = None
+        self._blocks = {}
 
         self.axes.figure.canvas.mpl_connect('button_press_event', self.on_press)
         self.axes.figure.canvas.mpl_connect('button_release_event', self.on_release)
+        self.axes.figure.canvas.mpl_connect('pick_event', self.on_pick)
         self.on_release()
         if xrange is not None: self.axes.set_xbound( xrange[0], xrange[1] )
         if yrange is not None: self.axes.set_ybound( yrange[0], yrange[1] )
@@ -45,12 +49,35 @@ class TileServiceImage(AxesImage):
         with self.hold_limits():
             self.axes.add_image( self )
 
+        if block_selection:
+            self.add_block_selection( )
+
+    def add_block_selection(self, block_selection_callback=None ):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        mdata = tm().tile_metadata
+        [dx, _, x0, _, dy, y0, _, _, _ ] = tm().transform
+        block_shape = tm().block_shape
+        block_size = mdata['block_size']
+        width, height = dx*block_shape[0], abs( dy*block_shape[1] )
+        for bc, bsize in block_size.items():
+            if bsize > 0:
+                xc, yc = x0 + dx*bc[0], y0+dy*bc[1]
+                if dy < 0: yc = yc - height
+                r = Rectangle( (xc,yc), width, height ) #, fill=False, edgecolor = 'yellow', lw=2 )
+                self._blocks[bc] = r
+                r.set_picker( True )
+                self.axes.add_patch( r )
+        self._block_selection_callback = block_selection_callback
+
     def on_press(self, event=None):
         self.user_is_interacting = True
 
     def on_release(self, event=None):
         self.user_is_interacting = False
         self.stale = True
+
+    def on_pick(self, event=None):
+        lgm().log( f"Pick Event: {event}", print=True )
 
     def get_window_extent(self, renderer=None):
         return self.axes.get_window_extent(renderer=renderer)

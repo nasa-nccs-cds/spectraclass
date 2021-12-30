@@ -11,8 +11,9 @@ class Tile:
     def __init__(self, **kwargs ):
         super(Tile, self).__init__()
         self._data: Optional[xa.DataArray] = None
-        self._transform: Optional[ProjectiveTransform] = None
+        self._transform = None
         self.subsampling: int =  kwargs.get('subsample',1)
+        self._extent = None
 
     @property
     def data(self) -> xa.DataArray:
@@ -24,11 +25,26 @@ class Tile:
     def reset(self):
         self._data = None
 
+    def update_transform(self):
+        from pyproj import Proj, transform
+        from spectraclass.data.spatial.tile.manager import TileManager
+        sref = self.data.spatial_ref
+        inProj =  Proj( sref.crs_wkt )
+        outProj = Proj(init=f'epsg:{TileManager.ESPG}')
+        [yc, xc] = [ self.data.coords[dim] for dim in self.data.dims[1:] ]
+        [ x0, x1 ], [ y0, y1 ] = transform( inProj, outProj, [ xc[0], xc[-1] ], [ yc[0], yc[-1] ] )
+        dx, dy = (x1-x0)/self.data.shape[2], (y1-y0)/self.data.shape[1]
+        self._extent = ( x0-dx/2, x1+dx/2, y0-dy/2, y1+dy/2 )
+        self._transform = ( dx, 0, x0, 0, dy, y0 )
+
     @property
-    def transform(self) -> Optional[ProjectiveTransform]:
-        if self.data is None: return None
-        if self._transform is None:
-            self._transform = ProjectiveTransform( np.array(list(self.data.attrs['transform']) + [0, 0, 1]).reshape(3, 3) )
+    def extent(self):
+        if self._extent is None: self.update_transform()
+        return self._extent
+
+    @property
+    def transform(self):
+        if self._transform is None: self.update_transform()
         return self._transform
 
     @property
@@ -43,13 +59,6 @@ class Tile:
         from spectraclass.data.spatial.tile.manager import TileManager
         tm = TileManager.instance()
         return [ Block( self, iy, ix, **kwargs ) for iy in range(0,tm.block_dims[0]) for ix in range(0,tm.block_dims[1]) ]
-
-    def coords2index(self, cy, cx ) -> Tuple[int,int]:     # -> iy, ix
-        coords = self.transform.inverse(np.array([[cx, cy], ]))
-        return (math.floor(coords[0, 1]), math.floor(coords[0, 0]))
-
-#    def index2coords(self, iy, ix ) -> Tuple[float,float]:
-#        return self.transform(np.array([[ix+0.5, iy+0.5], ]))
 
 class Block:
 

@@ -134,7 +134,6 @@ class TileManager(SCSingletonConfigurable):
         if self._tile_data is None:
             self._tile_data = self._readTileFile()
 #            self._tile_data.attrs['transform'] = self.transform
-            self.saveMetadata( )
         return self._tile_data
 
     @classmethod
@@ -157,11 +156,8 @@ class TileManager(SCSingletonConfigurable):
     @property
     def transform(self):
         if self._transform is None:
-            if 'transform' in self.tile_metadata:
-                self._transform = json.loads( self.tile_metadata.get('transform') )
-            else:
-                gt = [float(tv) for tv in self._tile_data.spatial_ref.GeoTransform.split()]
-                self._transform = [gt[1], gt[2], gt[0], gt[4], gt[5], gt[3], 0.0, 0.0, 1.0]
+            gt = [float(tv) for tv in self._tile_data.spatial_ref.GeoTransform.split()]
+            self._transform = [gt[1], gt[2], gt[0], gt[4], gt[5], gt[3], 0.0, 0.0, 1.0]
         return self._transform
 
     def loadMetadata(self) -> Dict:
@@ -170,17 +166,23 @@ class TileManager(SCSingletonConfigurable):
         try:
             with open( file_path, "r" ) as mdfile:
                 print(f"Loading metadata from file: {file_path}")
+                block_sizes = { (1,1): 1000 }
                 for line in mdfile.readlines():
                     try:
                         toks = line.split("=")
-                        mdata[toks[0]] = "=".join(toks[1:])
+                        if toks[0].startswith('block_size'):
+                            bs = toks[0].split("-")
+                            block_sizes[ (int(bs[0]), int(bs[1])) ] = int( toks[1] )
+                        else:
+                            mdata[toks[0]] = "=".join(toks[1:])
                     except Exception as err:
                         lgm().log( f"\nLoadMetadata: Error '{err}' reading line '{line}'" )
+                mdata[ 'block_size' ] = block_sizes
         except Exception as err:
             lgm().log( f"\nWarning: can't read config file '{file_path}': {err}\n")
         return mdata
 
-    def saveMetadata(self ):
+    def saveMetadata( self, block_data: Dict[Tuple,int] ):
         file_path = DataManager.instance().modal.getMetadataFilePath()
         print( f"Writing metadata file: {file_path}")
         with open( file_path, "w" ) as mdfile:
@@ -189,6 +191,8 @@ class TileManager(SCSingletonConfigurable):
             mdfile.write( f"tile_size={self.tile_size}\n" )
             for (aid,aiv) in self._tile_data.attrs.items():
                 mdfile.write(f"{aid}={aiv}\n")
+            for bcoords, bsize in block_data.items():
+                mdfile.write(f"block_size-{bcoords}-{bcoords}={bsize}\n")
 
 #     def getPointData( self ) -> Tuple[xa.DataArray,xa.DataArray]:
 #         from spectraclass.data.spatial.manager import SpatialDataManager

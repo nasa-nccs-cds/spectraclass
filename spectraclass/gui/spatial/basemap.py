@@ -18,7 +18,7 @@ from spectraclass.data.spatial.tile.manager import TileManager, tm
 
 class TileServiceBasemap(SCSingletonConfigurable):
 
-    def __init__(self):
+    def __init__(self, **kwargs ):
         super(TileServiceBasemap, self).__init__()
         self.tile_server_url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/WMTS'
         self.crs: str = TileManager.crs
@@ -26,6 +26,7 @@ class TileServiceBasemap(SCSingletonConfigurable):
         self.layer: str = None
         self.basemap: AxesImage = None
         self.wmts: WMTSRasterSource = None
+        self._block_selection = kwargs.get( 'block_selection', False )
 
 
     # def set_extent(self, xr: List[float], yr: List[float], **kwargs):
@@ -40,27 +41,32 @@ class TileServiceBasemap(SCSingletonConfigurable):
         fig_size = kwargs.pop('size', (6, 6))
         title = kwargs.pop('title', 'Selection Region')
         use_basemap = kwargs.pop('basemap', True)
+        use_slider = kwargs.pop( 'slider', True )
         self.figure: Figure = plt.figure( fig_index, figsize=fig_size )
         if not standalone: plt.ion()
 
         self.figure.suptitle(title)
-        self.gax: Axes = self.figure.add_axes( [0.01, 0.07, 0.98, 0.93], **kwargs )  # [left, bottom, width, height] # , projection=self.crs
+        bounds = [0.01, 0.07, 0.98, 0.93] if use_slider else [0.01, 0.01, 0.98, 0.93]
+        self.gax: Axes = self.figure.add_axes( bounds, **kwargs )  # [left, bottom, width, height] # , projection=self.crs
         self.gax.xaxis.set_visible( False ); self.gax.yaxis.set_visible( False )
         if use_basemap:
-            self.set_basemap( xlim, ylim ) # self.gax.add_wmts( self.tile_service, self.layer )
+            self.set_basemap( xlim, ylim, **kwargs)
         else:
             self.gax.set_xbound( xlim[0], xlim[1] )
             self.gax.set_ybound( ylim[0], ylim[1] )
-        self.sax: Axes = self.figure.add_axes( [0.01, 0.01, 0.85, 0.05] )  # [left, bottom, width, height]
+        self.sax: Axes = self.figure.add_axes( [0.01, 0.01, 0.85, 0.05] ) if use_slider else None # [left, bottom, width, height]
         self.figure.canvas.toolbar_visible = True
         self.figure.canvas.header_visible = False
 
+    def gui(self):
+        return self.figure.canvas
+
     @exception_handled
-    def set_basemap(self, xlim: Tuple[float,float], ylim: Tuple[float,float] ):
+    def set_basemap(self, xlim: Tuple[float,float], ylim: Tuple[float,float], **kwargs ):
         self.tile_service = WebMapTileService(self.tile_server_url)
         self.layer: str = list(self.tile_service.contents.keys())[0]
         self.wmts = WMTSRasterSource( self.tile_service, self.layer )
-        self.basemap = TileServiceImage(self.gax, self.wmts, self.crs, xrange=xlim, yrange=ylim )
+        self.basemap = TileServiceImage(self.gax, self.wmts, self.crs, xrange=xlim, yrange=ylim, block_selection=self._block_selection, **kwargs )
 
     @contextlib.contextmanager
     def hold_limits(self, hold=True):

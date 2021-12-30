@@ -2,6 +2,7 @@ import traceback
 
 import numpy as np
 import xarray as xa
+import ipywidgets as ip
 from pathlib import Path
 from spectraclass.gui.control import ufm
 from spectraclass.reduction.embedding import rm
@@ -25,12 +26,21 @@ class SpatialDataManager(ModeDataManager):
         super(SpatialDataManager, self).__init__()
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         self.tiles: TileManager = tm()
+        self._tile_selection_basemap = None
 
     @classmethod
     def extent(cls, image_data: xa.DataArray ) -> List[float]: # left, right, bottom, top
         xc, yc = image_data.coords[image_data.dims[-1]].values, image_data.coords[image_data.dims[-2]].values
         dx2, dy2 = (xc[1]-xc[0])/2, (yc[0]-yc[1])/2
         return [ xc[0]-dx2,  xc[-1]+dx2,  yc[-1]-dy2,  yc[0]+dy2 ]
+
+    def gui(self, **kwargs):
+        from spectraclass.gui.spatial.basemap import TileServiceBasemap
+        if self._tile_selection_basemap is None:
+            self._tile_selection_basemap = TileServiceBasemap( block_selection=True )
+            (x0, x1, y0, y1) = self.tiles.tile.extent
+            self._tile_selection_basemap.setup_plot( (x0, x1), (y0, y1), index=99, size=(3,3), slider=False, title="tile selection", **kwargs )
+        return self._tile_selection_basemap.gui()
 
     def getConstantXArray(self, fill_value: float, shape: Tuple[int], dims: Tuple[str], **kwargs) -> xa.DataArray:
         coords = kwargs.get( "coords", { dim: np.arange(shape[id]) for id, dim in enumerate(dims) } )
@@ -209,22 +219,36 @@ class SpatialDataManager(ModeDataManager):
         file_name_base = f"{dsid}-raw" if self.reduce_method.lower() == "none" else f"{dsid}-{self.reduce_method}-{self.model_dims}"
         return f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
 
+    def empty_array(self, dims ):
+        coords = { d: np.empty([1]) for d in dims }
+        data = np.empty([1]*len(dims) )
+        return xa.DataArray( data, dims, coords )
+
+    def get_empty_dataset(self) -> xa.Dataset:
+        data_vars = dict( raw = self.empty_array(['band', 'y', 'x']),
+                          norm = self.empty_array(['samples', 'band']),
+                          reduction = self.empty_array(['samples', 'model']),
+                          reproduction = self.empty_array(['samples', 'band']) )
+        coords = { c: np.empty([1]) for c in [ 'x', 'y', 'band', 'samples', 'model' ] }
+        return xa.Dataset( data_vars=data_vars, coords=coords )
+
     @exception_handled
-    def prepare_inputs(self) -> bool:
+    def prepare_inputs(self) -> Dict[Tuple,int]:
         lgm().log(f" Preparing inputs", print=True)
-        updated = False
+        block_nsamples = {}
         for block in self.tiles.tile.getBlocks():
             block_data_file =  dm().modal.dataFile(block=block)
             if os.path.isfile( block_data_file ):
                 lgm().log(f" Skipping existing file {block_data_file}", print=True)
             else:
                 lgm().log(f" Processing Block{block.block_coords}, shape = {block.shape}",  print=True)
-                updated = True
                 blocks_point_data: xa.DataArray = block.getPointData()[0]
                 lgm().log(f" Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}", print=True)
                 if blocks_point_data.size == 0:
                    lgm().log( f" Warning:  Block {block.block_coords} has no valid samples.", print=True )
-                   xa.Dataset().to_netcdf( block_data_file )
+                   empty_dataset = xa.DataArray()
+                   empty_dataset.to_netcdf( block_data_file )
+                   block_nsamples[block.block_coords] = 0
                    lgm().log(f" Writing empty dataset: {block_data_file}", print=True )
                 else:
                     normed_data = self.pnorm(blocks_point_data)
@@ -237,6 +261,7 @@ class SpatialDataManager(ModeDataManager):
                             model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
                             raw_data: xa.DataArray = block.data
                             data_vars = dict( raw=raw_data, norm=point_data )
+                            block_nsamples[block.block_coords] = point_data.shape[0]
                             reduced_dataArray =  xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
                             data_vars['reduction'] = reduced_dataArray
                             data_vars['reproduction'] = reproduction
@@ -251,7 +276,7 @@ class SpatialDataManager(ModeDataManager):
     #                        print(f"Writing raster file: '{self._reduced_raster_file}' with dims={reduced_dataArray.dims}, attrs = {reduced_dataArray.attrs}")
     #                        reduced_dataArray.rio.set_spatial_dims()
     #                        raw_data.rio.to_raster( self._reduced_raster_file )
-        return updated
+        return block_nsamples
 
     def getFilePath(self) -> str:
         base_dir = dm().modal.data_dir

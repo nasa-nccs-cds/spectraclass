@@ -116,13 +116,14 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def getSelectionPanel(self) -> ip.HBox:
         from spectraclass.data.base import DataManager, dm
-        self._dataset_prefix, dsets = self.getDatasetList()
-        self._dset_selection: ip.Select = ip.Select(options=dsets, description='Datasets:', disabled=False, layout=ip.Layout(width="900px"))
-        if len(dsets) > 0: self._dset_selection.value = dm().dsid()[ len(self._dataset_prefix): ]
-        load: ip.Button = ip.Button(description="Load", border='1px solid dimgrey')
-        load.on_click(self.select_dataset)
-        filePanel: ip.HBox = ip.HBox([self._dset_selection, load], layout=ip.Layout(width="100%", height="100%"), border='2px solid firebrick')
-        return filePanel
+        # self._dataset_prefix, dsets = self.getDatasetList()
+        # self._dset_selection: ip.Select = ip.Select(options=dsets, description='Datasets:', disabled=False, layout=ip.Layout(width="900px"))
+        # if len(dsets) > 0: self._dset_selection.value = dm().dsid()[ len(self._dataset_prefix): ]
+        # load: ip.Button = ip.Button(description="Load", border='1px solid dimgrey')
+        # load.on_click(self.select_dataset)
+        # filePanel: ip.HBox = ip.HBox([self._dset_selection, load], layout=ip.Layout(width="100%", height="100%"), border='2px solid firebrick')
+        # return filePanel
+        return ip.HBox([])
 
     def getConfigPanel(self):
         from spectraclass.reduction.embedding import ReductionManager
@@ -175,8 +176,9 @@ class ModeDataManager(SCSingletonConfigurable):
                                          layout=ip.Layout(width="100%", height="100%"), border='2px solid firebrick')
         return creationPanel
 
-    def gui(self) -> ip.HBox:
-        return self.getSelectionPanel()
+    def gui( self, **kwargs ):
+        pass
+#       return self.getSelectionPanel()
 
     def getInputFileData( self, vname: str = None, **kwargs ) -> np.ndarray:
         raise NotImplementedError()

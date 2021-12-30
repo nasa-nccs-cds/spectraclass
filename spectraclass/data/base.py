@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Optional, Dict, Type
+from typing import List, Union, Tuple, Optional, Dict, Type
 import os, warnings
 from enum import Enum
 import ipywidgets as ip
@@ -43,7 +43,7 @@ def register_modes():
 
 class DataManager(SCSingletonConfigurable):
     proc_type = tl.Unicode('cpu').tag(config=True)
-    _mode_data_managers_: Dict[str,Type[ModeDataManager]] = {}
+    _mode_data_managers_: Dict = {}
 
     def __init__(self):
         self._config: Config = None
@@ -75,8 +75,8 @@ class DataManager(SCSingletonConfigurable):
         dataManager._mode_data_manager_ = cls._mode_data_managers_[ mode.lower() ].instance()
         lgm().log("Logging configured")
         if not dm().modal.hasBlockData():
-            if dataManager.prepare_inputs( ):
-                dataManager.save_config()
+            block_data =  dataManager.prepare_inputs( )
+            dataManager.save_config( block_data )
         return dataManager
 
     def app(self) -> SpectraclassController:
@@ -107,7 +107,7 @@ class DataManager(SCSingletonConfigurable):
         os.makedirs( output_dir, exist_ok=True)
         return os.path.join( output_dir, f"{self.dsid()}-masks.nc" )
 
-    def save_config( self ):
+    def save_config( self, block_data: Dict[Tuple,int] ):
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.reduction.embedding import ReductionManager, rm
@@ -115,25 +115,27 @@ class DataManager(SCSingletonConfigurable):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
-        afm(), lm(), pcm(), mm(), texm(), rm(), tm()
-        conf_dict = self.generate_config_file()
-        for scope, trait_classes in conf_dict.items():
-            cfg_file = os.path.realpath( self.config_file( scope, self.mode ) )
-            os.makedirs(os.path.dirname(cfg_file), 0o777, exist_ok=True)
-            lines = []
+        if len( block_data ) > 0:
+            afm(), lm(), pcm(), mm(), texm(), rm(), tm()
+            tm().saveMetadata( block_data )
+            conf_dict = self.generate_config_file()
+            for scope, trait_classes in conf_dict.items():
+                cfg_file = os.path.realpath( self.config_file( scope, self.mode ) )
+                os.makedirs(os.path.dirname(cfg_file), 0o777, exist_ok=True)
+                lines = []
 
-            for class_name, trait_map in trait_classes.items():
-                for trait_name, trait_value in trait_map.items():
-                    tval_str = f'"{trait_value}"' if isinstance(trait_value, str) else f"{trait_value}"
-                    cfg_str = f"c.{class_name}.{trait_name} = {tval_str}\n"
-                    lines.append( cfg_str )
+                for class_name, trait_map in trait_classes.items():
+                    for trait_name, trait_value in trait_map.items():
+                        tval_str = f'"{trait_value}"' if isinstance(trait_value, str) else f"{trait_value}"
+                        cfg_str = f"c.{class_name}.{trait_name} = {tval_str}\n"
+                        lines.append( cfg_str )
 
-            lgm().log(f"Writing config file: {cfg_file}")
-            with self._lock:
-                cfile_handle = open(cfg_file, "w")
-                cfile_handle.writelines(lines)
-                cfile_handle.close()
-            lgm().log(f"Config file written")
+                lgm().log(f"Writing config file: {cfg_file}")
+                with self._lock:
+                    cfile_handle = open(cfg_file, "w")
+                    cfile_handle.writelines(lines)
+                    cfile_handle.close()
+                lgm().log(f"Config file written")
 
     def generate_config_file(self) -> Dict:
         #        print( f"Generate config file, _classes = {[inst.__class__ for inst in cls.config_instances]}")
@@ -181,9 +183,9 @@ class DataManager(SCSingletonConfigurable):
         return self._mode_data_manager_.metavars
 
     def gui( self ) -> ip.Tab():
-        from spectraclass.gui.unstructured.application import Spectraclass
+        from spectraclass.application.controller import SpectraclassController
         if self._wGui is None:
-            Spectraclass.set_spectraclass_theme()
+            SpectraclassController.set_spectraclass_theme()
             self._wGui = self._mode_data_manager_.gui()
         return self._wGui
 

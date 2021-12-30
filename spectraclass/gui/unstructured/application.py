@@ -13,15 +13,6 @@ class Spectraclass(SpectraclassController):
     def process_menubar_action(self, mname, dname, op, b ):
         print(f" process_menubar_action.on_value_change: {mname}.{dname} -> {op}")
 
-    @classmethod
-    def set_spectraclass_theme(cls):
-        from IPython.display import display, HTML
-        if cls.custom_theme:
-            theme_file = os.path.join( cls.HOME, "themes", "spectraclass.css" )
-            with open( theme_file ) as f:
-                css = f.read().replace(';', ' !important;')
-            display(HTML('<style type="text/css">%s</style>Customized changes loaded.' % css))
-
     def gui( self, **kwargs ):
         from bokeh.io import output_notebook
         from spectraclass.gui.plot import GraphPlotManager, gpm
@@ -41,7 +32,6 @@ class Spectraclass(SpectraclassController):
         control = ipw.VBox([am().gui(), tm().gui(), gpm().gui()], layout=ipw.Layout(flex='0 0 700px'), border=css_border)
         gui = ipw.HBox( [control, plot ], layout=ipw.Layout( width='100%' ) )
         if embed: self.embed()
-        dm().save_config()
         return gui
 
     def mark(self):
