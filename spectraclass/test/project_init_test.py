@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 load = False
 
 dm: DataManager = DataManager.initialize( "demo2", 'aviris' )
+dm.prepare_inputs()
 
 if load:
     dm.loadCurrentProject("main")

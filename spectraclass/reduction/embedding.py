@@ -41,6 +41,8 @@ class ReductionManager(SCSingletonConfigurable):
         self.ndim = 3
         self._state = self.UNDEF
         self._samples_coord = None
+        self._autoencoder = None
+        self._encoder = None
 
     @exception_handled
     def reduce(self, train_data: xa.DataArray, test_data: List[xa.DataArray], reduction_method: str, ndim: int, nepochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
@@ -92,44 +94,53 @@ class ReductionManager(SCSingletonConfigurable):
                 results.append( (reduced_features, reproduction, normed_input ) )
             return results
 
-    def autoencoder_reduction(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], ndim: int, epochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
+    def get_network( self, input_dims: int, model_dims: int, **kwargs ):
+        refresh: bool = kwargs.get('refresh', False)
+        if (self._autoencoder is None) or refresh:
+            self._build_network( input_dims, model_dims, **kwargs )
+        return self._autoencoder, self._encoder
+
+    def _build_network( self, input_dims: int, model_dims: int, **kwargs  ):
         from keras.layers import Input, Dense
         from keras.models import Model
         from keras import losses, regularizers
-        input_dims = train_input.shape[1]
+        sparsity: float = kwargs.get( 'sparsity', 0.0 )
+        reduction_factor = 2
+        inputlayer = Input(shape=[input_dims])
+        activation = 'tanh'
+        optimizer = 'rmsprop'
+        layer_dims, x = int(round(input_dims / reduction_factor)), inputlayer
+        while layer_dims > model_dims:
+            x = Dense(layer_dims, activation=activation)(x)
+            layer_dims = int(round(layer_dims / reduction_factor))
+        encoded = x = Dense(model_dims, activation=activation, activity_regularizer=regularizers.l1(sparsity))(x)
+        layer_dims = int(round(model_dims * reduction_factor))
+        while layer_dims < input_dims:
+            x = Dense(layer_dims, activation=activation)(x)
+            layer_dims = int(round(layer_dims * reduction_factor))
+        decoded = Dense(input_dims, activation='linear')(x)
+        #        modelcheckpoint = ModelCheckpoint('xray_auto.weights', monitor='loss', verbose=1, save_best_only=True, save_weights_only=True, mode='auto', period=1)
+        #        earlystopping = EarlyStopping(monitor='loss', min_delta=0., patience=100, verbose=1, mode='auto')
+        self._autoencoder = Model(inputs=[inputlayer], outputs=[decoded])
+        self._encoder = Model(inputs=[inputlayer], outputs=[encoded])
+        #        autoencoder.summary()
+        #        encoder.summary()
+        self._autoencoder.compile( loss=self.loss, optimizer=optimizer )
+        lgm().log(f" BUILD Autoencoder network: input_dims = {input_dims} ")
+
+    def autoencoder_reduction(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], model_dims: int, epochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
         ispecs: List[np.ndarray] = [train_input.data.max(0), train_input.data.min(0), train_input.data.mean(0), train_input.data.std(0)]
         lgm().log(f" autoencoder_reduction: train_input shape = {train_input.shape} ")
         lgm().log(f"   ----> max = {ispecs[0][:64].tolist()} ")
         lgm().log(f"   ----> min = {ispecs[1][:64].tolist()} ")
         lgm().log(f"   ----> ave = {ispecs[2][:64].tolist()} ")
         lgm().log(f"   ----> std = {ispecs[3][:64].tolist()} ")
-        reduction_factor = 2
-        inputlayer = Input( shape=[input_dims] )
-        activation = 'tanh'
-        optimizer = 'rmsprop'
-        layer_dims, x = int( round( input_dims / reduction_factor )), inputlayer
-        while layer_dims > ndim:
-            x = Dense(layer_dims, activation=activation)(x)
-            layer_dims = int( round( layer_dims / reduction_factor ))
-        encoded = x = Dense( ndim, activation=activation, activity_regularizer=regularizers.l1( sparsity ) )(x)
-        layer_dims = int( round( ndim * reduction_factor ))
-        while layer_dims < input_dims:
-            x = Dense(layer_dims, activation=activation)(x)
-            layer_dims = int( round( layer_dims * reduction_factor ))
-        decoded = Dense( input_dims, activation='linear' )(x)
-        print( f" Autoencoder_reduction: train_input shape = {train_input.shape} " )
-#        modelcheckpoint = ModelCheckpoint('xray_auto.weights', monitor='loss', verbose=1, save_best_only=True, save_weights_only=True, mode='auto', period=1)
-#        earlystopping = EarlyStopping(monitor='loss', min_delta=0., patience=100, verbose=1, mode='auto')
-        autoencoder = Model( inputs=[inputlayer], outputs=[decoded] )
-        encoder = Model( inputs=[inputlayer], outputs=[encoded] )
-#        autoencoder.summary()
-#        encoder.summary()
-        autoencoder.compile(loss=self.loss, optimizer=optimizer )
-        autoencoder.fit( train_input.data, train_input.data, epochs=epochs, batch_size=256, shuffle=True )
         results = []
         if test_inputs is None: test_inputs = [ train_input ]
         for iT, test_input in enumerate(test_inputs):
             try:
+                autoencoder, encoder = self.get_network( train_input.shape[1], model_dims, sparsity=sparsity, refresh=True )
+                autoencoder.fit( train_input.data, train_input.data, epochs=epochs, batch_size=256, shuffle=True )
                 encoded_data: np.ndarray = encoder.predict( test_input.data )
                 reproduced_data: np.ndarray = autoencoder.predict( test_input.data )
                 reproduction: xa.DataArray = test_input.copy( data=reproduced_data )

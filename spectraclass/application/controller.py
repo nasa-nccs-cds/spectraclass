@@ -71,15 +71,6 @@ class SpectraclassController(SCSingletonConfigurable):
         gpm().plot_graph( Marker( "marker", pids, iclass ) )
         mm().set_region_class( iclass )
 
-    @classmethod
-    def set_spectraclass_theme(cls):
-        from IPython.display import display, HTML
-        if cls.custom_theme:
-            theme_file = os.path.join( cls.HOME, "themes", "spectraclass.css" )
-            with open( theme_file ) as f:
-                css = f.read().replace(';', ' !important;')
-            display(HTML('<style type="text/css">%s</style>Customized changes loaded.' % css))
-
     def gui( self, **kwargs ):
         raise NotImplementedError()
 

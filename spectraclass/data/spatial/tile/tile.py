@@ -114,23 +114,24 @@ class Tile(DataContainer):
     def name(self) -> str:
         return self.data.attrs['tilename']
 
-    def getBlock(self, iy: int, ix: int, **kwargs ) -> Optional["Block"]:
-        block = Block( self, iy, ix, **kwargs )
+    def getBlock(self, ix: int, iy: int, **kwargs ) -> Optional["Block"]:
+        lgm().log(f"Tiles.getBlock: ix={ix}, iy={iy}")
+        block = Block( self, ix, iy, **kwargs )
         return block
 
     def getBlocks(self, **kwargs ) -> List["Block"]:
         from spectraclass.data.spatial.tile.manager import TileManager
         tm = TileManager.instance()
-        return [ Block( self, iy, ix, **kwargs ) for iy in range(0,tm.block_dims[0]) for ix in range(0,tm.block_dims[1]) ]
+        return [ Block( self, ix, iy, **kwargs ) for ix in range(0,tm.block_dims[0]) for iy in range(0,tm.block_dims[1]) ]
 
 class Block(DataContainer):
 
-    def __init__(self, tile: Tile, iy: int, ix: int, **kwargs ):
+    def __init__(self, tile: Tile, ix: int, iy: int, **kwargs ):
         super(Block, self).__init__( data_projected=True, **kwargs )
         self.tile: Tile = tile
         self.init_task = None
         self.config = kwargs
-        self.block_coords = (iy,ix)
+        self.block_coords = (ix,iy)
         self.validate_parameters()
         self._index_array: xa.DataArray = None
         self._flow = None
@@ -164,7 +165,7 @@ class Block(DataContainer):
             raw_raster = dataset["raw"]
         else:
             if self.tile.data is None: return None
-            ybounds, xbounds = self.getBounds()
+            xbounds, ybounds = self.getBounds()
             raster_slice = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
             raw_raster = TileManager.process_tile_data( raster_slice )
         block_raster = self._apply_mask( raw_raster )
@@ -207,8 +208,8 @@ class Block(DataContainer):
         return np.zeros( self.shape, np.int)
 
     def getBounds(self ) -> Tuple[ Tuple[int,int], Tuple[int,int] ]:
-        y0, x0 = self.block_coords[0]*self.shape[0], self.block_coords[1]*self.shape[1]
-        return ( y0, y0+self.shape[0] ), ( x0, x0+self.shape[1] )
+        x0, y0 = self.block_coords[0]*self.shape[0], self.block_coords[1]*self.shape[1]
+        return ( x0, x0+self.shape[1] ), ( y0, y0+self.shape[0] )
 
     def getPointData( self ) -> Tuple[xa.DataArray,Dict]:
         from spectraclass.data.spatial.manager import SpatialDataManager

@@ -205,6 +205,9 @@ class DataManager(SCSingletonConfigurable):
         lgm().log(f"Loaded project data:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
         return project_data
 
+    def loadBlock(self, block_index ):
+        self._mode_data_manager_.loadBlock( block_index )
+
     def prepare_inputs( self ) -> Dict[Tuple,int]:
         try:
             return self._mode_data_manager_.prepare_inputs( )

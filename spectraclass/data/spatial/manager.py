@@ -43,6 +43,14 @@ class SpatialDataManager(ModeDataManager):
             self._tile_selection_basemap.setup_plot( (x0, x1), (y0, y1), index=99, size=(3,3), slider=False, title="Tile Selection", **kwargs )
         return self._tile_selection_basemap.gui()
 
+    def loadBlock(self, block_index ):
+        from spectraclass.data.spatial.tile.manager import tm
+        from spectraclass.gui.spatial.map import MapManager, mm
+        lgm().log(f"Loading block: {block_index}")
+        tm().block_index = block_index
+        mm().setBlock()
+        mm().update_plots()
+
     def getConstantXArray(self, fill_value: float, shape: Tuple[int], dims: Tuple[str], **kwargs) -> xa.DataArray:
         coords = kwargs.get( "coords", { dim: np.arange(shape[id]) for id, dim in enumerate(dims) } )
         result: xa.DataArray = xa.DataArray( np.full( shape, fill_value ), dims=dims, coords=coords )
@@ -240,7 +248,10 @@ class SpatialDataManager(ModeDataManager):
         for block in self.tiles.tile.getBlocks():
             block_data_file =  dm().modal.dataFile(block=block)
             if os.path.isfile( block_data_file ):
-                lgm().log(f" Skipping existing file {block_data_file}", print=True)
+                dataset: xa.Dataset = xa.open_dataset( block_data_file )
+                nsamples = 0 if (len( dataset.coords ) == 0) else dataset.coords['samples'].size
+                block_nsamples[block.block_coords] = nsamples
+                lgm().log(f" Skipping existing block{block.block_coords} with nsamples={nsamples}, existing file: {block_data_file}", print=True)
             else:
                 lgm().log(f" Processing Block{block.block_coords}, shape = {block.shape}",  print=True)
                 try:

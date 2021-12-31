@@ -67,29 +67,20 @@ class TileManager(SCSingletonConfigurable):
     @property
     def block_dims(self) -> Tuple[int,int]:
         if self._block_dims is None:
-            if 'block_dims' in self.tile_metadata:
-                self._block_dims = json.loads( self.tile_metadata.get('block_dims') )
-            else:
-                self._block_dims = [ math.ceil(self.tile_shape[i]/self.block_shape[i]) for i in (0,1) ]
+            self._block_dims = [ math.ceil(self.tile_shape[i]/self.block_shape[i]) for i in (0,1) ]
         return self._block_dims
 
     @property
     def tile_size(self) -> Tuple[int,int]:
         if self._tile_size is None:
-            if 'tile_size' in self.tile_metadata:
-                self._tile_size = json.loads( self.tile_metadata.get('tile_size') )
-            else:
-                self._tile_size = [ (self._block_dims[i] * self.block_shape[i]) for i in (0,1) ]
+            self._tile_size = [ (self.block_dims[i] * self.block_shape[i]) for i in (0,1) ]
         return self._tile_size
 
     @property
     def tile_shape(self) -> Tuple[int,int]:
         if self._tile_shape is None:
-            if 'tile_shape' in self.tile_metadata:
-                self._tile_shape = json.loads( self.tile_metadata.get('tile_shape') )
-            else:
-                idata: xa.DataArray = self.getTileData()
-                self._tile_shape = idata.shape if (idata.ndim == 2) else  idata.shape[1:]
+            idata: xa.DataArray = self.getTileData()
+            self._tile_shape = [ idata.shape[-1], idata.shape[-2] ]
         return self._tile_shape
 
     @property
@@ -164,13 +155,13 @@ class TileManager(SCSingletonConfigurable):
         try:
             with open( file_path, "r" ) as mdfile:
                 print(f"Loading metadata from file: {file_path}")
-                block_sizes = { (1,1): 1000 }
+                block_sizes = {}  # { (1,1): 244284, (0,0): 134321 }
                 for line in mdfile.readlines():
                     try:
                         toks = line.split("=")
                         if toks[0].startswith('block_size'):
-                            bs = toks[0].split("-")
-                            block_sizes[ (int(bs[0]), int(bs[1])) ] = int( toks[1] )
+                            bstok = toks[0].split("-")
+                            block_sizes[ (int(bstok[1]), int(bstok[2])) ] = int( toks[1] )
                         else:
                             mdata[toks[0]] = "=".join(toks[1:])
                     except Exception as err:
@@ -190,7 +181,7 @@ class TileManager(SCSingletonConfigurable):
             for (aid,aiv) in self._tile_data.attrs.items():
                 mdfile.write(f"{aid}={aiv}\n")
             for bcoords, bsize in block_data.items():
-                mdfile.write(f"block_size-{bcoords}-{bcoords}={bsize}\n")
+                mdfile.write(f"block_size-{bcoords[0]}-{bcoords[1]}={bsize}\n")
 
 #     def getPointData( self ) -> Tuple[xa.DataArray,xa.DataArray]:
 #         from spectraclass.data.spatial.manager import SpatialDataManager
