@@ -115,7 +115,7 @@ class DataManager(SCSingletonConfigurable):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
-        if len( block_data ) > 0:
+        if block_data and len( block_data ) > 0:
             afm(), lm(), pcm(), mm(), texm(), rm(), tm()
             tm().saveMetadata( block_data )
             conf_dict = self.generate_config_file()
@@ -205,9 +205,12 @@ class DataManager(SCSingletonConfigurable):
         lgm().log(f"Loaded project data:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
         return project_data
 
-    @exception_handled
-    def prepare_inputs( self ) -> xa.Dataset:
-        return self._mode_data_manager_.prepare_inputs( )
+    def prepare_inputs( self ) -> Dict[Tuple,int]:
+        try:
+            return self._mode_data_manager_.prepare_inputs( )
+        except Exception as err:
+            lgm().exception( f"Error in prepare_inputs: {err}")
+            return {}
 
     def valid_bands(self) -> Optional[List]:
         return self._mode_data_manager_.valid_bands()

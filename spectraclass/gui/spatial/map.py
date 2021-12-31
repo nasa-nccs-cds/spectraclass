@@ -57,6 +57,7 @@ class MapManager(SCSingletonConfigurable):
         self.label_map: Optional[xa.DataArray] = None     # Map of classification labels from ML
         self.region_selection: PolygonInteractor = None
         self.labels_image: Optional[AxesImage] = None
+        self.layers.add( 'basemap', 1.0, True)
         self.layers.add( 'bands', 1.0, True )
         self.layers.add( 'markers', 0.5, False )
         self.layers.add( 'labels', 0.5, False )
@@ -155,7 +156,8 @@ class MapManager(SCSingletonConfigurable):
         self.update_canvas()
 
     def layer_managers( self, name: str ) -> List:
-        if name   == "labels":  mgrs = [ self.labels_image ]
+        if name == "basemap":  mgrs = [self.base]
+        elif name   == "labels":  mgrs = [ self.labels_image ]
         elif name == "bands":   mgrs = [ self.image ]
         elif name == "markers": mgrs = [ self.points_selection, self.region_selection ]
         else: raise Exception( f"Unknown Layer: {name}")
@@ -268,7 +270,7 @@ class MapManager(SCSingletonConfigurable):
         if self.base is None:
             self.setBlock()
             self.base = TileServiceBasemap()
-            [x0, x1, y0, y1] = self.block.extent()
+            [x0, x1, y0, y1] = self.block.extent
             self.base.setup_plot( (x0,x1), (y0,y1), index=100, **kwargs )
             self.init_map(**kwargs)
             self.region_selection = PolygonInteractor( self.base.gax )

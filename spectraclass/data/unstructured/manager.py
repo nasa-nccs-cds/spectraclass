@@ -4,6 +4,7 @@ from spectraclass.reduction.embedding import ReductionManager, rm
 from pathlib import Path
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import xarray as xa
+from typing import List, Union, Tuple, Optional, Dict, Callable
 import traitlets as tl
 import numpy as np
 import os, pickle
@@ -16,10 +17,9 @@ class UnstructuredDataManager(ModeDataManager):
         self._cached_data = {}
 
     @exception_handled
-    def prepare_inputs(self):
+    def prepare_inputs(self) -> Dict[Tuple,int]:
         self.update_gui_parameters()
         self.set_progress(0.02)
-        write = kwargs.get('write', True)
         output_file = os.path.join(self.datasetDir, self.dsid() + ".nc")
         assert (self.INPUTS is not None), f"INPUTS undefined for mode {self.mode}"
 
@@ -44,13 +44,12 @@ class UnstructuredDataManager(ModeDataManager):
 
             result_dataset = xa.Dataset(data_vars, coords=xcoords, attrs={'type': 'spectra'})
             result_dataset.attrs["colnames"] = mdata_vars
-            if write:
-                if os.path.exists(output_file): os.remove(output_file)
-                lgm().log( f"Writing output to {output_file}", print=True )
-                result_dataset.to_netcdf(output_file, format='NETCDF4', engine='netcdf4')
+            if os.path.exists(output_file): os.remove(output_file)
+            lgm().log( f"Writing output to {output_file}", print=True )
+            result_dataset.to_netcdf(output_file, format='NETCDF4', engine='netcdf4')
             self.updateDatasetList()
             self.set_progress(1.0)
-            return result_dataset
+            return {}
         else:
             print( "DATA PRE-PROCESSING FAILED!  See log file for more info.")
 

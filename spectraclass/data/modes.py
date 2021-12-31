@@ -93,7 +93,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def dsid(self, **kwargs) -> str:
         raise NotImplementedError()
 
-    def prepare_inputs(self):
+    def prepare_inputs(self) -> Dict[Tuple,int]:
         raise NotImplementedError()
 
     def updateDatasetList(self):

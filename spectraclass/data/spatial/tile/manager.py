@@ -11,6 +11,7 @@ import traitlets.config as tlc
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.gui.spatial.widgets.markers import Marker
+from pyproj import Transformer
 from .tile import Tile, Block
 
 def get_rounded_dims( master_shape: List[int], subset_shape: List[int] ) -> List[int]:
@@ -28,6 +29,7 @@ class TileManager(SCSingletonConfigurable):
     image_attrs = {}
     ESPG = 3857
     crs = ccrs.epsg(ESPG) # "+a=6378137.0 +b=6378137.0 +nadgrids=@null +proj=merc +lon_0=0.0 +x_0=0.0 +y_0=0.0 +units=m +no_defs"
+    geotrans = Transformer.from_crs( f'epsg:{ESPG}', f'epsg:4326' )
 
     def __init__(self):
         super(TileManager, self).__init__()
@@ -39,7 +41,18 @@ class TileManager(SCSingletonConfigurable):
         self._tile_metadata = None
         self._tile_size = None
         self._tile_shape = None
-        self._transform = None
+
+    @property
+    def tile(self) -> Tile:
+        return self._tiles.setdefault( self.image_name, Tile() )
+
+    @property
+    def extent(self):
+        return self.tile.extent
+
+    @property
+    def transform(self):
+        return self.tile.transform
 
     @property
     def tile_metadata(self):
@@ -49,10 +62,7 @@ class TileManager(SCSingletonConfigurable):
 
     @classmethod
     def reproject_to_latlon( cls, x, y ):
-        from pyproj import Proj, transform
-        inProj = Proj(f'epsg:{cls.ESPG}')
-        outProj = Proj('epsg:4326')
-        return transform( inProj, outProj, x, y )
+        return cls.geotrans.transform(  x, y )
 
     @property
     def block_dims(self) -> Tuple[int,int]:
@@ -116,10 +126,6 @@ class TileManager(SCSingletonConfigurable):
         ic = cid if (cid >= 0) else lm().current_cid
         return Marker( "marker", [pid], ic, **kwargs )
 
-    @property
-    def tile(self) -> Tile:
-        return self._tiles.setdefault( self.image_name, Tile() )
-
     def getTileFileName(self, with_extension = True ) -> str:
         return self.image_name + ".tif" if with_extension else self.image_name
 
@@ -133,7 +139,6 @@ class TileManager(SCSingletonConfigurable):
     def getTileData(self) -> xa.DataArray:
         if self._tile_data is None:
             self._tile_data = self._readTileFile()
-#            self._tile_data.attrs['transform'] = self.transform
         return self._tile_data
 
     @classmethod
@@ -152,13 +157,6 @@ class TileManager(SCSingletonConfigurable):
         result.attrs['wkt'] = result.spatial_ref.crs_wkt
         result.attrs['long_name'] = tile_data.attrs.get('long_name', None)
         return result
-
-    @property
-    def transform(self):
-        if self._transform is None:
-            gt = [float(tv) for tv in self._tile_data.spatial_ref.GeoTransform.split()]
-            self._transform = [gt[1], gt[2], gt[0], gt[4], gt[5], gt[3], 0.0, 0.0, 1.0]
-        return self._transform
 
     def loadMetadata(self) -> Dict:
         file_path = DataManager.instance().modal.getMetadataFilePath()
@@ -205,24 +203,6 @@ class TileManager(SCSingletonConfigurable):
 #         point_data.attrs['dsid'] = result.attrs['dsid']
 #         return ( point_data, point_coords)
 
-    def rescale( self, raster: xa.DataArray, **kwargs ) -> xa.DataArray:
-        norm_type = kwargs.get( 'norm', 'spectral' )
-        refresh = kwargs.get('refresh', False )
-        if norm_type == "none":
-            result = raster
-        else:
-            if norm_type == "spatial":
-                norm: xa.DataArray = self._computeSpatialNorm( raster, refresh )
-            else:          # 'spectral'
-                norm: xa.DataArray = raster.mean( dim=['band'], skipna=True )
-            result =  raster / norm
-            result.attrs = raster.attrs
-        return result
-
-    @property
-    def normFileName( self ) -> str:
-        return f"global_norm.pkl"
-
     def get_block_transform( self, iy, ix ) -> ProjectiveTransform:
         tr0 = self.transform
         iy0, ix0 = iy * self.block_shape[0], ix * self.block_shape[1]
@@ -230,17 +210,6 @@ class TileManager(SCSingletonConfigurable):
         tr1 = [ tr0[0], tr0[1], x0, tr0[3], tr0[4], y0, 0, 0, 1  ]
         lgm().log( f"Tile transform: {tr0}, Block transform: {tr1}, block indices = [ {iy}, {ix} ]" )
         return  ProjectiveTransform( np.array(tr1).reshape(3, 3) )
-
-    def _computeSpatialNorm(self, tile_raster: xa.DataArray, refresh=False) -> xa.DataArray:
-        norm_file = os.path.join(self.data_cache, self.normFileName)
-        if not refresh and os.path.isfile(norm_file):
-            lgm().log(f"Loading norm from global norm file {norm_file}")
-            return xa.DataArray.from_dict(pickle.load(open(norm_file, 'rb')))
-        else:
-            lgm().log(f"Computing norm and saving to global norm file {norm_file}")
-            norm: xa.DataArray = tile_raster.mean(dim=['x', 'y'], skipna=True)
-            pickle.dump(norm.to_dict(), open(norm_file, 'wb'))
-            return norm
 
     def _readTileFile(self) -> xa.DataArray:
         tm = TileManager.instance()

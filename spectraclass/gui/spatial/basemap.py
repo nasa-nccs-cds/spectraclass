@@ -5,6 +5,7 @@ from matplotlib.image import AxesImage
 import xarray as xa
 from spectraclass.util.logs import LogManager, lgm
 from spectraclass.data.spatial.tile.manager import TileManager
+from matplotlib.font_manager import FontProperties
 from spectraclass.gui.spatial.source import WMTSRasterSource
 from spectraclass.gui.spatial.image import TileServiceImage
 from typing import List, Optional, Dict, Tuple
@@ -45,10 +46,11 @@ class TileServiceBasemap(SCSingletonConfigurable):
         self.figure: Figure = plt.figure( fig_index, figsize=fig_size )
         if not standalone: plt.ion()
 
-        self.figure.suptitle(title)
-        bounds = [0.01, 0.07, 0.98, 0.93] if use_slider else [0.01, 0.01, 0.98, 0.93]
+        bounds = [0.01, 0.07, 0.98, 0.93] if use_slider else [0.01, 0.01, 0.98, 0.98]
         self.gax: Axes = self.figure.add_axes( bounds, **kwargs )  # [left, bottom, width, height] # , projection=self.crs
         self.gax.xaxis.set_visible( False ); self.gax.yaxis.set_visible( False )
+        self.gax.title.set_text( title )
+        self.gax.title.set_color("orange")
         if use_basemap:
             self.set_basemap( xlim, ylim, **kwargs)
         else:
@@ -57,6 +59,9 @@ class TileServiceBasemap(SCSingletonConfigurable):
         self.sax: Axes = self.figure.add_axes( [0.01, 0.01, 0.85, 0.05] ) if use_slider else None # [left, bottom, width, height]
         self.figure.canvas.toolbar_visible = True
         self.figure.canvas.header_visible = False
+
+    def set_alpha(self, alpha ):
+        self.basemap.set_alpha( alpha )
 
     def gui(self):
         return self.figure.canvas

@@ -10,6 +10,7 @@ from spectraclass.data.base import ModeDataManager
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Set
 import matplotlib.pyplot as plt
 import os, time
+from rioxarray.exceptions import NoDataInBounds
 from collections import OrderedDict
 from spectraclass.util.logs import lgm, exception_handled
 from spectraclass.model.labels import lm
@@ -39,7 +40,7 @@ class SpatialDataManager(ModeDataManager):
         if self._tile_selection_basemap is None:
             self._tile_selection_basemap = TileServiceBasemap( block_selection=True )
             (x0, x1, y0, y1) = self.tiles.tile.extent
-            self._tile_selection_basemap.setup_plot( (x0, x1), (y0, y1), index=99, size=(3,3), slider=False, title="tile selection", **kwargs )
+            self._tile_selection_basemap.setup_plot( (x0, x1), (y0, y1), index=99, size=(3,3), slider=False, title="Tile Selection", **kwargs )
         return self._tile_selection_basemap.gui()
 
     def getConstantXArray(self, fill_value: float, shape: Tuple[int], dims: Tuple[str], **kwargs) -> xa.DataArray:
@@ -242,16 +243,19 @@ class SpatialDataManager(ModeDataManager):
                 lgm().log(f" Skipping existing file {block_data_file}", print=True)
             else:
                 lgm().log(f" Processing Block{block.block_coords}, shape = {block.shape}",  print=True)
-                blocks_point_data: xa.DataArray = block.getPointData()[0]
-                lgm().log(f" Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}", print=True)
-                if blocks_point_data.size == 0:
+                try:
+                    blocks_point_data: Optional[xa.DataArray] = block.getPointData()[0]
+                    lgm().log(f" Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}", print=True)
+                except NoDataInBounds: blocks_point_data = None
+
+                if (blocks_point_data is None) or (blocks_point_data.size == 0):
                    lgm().log( f" Warning:  Block {block.block_coords} has no valid samples.", print=True )
                    empty_dataset = xa.DataArray()
                    empty_dataset.to_netcdf( block_data_file )
                    block_nsamples[block.block_coords] = 0
                    lgm().log(f" Writing empty dataset: {block_data_file}", print=True )
                 else:
-                    normed_data = self.pnorm(blocks_point_data)
+                    normed_data: xa.DataArray = self.pnorm(blocks_point_data)
                     prange = ( normed_data.values.min(), normed_data.values.max(), normed_data.values.mean() )
                     lgm().log(f" Preparing point data with shape {normed_data.shape}, range={prange}", print=True)
                     blocks_reduction = rm().reduce( normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
@@ -324,6 +328,8 @@ class SpatialDataManager(ModeDataManager):
         input_bands = raster
         input_bands.attrs['long_name'] = Path(input_file_path).stem
         lgm().log( f"Completed Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}, time={time.time()-t0} sec", print=True )
+        gt = [ float(sval) for sval in input_bands.spatial_ref.GeoTransform.split() ]
+        input_bands.attrs['transform'] = [ gt[1], gt[2], gt[0], gt[4], gt[5], gt[3] ]
         return input_bands
 
     def readMatlabFile(self, input_file_path: str ) -> xa.DataArray:

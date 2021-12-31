@@ -98,15 +98,6 @@ class SatellitePlotManager(SCSingletonConfigurable):
         os.makedirs( cache_file_dir, 0o777, exist_ok = True )
         return os.path.join( cache_file_dir, f"{self.block.file_name}.tiff" )
 
-
-    def set_axis_limits( self, xlims, ylims ):
-        if self.image is not None:
-            xlims1, ylims1 = self.block.project_extent( xlims, ylims, 4326 )
-            self.axes.set_xlim(*xlims1 )
-            self.axes.set_ylim(*ylims1)
-            lgm().log( f"Setting satellite image bounds: {xlims} {ylims} -> {xlims1} {ylims1}")
-            self.figure.canvas.draw_idle()
-
     @exception_handled
     def onMouseClick(self, event):
         from spectraclass.application.controller import app

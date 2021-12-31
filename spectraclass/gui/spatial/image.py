@@ -2,6 +2,7 @@ from matplotlib.patches import Rectangle
 import xarray as xa
 import numpy as np
 from matplotlib.axes import Axes
+from matplotlib.backend_bases import PickEvent, MouseEvent
 import contextlib, time
 from typing import List, Optional, Dict, Tuple
 from matplotlib.image import AxesImage
@@ -55,18 +56,19 @@ class TileServiceImage(AxesImage):
     def add_block_selection(self, block_selection_callback=None ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         mdata = tm().tile_metadata
-        [dx, _, x0, _, dy, y0, _, _, _ ] = tm().transform
+        [dx, _, x0, _, dy, y0 ] = tm().transform
         block_shape = tm().block_shape
         block_size = mdata['block_size']
-        width, height = dx*block_shape[0], abs( dy*block_shape[1] )
+        width, height = dx*block_shape[0], dy*block_shape[1]
         for bc, bsize in block_size.items():
             if bsize > 0:
-                xc, yc = x0 + dx*bc[0], y0+dy*bc[1]
-                if dy < 0: yc = yc - height
-                r = Rectangle( (xc,yc), width, height ) #, fill=False, edgecolor = 'yellow', lw=2 )
+                xc, yc = x0 + width*bc[0], y0+height*bc[1]
+                r = Rectangle( (xc,yc), width, height, fill=False, edgecolor='yellow', lw=1 )
+                setattr( r, 'block_index', bc )
                 self._blocks[bc] = r
                 r.set_picker( True )
                 self.axes.add_patch( r )
+                lgm().log( f" BLOCK[{bc}]: xc={xc:.1f}, yc={yc:.1f}, size=({width:.1f},{height:.1f})\n  ->> Axis bounds: xlim={self.axes.get_xlim()}, ylim={self.axes.get_ylim()}", print=True )
         self._block_selection_callback = block_selection_callback
 
     def on_press(self, event=None):
@@ -76,8 +78,8 @@ class TileServiceImage(AxesImage):
         self.user_is_interacting = False
         self.stale = True
 
-    def on_pick(self, event=None):
-        lgm().log( f"Pick Event: {event}", print=True )
+    def on_pick(self, event: PickEvent =None):
+        lgm().log( f"Pick Event: block = {event.artist.block_index}" )
 
     def get_window_extent(self, renderer=None):
         return self.axes.get_window_extent(renderer=renderer)
