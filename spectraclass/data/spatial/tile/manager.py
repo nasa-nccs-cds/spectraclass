@@ -7,6 +7,7 @@ from spectraclass.data.base import DataManager, DataType
 from spectraclass.util.logs import LogManager, lgm
 import os, math, pickle, json
 import cartopy.crs as ccrs
+from spectraclass.util.logs import lgm, exception_handled
 import traitlets.config as tlc
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable
@@ -44,6 +45,7 @@ class TileManager(SCSingletonConfigurable):
 
     @property
     def tile(self) -> Tile:
+        if self.image_name in self._tiles: return self._tiles[self.image_name]
         return self._tiles.setdefault( self.image_name, Tile() )
 
     @property
@@ -87,6 +89,7 @@ class TileManager(SCSingletonConfigurable):
     def image_name(self):
         return DataManager.instance().modal.image_name
 
+    @exception_handled
     def getBlock(self) -> Block:
         return self.tile.getBlock( self.block_index[0], self.block_index[1] )
 

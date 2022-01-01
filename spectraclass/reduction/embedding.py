@@ -126,7 +126,7 @@ class ReductionManager(SCSingletonConfigurable):
         #        autoencoder.summary()
         #        encoder.summary()
         self._autoencoder.compile( loss=self.loss, optimizer=optimizer )
-        lgm().log(f" BUILD Autoencoder network: input_dims = {input_dims} ")
+        self.log = lgm().log(f" BUILD Autoencoder network: input_dims = {input_dims} ")
 
     def autoencoder_reduction(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], model_dims: int, epochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
         ispecs: List[np.ndarray] = [train_input.data.max(0), train_input.data.min(0), train_input.data.mean(0), train_input.data.std(0)]
@@ -139,7 +139,7 @@ class ReductionManager(SCSingletonConfigurable):
         if test_inputs is None: test_inputs = [ train_input ]
         for iT, test_input in enumerate(test_inputs):
             try:
-                autoencoder, encoder = self.get_network( train_input.shape[1], model_dims, sparsity=sparsity, refresh=True )
+                autoencoder, encoder = self.get_network( train_input.shape[1], model_dims, sparsity=sparsity, refresh=False )
                 autoencoder.fit( train_input.data, train_input.data, epochs=epochs, batch_size=256, shuffle=True )
                 encoded_data: np.ndarray = encoder.predict( test_input.data )
                 reproduced_data: np.ndarray = autoencoder.predict( test_input.data )

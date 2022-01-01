@@ -15,8 +15,10 @@ def lgm() -> "LogManager":
 
 def exception_handled(func):
     def wrapper( *args, **kwargs ):
-        try:        return func( *args, **kwargs )
-        except:     lgm().exception( f" Error in {func}:")
+        try:
+            return func( *args, **kwargs )
+        except:
+            lgm().exception( f" Error in {func}:" )
     return wrapper
 
 def log_timing(f):

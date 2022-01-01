@@ -76,7 +76,7 @@ class DataContainer:
     def xlim(self) -> List[float]:
         if self._xlim is None:
             xc: np.ndarray = self.xcoord
-            dx = (xc[-1]-xc[0])/(xc.shape[2]-1)
+            dx = (xc[-1]-xc[0])/(xc.size-1)
             self._xlim = ( xc[0]-dx, xc[-1]+dx )
         return self._xlim
 
@@ -84,7 +84,7 @@ class DataContainer:
     def ylim(self) -> List[float]:
         if self._ylim is None:
             yc: np.ndarray = self.ycoord
-            dy = (yc[-1]-yc[0])/(yc.shape[1]-1)
+            dy = (yc[-1]-yc[0])/(yc.size-1)
             self._ylim = ( yc[0]-dy, yc[-1]+dy )
         return self._ylim
 
@@ -104,6 +104,7 @@ class Tile(DataContainer):
 
     def __init__(self, **kwargs ):
         super(Tile, self).__init__(**kwargs)
+        self._blocks = {}
         self.subsampling: int =  kwargs.get('subsample',1)
 
     def _get_data(self) -> xa.DataArray:
@@ -115,9 +116,8 @@ class Tile(DataContainer):
         return self.data.attrs['tilename']
 
     def getBlock(self, ix: int, iy: int, **kwargs ) -> Optional["Block"]:
-        lgm().log(f"Tiles.getBlock: ix={ix}, iy={iy}")
-        block = Block( self, ix, iy, **kwargs )
-        return block
+        if (ix,iy) in self._blocks: return self._blocks[ (ix,iy) ]
+        return self._blocks.setdefault( (ix,iy), Block( self, ix, iy, **kwargs ) )
 
     def getBlocks(self, **kwargs ) -> List["Block"]:
         from spectraclass.data.spatial.tile.manager import TileManager
@@ -138,6 +138,7 @@ class Block(DataContainer):
         self._samples_axis: Optional[xa.DataArray] = None
         self._point_data: Optional[xa.DataArray] = None
         self._point_coords: Dict = None
+        lgm().log(f"CREATE Block: ix={ix}, iy={iy}")
 
     def classmap(self, default_value: int =0 ) -> xa.DataArray:
         return xa.full_like( self.data[0].squeeze(drop=True), default_value, dtype=np.int )

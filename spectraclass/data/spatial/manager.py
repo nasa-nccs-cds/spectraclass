@@ -43,6 +43,7 @@ class SpatialDataManager(ModeDataManager):
             self._tile_selection_basemap.setup_plot( (x0, x1), (y0, y1), index=99, size=(3,3), slider=False, title="Tile Selection", **kwargs )
         return self._tile_selection_basemap.gui()
 
+    @exception_handled
     def loadBlock(self, block_index ):
         from spectraclass.data.spatial.tile.manager import tm
         from spectraclass.gui.spatial.map import MapManager, mm
@@ -247,12 +248,17 @@ class SpatialDataManager(ModeDataManager):
         block_nsamples = {}
         for block in self.tiles.tile.getBlocks():
             block_data_file =  dm().modal.dataFile(block=block)
+            process_dataset = True
             if os.path.isfile( block_data_file ):
                 dataset: xa.Dataset = xa.open_dataset( block_data_file )
-                nsamples = 0 if (len( dataset.coords ) == 0) else dataset.coords['samples'].size
-                block_nsamples[block.block_coords] = nsamples
-                lgm().log(f" Skipping existing block{block.block_coords} with nsamples={nsamples}, existing file: {block_data_file}", print=True)
-            else:
+                try:
+                    nsamples = 0 if (len( dataset.coords ) == 0) else dataset.coords['samples'].size
+                    block_nsamples[block.block_coords] = nsamples
+                    lgm().log(f" Skipping existing block{block.block_coords} with nsamples={nsamples}, existing file: {block_data_file}", print=True )
+                    process_dataset = False
+                except Exception:
+                    pass
+            if process_dataset:
                 lgm().log(f" Processing Block{block.block_coords}, shape = {block.shape}",  print=True)
                 try:
                     blocks_point_data: Optional[xa.DataArray] = block.getPointData()[0]

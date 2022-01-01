@@ -88,6 +88,7 @@ class TileServiceImage(AxesImage):
                 self._selected_block.set_linewidth(1)
             r.set_linewidth(2)
             self._selected_block = r
+            self.figure.canvas.draw_idle()
             dm().loadBlock( r.block_index )
 
     def on_pick(self, event: PickEvent =None):

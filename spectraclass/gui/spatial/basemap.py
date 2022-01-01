@@ -60,6 +60,10 @@ class TileServiceBasemap(SCSingletonConfigurable):
         self.figure.canvas.toolbar_visible = True
         self.figure.canvas.header_visible = False
 
+    def set_extent(self, xrange, yrange ):
+        self.gax.set_xbound(*xrange)
+        self.gax.set_ybound(*yrange)
+
     def set_alpha(self, alpha ):
         self.basemap.set_alpha( alpha )
 

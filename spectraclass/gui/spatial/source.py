@@ -372,6 +372,7 @@ class WMTSRasterSource(RasterSource):
         image_processor =  partial(self._get_image, wmts, layer, matrix_set_name, tile_matrix_id)
         with get_context("spawn").Pool( processes=nproc ) as p:
             image_tiles = p.map( image_processor, image_ids )
+        p.join()
 
         for ((row,col),img) in image_tiles:
             if big_img is None:
