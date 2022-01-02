@@ -190,15 +190,13 @@ class MapManager(SCSingletonConfigurable):
         return dict( vmin= ave - std * self.colorstretch, vmax= ave + std * self.colorstretch  )
 
     @exception_handled
-    def update_image_data(self):
-        if self.image is not None:
-            fdata: xa.DataArray = self.frame_data
-            if fdata is not None:
-                drange = self.get_color_bounds(fdata)
-                lgm().log(f"MAP: update_image_data: data shape = {fdata.shape}, drange={drange}" )
-                self.image.set_data( fdata.values )
-                self.image.set_norm( Normalize( **drange ) )
-                self.figure.canvas.flush_events()
+    def update_image(self):
+        fdata: xa.DataArray = self.frame_data
+        if fdata is not None:
+            drange = self.get_color_bounds(fdata)
+            lgm().log(f"MAP: update_image: data shape = {fdata.shape}, drange={drange}" )
+            if self.image is not None: self.image.remove()
+            self.image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=self.layers('bands').visibility, cmap='jet', norm=Normalize( **drange ) )
 
     @exception_handled
     def update_plots(self):
@@ -277,7 +275,7 @@ class MapManager(SCSingletonConfigurable):
         if self.block is not None:
             if self.base is not None:
                  self.base.set_extent( self.block.xlim, self.block.ylim )
-                 self.update_image_data()
+                 self.update_image()
                  lgm().log(f"MAP: set extent: xlim={self.block.xlim}, ylim={self.block.ylim}")
             if self.points_selection is not None:
                 self.points_selection.set_block(self.block)
@@ -288,7 +286,7 @@ class MapManager(SCSingletonConfigurable):
             self.x_axis_name = self.data.dims[self.x_axis]
             self.y_axis = kwargs.pop('y', 1)
             self.y_axis_name = self.data.dims[self.y_axis]
-#            self.update_canvas()
+            self.update_plots()
 
     def gui(self,**kwargs):
         if self.base is None:
@@ -312,8 +310,7 @@ class MapManager(SCSingletonConfigurable):
         self.points_selection.plot()
 
     def init_map(self,**kwargs):
-        norm = Normalize( **self.get_color_bounds( self.frame_data ) )
-        self.image: AxesImage = self.frame_data.plot.imshow( ax=self.base.gax, alpha=self.layers('bands').visibility, cmap='jet', norm=norm )
+        self.update_image()
         self.add_slider(**kwargs)
         self.initLabels()
         self._cidpress = self.figure.canvas.mpl_connect('button_press_event', self.on_button_press)
