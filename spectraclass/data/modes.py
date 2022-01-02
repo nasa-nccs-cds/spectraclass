@@ -183,9 +183,6 @@ class ModeDataManager(SCSingletonConfigurable):
     def getInputFileData( self, vname: str = None, **kwargs ) -> np.ndarray:
         raise NotImplementedError()
 
-    def loadBlock(self, block_index ):
-        raise NotImplementedError()
-
     @exception_handled
     def loadDataset(self, **kwargs) -> Optional[xa.Dataset]:
         lgm().log(f"Load dataset {self.dsid()}, current datasets = {self.datasets.keys()}")

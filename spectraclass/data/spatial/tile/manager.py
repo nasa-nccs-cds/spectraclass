@@ -90,7 +90,8 @@ class TileManager(SCSingletonConfigurable):
         return DataManager.instance().modal.image_name
 
     @exception_handled
-    def getBlock(self) -> Block:
+    def getBlock( self, block_index: Tuple[int,int] = None ) -> Block:
+        if block_index is not None: self.block_index = block_index
         return self.tile.getBlock( self.block_index[0], self.block_index[1] )
 
     def getMask(self) -> Optional[xa.DataArray]:

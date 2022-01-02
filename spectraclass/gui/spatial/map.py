@@ -130,10 +130,12 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def on_button_press(self, event: MouseEvent ):
         from spectraclass.data.spatial.tile.manager import TileManager
-        c: Dict = self.block.coords2indices( event.ydata, event.xdata )
-        by, bx = TileManager.reproject_to_latlon(self.block.xcoord[c['ix']], self.block.ycoord[c['iy']] )
-        lat,lon = TileManager.reproject_to_latlon( event.xdata, event.ydata )
-        ufm().show( f"[{event.y},{event.x}]: ({lat:.4f},{lon:.4f}), block[{c['iy']},{c['ix']}]: ({by:.4f},{bx:.4f})", color="blue")
+        if event.inaxes == self.base.gax:
+            c: Dict = self.block.coords2indices( event.ydata, event.xdata )
+    #        lgm().log( f" on_button_press: xydata = {(event.xdata,event.ydata)}, c = {(c['ix'],c['iy'])}, transform = {self.block.transform}")
+            by, bx = TileManager.reproject_to_latlon(self.block.xcoord[c['ix']], self.block.ycoord[c['iy']] )
+            lat,lon = TileManager.reproject_to_latlon( event.xdata, event.ydata )
+            ufm().show( f"[{event.y},{event.x}]: ({lat:.4f},{lon:.4f}), block[{c['iy']},{c['ix']}]: ({by:.4f},{bx:.4f})", color="blue")
 
     @property
     def selectionMode(self) -> str:
@@ -186,6 +188,17 @@ class MapManager(SCSingletonConfigurable):
             msg =  "This block does not appear to contain any data.  Suggest trying a different tile/block."
             ufm().show( msg, "red" ); lgm().log( "\n" +  msg + "\n"  )
         return dict( vmin= ave - std * self.colorstretch, vmax= ave + std * self.colorstretch  )
+
+    @exception_handled
+    def update_image_data(self):
+        if self.image is not None:
+            fdata: xa.DataArray = self.frame_data
+            if fdata is not None:
+                drange = self.get_color_bounds(fdata)
+                lgm().log(f"MAP: update_image_data: data shape = {fdata.shape}, drange={drange}" )
+                self.image.set_data( fdata.values )
+                self.image.set_norm( Normalize( **drange ) )
+                self.figure.canvas.flush_events()
 
     @exception_handled
     def update_plots(self):
@@ -257,15 +270,15 @@ class MapManager(SCSingletonConfigurable):
             return block_data
 
     @exception_handled
-    def setBlock( self, **kwargs ):
-        from spectraclass.data.spatial.tile.manager import TileManager
-        tm = TileManager.instance()
-        self.block: Block = tm.getBlock()
+    def setBlock( self, block_index: Tuple[int,int] = None, **kwargs ):
+        from spectraclass.data.spatial.tile.manager import tm
+        lgm().log(f"Loading block: {block_index}")
+        self.block: Block = tm().getBlock( block_index )
         if self.block is not None:
             if self.base is not None:
                  self.base.set_extent( self.block.xlim, self.block.ylim )
+                 self.update_image_data()
                  lgm().log(f"MAP: set extent: xlim={self.block.xlim}, ylim={self.block.ylim}")
-                 self.update_canvas()
             if self.points_selection is not None:
                 self.points_selection.set_block(self.block)
             self.nFrames = self.data.shape[0]
@@ -275,6 +288,7 @@ class MapManager(SCSingletonConfigurable):
             self.x_axis_name = self.data.dims[self.x_axis]
             self.y_axis = kwargs.pop('y', 1)
             self.y_axis_name = self.data.dims[self.y_axis]
+#            self.update_canvas()
 
     def gui(self,**kwargs):
         if self.base is None:

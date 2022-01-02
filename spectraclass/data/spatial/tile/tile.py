@@ -41,8 +41,8 @@ class DataContainer:
     def update_transform(self):
 #        self.transformer.transform_bounds()
 #        gt = self.data.attrs['transform']
-        (xr, yr) = (self.xrange, self.xrange) if self._data_projected else self.transformer.transform( self.xrange, self.yrange  )
-        dx, dy = (xr[1]-xr[0])/(self.data.shape[2]-1), (yr[1]-yr[0])/(self.data.shape[1]-1)
+        (xr, yr) = ( self.xrange, self.yrange ) if self._data_projected else self.transformer.transform( self.xrange, self.yrange  )
+        dx, dy = (xr[1]-xr[0])/(self.data.shape[-1]-1), (yr[1]-yr[0])/(self.data.shape[-2]-1)
         self._extent = [ xr[0]-dx/2,  xr[-1]+dx/2,  yr[-1]-dy/2,  yr[0]+dy/2 ]
         self._transform = ( dx, 0, xr[0], 0, dy, yr[0] )
 

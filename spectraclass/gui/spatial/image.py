@@ -81,7 +81,7 @@ class TileServiceImage(AxesImage):
         self.stale = True
 
     def select_block(self, r: Rectangle ):
-        from spectraclass.data.base import DataManager, dm
+        from spectraclass.gui.spatial.map import MapManager, mm
         lgm().log(f"Selected block: {r.block_index}")
         if r != self._selected_block:
             if self._selected_block is not None:
@@ -89,7 +89,7 @@ class TileServiceImage(AxesImage):
             r.set_linewidth(2)
             self._selected_block = r
             self.figure.canvas.draw_idle()
-            dm().loadBlock( r.block_index )
+            mm().setBlock( r.block_index )
 
     def on_pick(self, event: PickEvent =None):
         if type(event.artist) == Rectangle:
@@ -100,6 +100,7 @@ class TileServiceImage(AxesImage):
 
     @matplotlib.artist.allow_rasterization
     def draw(self, renderer, *args, **kwargs):
+        from spectraclass.gui.spatial.map import MapManager, mm
         if not self.get_visible():
             return
 

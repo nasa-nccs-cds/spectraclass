@@ -25,7 +25,7 @@ class TileServiceBasemap(SCSingletonConfigurable):
         self.crs: str = TileManager.crs
         self.tile_service: WebMapTileService = None
         self.layer: str = None
-        self.basemap: AxesImage = None
+        self.basemap: TileServiceImage = None
         self.wmts: WMTSRasterSource = None
         self._block_selection = kwargs.get( 'block_selection', False )
 

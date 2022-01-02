@@ -43,15 +43,6 @@ class SpatialDataManager(ModeDataManager):
             self._tile_selection_basemap.setup_plot( (x0, x1), (y0, y1), index=99, size=(3,3), slider=False, title="Tile Selection", **kwargs )
         return self._tile_selection_basemap.gui()
 
-    @exception_handled
-    def loadBlock(self, block_index ):
-        from spectraclass.data.spatial.tile.manager import tm
-        from spectraclass.gui.spatial.map import MapManager, mm
-        lgm().log(f"Loading block: {block_index}")
-        tm().block_index = block_index
-        mm().setBlock()
-        mm().update_plots()
-
     def getConstantXArray(self, fill_value: float, shape: Tuple[int], dims: Tuple[str], **kwargs) -> xa.DataArray:
         coords = kwargs.get( "coords", { dim: np.arange(shape[id]) for id, dim in enumerate(dims) } )
         result: xa.DataArray = xa.DataArray( np.full( shape, fill_value ), dims=dims, coords=coords )
