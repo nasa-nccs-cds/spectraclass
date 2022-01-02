@@ -17,7 +17,7 @@ class UnstructuredDataManager(ModeDataManager):
         self._cached_data = {}
 
     @exception_handled
-    def prepare_inputs(self) -> Dict[Tuple,int]:
+    def prepare_inputs(self, **kwargs ) -> Dict[Tuple,int]:
         self.update_gui_parameters()
         self.set_progress(0.02)
         output_file = os.path.join(self.datasetDir, self.dsid() + ".nc")

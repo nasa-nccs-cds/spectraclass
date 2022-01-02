@@ -53,7 +53,7 @@ class MapManager(SCSingletonConfigurable):
         self._classification_data = None
         self.layers = LayersManager( self.on_layer_change )
         self.slider: Optional[PageSlider] = None
-        self.image: Optional[AxesImage] = None
+        self.spectral_image: Optional[AxesImage] = None
         self.label_map: Optional[xa.DataArray] = None     # Map of classification labels from ML
         self.region_selection: PolygonInteractor = None
         self.labels_image: Optional[AxesImage] = None
@@ -160,7 +160,7 @@ class MapManager(SCSingletonConfigurable):
     def layer_managers( self, name: str ) -> List:
         if name == "basemap":  mgrs = [self.base]
         elif name   == "labels":  mgrs = [ self.labels_image ]
-        elif name == "bands":   mgrs = [ self.image ]
+        elif name == "bands":   mgrs = [ self.spectral_image ]
         elif name == "markers": mgrs = [ self.points_selection, self.region_selection ]
         else: raise Exception( f"Unknown Layer: {name}")
         return mgrs
@@ -190,19 +190,23 @@ class MapManager(SCSingletonConfigurable):
         return dict( vmin= ave - std * self.colorstretch, vmax= ave + std * self.colorstretch  )
 
     @exception_handled
-    def update_image(self):
-        fdata: xa.DataArray = self.frame_data
-        if fdata is not None:
-            drange = self.get_color_bounds(fdata)
-            lgm().log(f"MAP: update_image: data shape = {fdata.shape}, drange={drange}" )
-            if self.image is not None: self.image.remove()
-            self.image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=self.layers('bands').visibility, cmap='jet', norm=Normalize( **drange ) )
+    def update_spectral_image(self):
+        if self.base is not None:
+            self.base.set_extent(self.block.xlim, self.block.ylim)
+            lgm().log(f"MAP: set extent: xlim={self.block.xlim}, ylim={self.block.ylim}")
+            fdata: xa.DataArray = self.frame_data
+            if fdata is not None:
+                drange = self.get_color_bounds(fdata)
+                lgm().log(f"MAP: update_spectral_image: data shape = {fdata.shape}, drange={drange}" )
+                if self.spectral_image is not None: self.spectral_image.remove()
+                self.spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=self.layers('bands').visibility,
+                                                      cmap='jet', norm=Normalize( **drange ), add_colorbar=False )
 
     @exception_handled
     def update_plots(self):
         from spectraclass.data.spatial.manager import SpatialDataManager
         from spectraclass.data.base import DataManager, dm
-        if self.image is not None:
+        if self.spectral_image is not None:
             fdata: xa.DataArray = self.frame_data
             if fdata is not None:
                 drange = self.get_color_bounds(fdata)
@@ -210,9 +214,9 @@ class MapManager(SCSingletonConfigurable):
                 lgm().log(f"MAP: update_plots: data shape = {fdata.shape}, alpha={alpha}, drange={drange}" )
                 lgm().log(f" --> AXIS: xlim={self.plot_axes.get_xlim()}, ylim={self.plot_axes.get_ylim()}")
                 lgm().log(f" --> DATA: extent={SpatialDataManager.extent(fdata)}")
-                self.image.set_data(fdata.values)
-                self.image.set_alpha( alpha )
-                self.image.set_norm( Normalize( **drange ) )
+                self.spectral_image.set_data(fdata.values)
+                self.spectral_image.set_alpha( alpha )
+                self.spectral_image.set_norm( Normalize( **drange ) )
                 plot_name = os.path.basename(dm().dsid())
                 self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
                 self.plot_axes.title.set_fontsize( 8 )
@@ -273,10 +277,8 @@ class MapManager(SCSingletonConfigurable):
         lgm().log(f"Loading block: {block_index}")
         self.block: Block = tm().getBlock( block_index )
         if self.block is not None:
-            if self.base is not None:
-                 self.base.set_extent( self.block.xlim, self.block.ylim )
-                 self.update_image()
-                 lgm().log(f"MAP: set extent: xlim={self.block.xlim}, ylim={self.block.ylim}")
+            self.update_spectral_image()
+
             if self.points_selection is not None:
                 self.points_selection.set_block(self.block)
             self.nFrames = self.data.shape[0]
@@ -310,11 +312,11 @@ class MapManager(SCSingletonConfigurable):
         self.points_selection.plot()
 
     def init_map(self,**kwargs):
-        self.update_image()
+        self.update_spectral_image()
         self.add_slider(**kwargs)
         self.initLabels()
         self._cidpress = self.figure.canvas.mpl_connect('button_press_event', self.on_button_press)
-     #   self._cidrelease = self.image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
+     #   self._cidrelease = self.spectral_image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
      #   self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
 
     def __del__(self):

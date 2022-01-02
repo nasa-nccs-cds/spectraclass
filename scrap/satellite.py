@@ -54,7 +54,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
                 lgm().log("  @@GPM:  Setting block")
         self.google = GoogleMaps( self.block, self.api_key )
         cfile = self.cache_file_path
-        extent = self.full_extent = self.block.extent(4326)
+        extent = self.full_extent = self.block.extent
         lgm().log(f"Setting satellite image extent: {extent}, xlim = {self.block.xlim}, ylim = {self.block.ylim}")
         lgm().log(f"Google Earth block center coords: {(extent[2] + extent[3]) / 2},{(extent[1] + extent[0]) / 2}")
 

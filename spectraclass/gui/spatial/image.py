@@ -73,8 +73,9 @@ class TileServiceImage(AxesImage):
                 if selected: self._selected_block = r
          #       lgm().log( f" BLOCK[{bc}]: xc={xc:.1f}, yc={yc:.1f}, size=({width:.1f},{height:.1f})\n  ->> Axis bounds: xlim={self.axes.get_xlim()}, ylim={self.axes.get_ylim()}", print=True )
 
-    def on_press(self, event=None):
+    def on_press(self, event: MouseEvent =None):
         self.user_is_interacting = True
+        lgm().log( f" Button Press: {(event.xdata,event.ydata)}")
 
     def on_release(self, event=None):
         self.user_is_interacting = False
@@ -92,6 +93,7 @@ class TileServiceImage(AxesImage):
             mm().setBlock( r.block_index )
 
     def on_pick(self, event: PickEvent =None):
+        lgm().log( f" Pick Event: type = {type(event)}" )
         if type(event.artist) == Rectangle:
             self.select_block( event.artist )
 

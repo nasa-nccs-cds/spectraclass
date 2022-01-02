@@ -140,7 +140,7 @@ class mplGraphPlot:
 
     def update_graph(self, xs: List[ np.ndarray ], ys: List[ np.ndarray ], **kwargs ):
         for x, y in zip(xs,ys):
-#            lgm().log( f"Plotting line, xs = {x.shape}, ys = {y.shape}, xrange = {[x.min(),x.max()]}, yrange = {[y.min(),y.max()]}, args = {kwargs}")
+            lgm().log( f"Plotting line, xs = {x.shape}, ys = {y.shape}, xrange = {[x.min(),x.max()]}, yrange = {[y.min(),y.max()]}, args = {kwargs}")
             line, = self.ax.plot( x, y, **kwargs )
             self.lines.append(line)
         self.fig.canvas.draw()
