@@ -43,6 +43,7 @@ def register_modes():
 
 class DataManager(SCSingletonConfigurable):
     proc_type = tl.Unicode('cpu').tag(config=True)
+    use_model_data = tl.Bool(False).tag(config=True, sync=True)
     _mode_data_managers_: Dict = {}
 
     def __init__(self):
@@ -54,9 +55,19 @@ class DataManager(SCSingletonConfigurable):
         super(DataManager, self).__init__()
         self._wGui = None
         self._lock = threading.Lock()
+        self.observe( self.on_control_change, names=["use_model_data"] )
 
     def _contingent_configuration_(self):
         pass
+
+    def on_control_change(self, change: Dict ):
+        from spectraclass.gui.plot import GraphPlotManager, gpm
+        from spectraclass.gui.spatial.map import MapManager, mm
+        lgm().log( f"on_control_change: {change}")
+        if change.get('name', None) == 'use_model_data':
+            use_model_data = bool( change['new'] )
+            gpm().use_model_data( use_model_data )
+            mm().use_model_data( use_model_data )
 
     def getClassMap(self)-> Optional[xa.DataArray]:
         return self.modal.getClassMap()
@@ -186,8 +197,13 @@ class DataManager(SCSingletonConfigurable):
         from spectraclass.application.controller import SpectraclassController
         if self._wGui is None:
             SpectraclassController.set_spectraclass_theme()
-            self._wGui = self._mode_data_manager_.gui()
+            self._wGui = ip.HBox( [self._mode_data_manager_.gui(), dm().control_panel() ] )
         return self._wGui
+
+    def control_panel(self) -> ip.VBox:
+        use_model_data = ip.Checkbox( value=False, description = "View Model Data" )
+        tl.link( (use_model_data, "value"), (self, 'use_model_data') )
+        return ip.VBox( [ use_model_data ] )
 
     def getInputFileData(self, vname: str = None, **kwargs ) -> np.ndarray:
         return self._mode_data_manager_.getInputFileData( vname, **kwargs )

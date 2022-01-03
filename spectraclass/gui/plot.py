@@ -18,9 +18,12 @@ def rescale( x: np.ndarray ):
 
 class mplGraphPlot:
     _x: np.ndarray = None
+    _mx: np.ndarray = None
     _ploty: np.ndarray = None
     _rploty: np.ndarray = None
+    _mploty: np.ndarray = None
     _mdata: List[np.ndarray] = None
+    _use_model = False
 
     def __init__( self, index: int, **kwargs ):
         self.index = index
@@ -29,11 +32,15 @@ class mplGraphPlot:
         self._selected_pids: List[int] = []
         self.ax : plt.Axes = None
         self.fig : plt.Figure = None
-        self.lines: List[plt.Line2D] = []
+        self.lines: plt.Line2D = None
         self._markers: List[Marker] = []
         self._regions: Dict[int,Marker] = {}
         self._points = Dict[int, Marker]
         self.init_figure( **kwargs )
+
+    def use_model_data( self, use: bool ):
+        self._use_model = use
+        self.clear()
 
     def init_figure(self, **kwargs):
 
@@ -57,7 +64,7 @@ class mplGraphPlot:
 
     def clear(self):
         self.ax.clear()
-        self.lines = []
+        self.lines = None
         self.ax.grid(True)
 
     @classmethod
@@ -65,8 +72,10 @@ class mplGraphPlot:
         if cls._x is None:
             project_data: xa.Dataset = DataManager.instance().loadCurrentProject("graph")
             cls._x: np.ndarray = project_data["plot-x"].values
+            cls._mx: np.ndarray = project_data["plot-mx"].values
             cls._ploty: np.ndarray = project_data["plot-y"].values
             cls._rploty: np.ndarray = project_data["reproduction"].values
+            cls._mploty: np.ndarray = project_data["reduction"].values
             table_cols = DataManager.instance().table_cols
             lgm().log( f" mplGraphPlot init, using cols {table_cols} from {list(project_data.variables.keys())}, ploty shape = {cls._ploty.shape}, rploty shape = {cls._rploty.shape}" )
             cls._mdata: List[np.ndarray] = [ project_data[mdv].values for mdv in table_cols ]
@@ -133,16 +142,14 @@ class mplGraphPlot:
         self.ax.title.text = self.title
         nsel = len(self._selected_pids)
         if nsel == 1:
-            self.update_graph( self.x2, self.y2 )
+            self.update_graph( self.x, self.y2 )
         elif nsel > 1:
             self.ax.set_prop_cycle( color=self.get_colors() )
             self.update_graph( self.x, self.y )
 
-    def update_graph(self, xs: List[ np.ndarray ], ys: List[ np.ndarray ], **kwargs ):
-        for x, y in zip(xs,ys):
-            lgm().log( f"Plotting line, xs = {x.shape}, ys = {y.shape}, xrange = {[x.min(),x.max()]}, yrange = {[y.min(),y.max()]}, args = {kwargs}")
-            line, = self.ax.plot( x, y, **kwargs )
-            self.lines.append(line)
+    def update_graph(self, x:  np.ndarray, y: np.ndarray, **kwargs ):
+        lgm().log( f"Plotting lines, xs = {x.shape}, ys = {y.shape}, xrange = {[x.min(),x.max()]}, yrange = {[y.min(),y.max()]}, args = {kwargs}")
+        self.lines, = self.ax.plot( x, y, **kwargs )
         self.fig.canvas.draw()
 
     @property
@@ -150,32 +157,32 @@ class mplGraphPlot:
         return len( self._selected_pids )
 
     @property
-    def x(self) -> List[ np.ndarray ]:
-        if self._x.ndim == 1:   return [ self._x ] * self.nlines
-        else:                   return [ self._x[ pid ] for pid in self._selected_pids ]
+    def x(self) -> np.ndarray:
+        xv = self._mx if self._use_model else self._x
+        if xv.ndim == 1:   return  xv
+        else:              return  xv[ self._selected_pids ]
 
     @property
-    def y( self ) -> List[ np.ndarray ]:
-        return [ rescale( self._ploty[idx] ) for idx in self._selected_pids ]
+    def ydata( self )  -> np.ndarray:
+        return self._mploty[self._selected_pids] if self._use_model else self._ploty[self._selected_pids]
 
     @property
-    def ry( self ) -> List[ np.ndarray ]:
-        return [ rescale( self._rploty[idx] ) for idx in self._selected_pids ]
+    def y( self ) -> np.ndarray :
+        return self.ydata
 
     @property
-    def x2( self ) -> List[ np.ndarray ]:
-        return [ self._x ] * 2 if (self._x.ndim == 1) else [ self._x[self._selected_pids[0]] ] * 2
+    def ry( self ) ->  np.ndarray:
+        return  self._rploty[self._selected_pids]
 
     @property
-    def y2( self ) -> List[ np.ndarray ]:
+    def y2( self ) -> np.ndarray:
         idx = self._selected_pids[0]
-        rp = rescale( self._rploty[idx] )
-        lgm().log( f" GRAPH:y2-> idx={idx}, val[10] = {rp[:10]} ({self._rploty[idx][:10]})")
-        return [ rescale( self._ploty[idx] ), rp ]
+        if self._use_model: return self._mploty[idx]
+        else:               return np.concatenate( [ np.expand_dims(self._ploty[idx],1), np.expand_dims(self._rploty[idx],1) ], axis=1 )
 
     @property
     def yrange(self):
-        ydata: np.ndarray = self._ploty[ self._selected_pids ]
+        ydata: np.ndarray = self.ydata
         ymean: np.ndarray = ydata.mean( axis=1 )
         ys = ydata / ymean.reshape( ymean.shape[0], 1 )
         return ( ys.min(), ys.max() )
@@ -203,6 +210,9 @@ class GraphPlotManager(SCSingletonConfigurable):
         if self._wGui is None:
             self._wGui = self._createGui( **kwargs )
         return self._wGui
+
+    def use_model_data(self, use: bool ):
+        for g in self._graphs: g.use_model_data( use )
 
     def clear(self):
         for g in self._graphs:

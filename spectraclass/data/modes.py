@@ -194,8 +194,10 @@ class ModeDataManager(SCSingletonConfigurable):
             lgm().log(f" ---> Opened Dataset {self.dsid()} from file {dataset.attrs['data_file']}\n\t -> variables: {' '.join(vshapes)}")
             if 'plot-x' not in vnames:
                 raw_data: xa.DataArray = dataset['norm']      # point data ( shape = [ nsamples, nbands ] )
+                model_data: xa.DataArray = dataset['reduction']
                 dataset['plot-y'] = raw_data
                 dataset['plot-x'] = np.arange(0,raw_data.shape[1])
+                dataset['plot-mx'] = np.arange(0, model_data.shape[1])
             dataset.attrs['dsid'] = self.dsid()
             dataset.attrs['type'] = 'spectra'
             self.datasets[ self.dsid() ] = dataset

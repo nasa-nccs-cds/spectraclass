@@ -48,7 +48,7 @@ class MapManager(SCSingletonConfigurable):
         self.block: Block = None
         self._adding_marker = False
         self.points_selection: MarkerManager = None
-        self.use_model_data = False
+        self._use_model_data = False
         self._cidpress = -1
         self._classification_data = None
         self.layers = LayersManager( self.on_layer_change )
@@ -66,6 +66,9 @@ class MapManager(SCSingletonConfigurable):
                                                     [ "Increase Band Alpha",   'Alt+>',  None, partial( self.update_image_alpha, "bands", True ) ],
                                                     [ "Decrease Band Alpha",   'Alt+<',  None, partial( self.update_image_alpha, "bands", False ) ] ] )
         atexit.register(self.exit)
+
+    def use_model_data(self, use: bool ):
+        self._use_model_data = use
 
     def get_selection_panel(self):
         self.gui()
@@ -261,7 +264,7 @@ class MapManager(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         if self.block is None: self.setBlock()
         block_data: xa.DataArray = self.block.data
-        if self.use_model_data:
+        if self._use_model_data:
             reduced_data: xa.DataArray = dm().getModelData().transpose()
             dims = [reduced_data.dims[0], block_data.dims[1], block_data.dims[2]]
             coords = [(dims[0], reduced_data[dims[0]]), (dims[1], block_data[dims[1]]), (dims[2], block_data[dims[2]])]
@@ -274,11 +277,11 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def setBlock( self, block_index: Tuple[int,int] = None, **kwargs ):
         from spectraclass.data.spatial.tile.manager import tm
+        from spectraclass.gui.plot import GraphPlotManager, gpm
         lgm().log(f"Loading block: {block_index}")
         self.block: Block = tm().getBlock( block_index )
         if self.block is not None:
             self.update_spectral_image()
-
             if self.points_selection is not None:
                 self.points_selection.set_block(self.block)
             self.nFrames = self.data.shape[0]
@@ -288,7 +291,9 @@ class MapManager(SCSingletonConfigurable):
             self.x_axis_name = self.data.dims[self.x_axis]
             self.y_axis = kwargs.pop('y', 1)
             self.y_axis_name = self.data.dims[self.y_axis]
+            gpm().refresh()
             self.update_plots()
+
 
     def gui(self,**kwargs):
         if self.base is None:

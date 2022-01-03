@@ -50,8 +50,8 @@ class SpatialDataManager(ModeDataManager):
         result.name = kwargs.get( "name", "")
         return result
 
-    def pnorm(self, data: xa.DataArray ) -> xa.DataArray:
-        dave, dmag = data.values.mean(0), data.values.std(0)
+    def pnorm( self, data: xa.DataArray, dim: int = 1 ) -> xa.DataArray:
+        dave, dmag = data.values.mean( dim, keepdims=True ), data.values.std( dim, keepdims=True )
         normed_data = (data.values - dave) / dmag
         return data.copy( data=normed_data )
 
@@ -287,7 +287,8 @@ class SpatialDataManager(ModeDataManager):
                             for varname, da in result_dataset.data_vars.items():
                                 da.attrs['long_name'] = ".".join( [ point_data.attrs['file_name'], varname ] )
                             print( f"Writing output file: '{block_data_file}' with {blocks_point_data.size} samples")
-                            os.makedirs( os.path.dirname( block_data_file ), exist_ok=True )
+                            if os.path.exists( block_data_file ): os.remove( block_data_file )
+                            else: os.makedirs( os.path.dirname( block_data_file ), exist_ok=True )
                             result_dataset.to_netcdf( block_data_file )
     #                        print(f"Writing raster file: '{self._reduced_raster_file}' with dims={reduced_dataArray.dims}, attrs = {reduced_dataArray.attrs}")
     #                        reduced_dataArray.rio.set_spatial_dims()
