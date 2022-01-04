@@ -133,11 +133,12 @@ class SpatialDataManager(ModeDataManager):
         if '_FillValue' in point_data.attrs:
             nodata = point_data.attrs['_FillValue']
             point_data = point_data.where( point_data != nodata )
-        mask: np.ndarray = ma.masked_invalid( point_data ).mask[:,0].reshape(base_raster.shape[1:])
-        point_data = point_data.dropna( dim='samples', how='any')
-        lgm().log(f"\n\n raster2points -> [{base_raster.name}]: Using {point_data.shape[0]} valid samples out of {npts0} pixels, mask shape = {mask.shape}, mask #valid = {np.count_nonzero(mask)}/{mask.size}\n", print=True )
-        point_data.attrs['dsid'] = base_raster.name
-        return point_data, mask
+        mask: np.ndarray = ~ma.masked_invalid( point_data[:,0] ).mask
+        filtered_point_data: xa.DataArray = point_data[ mask ]
+        lgm().log(f"raster2points -> [{base_raster.name}]: filtered_point_data shape = {filtered_point_data.shape}", print=True )
+        lgm().log(f"mask shape = {mask.shape}, mask type = {mask.dtype}:{mask[0]}, mask #valid = {np.count_nonzero(mask)}/{mask.size}, pt range = {filtered_point_data.values.min()} -> {filtered_point_data.values.max()}", print=True )
+        filtered_point_data.attrs['dsid'] = base_raster.name
+        return filtered_point_data, mask
 
     @classmethod
     def addTextureBands(cls, base_raster: xa.DataArray ) -> xa.DataArray:   #  base_raster dims: [ band, y, x ]
@@ -259,7 +260,7 @@ class SpatialDataManager(ModeDataManager):
             else:
                 lgm().log(f" Processing Block{block.block_coords}, shape = {block.shape}",  print=True)
                 try:
-                    blocks_point_data, coord_data = block.getPointData()[0]
+                    blocks_point_data, coord_data = block.getPointData()
                     lgm().log(f" Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}", print=True)
                 except NoDataInBounds: blocks_point_data = None
 
