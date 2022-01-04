@@ -215,14 +215,14 @@ class Block(DataContainer):
     def getPointData( self ) -> Tuple[xa.DataArray,Dict]:
         from spectraclass.data.spatial.manager import SpatialDataManager
         if self._point_data is None:
-            result: xa.DataArray =  SpatialDataManager.raster2points( self.data )
-            self._point_coords: Dict = dict( y=self.data.y, x=self.data.x )
+            result, mask =  SpatialDataManager.raster2points( self.data )
+            self._point_coords: Dict = dict( y=self.data.y, x=self.data.x, mask=mask )
             npts = self.data.y.size * self.data.x.size
             self._point_data = result.assign_coords( samples = np.arange( 0, result.shape[0] ) )
             self._samples_axis = self._point_data.coords['samples']
             self._point_data.attrs['type'] = 'block'
             self._point_data.attrs['dsid'] = self.dsid()
-        return (self._point_data, self._point_coords)
+        return (self._point_data, self._point_coords )
 
     @property
     def point_coords(self) -> Dict[str,xa.DataArray]:

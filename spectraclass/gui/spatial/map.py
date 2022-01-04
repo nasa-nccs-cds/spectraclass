@@ -269,6 +269,7 @@ class MapManager(SCSingletonConfigurable):
             dims = [reduced_data.dims[0], block_data.dims[1], block_data.dims[2]]
             coords = [(dims[0], reduced_data[dims[0]]), (dims[1], block_data[dims[1]]), (dims[2], block_data[dims[2]])]
             shape = [c[1].size for c in coords]
+            lgm().log(f"\n\nGot Model Data{reduced_data.dims}, shape = {reduced_data.shape}, size={reduced_data.size}\n --> Reshape to {shape}\n")
             raster_data = reduced_data.data.reshape(shape)
             return xa.DataArray(raster_data, coords, dims, reduced_data.name, reduced_data.attrs)
         else:

@@ -3,6 +3,7 @@ import traceback
 import numpy as np
 import xarray as xa
 import ipywidgets as ip
+import numpy.ma as ma
 from pathlib import Path
 from spectraclass.gui.control import ufm
 from spectraclass.reduction.embedding import rm
@@ -126,16 +127,17 @@ class SpatialDataManager(ModeDataManager):
         return result
 
     @classmethod
-    def raster2points(cls, base_raster: xa.DataArray ) -> xa.DataArray:   #  base_raster dims: [ band, y, x ]
+    def raster2points(cls, base_raster: xa.DataArray ) -> Tuple[xa.DataArray,np.ndarray]:   #  base_raster dims: [ band, y, x ]
         point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
         npts0 = point_data.shape[0]
         if '_FillValue' in point_data.attrs:
             nodata = point_data.attrs['_FillValue']
-            point_data = point_data.where( point_data != nodata, drop=True )
+            point_data = point_data.where( point_data != nodata )
+        mask: np.ndarray = ma.masked_invalid( point_data ).mask[:,0].reshape(base_raster.shape[1:])
         point_data = point_data.dropna( dim='samples', how='any')
-        lgm().log(f" raster2points -> [{base_raster.name}]: Using {point_data.shape[0]} valid samples out of {npts0} pixels")
+        lgm().log(f"\n\n raster2points -> [{base_raster.name}]: Using {point_data.shape[0]} valid samples out of {npts0} pixels, mask shape = {mask.shape}, mask #valid = {np.count_nonzero(mask)}/{mask.size}\n", print=True )
         point_data.attrs['dsid'] = base_raster.name
-        return point_data
+        return point_data, mask
 
     @classmethod
     def addTextureBands(cls, base_raster: xa.DataArray ) -> xa.DataArray:   #  base_raster dims: [ band, y, x ]
@@ -241,6 +243,7 @@ class SpatialDataManager(ModeDataManager):
         for block in self.tiles.tile.getBlocks():
             block_data_file =  dm().modal.dataFile(block=block)
             nsamples = 0
+            coord_data = {}
             process_dataset = True
             block_file_exists = os.path.isfile( block_data_file )
             if block_file_exists:
@@ -256,7 +259,7 @@ class SpatialDataManager(ModeDataManager):
             else:
                 lgm().log(f" Processing Block{block.block_coords}, shape = {block.shape}",  print=True)
                 try:
-                    blocks_point_data: Optional[xa.DataArray] = block.getPointData()[0]
+                    blocks_point_data, coord_data = block.getPointData()[0]
                     lgm().log(f" Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}", print=True)
                 except NoDataInBounds: blocks_point_data = None
 
@@ -281,6 +284,7 @@ class SpatialDataManager(ModeDataManager):
                             reduced_dataArray =  xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
                             data_vars['reduction'] = reduced_dataArray
                             data_vars['reproduction'] = reproduction
+                            data_vars['mask'] = coord_data['mask']
                             result_dataset = xa.Dataset( data_vars )
     #                       self._reduced_raster_file = os.path.join(self.datasetDir, self.dataset + ".tif")
                             lgm().log(f" Writing reduced[{self.reduce_scope}] output to {block_data_file} with {blocks_point_data.size} samples, dset attrs:")

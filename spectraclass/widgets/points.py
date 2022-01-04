@@ -53,6 +53,8 @@ class PointsInteractor:
     def plot( self ):
         ycoords, xcoords, colors = self.get_points()
         lgm().log(f" ** plot point_selection image, nmarkers = {len(ycoords)}")
+        lgm().log(f"  --> xcoords = {xcoords}")
+        lgm().log(f"  --> ycoords = {ycoords}")
         if len(ycoords) > 0:
             self.points.set_offsets(np.c_[xcoords, ycoords])
             self.points.set_facecolor(colors)

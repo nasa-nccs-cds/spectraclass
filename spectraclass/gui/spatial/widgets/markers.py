@@ -32,7 +32,7 @@ class Marker:
         self.props[key] = item
 
     def __getitem__(self, key: str ):
-        return self.props[key]
+        return self.props.get(key,None)
 
     def __eq__(self, m ):
         return isinstance( m, Marker ) and ( m.cid == self.cid ) and ( m.pids.tolist() == self._pids.tolist() )
@@ -106,12 +106,18 @@ class MarkerManager( PointsInteractor ):
         ycoords, xcoords, colors, markers = [], [], [], lm().markers
         for marker in markers:
             if marker.type == "marker":
-                for pid in marker.pids:
-                    coords = self._block.pindex2coords( pid )
-                    if (coords is not None) and self._block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
-                        ycoords.append( coords['y'] )
-                        xcoords.append( coords['x'] )
-                        colors.append( lm().colors[marker.cid] )
+                point = marker['point']
+                if point is not None:
+                    ycoords.append(point[1])
+                    xcoords.append(point[0])
+                    colors.append(lm().colors[marker.cid])
+                else:
+                    for pid in marker.pids:
+                        coords = self._block.pindex2coords( pid )
+                        if (coords is not None) and self._block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
+                            ycoords.append( coords['y'] )
+                            xcoords.append( coords['x'] )
+                            colors.append( lm().colors[marker.cid] )
         return ycoords, xcoords, colors
 
     @log_timing

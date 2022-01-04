@@ -149,7 +149,7 @@ class mplGraphPlot:
 
     def update_graph(self, x:  np.ndarray, y: np.ndarray, **kwargs ):
         lgm().log( f"Plotting lines, xs = {x.shape}, ys = {y.shape}, xrange = {[x.min(),x.max()]}, yrange = {[y.min(),y.max()]}, args = {kwargs}")
-        self.lines, = self.ax.plot( x, y, **kwargs )
+        self.lines = self.ax.plot( x, y, **kwargs )
         self.fig.canvas.draw()
 
     @property
