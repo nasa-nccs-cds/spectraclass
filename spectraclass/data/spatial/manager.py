@@ -135,8 +135,8 @@ class SpatialDataManager(ModeDataManager):
             point_data = point_data.where( point_data != nodata )
         mask: np.ndarray = ~ma.masked_invalid( point_data[:,0] ).mask
         filtered_point_data: xa.DataArray = point_data[ mask ]
-        lgm().log(f"raster2points -> [{base_raster.name}]: filtered_point_data shape = {filtered_point_data.shape}", print=True )
-        lgm().log(f"mask shape = {mask.shape}, mask type = {mask.dtype}:{mask[0]}, mask #valid = {np.count_nonzero(mask)}/{mask.size}, pt range = {filtered_point_data.values.min()} -> {filtered_point_data.values.max()}", print=True )
+        lgm().log( f"raster2points -> [{base_raster.name}]: filtered_point_data shape = {filtered_point_data.shape}" )
+        lgm().log( f"mask shape = {mask.shape}, mask #valid = {np.count_nonzero(mask)}/{mask.size}" )
         filtered_point_data.attrs['dsid'] = base_raster.name
         return filtered_point_data, mask
 

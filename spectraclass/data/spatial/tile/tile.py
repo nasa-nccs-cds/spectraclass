@@ -137,7 +137,7 @@ class Block(DataContainer):
         self._flow = None
         self._samples_axis: Optional[xa.DataArray] = None
         self._point_data: Optional[xa.DataArray] = None
-        self._point_coords: Dict = None
+        self._point_coords: Dict[str,np.ndarray] = None
         lgm().log(f"CREATE Block: ix={ix}, iy={iy}")
 
     def classmap(self, default_value: int =0 ) -> xa.DataArray:
@@ -216,7 +216,7 @@ class Block(DataContainer):
         from spectraclass.data.spatial.manager import SpatialDataManager
         if self._point_data is None:
             result, mask =  SpatialDataManager.raster2points( self.data )
-            self._point_coords: Dict = dict( y=self.data.y, x=self.data.x, mask=mask )
+            self._point_coords: Dict[str,np.ndarray] = dict( y=self.data.y.values(), x=self.data.x.values(), mask=mask )
             npts = self.data.y.size * self.data.x.size
             self._point_data = result.assign_coords( samples = np.arange( 0, result.shape[0] ) )
             self._samples_axis = self._point_data.coords['samples']
@@ -225,9 +225,13 @@ class Block(DataContainer):
         return (self._point_data, self._point_coords )
 
     @property
-    def point_coords(self) -> Dict[str,xa.DataArray]:
+    def point_coords(self) -> Dict[str,np.ndarray]:
         if self._point_coords is None: self.getPointData()
         return  self._point_coords
+
+    @property
+    def mask(self) -> np.ndarray:
+        return self.point_coords['mask']
 
     def getSelectedPointData( self, cy: List[float], cx: List[float] ) -> np.ndarray:
         yIndices, xIndices = self.multi_coords2indices(cy, cx)
@@ -272,7 +276,7 @@ class Block(DataContainer):
         xs = self.point_coords['x'].size
         pi = dict( x= point_index % xs,  y= point_index // xs )
         try:
-            return { c: self.point_coords[c].data[ pi[c] ] for c in ['y','x'] }
+            return { c: self.point_coords[c][ pi[c] ] for c in ['y','x'] }
         except Exception as err:
             lgm().log( f" --> pindex2coords Error: {err}, pid = {point_index}, coords = {pi}" )
 
@@ -280,7 +284,7 @@ class Block(DataContainer):
         xs = self.point_coords['x'].size
         pi = dict( x= point_index % xs,  y= point_index // xs )
         try:
-            selected_sample: List = [ self.point_coords[c].data[ pi[c] ] for c in ['y','x'] ]
+            selected_sample: List = [ self.point_coords[c][ pi[c] ] for c in ['y','x'] ]
             return self.coords2indices( selected_sample[0], selected_sample[1] )
         except Exception as err:
             lgm().log( f" --> pindex2indices Error: {err}, pid = {point_index}, coords = {pi}" )
