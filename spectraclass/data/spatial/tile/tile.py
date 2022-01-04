@@ -216,7 +216,7 @@ class Block(DataContainer):
         from spectraclass.data.spatial.manager import SpatialDataManager
         if self._point_data is None:
             result, mask =  SpatialDataManager.raster2points( self.data )
-            self._point_coords: Dict[str,np.ndarray] = dict( y=self.data.y.values(), x=self.data.x.values(), mask=mask )
+            self._point_coords: Dict[str,np.ndarray] = dict( y=self.data.y.values, x=self.data.x.values, mask=mask )
             npts = self.data.y.size * self.data.x.size
             self._point_data = result.assign_coords( samples = np.arange( 0, result.shape[0] ) )
             self._samples_axis = self._point_data.coords['samples']
@@ -291,6 +291,15 @@ class Block(DataContainer):
 
     def indices2pindex( self, iy, ix ) -> int:
         return self.index_array.values[ iy, ix ]
+
+    def points2raster(self, points_data: xa.DataArray ):
+        dims = [points_data.dims[1], self.data.dims[1], self.data.dims[2]]
+        coords = [(dims[0], points_data[dims[0]].data), (dims[1], self.data[dims[1]].data), (dims[2], self.data[dims[2]].data)]
+        raster_data = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
+        raster_data[ self.mask ] = points_data.data
+        raster_data = raster_data.transpose().reshape([points_data.shape[1], self.data.shape[1], self.data.shape[2]])
+        lgm().log( f"\n\nGot Model Data{points_data.dims}: {points_data.shape} -> {raster_data.shape} using mask ({self.mask.shape})\n")
+        return xa.DataArray(raster_data, coords, dims, points_data.name, points_data.attrs)
 
     def coords2pindex( self, cy, cx ) -> int:
         try:
