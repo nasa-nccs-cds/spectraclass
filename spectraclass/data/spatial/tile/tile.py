@@ -298,7 +298,7 @@ class Block(DataContainer):
         raster_data = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
         raster_data[ self.mask ] = points_data.data
         raster_data = raster_data.transpose().reshape([points_data.shape[1], self.data.shape[1], self.data.shape[2]])
-        lgm().log( f"\n\nGot Model Data{points_data.dims}: {points_data.shape} -> {raster_data.shape} using mask ({self.mask.shape})\n")
+        lgm().log( f"Got Model Data{points_data.dims}: {points_data.shape} -> {raster_data.shape} using mask ({self.mask.shape})")
         return xa.DataArray(raster_data, coords, dims, points_data.name, points_data.attrs)
 
     def coords2pindex( self, cy, cx ) -> int:

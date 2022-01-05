@@ -52,7 +52,8 @@ class MapManager(SCSingletonConfigurable):
         self._cidpress = -1
         self._classification_data = None
         self.layers = LayersManager( self.on_layer_change )
-        self.slider: Optional[PageSlider] = None
+        self.band_slider: PageSlider = None
+        self.model_slider: PageSlider = None
         self.spectral_image: Optional[AxesImage] = None
         self.label_map: Optional[xa.DataArray] = None     # Map of classification labels from ML
         self.region_selection: PolygonInteractor = None
@@ -69,6 +70,8 @@ class MapManager(SCSingletonConfigurable):
 
     def use_model_data(self, use: bool ):
         self._use_model_data = use
+        self.update_slider_visibility()
+        self.update_plots()
 
     def get_selection_panel(self):
         self.gui()
@@ -147,10 +150,12 @@ class MapManager(SCSingletonConfigurable):
     def set_region_class(self, cid: int ):
         self.region_selection.set_class( cid )
 
-    def add_slider(self,  **kwargs ):
-        if self.slider is None:
-            self.slider = PageSlider( self.slider_axes, self.nFrames )
-            self.slider_cid = self.slider.on_changed(self._update)
+    def create_sliders(self):
+        self.band_slider = PageSlider( self.slider_axes(False), self.nFrames(model=False) )
+        self.band_slider_cid = self.band_slider.on_changed(self._update)
+        self.model_slider = PageSlider( self.slider_axes(True), self.nFrames(model=True) )
+        self.model_slider_cid = self.model_slider.on_changed(self._update)
+
 
     @exception_handled
     def plot_labels_image(self):
@@ -173,13 +178,14 @@ class MapManager(SCSingletonConfigurable):
             mgr.set_alpha( layer.visibility )
         self.update_canvas()
 
+    @property
+    def slider(self) -> PageSlider:
+        return self.model_slider if self._use_model_data else self.band_slider
+
     @exception_handled
     def _update( self, val ):
-        if self.slider is not None:
-            tval = self.slider.val
-            self.currentFrame = int( tval )
-            lgm().log(f"Slider Update, frame = {self.currentFrame}")
-            self.update_plots()
+        self.currentFrame = int( self.slider.val )
+        self.update_plots()
 
     def update_image_alpha( self, layer: str, increase: bool, *args, **kwargs ):
         self.layers(layer).increment( increase )
@@ -211,6 +217,7 @@ class MapManager(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         if self.spectral_image is not None:
             fdata: xa.DataArray = self.frame_data
+            lgm().log(f"update_plots: block data shape = {self.data.shape}" )
             if fdata is not None:
                 drange = self.get_color_bounds(fdata)
                 alpha = self.layers('bands').visibility
@@ -228,12 +235,21 @@ class MapManager(SCSingletonConfigurable):
     def update_canvas(self):
         self.figure.canvas.draw_idle()
 
+    def nFrames(self, **kwargs ) -> int:
+        from spectraclass.data.base import DataManager, dm
+        use_model = kwargs.get( 'model', self._use_model_data )
+        return dm().getModelData().shape[1] if use_model else self.data.shape[0]
+
+    @property
+    def block_data(self):
+        return
+
     @property
     def frame_data(self) -> Optional[xa.DataArray]:
-        if self.currentFrame >= self.data.shape[0]: return None
+        if self.currentFrame >= self.nFrames(): return None
         # lgm().log( f" color_pointcloud: currentFrame = {self.currentFrame}, frame data shape = {frame_data.shape}")
         # app().color_pointcloud( frame_data.values.flatten(), **kwargs )
-        return self.block.data[self.currentFrame].squeeze(drop=True)
+        return self.data[self.currentFrame].squeeze(drop=True)
 
     @property
     def figure(self) -> Figure:
@@ -243,9 +259,12 @@ class MapManager(SCSingletonConfigurable):
     def plot_axes(self) -> Axes:
         return self.base.gax
 
-    @property
-    def slider_axes(self) -> Axes:
-        return self.base.sax
+    def slider_axes(self, use_model = False ) -> Axes:
+        return self.base.msax if use_model else self.base.bsax
+
+    def update_slider_visibility(self):
+        self.base.msax.set_visible( self._use_model_data )
+        self.base.bsax.set_visible( not self._use_model_data )
 
     def invert_yaxis(self):
         self.plot_axes.invert_yaxis()
@@ -270,12 +289,11 @@ class MapManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import tm
         from spectraclass.gui.plot import GraphPlotManager, gpm
         lgm().log(f"Loading block: {block_index}")
-        self.block: Block = tm().getBlock( block_index )
+        self.block: Block = tm().getBlock( index=block_index )
         if self.block is not None:
             self.update_spectral_image()
             if self.points_selection is not None:
                 self.points_selection.set_block(self.block)
-            self.nFrames = self.data.shape[0]
             self.band_axis = kwargs.pop('band', 0)
             self.z_axis_name = self.data.dims[self.band_axis]
             self.x_axis = kwargs.pop('x', 2)
@@ -309,7 +327,7 @@ class MapManager(SCSingletonConfigurable):
 
     def init_map(self,**kwargs):
         self.update_spectral_image()
-        self.add_slider(**kwargs)
+        self.create_sliders(**kwargs)
         self.initLabels()
         self._cidpress = self.figure.canvas.mpl_connect('button_press_event', self.on_button_press)
      #   self._cidrelease = self.spectral_image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )

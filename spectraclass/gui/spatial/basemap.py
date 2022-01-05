@@ -56,7 +56,9 @@ class TileServiceBasemap(SCSingletonConfigurable):
         else:
             self.gax.set_xbound( xlim[0], xlim[1] )
             self.gax.set_ybound( ylim[0], ylim[1] )
-        self.sax: Axes = self.figure.add_axes( [0.01, 0.01, 0.85, 0.05] ) if use_slider else None # [left, bottom, width, height]
+        self.bsax: Axes  = self.figure.add_axes([0.01, 0.01, 0.85, 0.05]) if use_slider else None # [left, bottom, width, height]
+        self.msax: Axes = self.figure.add_axes( [0.01, 0.01, 0.85, 0.05]) if use_slider else None  # [left, bottom, width, height]
+        self.msax.set_visible(False)
         self.figure.canvas.toolbar_visible = True
         self.figure.canvas.header_visible = False
 

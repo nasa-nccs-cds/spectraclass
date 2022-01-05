@@ -89,9 +89,15 @@ class TileManager(SCSingletonConfigurable):
     def image_name(self):
         return DataManager.instance().modal.image_name
 
+    @property
+    def block_coords(self):
+        return self.block_index
+
     @exception_handled
-    def getBlock( self, block_index: Tuple[int,int] = None ) -> Block:
-        if block_index is not None: self.block_index = block_index
+    def getBlock( self, **kwargs ) -> Block:
+        bindex = kwargs.get( 'index' )
+        if (bindex is None) and ('block' in kwargs): bindex = kwargs['block'].block_coords
+        if bindex is not None: self.block_index = bindex
         return self.tile.getBlock( self.block_index[0], self.block_index[1] )
 
     def getMask(self) -> Optional[xa.DataArray]:
