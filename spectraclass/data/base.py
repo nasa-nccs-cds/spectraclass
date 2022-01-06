@@ -14,7 +14,7 @@ from spectraclass.model.base import SCSingletonConfigurable
 from traitlets.config.loader import load_pyconfig_files
 from .modes import ModeDataManager
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
-from traitlets.config.loader import Config
+from traitlets.config.loader import Config, PyFileConfigLoader
 import threading, time, logging, sys
 
 class DataType(Enum):
@@ -47,9 +47,7 @@ class DataManager(SCSingletonConfigurable):
     _mode_data_managers_: Dict = {}
 
     def __init__(self):
-        self._config: Config = None
         self.config_files = []
-        self.config_dir = None
         self.name = None
         self._mode_data_manager_: ModeDataManager = None
         super(DataManager, self).__init__()
@@ -74,8 +72,7 @@ class DataManager(SCSingletonConfigurable):
 
     @property
     def sysconfig(self) -> Config:
-        if self._config is None: raise TypeError( "DataManager not initialized" )
-        return self._config
+        return self.config
 
     @classmethod
     def initialize(cls, name: str, mode: str ):
@@ -93,23 +90,29 @@ class DataManager(SCSingletonConfigurable):
     def app(self) -> SpectraclassController:
         return self.modal.application.instance()
 
+    @property
+    def defaults_dir(self):
+        sc_dir = os.path.dirname( os.path.dirname( os.path.realpath("__file__") ) )
+        return os.path.join( sc_dir, "defaults" )
+
     def _configure_(self, name: str, mode: str ):
         self.name = name
-        cfg_file = self.config_file( name, mode )
-        if os.path.isfile(cfg_file):
-            print(f"Using config file: '{cfg_file}'")
-            (self.config_dir, fname) = os.path.split(cfg_file)
-            self.config_files = [ fname ]
-            self._config = load_pyconfig_files(self.config_files, self.config_dir)
-            self.update_config( self._config )
-        else:
-            print(f"Configuration error: '{cfg_file}' is not a file.")
+        self.config_files.append( ( self.defaults_dir, "config.py" ) )
+        self.config_files.append( ( self.config_dir(  mode ), f"{name}.py" ) )
+        for ( cfg_dir, fname) in self.config_files:
+            cfg_file = os.path.join( cfg_dir, fname )
+            if os.path.isfile(cfg_file):
+                print(f"Using config file: '{cfg_file}'")
+                loader = PyFileConfigLoader( fname, path=cfg_dir )
+                self.update_config( loader.load_config() )
 
     def getCurrentConfig(self):
-        config_dict = {}
-        for cfg_file in self.config_files:
-            scope = dm().name # cfg_file.split(".")[0]
-            config_dict[ scope ] = load_pyconfig_files( [cfg_file], self.config_dir )
+        cfg = Config()
+        config_dict = { dm().name: cfg }
+        for ( cfg_dir, fname ) in self.config_files:
+            if os.path.isfile( os.path.join( cfg_dir, fname ) ):
+                loader = PyFileConfigLoader( fname, path=cfg_dir )
+                cfg.merge( loader.load_config() )
         return config_dict
 
     @property
@@ -169,6 +172,12 @@ class DataManager(SCSingletonConfigurable):
         config_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "config",  mode )
         if not os.path.isdir( config_dir ): os.makedirs( config_dir, mode = 0o777 )
         return os.path.join( config_dir, name + ".py" )
+
+    @classmethod
+    def config_dir( cls, mode:str ) -> str :
+        config_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "config",  mode )
+        if not os.path.isdir( config_dir ): os.makedirs( config_dir, mode = 0o777 )
+        return config_dir
 
     @property
     def mode(self) -> str:
