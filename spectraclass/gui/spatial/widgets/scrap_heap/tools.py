@@ -14,7 +14,6 @@ class PageSlider(Slider):
         self.stepcolor = kwargs.pop('stepcolor', "#ff6f6f" )
         self.on_animcolor = kwargs.pop('on-animcolor', "#006622")
         self.fontsize = kwargs.pop('fontsize', 10)
-        self.maxIndexedPages = 5
         self.numpages = numpages
         self.axes = ax
 
@@ -23,7 +22,7 @@ class PageSlider(Slider):
         self.poly.set_visible(False)
         self.vline.set_visible(False)
         self.pageRects = []
-        indexMod = math.ceil( self.numpages / self.maxIndexedPages )
+        indexMod = self.numpages // 12
         for i in range(numpages):
             facecolor = self.activecolor if i==valinit else self.facecolor
             r  = Rectangle((float(i)/numpages, 0), 1./numpages, 1, transform=ax.transAxes, facecolor=facecolor)
