@@ -28,7 +28,7 @@ tile: xa.DataArray = block.data[band_index].squeeze( drop=True )
 [ x0, x1, y0, y1 ] = block.extent()
 
 base = TileServiceBasemap()
-base.setup_plot( (x0,x1), (y0,y1), basemap=True, standalone=True )
+base.setup_plot( "Test", (x0,x1), (y0,y1), basemap=True, standalone=True )
 image: AxesImage = tile.plot.imshow( ax=base.gax, alpha=0.3 )
 p = PolygonInteractor( base.gax )
 

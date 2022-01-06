@@ -35,30 +35,31 @@ class TileServiceBasemap(SCSingletonConfigurable):
     #     self.gax.set_extent( xr + yr, crs=crs )
 
     @exception_handled
-    def setup_plot( self, xlim: Tuple[float,float], ylim: Tuple[float,float], **kwargs ):
+    def setup_plot( self, title: str, xlim: Tuple[float,float], ylim: Tuple[float,float], **kwargs ):
         standalone = kwargs.pop( 'standalone', False )
         if not standalone: plt.ioff()
         fig_index = kwargs.pop('index',100)
         fig_size = kwargs.pop('size', (6, 6))
-        title = kwargs.pop('title', 'Selection Region')
         use_basemap = kwargs.pop('basemap', True)
         use_slider = kwargs.pop( 'slider', True )
         self.figure: Figure = plt.figure( fig_index, figsize=fig_size )
+        self.figure.suptitle( title )
         if not standalone: plt.ion()
 
         bounds = [0.01, 0.07, 0.98, 0.93] if use_slider else [0.01, 0.01, 0.98, 0.98]
         self.gax: Axes = self.figure.add_axes( bounds, **kwargs )  # [left, bottom, width, height] # , projection=self.crs
         self.gax.xaxis.set_visible( False ); self.gax.yaxis.set_visible( False )
-        self.gax.title.set_text( title )
         self.gax.title.set_color("orange")
         if use_basemap:
             self.set_basemap( xlim, ylim, **kwargs)
         else:
             self.gax.set_xbound( xlim[0], xlim[1] )
             self.gax.set_ybound( ylim[0], ylim[1] )
-        self.bsax: Axes  = self.figure.add_axes([0.01, 0.01, 0.85, 0.05]) if use_slider else None # [left, bottom, width, height]
-        self.msax: Axes = self.figure.add_axes( [0.01, 0.01, 0.85, 0.05]) if use_slider else None  # [left, bottom, width, height]
-        self.msax.set_visible(False)
+        if use_slider:
+            self.bsax: Axes  = self.figure.add_axes( [0.01, 0.01, 0.98, 0.05])  # [left, bottom, width, height]
+            self.msax: Axes  = self.figure.add_axes( [0.01, 0.01, 0.98, 0.05]) # [left, bottom, width, height]
+            self.msax.set_visible( False )
+            self.bsax.set_visible( True  )
         self.figure.canvas.toolbar_visible = True
         self.figure.canvas.header_visible = False
 

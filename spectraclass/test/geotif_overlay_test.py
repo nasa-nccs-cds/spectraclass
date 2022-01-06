@@ -15,7 +15,7 @@ tile_raster: xa.DataArray = DataManager.instance().modal.readSpectralData( subse
 [x0,x1,y0,y1] = SpatialDataManager.extent( tile_raster )
 
 base = TileServiceBasemap()
-base.setup_plot( (x0 ,x1), (y0 ,y1), standalone=True )
+base.setup_plot( "Test", (x0 ,x1), (y0 ,y1), standalone=True )
 raster_layer = tile_raster[iband].squeeze( drop=True )
 raster_layer.plot.imshow( ax=base.gax, alpha=band_alpha )
 plt.show()

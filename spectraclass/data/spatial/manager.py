@@ -41,7 +41,7 @@ class SpatialDataManager(ModeDataManager):
         if self._tile_selection_basemap is None:
             self._tile_selection_basemap = TileServiceBasemap( block_selection=True )
             (x0, x1, y0, y1) = self.tiles.tile.extent
-            self._tile_selection_basemap.setup_plot( (x0, x1), (y0, y1), index=99, size=(3,3), slider=False, title="Tile Selection", **kwargs )
+            self._tile_selection_basemap.setup_plot( "Tile Selection", (x0, x1), (y0, y1), index=99, size=(3,3), slider=False, **kwargs )
         return self._tile_selection_basemap.gui()
 
     def getConstantXArray(self, fill_value: float, shape: Tuple[int], dims: Tuple[str], **kwargs) -> xa.DataArray:

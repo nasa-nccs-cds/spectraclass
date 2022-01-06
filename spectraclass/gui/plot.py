@@ -84,15 +84,18 @@ class mplGraphPlot:
     @log_timing
     def get_region_marker(self, prec: PolyRec, cid: int ) -> Marker:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.data.spatial.tile.tile import Block, Tile
         from shapely.geometry import Polygon
-        raster:  xa.DataArray = tm().getBlock().data[0].squeeze()
+        block: Block = tm().getBlock()
+        idx2pid: np.ndarray = block.index_array.values.flatten()
+        raster:  xa.DataArray = block.data[0].squeeze()
         X, Y = raster.x.values, raster.y.values
         polygon = Polygon(prec.poly.get_xy())
         MX, MY = np.meshgrid(X, Y)
-        PID = np.array(range(raster.size))
-        mask = svect.contains( polygon, MX, MY )
-        pids = PID[mask.flatten()].tolist()
-        marker =  Marker( "label", pids, cid )
+        PID: np.ndarray = np.array(range(raster.size))
+        mask: np.ndarray = svect.contains( polygon, MX, MY ).flatten()
+        pids = idx2pid[ PID[mask] ]
+        marker = Marker( "label", pids[ pids > -1 ].tolist(), cid )
         self._regions[ prec.polyId ] = marker
         return marker
 
@@ -168,7 +171,7 @@ class mplGraphPlot:
 
     @property
     def y( self ) -> np.ndarray :
-        return self.ydata
+        return self.ydata.transpose()
 
     @property
     def ry( self ) ->  np.ndarray:
