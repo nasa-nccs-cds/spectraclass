@@ -5,7 +5,7 @@ from typing import List, Union, Tuple, Optional, Dict
 from pyproj import Proj
 from spectraclass.data.base import DataManager, DataType
 from spectraclass.util.logs import LogManager, lgm, log_timing
-import os, math, pickle, json
+import os, math, pickle, time
 import cartopy.crs as ccrs
 from spectraclass.util.logs import lgm, exception_handled
 import traitlets.config as tlc
@@ -142,9 +142,9 @@ class TileManager(SCSingletonConfigurable):
             self._tile_data = self._readTileFile()
         return self._tile_data
 
-    @log_timing
     @classmethod
     def process_tile_data( cls, tile_data: xa.DataArray ) -> xa.DataArray:
+        t0 = time.time()
         tile_data = cls.mask_nodata(tile_data)
         init_shape = [*tile_data.shape]
         valid_bands = DataManager.instance().valid_bands()
@@ -158,6 +158,7 @@ class TileManager(SCSingletonConfigurable):
         result = tile_data.rio.reproject(cls.crs)
         result.attrs['wkt'] = result.spatial_ref.crs_wkt
         result.attrs['long_name'] = tile_data.attrs.get('long_name', None)
+        lgm().log(f"Completed process_tile_data in {time.time()-t0} sec")
         return result
 
     def loadMetadata(self) -> Dict:
