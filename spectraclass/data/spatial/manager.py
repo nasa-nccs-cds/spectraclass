@@ -126,9 +126,9 @@ class SpatialDataManager(ModeDataManager):
         result.attrs = raster.attrs
         return result
 
-    @log_timing
     @classmethod
     def raster2points( cls, base_raster: xa.DataArray ) -> Tuple[xa.DataArray,np.ndarray]:   #  base_raster dims: [ band, y, x ]
+        t0 = time.time()
         point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
         npts0 = point_data.shape[0]
         if '_FillValue' in point_data.attrs:
@@ -136,9 +136,9 @@ class SpatialDataManager(ModeDataManager):
             point_data = point_data.where( point_data != nodata )
         mask: np.ndarray = ~ma.masked_invalid( point_data[:,0] ).mask
         filtered_point_data: xa.DataArray = point_data[ mask ]
-        lgm().log( f"raster2points -> [{base_raster.name}]: filtered_point_data shape = {filtered_point_data.shape}" )
-        lgm().log( f"mask shape = {mask.shape}, mask #valid = {np.count_nonzero(mask)}/{mask.size}" )
         filtered_point_data.attrs['dsid'] = base_raster.name
+        lgm().log( f"raster2points -> [{base_raster.name}]: filtered_point_data shape = {filtered_point_data.shape}" )
+        lgm().log( f" --> mask shape = {mask.shape}, mask #valid = {np.count_nonzero(mask)}/{mask.size}, completed in {time.time()-t0} sec" )
         return filtered_point_data, mask
 
     @classmethod
