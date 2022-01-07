@@ -155,10 +155,11 @@ class TileManager(SCSingletonConfigurable):
             if isinstance(band_names, (list, tuple)):
                 tile_data.attrs['bands'] = sum( [list(band_names[valid_band[0]:valid_band[1]]) for valid_band in valid_bands], [])
             lgm().log( f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
+        t1 = time.time()
         result = tile_data.rio.reproject(cls.crs)
         result.attrs['wkt'] = result.spatial_ref.crs_wkt
         result.attrs['long_name'] = tile_data.attrs.get('long_name', None)
-        lgm().log(f"Completed   process_tile_data in {time.time()-t0} sec")
+        lgm().log(f"Completed process_tile_data in ( {time.time()-t1:.1f}, {t1-t0:.1f} ) sec")
         return result
 
     def loadMetadata(self) -> Dict:
