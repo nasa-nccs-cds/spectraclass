@@ -101,9 +101,9 @@ class ReductionManager(SCSingletonConfigurable):
         return self._autoencoder, self._encoder
 
     def _build_network( self, input_dims: int, model_dims: int, **kwargs  ):
-        from keras.layers import Input, Dense
-        from keras.models import Model
-        from keras import losses, regularizers
+        from tensorflow.keras.layers import Input, Dense
+        from tensorflow.keras.models import Model
+        from tensorflow.keras import losses, regularizers
         sparsity: float = kwargs.get( 'sparsity', 0.0 )
         reduction_factor = 2
         inputlayer = Input(shape=[input_dims])

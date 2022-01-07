@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import os, time
 from rioxarray.exceptions import NoDataInBounds
 from collections import OrderedDict
-from spectraclass.util.logs import lgm, exception_handled
+from spectraclass.util.logs import lgm, exception_handled, log_timing
 from spectraclass.model.labels import lm
 import rioxarray as rio
 
@@ -126,8 +126,9 @@ class SpatialDataManager(ModeDataManager):
         result.attrs = raster.attrs
         return result
 
+    @log_timing
     @classmethod
-    def raster2points(cls, base_raster: xa.DataArray ) -> Tuple[xa.DataArray,np.ndarray]:   #  base_raster dims: [ band, y, x ]
+    def raster2points( cls, base_raster: xa.DataArray ) -> Tuple[xa.DataArray,np.ndarray]:   #  base_raster dims: [ band, y, x ]
         point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
         npts0 = point_data.shape[0]
         if '_FillValue' in point_data.attrs:

@@ -157,7 +157,8 @@ class Block(DataContainer):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         assert ( self.block_coords[0] < tm().block_dims[0] ) and ( self.block_coords[1] < tm().block_dims[1] ), f"Block coordinates {self.block_coords} out of bounds with block dims = {tm().block_dims}"
 
-    def _get_data( self ) -> Optional[xa.DataArray]:
+    @log_timing
+    def _get_data( self ) -> xa.DataArray:
         from spectraclass.data.base import DataManager, dm
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block_data_file = dm().modal.dataFile( block=self )

@@ -4,7 +4,7 @@ import xarray as xa
 from typing import List, Union, Tuple, Optional, Dict
 from pyproj import Proj
 from spectraclass.data.base import DataManager, DataType
-from spectraclass.util.logs import LogManager, lgm
+from spectraclass.util.logs import LogManager, lgm, log_timing
 import os, math, pickle, json
 import cartopy.crs as ccrs
 from spectraclass.util.logs import lgm, exception_handled
@@ -142,6 +142,7 @@ class TileManager(SCSingletonConfigurable):
             self._tile_data = self._readTileFile()
         return self._tile_data
 
+    @log_timing
     @classmethod
     def process_tile_data( cls, tile_data: xa.DataArray ) -> xa.DataArray:
         tile_data = cls.mask_nodata(tile_data)

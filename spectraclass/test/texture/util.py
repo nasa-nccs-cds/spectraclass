@@ -77,8 +77,8 @@ def apply_standard_pca( array: np.ndarray, n_components: int ) -> np.ndarray:
     return transformed_data
 
 def autoencoder_reduction( input_data: np.ndarray, ndim: int, epochs: int = 70, **kwargs )-> Tuple[np.ndarray,np.ndarray]:  #  input_data:  [ n_features, n_samples ]
-    from keras.layers import Input, Dense
-    from keras.models import Model
+    from tensorflow.keras.layers import Input, Dense
+    from tensorflow.keras.models import Model
 
     activation = kwargs.get( 'activation', 'tanh' )
     optimizer = kwargs.get( 'optimizer', 'rmsprop')
