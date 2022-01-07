@@ -213,7 +213,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def dataFile( self, **kwargs ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block = kwargs.get('block', tm().getBlock( **kwargs ) )
-        return os.path.join( self.datasetDir, block.file_name + ".nc" )
+        return os.path.join( self.datasetDir, block.file_name + f"-m{self.model_dims}.nc" )
 
     def hasBlockData(self) -> bool:
         return os.path.isfile( self.dataFile() )
