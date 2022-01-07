@@ -219,7 +219,7 @@ class DataManager(SCSingletonConfigurable):
     def getInputFileData(self, vname: str = None, **kwargs ) -> np.ndarray:
         return self._mode_data_manager_.getInputFileData( vname, **kwargs )
 
-    def loadCurrentProject(self, caller_id: str ) -> xa.Dataset:
+    def loadCurrentProject(self, caller_id: str = "main" ) -> xa.Dataset:
         lgm().log( f" DataManager: loadCurrentProject: {caller_id}" )
         self.preprocess_data()
         project_data = self._mode_data_manager_.loadCurrentProject()
