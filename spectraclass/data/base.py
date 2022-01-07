@@ -104,9 +104,11 @@ class DataManager(SCSingletonConfigurable):
         for ( cfg_dir, fname) in self.config_files:
             cfg_file = os.path.join( cfg_dir, fname )
             if os.path.isfile(cfg_file):
-                print(f"Using config file: '{cfg_file}'")
+                lgm().log( f"Using config file: '{cfg_file}'", print=True )
                 loader = PyFileConfigLoader( fname, path=cfg_dir )
                 self.update_config( loader.load_config() )
+            else:
+                lgm().log(f" ---> Config file not found: {cfg_file}")
 
     def getCurrentConfig(self):
         cfg = Config()
