@@ -82,10 +82,12 @@ class DataManager(SCSingletonConfigurable):
         if mode.lower() not in cls._mode_data_managers_: raise Exception( f"Mode {mode} is not defined, available modes = {cls._mode_data_managers_.keys()}")
         dataManager._mode_data_manager_ = cls._mode_data_managers_[ mode.lower() ].instance()
         lgm().log("Logging configured")
-        if not dm().modal.hasBlockData():
-            block_data =  dataManager.prepare_inputs( )
-            dataManager.save_config( block_data )
         return dataManager
+
+    def preprocess_data(self):
+        if not self.modal.hasBlockData():
+            block_data =  self.prepare_inputs( )
+            self.save_config( block_data )
 
     def app(self) -> SpectraclassController:
         return self.modal.application.instance()
@@ -219,6 +221,7 @@ class DataManager(SCSingletonConfigurable):
 
     def loadCurrentProject(self, caller_id: str ) -> xa.Dataset:
         lgm().log( f" DataManager: loadCurrentProject: {caller_id}" )
+        self.preprocess_data()
         project_data = self._mode_data_manager_.loadCurrentProject()
         assert project_data is not None, "Project initialization failed- check log file for details"
         lgm().log(f"Loaded project data:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
