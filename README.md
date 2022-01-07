@@ -8,14 +8,14 @@ Conda CPU Versioned Setup
 
     > conda create -n spectraclass 
     > conda activate spectraclass
-    > conda install -c conda-forge conda nb_conda_kernels nodejs jupyterlab jupytext jupyterlab_server ipywidgets ipycanvas ipyevents ipympl matplotlib mplcursors contextily kdtree numpy pynndescent xarray rasterio umap-learn scipy scikit-learn dask netcdf4 scikit-image gdal owslib pyepsg rioxarray cartopy shapely bottleneck geopandas utm keras tensorflow
+    > conda install -c conda-forge conda nb_conda_kernels nodejs jupyterlab jupytext jupyterlab_server ipywidgets ipycanvas ipyevents ipympl matplotlib mplcursors contextily kdtree numpy pynndescent xarray rasterio umap-learn scipy scikit-learn dask netcdf4 scikit-image gdal owslib pyepsg rioxarray cartopy shapely bottleneck geopandas keras tensorflow
 
 Legacy:
 
     > conda install -c rusty1s -c conda-forge conda nb_conda_kernels nodejs jupyterlab jupytext jupyterlab_server  
                         ipycanvas ipyevents itkwidgets ipympl numpy gdal geos shapely kdtree pynndescent xarray  
                         umap-learn scipy scikit-learn toml jupyter_bokeh keras tensorflow rioxarray numba dask   
-                        utm proj4 pyproj pyepsg owslib basemap ipywidgets scikit-image pytorch-geometric pytorch
+                        proj4 pyproj pyepsg owslib basemap ipywidgets scikit-image pytorch-geometric pytorch
                         torchmetrics  matplotlib hvplot bokeh basemap-data-hires rasterio netcdf4
 Installation
 ------------
