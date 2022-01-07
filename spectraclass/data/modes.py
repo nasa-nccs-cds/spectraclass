@@ -22,7 +22,7 @@ class ModeDataManager(SCSingletonConfigurable):
     VALID_BANDS = None
     application: SpectraclassController = None
 
-    image_names = tl.List(tl.Unicode,[]).tag(config=True ,sync=True)
+    image_names = tl.List(tl.Unicode,["NONE"]).tag(config=True ,sync=True)
     cache_dir = tl.Unicode(os.path.expanduser("~/Development/Cache")).tag(config=True)
     data_dir = tl.Unicode(os.path.expanduser("~/Development/Data")).tag(config=True)
     class_file = tl.Unicode("NONE").tag(config=True, sync=True)
@@ -40,9 +40,24 @@ class ModeDataManager(SCSingletonConfigurable):
         self.datasets = {}
         self._model_dims_selector: ip.SelectionSlider = None
         self._subsample_selector: ip.SelectionSlider = None
-        self._progress = None
+        self._progress: ip.FloatProgress = None
         self._dset_selection: ip.Select = None
-        self._dataset_prefix = ""
+        self._dataset_prefix: str = ""
+        self._file_selector = None
+
+    @property
+    def image_name(self):
+        return self._file_selector.value
+
+    @property
+    def file_selector(self):
+        if self._file_selector is None:
+            self._file_selector =  ip.Select( options=self.image_names, value=self.image_names[0] )
+            self._file_selector.observe( self.on_image_change, names=['value'] )
+        return self._file_selector
+
+    def on_image_change( self, event: Dict ):
+        pass
 
     @property
     def mode(self):

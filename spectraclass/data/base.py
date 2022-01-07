@@ -216,7 +216,8 @@ class DataManager(SCSingletonConfigurable):
     def control_panel(self) -> ip.VBox:
         use_model_data = ip.Checkbox( value=False, description = "View Model Data" )
         tl.link( (use_model_data, "value"), (self, 'use_model_data') )
-        return ip.VBox( [ use_model_data ] )
+        file_selector = dm().modal.file_selector
+        return ip.VBox( [ use_model_data, file_selector ] )
 
     def getInputFileData(self, vname: str = None, **kwargs ) -> np.ndarray:
         return self._mode_data_manager_.getInputFileData( vname, **kwargs )
