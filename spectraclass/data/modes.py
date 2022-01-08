@@ -47,7 +47,7 @@ class ModeDataManager(SCSingletonConfigurable):
 
     @property
     def image_name(self):
-        return self._file_selector.value
+        return self.file_selector.value
 
     @property
     def file_selector(self):
