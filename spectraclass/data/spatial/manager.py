@@ -254,8 +254,8 @@ class SpatialDataManager(ModeDataManager):
                     nsamples = 0 if (len( dataset.coords ) == 0) else dataset.coords['samples'].size
                     block_nsamples[block.block_coords] = nsamples
                     process_dataset = reprocess
-                except Exception:
-                    pass
+                except Exception as err:
+                    lgm().log(f" Error getting samples from existing block_data_file: {block_data_file}\n ---> ERROR = {err}",  print=True)
             if not process_dataset:
                 lgm().log( f" Skipping existing block{block.block_coords} with nsamples={nsamples}, existing file: {block_data_file}", print=True)
             else:
