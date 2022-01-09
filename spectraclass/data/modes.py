@@ -22,7 +22,7 @@ class ModeDataManager(SCSingletonConfigurable):
     VALID_BANDS = None
     application: SpectraclassController = None
 
-    image_names = tl.List(tl.Unicode,["NONE"]).tag(config=True ,sync=True)
+    image_names = tl.List( tl.Unicode(), ["NONE"] ).tag(config=True ,sync=True)
     cache_dir = tl.Unicode(os.path.expanduser("~/Development/Cache")).tag(config=True)
     data_dir = tl.Unicode(os.path.expanduser("~/Development/Data")).tag(config=True)
     class_file = tl.Unicode("NONE").tag(config=True, sync=True)
@@ -30,7 +30,6 @@ class ModeDataManager(SCSingletonConfigurable):
     model_dims = tl.Int(32).tag(config=True, sync=True)
     subsample = tl.Int(1).tag(config=True, sync=True)
     reduce_method = tl.Unicode("Autoencoder").tag(config=True, sync=True)
-    reduce_scope = tl.Unicode("block").tag(config=True, sync=True)
     reduce_nepochs = tl.Int(5).tag(config=True, sync=True)
     reduce_sparsity = tl.Float( 0.0 ).tag(config=True,sync=True)
 
@@ -52,12 +51,14 @@ class ModeDataManager(SCSingletonConfigurable):
     @property
     def file_selector(self):
         if self._file_selector is None:
+            lgm().log( f"Creating file_selector, options={self.image_names}, value={self.image_names[0]}")
             self._file_selector =  ip.Select( options=self.image_names, value=self.image_names[0] )
             self._file_selector.observe( self.on_image_change, names=['value'] )
         return self._file_selector
 
     def on_image_change( self, event: Dict ):
-        pass
+        from spectraclass.gui.spatial.map import MapManager, mm
+        mm().update_plots( new_image=True )
 
     @property
     def mode(self):
@@ -203,18 +204,22 @@ class ModeDataManager(SCSingletonConfigurable):
         lgm().log(f"Load dataset {self.dsid()}, current datasets = {self.datasets.keys()}")
         if self.dsid() not in self.datasets:
             dataset: xa.Dataset = self.loadDataFile(**kwargs)
-            vnames = dataset.variables.keys()
-            vshapes = [f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
-            lgm().log(f" ---> Opened Dataset {self.dsid()} from file {dataset.attrs['data_file']}\n\t -> variables: {' '.join(vshapes)}")
-            if 'plot-x' not in vnames:
-                raw_data: xa.DataArray = dataset['norm']      # point data ( shape = [ nsamples, nbands ] )
-                model_data: xa.DataArray = dataset['reduction']
-                dataset['plot-y'] = raw_data
-                dataset['plot-x'] = np.arange(0,raw_data.shape[1])
-                dataset['plot-mx'] = np.arange(0, model_data.shape[1])
-            dataset.attrs['dsid'] = self.dsid()
-            dataset.attrs['type'] = 'spectra'
-            self.datasets[ self.dsid() ] = dataset
+            if len(dataset.variables.keys()) == 0:
+                lgm().log(f"Warning: Attempt to Load empty dataset {self.dataFile( **kwargs )}", print=True)
+                return None
+            else:
+                vnames = dataset.variables.keys()
+                vshapes = [f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
+                lgm().log(f" ---> Opened Dataset {self.dsid()} from file {dataset.attrs['data_file']}\n\t -> variables: {' '.join(vshapes)}")
+                if 'plot-x' not in vnames:
+                    raw_data: xa.DataArray = dataset['norm']      # point data ( shape = [ nsamples, nbands ] )
+                    model_data: xa.DataArray = dataset['reduction']
+                    dataset['plot-y'] = raw_data
+                    dataset['plot-x'] = np.arange(0,raw_data.shape[1])
+                    dataset['plot-mx'] = np.arange(0, model_data.shape[1])
+                dataset.attrs['dsid'] = self.dsid()
+                dataset.attrs['type'] = 'spectra'
+                self.datasets[ self.dsid() ] = dataset
         return self.datasets[ self.dsid() ]
 
     def blockFilePath( self, **kwargs ) -> str:
@@ -265,7 +270,7 @@ class ModeDataManager(SCSingletonConfigurable):
     @property
     def datasetDir(self):
         from spectraclass.data.base import DataManager, dm
-        dsdir = os.path.join( self.cache_dir, "spectraclass", self.MODE, dm().name )
+        dsdir = os.path.join( self.cache_dir, "spectraclass", dm().mode )
         os.makedirs(dsdir, 0o777, exist_ok=True)
         return dsdir
 

@@ -6,16 +6,17 @@ Jupyterlab workbench supporting visual exploration and classification of high di
 Conda CPU Versioned Setup
 ---------------
 
-    > conda create -n spectraclass 
+    > conda create -n spectraclass python=3.7
     > conda activate spectraclass
-    > conda install -c conda-forge conda nb_conda_kernels nodejs jupyterlab jupytext jupyterlab_server ipywidgets ipycanvas ipyevents ipympl matplotlib mplcursors contextily kdtree numpy pynndescent xarray rasterio umap-learn scipy scikit-learn dask netcdf4 scikit-image gdal owslib pyepsg rioxarray cartopy shapely bottleneck geopandas keras tensorflow
+    > conda install -c conda-forge mamba
+    > mamba install -c conda-forge nb_conda_kernels nodejs jupyterlab jupyterlab_server ipywidgets ipympl matplotlib mplcursors contextily kdtree numpy pynndescent xarray rasterio umap-learn scipy scikit-learn dask netcdf4 scikit-image gdal owslib pyepsg rioxarray cartopy shapely bottleneck geopandas utm keras tensorflow
 
 Legacy:
 
     > conda install -c rusty1s -c conda-forge conda nb_conda_kernels nodejs jupyterlab jupytext jupyterlab_server  
                         ipycanvas ipyevents itkwidgets ipympl numpy gdal geos shapely kdtree pynndescent xarray  
                         umap-learn scipy scikit-learn toml jupyter_bokeh keras tensorflow rioxarray numba dask   
-                        proj4 pyproj pyepsg owslib basemap ipywidgets scikit-image pytorch-geometric pytorch
+                        utm proj4 pyproj pyepsg owslib basemap ipywidgets scikit-image pytorch-geometric pytorch
                         torchmetrics  matplotlib hvplot bokeh basemap-data-hires rasterio netcdf4
 Installation
 ------------

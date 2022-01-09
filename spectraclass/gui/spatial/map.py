@@ -212,9 +212,11 @@ class MapManager(SCSingletonConfigurable):
                                                       cmap='jet', norm=Normalize( **drange ), add_colorbar=False )
 
     @exception_handled
-    def update_plots(self):
+    def update_plots(self, **kwargs ):
         from spectraclass.data.spatial.manager import SpatialDataManager
         from spectraclass.data.base import DataManager, dm
+        new_image = kwargs.get('new_image',False)
+        if new_image: self.block = None
         if self.spectral_image is not None:
             fdata: xa.DataArray = self.frame_data
             lgm().log(f"update_plots: block data shape = {self.data.shape}" )
@@ -277,6 +279,9 @@ class MapManager(SCSingletonConfigurable):
 
     def get_coord(self,   iCoord: int ) -> np.ndarray:
         return self.data.coords[  self.data.dims[iCoord] ].values
+
+    def image_update(self):
+        self.block = None
 
     @property
     def data(self) -> Optional[xa.DataArray]:

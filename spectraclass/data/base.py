@@ -135,7 +135,7 @@ class DataManager(SCSingletonConfigurable):
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
         if block_data and len( block_data ) > 0:
             afm(), lm(), pcm(), mm(), texm(), rm()
-#            tm(); tm().saveMetadata( block_data )
+            tm(); tm().saveMetadata( block_data )
             conf_dict = self.generate_config_file()
             for scope, trait_classes in conf_dict.items():
                 cfg_file = os.path.realpath( self.config_file( scope, self.mode ) )
@@ -233,7 +233,8 @@ class DataManager(SCSingletonConfigurable):
     def loadProject(self, dsid: str ) -> xa.Dataset:
         self._mode_data_manager_.setDatasetId(dsid)
         project_data = self._mode_data_manager_.loadCurrentProject()
-        lgm().log(f"Loaded project data:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
+        if project_data is not None:
+            lgm().log(f"Loaded project data:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
         return project_data
 
     def prepare_inputs( self, **kwargs ) -> Dict[Tuple,int]:
