@@ -216,6 +216,7 @@ class TileManager(SCSingletonConfigurable):
         return  ProjectiveTransform( np.array(tr1).reshape(3, 3) )
 
     def _readTileFile(self) -> xa.DataArray:
+        from spectraclass.gui.control import UserFeedbackManager, ufm
         tm = TileManager.instance()
         tile_raster: xa.DataArray = DataManager.instance().modal.readSpectralData()
         if tile_raster is not None:

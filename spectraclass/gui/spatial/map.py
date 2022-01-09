@@ -156,7 +156,6 @@ class MapManager(SCSingletonConfigurable):
         self.model_slider = PageSlider( self.slider_axes(True), self.nFrames(model=True) )
         self.model_slider_cid = self.model_slider.on_changed(self._update)
 
-
     @exception_handled
     def plot_labels_image(self):
         self._classification_data = lm().get_label_map( self.block )

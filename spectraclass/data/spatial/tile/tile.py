@@ -161,10 +161,12 @@ class Block(DataContainer):
     def _get_data( self ) -> xa.DataArray:
         from spectraclass.data.base import DataManager, dm
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.gui.control import UserFeedbackManager, ufm
         block_data_file = dm().modal.dataFile( block=self )
         if os.path.isfile( block_data_file ):
             dataset: Optional[xa.Dataset] = dm().modal.loadDataFile(block=self)
             raw_raster = dataset["raw"]
+            if raw_raster.size == 0: ufm().show( "This block does not appear to have any data.", "red" )
         else:
             if self.tile.data is None: return None
             xbounds, ybounds = self.getBounds()
