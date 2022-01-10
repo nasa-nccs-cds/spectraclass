@@ -52,7 +52,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def file_selector(self):
         if self._file_selector is None:
             lgm().log( f"Creating file_selector, options={self.image_names}, value={self.image_names[0]}")
-            self._file_selector =  ip.Select( options=self.image_names, value=self.image_names[0] )
+            self._file_selector =  ip.Select( options=self.image_names, value=self.image_names[0], description="Images", layout="top" )
             self._file_selector.observe( self.on_image_change, names=['value'] )
         return self._file_selector
 
