@@ -11,13 +11,6 @@ Conda CPU Versioned Setup
     > conda install -c conda-forge mamba
     > mamba install -c conda-forge nb_conda_kernels nodejs jupyterlab jupyterlab_server ipywidgets ipympl matplotlib mplcursors contextily kdtree numpy pynndescent xarray rasterio umap-learn scipy scikit-learn dask netcdf4 scikit-image gdal owslib pyepsg rioxarray cartopy shapely bottleneck geopandas utm keras tensorflow
 
-Legacy:
-
-    > conda install -c rusty1s -c conda-forge conda nb_conda_kernels nodejs jupyterlab jupytext jupyterlab_server  
-                        ipycanvas ipyevents itkwidgets ipympl numpy gdal geos shapely kdtree pynndescent xarray  
-                        umap-learn scipy scikit-learn toml jupyter_bokeh keras tensorflow rioxarray numba dask   
-                        utm proj4 pyproj pyepsg owslib basemap ipywidgets scikit-image pytorch-geometric pytorch
-                        torchmetrics  matplotlib hvplot bokeh basemap-data-hires rasterio netcdf4
 Installation
 ------------
 
