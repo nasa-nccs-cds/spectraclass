@@ -1,4 +1,5 @@
 import numpy as np
+import ipywidgets as ipw
 from typing import List, Union, Tuple, Optional, Dict, Type
 import os, warnings
 from enum import Enum
@@ -214,10 +215,11 @@ class DataManager(SCSingletonConfigurable):
         return self._wGui
 
     def control_panel(self) -> ip.VBox:
-        use_model_data = ip.Checkbox( value=False, description = "View Model Data" )
-        tl.link( (use_model_data, "value"), (self, 'use_model_data') )
+        title = ipw.Label( value="Images", width='500px' )
         file_selector = dm().modal.file_selector
-        return ip.VBox( [ file_selector, use_model_data ] )
+        use_model_data = ip.Checkbox( value=False, description = "View Model Data", layout=ipw.Layout( width='500px' ) )
+        tl.link( (use_model_data, "value"), (self, 'use_model_data') )
+        return ip.VBox( [ title, file_selector, use_model_data ], layout=ipw.Layout(flex='1 1 auto') )
 
     def getInputFileData(self, vname: str = None, **kwargs ) -> np.ndarray:
         return self._mode_data_manager_.getInputFileData( vname, **kwargs )

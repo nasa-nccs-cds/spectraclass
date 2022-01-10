@@ -32,6 +32,9 @@ from spectraclass.data.spatial.tile.tile import Block, Tile
 def mm(**kwargs) -> "MapManager":
     return MapManager.instance(**kwargs)
 
+def fs(flist):
+    return [f"{fv:.1f}" for fv in flist]
+
 class MapManager(SCSingletonConfigurable):
     init_band = tl.Int(10).tag(config=True, sync=True)
 
@@ -70,8 +73,9 @@ class MapManager(SCSingletonConfigurable):
 
     def use_model_data(self, use: bool ):
         self._use_model_data = use
-        self.update_slider_visibility()
-        self.update_plots()
+        if self.base is not None:
+            self.update_slider_visibility()
+            self.update_plots()
 
     def get_selection_panel(self):
         self.gui()
@@ -200,12 +204,11 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def update_spectral_image(self):
         if self.base is not None:
-            self.base.set_extent(self.block.xlim, self.block.ylim)
-            lgm().log(f"MAP: set extent: xlim={self.block.xlim}, ylim={self.block.ylim}")
+            self.base.set_bounds(self.block.xlim, self.block.ylim)
             fdata: xa.DataArray = self.frame_data
             if fdata is not None:
                 drange = self.get_color_bounds(fdata)
-                lgm().log(f"MAP: update_spectral_image: data shape = {fdata.shape}, drange={drange}" )
+                lgm().log(f"\n ***** update_spectral_image: data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
                 if self.spectral_image is not None: self.spectral_image.remove()
                 self.spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=self.layers('bands').visibility,
                                                       cmap='jet', norm=Normalize( **drange ), add_colorbar=False )
@@ -215,23 +218,26 @@ class MapManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.manager import SpatialDataManager
         from spectraclass.data.base import DataManager, dm
         new_image = kwargs.get('new_image',False)
-        if new_image: self.block = None
+        if new_image:
+            self.block = None
+            lgm().log(f" <------> Loading new image <------> ")
         if self.spectral_image is not None:
             fdata: xa.DataArray = self.frame_data
             lgm().log(f"update_plots: block data shape = {self.data.shape}" )
             if fdata is not None:
-                drange = self.get_color_bounds(fdata)
-                alpha = self.layers('bands').visibility
-                lgm().log(f"MAP: update_plots: data shape = {fdata.shape}, alpha={alpha}, drange={drange}" )
-                lgm().log(f" --> AXIS: xlim={self.plot_axes.get_xlim()}, ylim={self.plot_axes.get_ylim()}")
-                lgm().log(f" --> DATA: extent={SpatialDataManager.extent(fdata)}")
-                self.spectral_image.set_data(fdata.values)
-                self.spectral_image.set_alpha( alpha )
-                self.spectral_image.set_norm( Normalize( **drange ) )
+                if new_image:
+                    self.update_spectral_image()
+                else:
+                    drange = self.get_color_bounds(fdata)
+                    self.spectral_image.set_data(fdata.values)
+                    self.spectral_image.set_norm(Normalize(**drange))
+                self.spectral_image.set_alpha( self.layers('bands').visibility )
                 plot_name = os.path.basename(dm().dsid())
                 self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
                 self.plot_axes.title.set_fontsize( 8 )
                 self.update_canvas()
+                lgm().log(f" --> AXIS: xlim={fs(self.plot_axes.get_xlim())}, ylim={fs(self.plot_axes.get_ylim())}")
+                lgm().log(f" --> DATA: extent={fs(SpatialDataManager.extent(fdata))}")
 
     def update_canvas(self):
         self.figure.canvas.draw_idle()

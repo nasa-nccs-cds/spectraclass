@@ -63,7 +63,11 @@ class TileServiceBasemap(SCSingletonConfigurable):
         self.figure.canvas.toolbar_visible = True
         self.figure.canvas.header_visible = False
 
-    def set_extent(self, xrange, yrange ):
+    def set_extent(self, extent: List[float] ):
+        self.gax.set_xbound(extent[0],extent[1])
+        self.gax.set_ybound(extent[2],extent[3])
+
+    def set_bounds(self, xrange: List[float], yrange: List[float] ):
         self.gax.set_xbound(*xrange)
         self.gax.set_ybound(*yrange)
 

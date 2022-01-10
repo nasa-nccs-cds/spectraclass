@@ -3,7 +3,7 @@ spectraclass
 
 Jupyterlab workbench supporting visual exploration and classification of high dimensional sensor data.
 
-Conda CPU Versioned Setup
+Conda CPU Environment Setup
 ---------------
 
     > conda create -n spectraclass python=3.7

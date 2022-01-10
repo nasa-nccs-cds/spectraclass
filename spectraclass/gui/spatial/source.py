@@ -69,7 +69,7 @@ _URN_TO_CRS = collections.OrderedDict(
 # XML namespace definitions
 _MAP_SERVER_NS = '{http://mapserver.gis.umn.edu/mapserver}'
 _GML_NS = '{http://www.opengis.net/gml}'
-
+def fs(flist): return [f"{fv:.1f}" for fv in flist]
 
 def _warped_located_image(image, source_projection, source_extent,
                           output_projection, output_extent, target_resolution):
@@ -260,7 +260,7 @@ class WMTSRasterSource(RasterSource):
             wmts_image, wmts_actual_extent = self._wmts_images( self.wmts, self.layer, matrix_set_name, extent=wmts_desired_extent, max_pixel_span=max_pixel_span)
             t1 = time.time()
             located_image = LocatedImage(wmts_image, wmts_actual_extent)
-            lgm().log( f" fetch_raster-> dt={t1-t0:.2f}: {wmts_desired_extent} -> {wmts_actual_extent} ")
+            lgm().log( f" fetch_raster-> dt={t1-t0:.2f}: {fs(wmts_desired_extent)} -> {fs(wmts_actual_extent)} ")
             self._current_extent = wmts_actual_extent
             located_images.append(located_image)
         return located_images
@@ -367,7 +367,7 @@ class WMTSRasterSource(RasterSource):
         n_rows = 1 + max_row - min_row
         n_cols = 1 + max_col - min_col
         nproc = 4 # cpu_count()
-        lgm().log(f" ***** Fetch image extent {extent}, (n_rows,n_cols) = {[n_rows,n_cols]}, nproc={nproc} ")
+        lgm().log(f" ***** Fetch image extent {fs(extent)}, (n_rows,n_cols) = {[n_rows,n_cols]}, nproc={nproc} ")
         image_ids = [ (row, col) for row in range(min_row, max_row + 1) for col in range(min_col, max_col + 1) ]
         image_processor =  partial(self._get_image, wmts, layer, matrix_set_name, tile_matrix_id)
         with get_context("spawn").Pool( processes=nproc ) as p:

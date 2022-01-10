@@ -53,6 +53,10 @@ class TileServiceImage(AxesImage):
         if block_selection:
             self.add_block_selection( )
 
+    def set_bounds(self, xrange: Tuple[float], yrange: Tuple[float] ):
+        if xrange is not None: self.axes.set_xbound( xrange[0], xrange[1] )
+        if yrange is not None: self.axes.set_ybound( yrange[0], yrange[1] )
+
     def add_block_selection(self):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         mdata = tm().tile_metadata
