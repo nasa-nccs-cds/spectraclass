@@ -210,7 +210,7 @@ class ModeDataManager(SCSingletonConfigurable):
                 return None
             else:
                 vnames = dataset.variables.keys()
-                vshapes = [f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
+                vshapes = [ f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
                 lgm().log(f" ---> Opened Dataset {self.dsid()} from file {dataset.attrs['data_file']}\n\t -> variables: {' '.join(vshapes)}")
                 if 'plot-x' not in vnames:
                     raw_data: xa.DataArray = dataset['norm']      # point data ( shape = [ nsamples, nbands ] )
@@ -243,10 +243,11 @@ class ModeDataManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         dFile = self.dataFile( **kwargs )
         if os.path.isfile( dFile ):
+            lgm().log( f"loadDataFile: {dFile}" )
             dataset: xa.Dataset = xa.open_dataset( dFile )
             dataset.attrs['data_file'] = dFile
         else:
-            raise Exception( f"BLOCK[{tm().getBlock().block_coords}]: Missing data file: {dFile}")
+            raise Exception( f"BLOCK[{tm().getBlock().block_coords}]: Missing data file: {dFile}" )
         return dataset
 
     def filterCommonPrefix(self, paths: List[str])-> Tuple[str,List[str]]:

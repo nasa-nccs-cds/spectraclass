@@ -184,13 +184,14 @@ class WMTSRasterSource(RasterSource):
 
     """
 
-    def __init__(self, wmts: WebMapTileService, layer_name: str, gettile_extra_kwargs=None):
+    def __init__(self, wmts: WebMapTileService, layer_name: str, parallel: bool, gettile_extra_kwargs=None):
         try:                layer = wmts.contents[ layer_name ]
         except KeyError:    raise ValueError( f'Invalid layer name {layer_name!r} for WMTS at {wmts.url!r}')
 
         self.image_cache = {}
         self.wmts: WebMapTileService = wmts
         self.layer = layer
+        self.parallel = parallel
         if gettile_extra_kwargs is None: gettile_extra_kwargs = {}
         self.gettile_extra_kwargs = gettile_extra_kwargs
         self._matrix_set_name_map = {}
@@ -369,10 +370,13 @@ class WMTSRasterSource(RasterSource):
         nproc = 4 # cpu_count()
         lgm().log(f" ***** Fetch image extent {fs(extent)}, (n_rows,n_cols) = {[n_rows,n_cols]}, nproc={nproc} ")
         image_ids = [ (row, col) for row in range(min_row, max_row + 1) for col in range(min_col, max_col + 1) ]
-        image_processor =  partial(self._get_image, wmts, layer, matrix_set_name, tile_matrix_id)
-        with get_context("spawn").Pool( processes=nproc ) as p:
-            image_tiles = p.map( image_processor, image_ids )
-        p.join()
+        image_processor = partial(self._get_image, wmts, layer, matrix_set_name, tile_matrix_id)
+        if self.parallel:
+            with get_context("spawn").Pool( processes=nproc ) as p:
+                image_tiles = p.map( image_processor, image_ids )
+            p.join()
+        else:
+            image_tiles = [ image_processor(pid) for pid in image_ids ]
 
         for ((row,col),img) in image_tiles:
             if big_img is None:

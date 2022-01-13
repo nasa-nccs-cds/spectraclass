@@ -106,10 +106,8 @@ class TileServiceImage(AxesImage):
 
     @matplotlib.artist.allow_rasterization
     def draw(self, renderer, *args, **kwargs):
-        from spectraclass.gui.spatial.map import MapManager, mm
         if not self.get_visible():
             return
-
         window_extent = self.axes.get_window_extent()
         [x1, y1], [x2, y2] = self.axes.viewLim.get_points()
         extent_changed = ( self.current_extent != [x1, y1, x2, y2] )

@@ -209,9 +209,10 @@ class MapManager(SCSingletonConfigurable):
             if fdata is not None:
                 drange = self.get_color_bounds(fdata)
                 lgm().log(f"\n ***** update_spectral_image: data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
-                if self.spectral_image is not None: self.spectral_image.remove()
-                self.spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=self.layers('bands').visibility,
-                                                      cmap='jet', norm=Normalize( **drange ), add_colorbar=False )
+                try: self.spectral_image.remove()
+                except Exception: pass
+                self.spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=self.layers('bands').visibility, cmap='jet', norm=Normalize( **drange ), add_colorbar=False )
+                self.update_canvas()
 
     @exception_handled
     def update_plots(self, **kwargs ):
@@ -220,18 +221,22 @@ class MapManager(SCSingletonConfigurable):
         new_image = kwargs.get('new_image',False)
         if new_image:
             self.block = None
-            lgm().log(f" <------> Loading new image <------> ")
+            self.spectral_image.remove()
+            lgm().log(f"\n <------> Loading new image <------> \n")
         if self.spectral_image is not None:
             fdata: xa.DataArray = self.frame_data
             lgm().log(f"update_plots: block data shape = {self.data.shape}" )
             if fdata is not None:
+                drange = self.get_color_bounds(fdata)
                 if new_image:
-                    self.update_spectral_image()
+                    self.spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax,
+                                                                       alpha=self.layers('bands').visibility,
+                                                                       cmap='jet', norm=Normalize(**drange),
+                                                                       add_colorbar=False)
                 else:
-                    drange = self.get_color_bounds(fdata)
                     self.spectral_image.set_data(fdata.values)
                     self.spectral_image.set_norm(Normalize(**drange))
-                self.spectral_image.set_alpha( self.layers('bands').visibility )
+                    self.spectral_image.set_alpha( self.layers('bands').visibility )
                 plot_name = os.path.basename(dm().dsid())
                 self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
                 self.plot_axes.title.set_fontsize( 8 )
@@ -298,9 +303,9 @@ class MapManager(SCSingletonConfigurable):
     def setBlock( self, block_index: Tuple[int,int] = None, **kwargs ):
         from spectraclass.data.spatial.tile.manager import tm
         from spectraclass.gui.plot import GraphPlotManager, gpm
-        lgm().log(f"Loading block: {block_index}")
         self.block: Block = tm().getBlock( index=block_index )
         if self.block is not None:
+            lgm().log(f"\n         Loading block: {block_index}\n")
             self.update_spectral_image()
             if self.points_selection is not None:
                 self.points_selection.set_block(self.block)
@@ -319,12 +324,13 @@ class MapManager(SCSingletonConfigurable):
             self.setBlock()
             self.base = TileServiceBasemap()
             [x0, x1, y0, y1] = self.block.extent
-            self.base.setup_plot( "Label Construction", (x0,x1), (y0,y1), index=100, **kwargs )
-            self.init_map(**kwargs)
+            standalone = self.base.setup_plot( "Label Construction", (x0,x1), (y0,y1), index=100, **kwargs )
+            self.init_map()
             self.region_selection = PolygonInteractor( self.base.gax )
             self.points_selection = MarkerManager( self.base.gax, self.block )
-            self.create_selection_panel()
             self.init_hover()
+            if not standalone:
+                self.create_selection_panel()
         return self.base.gax.figure.canvas
 
     def init_hover(self):
@@ -335,9 +341,9 @@ class MapManager(SCSingletonConfigurable):
     def plot_markers_image(self):
         self.points_selection.plot()
 
-    def init_map(self,**kwargs):
+    def init_map(self):
         self.update_spectral_image()
-        self.create_sliders(**kwargs)
+        self.create_sliders()
         self.initLabels()
         self._cidpress = self.figure.canvas.mpl_connect('button_press_event', self.on_button_press)
      #   self._cidrelease = self.spectral_image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )

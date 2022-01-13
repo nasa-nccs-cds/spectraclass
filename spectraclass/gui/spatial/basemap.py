@@ -41,6 +41,7 @@ class TileServiceBasemap(SCSingletonConfigurable):
         fig_index = kwargs.pop('index',100)
         fig_size = kwargs.pop('size', (6, 6))
         use_basemap = kwargs.pop('basemap', True)
+        parallel = kwargs.pop('parallel', True)
         use_slider = kwargs.pop( 'slider', True )
         self.figure: Figure = plt.figure( fig_index, figsize=fig_size )
         self.figure.suptitle( title )
@@ -51,7 +52,7 @@ class TileServiceBasemap(SCSingletonConfigurable):
         self.gax.xaxis.set_visible( False ); self.gax.yaxis.set_visible( False )
         self.gax.title.set_color("orange")
         if use_basemap:
-            self.set_basemap( xlim, ylim, **kwargs)
+            self.set_basemap( xlim, ylim, parallel=parallel, **kwargs)
         else:
             self.gax.set_xbound( xlim[0], xlim[1] )
             self.gax.set_ybound( ylim[0], ylim[1] )
@@ -62,6 +63,7 @@ class TileServiceBasemap(SCSingletonConfigurable):
             self.bsax.set_visible( True  )
         self.figure.canvas.toolbar_visible = True
         self.figure.canvas.header_visible = False
+        return standalone
 
     def set_extent(self, extent: List[float] ):
         self.gax.set_xbound(extent[0],extent[1])
@@ -81,7 +83,7 @@ class TileServiceBasemap(SCSingletonConfigurable):
     def set_basemap(self, xlim: Tuple[float,float], ylim: Tuple[float,float], **kwargs ):
         self.tile_service = WebMapTileService(self.tile_server_url)
         self.layer: str = list(self.tile_service.contents.keys())[0]
-        self.wmts = WMTSRasterSource( self.tile_service, self.layer )
+        self.wmts = WMTSRasterSource( self.tile_service, self.layer, kwargs.pop('parallel',True) )
         self.basemap = TileServiceImage(self.gax, self.wmts, self.crs, xrange=xlim, yrange=ylim, block_selection=self._block_selection, **kwargs )
 
     @contextlib.contextmanager
