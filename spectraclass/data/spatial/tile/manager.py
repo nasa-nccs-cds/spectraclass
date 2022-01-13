@@ -185,10 +185,10 @@ class TileManager(SCSingletonConfigurable):
         file_path = DataManager.instance().modal.getMetadataFilePath()
         print( f"Writing metadata file: {file_path}")
         with open( file_path, "w" ) as mdfile:
-            mdfile.write( f"tile_shape={self._tile_data.shape}\n" )
+            mdfile.write( f"tile_shape={self.tile.data.shape}\n" )
             mdfile.write( f"block_dims={self.block_dims}\n" )
             mdfile.write( f"tile_size={self.tile_size}\n" )
-            for (aid,aiv) in self._tile_data.attrs.items():
+            for (aid,aiv) in self.tile.data.attrs.items():
                 mdfile.write(f"{aid}={aiv}\n")
             for bcoords, bsize in block_data.items():
                 mdfile.write(f"block_size-{bcoords[0]}-{bcoords[1]}={bsize}\n")
