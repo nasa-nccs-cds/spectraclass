@@ -65,13 +65,16 @@ class TileServiceBasemap(SCSingletonConfigurable):
         self.figure.canvas.header_visible = False
         return standalone
 
+    def update(self):
+        self.figure.canvas.draw_idle()
+
     def set_extent(self, extent: List[float] ):
-        self.gax.set_xbound(extent[0],extent[1])
-        self.gax.set_ybound(extent[2],extent[3])
+        self.set_bounds( [extent[0],extent[1]], [extent[2],extent[3]] )
 
     def set_bounds(self, xrange: List[float], yrange: List[float] ):
         self.gax.set_xbound(*xrange)
         self.gax.set_ybound(*yrange)
+        if self._block_selection: self.basemap.update_blocks()
 
     def set_alpha(self, alpha ):
         self.basemap.set_alpha( alpha )

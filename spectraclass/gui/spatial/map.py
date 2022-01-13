@@ -57,7 +57,7 @@ class MapManager(SCSingletonConfigurable):
         self.layers = LayersManager( self.on_layer_change )
         self.band_slider: PageSlider = None
         self.model_slider: PageSlider = None
-        self.spectral_image: Optional[AxesImage] = None
+        self._spectral_image: Optional[AxesImage] = None
         self.label_map: Optional[xa.DataArray] = None     # Map of classification labels from ML
         self.region_selection: PolygonInteractor = None
         self.labels_image: Optional[AxesImage] = None
@@ -76,6 +76,10 @@ class MapManager(SCSingletonConfigurable):
         if self.base is not None:
             self.update_slider_visibility()
             self.update_plots()
+
+    @property
+    def spectral_image(self) -> Optional[AxesImage]:
+        return self._spectral_image
 
     def get_selection_panel(self):
         self.gui()
@@ -209,9 +213,9 @@ class MapManager(SCSingletonConfigurable):
             if fdata is not None:
                 drange = self.get_color_bounds(fdata)
                 lgm().log(f"\n ***** update_spectral_image: data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
-                try: self.spectral_image.remove()
+                try: self._spectral_image.remove()
                 except Exception: pass
-                self.spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=self.layers('bands').visibility, cmap='jet', norm=Normalize( **drange ), add_colorbar=False )
+                self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=self.layers('bands').visibility, cmap='jet', norm=Normalize(**drange), add_colorbar=False)
                 self.update_canvas()
 
     @exception_handled
@@ -221,22 +225,23 @@ class MapManager(SCSingletonConfigurable):
         new_image = kwargs.get('new_image',False)
         if new_image:
             self.block = None
-            self.spectral_image.remove()
+            self._spectral_image.remove()
             lgm().log(f"\n <------> Loading new image <------> \n")
-        if self.spectral_image is not None:
+        if self._spectral_image is not None:
             fdata: xa.DataArray = self.frame_data
             lgm().log(f"update_plots: block data shape = {self.data.shape}" )
             if fdata is not None:
                 drange = self.get_color_bounds(fdata)
                 if new_image:
-                    self.spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax,
-                                                                       alpha=self.layers('bands').visibility,
-                                                                       cmap='jet', norm=Normalize(**drange),
-                                                                       add_colorbar=False)
+                    dm().modal.update_extent()
+                    self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax,
+                                                                        alpha=self.layers('bands').visibility,
+                                                                        cmap='jet', norm=Normalize(**drange),
+                                                                        add_colorbar=False)
                 else:
-                    self.spectral_image.set_data(fdata.values)
-                    self.spectral_image.set_norm(Normalize(**drange))
-                    self.spectral_image.set_alpha( self.layers('bands').visibility )
+                    self._spectral_image.set_data(fdata.values)
+                    self._spectral_image.set_norm(Normalize(**drange))
+                    self._spectral_image.set_alpha(self.layers('bands').visibility)
                 plot_name = os.path.basename(dm().dsid())
                 self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
                 self.plot_axes.title.set_fontsize( 8 )
@@ -346,7 +351,7 @@ class MapManager(SCSingletonConfigurable):
         self.create_sliders()
         self.initLabels()
         self._cidpress = self.figure.canvas.mpl_connect('button_press_event', self.on_button_press)
-     #   self._cidrelease = self.spectral_image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
+     #   self._cidrelease = self._spectral_image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
      #   self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
 
     def __del__(self):

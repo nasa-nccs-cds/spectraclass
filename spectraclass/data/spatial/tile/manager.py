@@ -38,7 +38,6 @@ class TileManager(SCSingletonConfigurable):
         self.cacheTileData = True
         self.block_shape = [ self.block_size ] * 2
         self._block_dims = None
-        self._tile_data: xa.DataArray = None
         self._tile_metadata = None
         self._tile_size = None
         self._tile_shape = None
@@ -138,9 +137,7 @@ class TileManager(SCSingletonConfigurable):
         return str(value).strip("([])").replace(",", "-").replace(" ", "")
 
     def getTileData(self) -> xa.DataArray:
-        if self._tile_data is None:
-            self._tile_data = self._readTileFile()
-        return self._tile_data
+         return self._readTileFile()
 
     @classmethod
     def process_tile_data( cls, tile_data: xa.DataArray ) -> xa.DataArray:

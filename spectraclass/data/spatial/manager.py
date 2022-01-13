@@ -25,10 +25,11 @@ class SpatialDataManager(ModeDataManager):
     colorstretch = 1.25
 
     def __init__( self  ):   # Tile shape (y,x) matches image shape (row,col)
+        from spectraclass.gui.spatial.basemap import TileServiceBasemap
         super(SpatialDataManager, self).__init__()
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         self.tiles: TileManager = tm()
-        self._tile_selection_basemap = None
+        self._tile_selection_basemap: TileServiceBasemap = None
 
     @classmethod
     def extent(cls, image_data: xa.DataArray ) -> List[float]: # left, right, bottom, top
@@ -43,6 +44,11 @@ class SpatialDataManager(ModeDataManager):
             (x0, x1, y0, y1) = self.tiles.tile.extent
             self._tile_selection_basemap.setup_plot( "Tile Selection", (x0, x1), (y0, y1), index=99, size=(3,3), slider=False, **kwargs )
         return self._tile_selection_basemap.gui()
+
+    def update_extent(self):
+        (x0, x1, y0, y1) = self.tiles.tile.extent
+        self._tile_selection_basemap.set_bounds( [x0, x1], [y0, y1] )
+        self._tile_selection_basemap.update()
 
     def getConstantXArray(self, fill_value: float, shape: Tuple[int], dims: Tuple[str], **kwargs) -> xa.DataArray:
         coords = kwargs.get( "coords", { dim: np.arange(shape[id]) for id, dim in enumerate(dims) } )
@@ -89,7 +95,7 @@ class SpatialDataManager(ModeDataManager):
 
     def markerFileName(self) -> str:
         try:
-            return self.tiles.image_name.strip("/").replace("/","_")
+            return dm().modal.image_name.strip("/").replace("/","_")
         except Exception:
             return ""
 
@@ -304,7 +310,7 @@ class SpatialDataManager(ModeDataManager):
 
     def getFilePath(self) -> str:
         base_dir = dm().modal.data_dir
-        base_file = self.tiles.image_name
+        base_file = dm().modal.image_name
         if base_file.endswith(".mat") or base_file.endswith(".tif"):
             return f"{base_dir}/{base_file}"
         else:
@@ -312,7 +318,7 @@ class SpatialDataManager(ModeDataManager):
 
     def getMetadataFilePath(self) -> str:
         base_dir = dm().modal.data_dir
-        base_file = self.tiles.image_name
+        base_file = dm().modal.image_name
         if base_file.endswith(".mat") or base_file.endswith(".tif"):
             return f"{base_dir}/{base_file[:-4]}.mdata.txt"
         else:

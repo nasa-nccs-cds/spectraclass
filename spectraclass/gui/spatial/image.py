@@ -39,6 +39,7 @@ class TileServiceImage(AxesImage):
         self.current_extent = []
         self._block_selection_callback = None
         self._selected_block: Rectangle = None
+        self._blocks: List[Rectangle] = []
 
         self.axes.figure.canvas.mpl_connect('button_press_event', self.on_press)
         self.axes.figure.canvas.mpl_connect('button_release_event', self.on_release)
@@ -57,6 +58,14 @@ class TileServiceImage(AxesImage):
         if xrange is not None: self.axes.set_xbound( xrange[0], xrange[1] )
         if yrange is not None: self.axes.set_ybound( yrange[0], yrange[1] )
 
+    def update_blocks(self):
+        self.clear_blocks()
+        self.add_block_selection()
+
+    def clear_blocks(self):
+        for r in self._blocks: r.remove()
+        self._blocks = []
+
     def add_block_selection(self):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         mdata = tm().tile_metadata
@@ -74,6 +83,7 @@ class TileServiceImage(AxesImage):
                 setattr( r, 'block_index', bc )
                 r.set_picker( True )
                 self.axes.add_patch( r )
+                self._blocks.append( r )
                 if selected: self._selected_block = r
          #       lgm().log( f" BLOCK[{bc}]: xc={xc:.1f}, yc={yc:.1f}, size=({width:.1f},{height:.1f})\n  ->> Axis bounds: xlim={self.axes.get_xlim()}, ylim={self.axes.get_ylim()}", print=True )
 

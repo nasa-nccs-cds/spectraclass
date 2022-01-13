@@ -44,21 +44,31 @@ class ModeDataManager(SCSingletonConfigurable):
         self._dset_selection: ip.Select = None
         self._dataset_prefix: str = ""
         self._file_selector = None
+        self._image_name = None
 
     @property
     def image_name(self):
-        return self.file_selector.value
+        if self._image_name is None:
+            self._image_name = self.image_names[0]
+        return self._image_name
 
     @property
     def file_selector(self):
         if self._file_selector is None:
             lgm().log( f"Creating file_selector, options={self.image_names}, value={self.image_names[0]}")
-            self._file_selector =  ip.Select( options=self.image_names, value=self.image_names[0], layout=ipw.Layout(width='600px') )
+            self._file_selector =  ip.Select( options=self.image_names, value=self.image_name, layout=ipw.Layout(width='600px') )
             self._file_selector.observe( self.on_image_change, names=['value'] )
         return self._file_selector
 
     def on_image_change( self, event: Dict ):
         from spectraclass.gui.spatial.map import MapManager, mm
+        self._image_name = self.file_selector.value
+        mm().update_plots( new_image=True )
+
+    def set_image_name(self, image_name: str ):
+        from spectraclass.gui.spatial.map import MapManager, mm
+        self._image_name = image_name
+        lgm().log( f"Install new image: {image_name}", print=True )
         mm().update_plots( new_image=True )
 
     @property
@@ -111,6 +121,9 @@ class ModeDataManager(SCSingletonConfigurable):
         raise NotImplementedError()
 
     def prepare_inputs(self, **kwargs ) -> Dict[Tuple,int]:
+        raise NotImplementedError()
+
+    def update_extent(self):
         raise NotImplementedError()
 
     def updateDatasetList(self):
