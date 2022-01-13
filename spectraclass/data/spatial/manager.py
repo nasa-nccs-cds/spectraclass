@@ -248,6 +248,7 @@ class SpatialDataManager(ModeDataManager):
         lgm().log(f" Preparing inputs", print=True)
         reprocess = kwargs.get( 'reprocess',False )
         block_nsamples = {}
+        ufm().show( f"Preprocessing data blocks for image {dm().modal.image_name}", "blue" )
         ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
         for block in self.tiles.tile.getBlocks():
             block_data_file =  dm().modal.dataFile(block=block)
