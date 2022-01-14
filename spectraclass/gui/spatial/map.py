@@ -10,7 +10,6 @@ from matplotlib.backend_bases import PickEvent, MouseButton  # , NavigationToolb
 from functools import partial
 from spectraclass.gui.spatial.widgets.markers import MarkerManager
 from matplotlib.image import AxesImage
-# import mplcursors
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from matplotlib.axes import Axes
 from typing import List, Union, Tuple, Optional, Dict, Callable
@@ -182,7 +181,12 @@ class MapManager(SCSingletonConfigurable):
 
     def on_layer_change( self, layer: Layer ):
         for mgr in self.layer_managers( layer.name ):
+            lgm().log( f" **** layer_change[{layer.name}]: {type(mgr)} -> alpha_change[{layer.visibility}]")
             mgr.set_alpha( layer.visibility )
+            try:
+                mgr.stale = True
+                lgm().log( f"   ------> ALPHA ->{mgr.get_alpha()} ")
+            except: pass
         self.update_canvas()
 
     @property
@@ -310,7 +314,7 @@ class MapManager(SCSingletonConfigurable):
         from spectraclass.gui.plot import GraphPlotManager, gpm
         self.block: Block = tm().getBlock( index=block_index )
         if self.block is not None:
-            lgm().log(f"\n         Loading block: {block_index}\n")
+            lgm().log(f"\n -------------------- Loading block: {self.block.block_coords}  -------------------- " )
             self.update_spectral_image()
             if self.points_selection is not None:
                 self.points_selection.set_block(self.block)
@@ -325,6 +329,7 @@ class MapManager(SCSingletonConfigurable):
 
 
     def gui(self,**kwargs):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         if self.base is None:
             self.setBlock()
             self.base = TileServiceBasemap()

@@ -78,8 +78,9 @@ class TileServiceImage(AxesImage):
             if bsize > 0:
                 selected = (list(bc) == tm().block_index)
                 xc, yc = x0 + width*bc[0], y0+height*bc[1]
-                lw = 2 if selected else 1
-                r = Rectangle( (xc,yc), width, height, fill=False, edgecolor='yellow', lw=lw, alpha=bsize/maxsize )
+                lw = 3 if selected else 1
+                color = 'orange' if selected else 'yellow'
+                r = Rectangle( (xc,yc), width, height, fill=False, edgecolor=color, lw=lw, alpha=bsize/maxsize )
                 setattr( r, 'block_index', bc )
                 r.set_picker( True )
                 self.axes.add_patch( r )
@@ -97,11 +98,13 @@ class TileServiceImage(AxesImage):
 
     def select_block(self, r: Rectangle ):
         from spectraclass.gui.spatial.map import MapManager, mm
-        lgm().log(f"Selected block: {r.block_index}")
         if r != self._selected_block:
+            lgm().log(f"\n  ******** Selected block: {r.block_index}  ******** ")
             if self._selected_block is not None:
                 self._selected_block.set_linewidth(1)
-            r.set_linewidth(2)
+                self._selected_block.set_color("yellow")
+            r.set_linewidth(3)
+            r.set_color("orange")
             self._selected_block = r
             self.figure.canvas.draw_idle()
             mm().setBlock( r.block_index )
