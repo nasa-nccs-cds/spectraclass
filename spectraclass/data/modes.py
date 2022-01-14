@@ -63,7 +63,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def on_image_change( self, event: Dict ):
         from spectraclass.gui.spatial.map import MapManager, mm
         self._image_name = self.file_selector.value
-        mm().update_plots( new_image=True )
+        mm().update_plots( new_image=self._image_name )
 
     def set_image_name(self, image_name: str ):
         from spectraclass.gui.spatial.map import MapManager, mm

@@ -181,12 +181,8 @@ class MapManager(SCSingletonConfigurable):
 
     def on_layer_change( self, layer: Layer ):
         for mgr in self.layer_managers( layer.name ):
-            lgm().log( f" **** layer_change[{layer.name}]: {type(mgr)} -> alpha_change[{layer.visibility}]")
+ #           lgm().log( f" **** layer_change[{layer.name}]: {id(mgr)} -> alpha_change[{layer.visibility}]")
             mgr.set_alpha( layer.visibility )
-            try:
-                mgr.stale = True
-                lgm().log( f"   ------> ALPHA ->{mgr.get_alpha()} ")
-            except: pass
         self.update_canvas()
 
     @property
@@ -216,36 +212,38 @@ class MapManager(SCSingletonConfigurable):
             fdata: xa.DataArray = self.frame_data
             if fdata is not None:
                 drange = self.get_color_bounds(fdata)
-                lgm().log(f"\n ***** update_spectral_image: data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
                 try: self._spectral_image.remove()
                 except Exception: pass
                 self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=self.layers('bands').visibility, cmap='jet', norm=Normalize(**drange), add_colorbar=False)
+                lgm().log(f"\n CREATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
                 self.update_canvas()
 
     @exception_handled
     def update_plots(self, **kwargs ):
         from spectraclass.data.spatial.manager import SpatialDataManager
         from spectraclass.data.base import DataManager, dm
-        new_image = kwargs.get('new_image',False)
-        if new_image:
+        new_image = kwargs.get( 'new_image', None )
+        if new_image is not None:
             self.block = None
             self._spectral_image.remove()
-            lgm().log(f"\n <------> Loading new image <------> \n")
+            dm().modal.update_extent()
+            lgm().log(f"\n <------> Loading new image: {os.path.basename(new_image)} <------> \n")
         if self._spectral_image is not None:
             fdata: xa.DataArray = self.frame_data
             lgm().log(f"update_plots: block data shape = {self.data.shape}" )
             if fdata is not None:
                 drange = self.get_color_bounds(fdata)
-                if new_image:
-                    dm().modal.update_extent()
-                    self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax,
-                                                                        alpha=self.layers('bands').visibility,
-                                                                        cmap='jet', norm=Normalize(**drange),
-                                                                        add_colorbar=False)
-                else:
-                    self._spectral_image.set_data(fdata.values)
-                    self._spectral_image.set_norm(Normalize(**drange))
-                    self._spectral_image.set_alpha(self.layers('bands').visibility)
+                alpha = self.layers('bands').visibility
+                norm = Normalize(**drange)
+
+                # if new_image is not None:
+                #     self._spectral_image = fdata.plot.imshow(ax=self.base.gax, alpha=alpha, cmap='jet', norm=norm, add_colorbar=False)
+                #     lgm().log(f"\nRECREATE spectral_image({id(self._spectral_image)}), alpha = {alpha}")
+                # else:
+                self._spectral_image.set_data(fdata.values)
+                self._spectral_image.set_norm(norm)
+                self._spectral_image.set_alpha(alpha)
+
                 plot_name = os.path.basename(dm().dsid())
                 self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
                 self.plot_axes.title.set_fontsize( 8 )
