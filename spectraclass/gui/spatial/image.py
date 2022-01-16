@@ -107,7 +107,7 @@ class TileServiceImage(AxesImage):
             r.set_color("orange")
             self._selected_block = r
             self.figure.canvas.draw_idle()
-            mm().setBlock( r.block_index )
+            mm().setBlock( r.block_index, update=True )
 
     def on_pick(self, event: PickEvent =None):
         lgm().log( f" Pick Event: type = {type(event)}" )

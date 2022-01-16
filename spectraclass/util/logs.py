@@ -76,6 +76,6 @@ class LogManager(SCSingletonConfigurable):
         self._log_file.flush()
 
     def trace(self,  msg, **kwargs ):
-        strace = "\n".join(traceback.format_stack())
+        strace = "".join(traceback.format_stack())
         self._log_file.write( f"\n{msg}\n{strace}\n" )
         self._log_file.flush()

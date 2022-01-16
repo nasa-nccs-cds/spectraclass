@@ -235,15 +235,9 @@ class MapManager(SCSingletonConfigurable):
                 drange = self.get_color_bounds(fdata)
                 alpha = self.layers('bands').visibility
                 norm = Normalize(**drange)
-
-                # if new_image is not None:
-                #     self._spectral_image = fdata.plot.imshow(ax=self.base.gax, alpha=alpha, cmap='jet', norm=norm, add_colorbar=False)
-                #     lgm().log(f"\nRECREATE spectral_image({id(self._spectral_image)}), alpha = {alpha}")
-                # else:
                 self._spectral_image.set_data(fdata.values)
                 self._spectral_image.set_norm(norm)
                 self._spectral_image.set_alpha(alpha)
-
                 plot_name = os.path.basename(dm().dsid())
                 self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
                 self.plot_axes.title.set_fontsize( 8 )
@@ -312,6 +306,7 @@ class MapManager(SCSingletonConfigurable):
         from spectraclass.gui.plot import GraphPlotManager, gpm
         self.block: Block = tm().getBlock( index=block_index )
         if self.block is not None:
+            update = kwargs.get( 'update', False )
             lgm().log(f"\n -------------------- Loading block: {self.block.block_coords}  -------------------- " )
             self.update_spectral_image()
             if self.points_selection is not None:
@@ -323,8 +318,7 @@ class MapManager(SCSingletonConfigurable):
             self.y_axis = kwargs.pop('y', 1)
             self.y_axis_name = self.data.dims[self.y_axis]
             gpm().refresh()
-            self.update_plots()
-
+            if update: self.update_plots()
 
     def gui(self,**kwargs):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
