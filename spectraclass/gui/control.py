@@ -79,7 +79,7 @@ class ParametersManager(SCSingletonConfigurable):
 
     def _createGui( self, **kwargs ) -> ipw.Box:
         wTab = ipw.Tab()
-        tabNames = [  "layers", "selection"  ]
+        tabNames = [  "layers", "selection", "learning"  ]
         children = []
         for iT, title in enumerate( tabNames ):
             wTab.set_title( iT, title )
@@ -90,11 +90,14 @@ class ParametersManager(SCSingletonConfigurable):
     def createPanel(self, title: str ):
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.data.base import DataManager, dm
+        from spectraclass.learn.base import ClassificationManager, cm
         widgets = []
         if title == "layers":
             widgets.append( mm().layers.gui() )
         if title == "selection":
             widgets.append(mm().get_selection_panel())
+        if title == "learning":
+            widgets.append( cm().gui())
         elif title == "reduction":
             widgets.append( dm().modal.getCreationPanel() )
         elif title == "embedding":

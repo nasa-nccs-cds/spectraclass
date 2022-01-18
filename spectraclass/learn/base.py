@@ -2,112 +2,18 @@ import xarray as xa
 import time, traceback, abc
 import numpy as np
 import scipy, sklearn
+from tensorflow.keras.models import Model
 from typing import List, Tuple, Optional, Dict
 from ..model.labels import LabelsManager
 import traitlets as tl
 import traitlets.config as tlc
+import ipywidgets as ipw
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
-from spectraclass.model.base import SCSingletonConfigurable
-
-def cm():
-    return ClassificationManager.instance()
-
-class Cluster:
-
-    def __init__(self, cid, **kwargs):
-        self.cid = cid
-        self._members = []
-        self.metrics = {}
-
-    def addMember(self, example: np.ndarray ):
-        self._members.append( example )
-        self.metrics = {}
-
-    @property
-    def members(self) -> np.ndarray:
-        return np.vstack(self._members)
-
-    @property
-    def mean(self):
-        if "mean" not in self.metrics.keys():
-            self.metrics["mean"] = self.members.mean(0)
-        return self.metrics["mean"]
-
-    @property
-    def std(self):
-        if "std" not in self.metrics.keys():
-            self.metrics["std"] = self.members.std(0)
-        return self.metrics["std"]
-
-    @property
-    def cov(self):
-        if "cov" not in self.metrics.keys():
-            self.metrics["cov"] = np.cov( self.members.transpose() )
-        return self.metrics["cov"]
-
-    @property
-    def cor(self):
-        if "cor" not in self.metrics.keys():
-            self.metrics["cor"] = np.corrcoef( self.members.transpose() )
-        return self.metrics["cor"]
-
-    @property
-    def icov(self):
-        if "icov" not in self.metrics.keys():
-            self.metrics["icov"] = scipy.linalg.pinv(self.cov)
-        return self.metrics["icov"]
-
-    @property
-    def icor(self):
-        if "icor" not in self.metrics.keys():
-            self.metrics["icor"] = scipy.linalg.pinv(self.cor)
-        return self.metrics["icor"]
-
-class ClassificationManager(SCSingletonConfigurable):
-    mid = tl.Unicode("svc").tag(config=True, sync=True)
-
-    def __init__(self,  **kwargs ):
-        super(ClassificationManager, self).__init__(**kwargs)
-        self._models: Dict[str,LearningModel] = {}
-        self.import_models()
-
-    def import_models(self):
-        from .svc import SVCLearningModel
-        self._models['svc'] = SVCLearningModel()
-
-    @property
-    def mids(self):
-        return [ m.mid for m in self._models.values() ]
-
-    def addModel(self, mid: str, model: "LearningModel" ):
-        self._models[ mid ] = model
-
-    def gui(self):
-        mids = self.mids
-        # model = base.createComboSelector( "Model: ", mids, "dev/model", "cluster" )
-        # distanceMetric = base.createComboSelector("Distance.Metric: ", ["mahal","euclid"], "dev/distance/metric", "mahal")
-        # distanceMethod = base.createComboSelector("Distance.Method: ", ["centroid","nearest"], "dev/distance/method", "centroid")
-        # return base.createGroupBox("dev", [model, distanceMetric, distanceMethod ] )
-
-    @property
-    def model(self) -> "LearningModel":
-        model: LearningModel = self._models[ self.mid ]
-        return model
-
-    @exception_handled
-    def learn_classification( self, filtered_point_data: np.ndarray, filtered_labels: np.ndarray, **kwargs  ):
-        self.model.learn_classification( filtered_point_data, filtered_labels, **kwargs  )
-        ufm().show( "Classification Mapping learned" )
-
-    @exception_handled
-    def apply_classification( self, embedding: xa.DataArray, **kwargs ) -> xa.DataArray:
-        try:
-            sample_labels: xa.DataArray = self.model.apply_classification( embedding, **kwargs  )
-            return sample_labels
-        except sklearn.exceptions.NotFittedError:
-            ufm().show( "Must learn a mapping before applying a classification", "red")
-
+import torch
+from torch.autograd import Variable
+from torch.nn import Linear, ReLU, CrossEntropyLoss, Sequential, Conv2d, MaxPool2d, Module, Softmax, BatchNorm2d, Dropout
+from torch.optim import Adam, SGD
 
 class LearningModel:
 
@@ -143,6 +49,56 @@ class LearningModel:
 
     def predict( self, data: np.ndarray, **kwargs ):
         raise Exception( "abstract method LearningModel.predict called")
+
+
+class LearningModelWrapper(LearningModel):
+
+    def __init__(self, name: str,  model: Model, **kwargs ):
+        LearningModel.__init__( self, name,  **kwargs )
+        self._model = model
+        self.optimizer = self.get_optimizer( **kwargs )
+        self.criterion = CrossEntropyLoss()
+        if torch.cuda.is_available():
+            self._model = self._model.cuda()
+            self.criterion = self.criterion.cuda()
+
+    def get_optimizer( self, **kwargs ):
+        opt = str(kwargs.get( 'opt', 'SGD' )).lower()
+        parms = self._model.parameters()
+        if opt == "sgd": return SGD( parms, lr=0.07)
+        elif opt == "adam": return Adam(parms, lr=0.07)
+        else: raise Exception( f"Unknown optimizer: {opt}" )
+
+    def predict( self, data: np.ndarray, **kwargs ):
+        raise Exception( "abstract method LearningModel.predict called")
+
+
+    def fit(self, data: np.ndarray, labels: np.ndarray, **kwargs):
+        raise Exception( "abstract method LearningModel.fit called")
+
+    def train( self, epoch ):
+        self._model.train()
+        tr_loss = 0
+        x_train, y_train = Variable(train_x), Variable(train_y)
+        # getting the validation set
+        x_val, y_val = Variable(val_x), Variable(val_y)
+        if torch.cuda.is_available():
+            x_train = x_train.cuda()
+            y_train = y_train.cuda()
+            x_val = x_val.cuda()
+            y_val = y_val.cuda()
+        self.optimizer.zero_grad()
+        output_train = self._model(x_train)
+        output_val = self._model(x_val)
+        loss_train = self.criterion(output_train, y_train)
+        loss_val = self.criterion(output_val, y_val)
+        train_losses.append(loss_train)
+        val_losses.append(loss_val)
+        loss_train.backward()
+        self.optimizer.step()
+        tr_loss = loss_train.item()
+        if epoch % 2 == 0:
+            print('Epoch : ', epoch + 1, '\t', 'loss :', loss_val)
 
 
 

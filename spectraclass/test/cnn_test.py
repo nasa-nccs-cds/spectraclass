@@ -18,7 +18,7 @@ best_model = None
 best_acc = 0.0
 best_data = None
 
-X: torch.Tensor = CNN.getConvData(dm)
+X: torch.Tensor = CNN.getInputData(dm)
 class_map: xa.DataArray = dm.getClassMap()
 class_data: np.ndarray = class_map.values
 nodata_mask = (class_data.flatten() == 0)
