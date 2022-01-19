@@ -29,21 +29,23 @@ class LearningModel:
     def score(self) -> Optional[np.ndarray]:
         return self._score
 
-    def learn_classification( self, point_data: np.ndarray, labels: np.ndarray, **kwargs  ):
+    @exception_handled
+    def learn_classification( self, point_data: np.ndarray, labels: np.ndarray, **kwargs ):
         t1 = time.time()
         if np.count_nonzero( labels > 0 ) == 0:
             ufm().show( "Must label some points before learning the classification" )
             return None
         self.fit( point_data, labels, **kwargs )
-        print(f"Learned mapping with {labels.shape[0]} labels in {time.time()-t1} sec.")
+        lgm().log(f"Learned mapping with {labels.shape[0]} labels in {time.time()-t1} sec.")
 
     def fit(self, data: np.ndarray, labels: np.ndarray, **kwargs):
         raise Exception( "abstract method LearningModel.fit called")
 
+    @exception_handled
     def apply_classification( self, data: xa.DataArray, **kwargs ) -> xa.DataArray:
         t1 = time.time()
         prediction: np.ndarray = self.predict( data.values, **kwargs )
-        print(f"Applied classication with input shape {data.shape[0]} in {time.time() - t1} sec.")
+        lgm().log(f"Applied classication with input shape {data.shape[0]} in {time.time() - t1} sec.")
         return xa.DataArray( prediction, dims=['samples'], coords=dict( samples=data.coords['samples'] ) )
 
     def predict( self, data: np.ndarray, **kwargs ):
