@@ -11,7 +11,7 @@ import ipywidgets as ipw
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from spectraclass.model.base import SCSingletonConfigurable
-from .base import LearningModel, LearningModelWrapper
+from .base import LearningModel, KerasModelWrapper
 
 def cm():
     return ClassificationManager.instance()
@@ -68,22 +68,25 @@ class Cluster:
         return self.metrics["icor"]
 
 class ClassificationManager(SCSingletonConfigurable):
-    mid = tl.Unicode("default").tag(config=True, sync=True)
+    mid = tl.Unicode("").tag(config=True, sync=True)
 
     def __init__(self,  **kwargs ):
         super(ClassificationManager, self).__init__(**kwargs)
         self._models: Dict[str,LearningModel] = {}
         self.import_models()
+        self.selection = self.selection_label = None
 
     @property
     def mids(self) -> List[str]:
         return list(self._models.keys())
 
     @exception_handled
-    def create_selection_panel(self):
-        self.selection_label = ipw.Label(value='Selection Operation:')
-        self.selection = ipw.RadioButtons(  options=self.mids, disabled=False, layout={'width': 'max-content'}, value="default" )
+    def create_selection_panel(self, **kwargs ):
+        default = kwargs.get( 'default', self.mids[0] )
+        self.selection_label = ipw.Label(value='Learning Model:')
+        self.selection = ipw.RadioButtons(  options=self.mids, disabled=False, layout={'width': 'max-content'}, value=default )
         self.selection.observe( self.set_model_callback, "value" )
+        self.mid = default
 
     def set_model_callback(self, event: Dict ):
         self.mid = event['new']
@@ -91,19 +94,20 @@ class ClassificationManager(SCSingletonConfigurable):
     def import_models(self):
         from .svc import SVCLearningModel
         self._models['svc'] = SVCLearningModel()
-        self._models['default'] = self.create_default_model()
+        self._models['cnn'] = self.create_default_cnn()
 
-    def create_default_model(self) -> "LearningModel":
+    def create_default_cnn(self) -> "LearningModel":
         pass
 
     def addLearningModel(self, mid: str, model: "LearningModel" ):
         self._models[ mid ] = model
 
     def addNetworkModel(self, mid: str, model: Model, **kwargs ):
-        self._models[ mid ] = LearningModelWrapper( mid, model, **kwargs )
+        self._models[ mid ] = KerasModelWrapper(mid, model, **kwargs)
 
     def gui(self):
-        return ipw.HBox( self.selection_label, self.selection )
+        if self.selection is None: self.create_selection_panel()
+        return ipw.HBox( [self.selection_label, self.selection] )
         # distanceMetric = base.createComboSelector("Distance.Metric: ", ["mahal","euclid"], "dev/distance/metric", "mahal")
         # distanceMethod = base.createComboSelector("Distance.Method: ", ["centroid","nearest"], "dev/distance/method", "centroid")
         # return base.createGroupBox("dev", [model, distanceMetric, distanceMethod ] )
@@ -115,6 +119,7 @@ class ClassificationManager(SCSingletonConfigurable):
 
     @exception_handled
     def learn_classification( self, filtered_point_data: np.ndarray, filtered_labels: np.ndarray, **kwargs  ):
+        lgm().log( f"\n learn_classification-> point_data: {filtered_point_data.shape}, labels: {filtered_labels.shape} \n")
         self.model.learn_classification( filtered_point_data, filtered_labels, **kwargs  )
         ufm().show( "Classification Mapping learned" )
 

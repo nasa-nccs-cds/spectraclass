@@ -119,7 +119,7 @@ class SpectraclassController(SCSingletonConfigurable):
 
     @exception_handled
     def classify(self) -> xa.DataArray:
-        from spectraclass.learn.base import ClassificationManager, cm
+        from spectraclass.learn.manager import ClassificationManager, cm
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.spatial.map import MapManager, mm
@@ -136,7 +136,7 @@ class SpectraclassController(SCSingletonConfigurable):
 
     @exception_handled
     def learn(self):
-        from spectraclass.learn.base import ClassificationManager, cm
+        from spectraclass.learn.manager import ClassificationManager, cm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.model.labels import LabelsManager, Action, lm
         embedding: xa.DataArray = dm().getModelData()

@@ -90,7 +90,7 @@ class ParametersManager(SCSingletonConfigurable):
     def createPanel(self, title: str ):
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.data.base import DataManager, dm
-        from spectraclass.learn.base import ClassificationManager, cm
+        from spectraclass.learn.manager import ClassificationManager, cm
         widgets = []
         if title == "layers":
             widgets.append( mm().layers.gui() )

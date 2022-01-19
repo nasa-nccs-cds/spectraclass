@@ -20,9 +20,6 @@ class SVCLearningModel(LearningModel):
         if norm: self.svc = make_pipeline( StandardScaler(), model  )
         else:    self.svc = model
 
-
-
-
     def fit( self, X: np.ndarray, y: np.ndarray, **kwargs ):       # X[n_samples, n_features], y[n_samples]
         t0 = time.time()
         print(f"Running SVC fit, X shape: {X.shape}), y shape: {y.shape})")

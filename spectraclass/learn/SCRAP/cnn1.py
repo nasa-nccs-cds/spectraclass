@@ -1,6 +1,6 @@
 import torch, time
 import torch.nn.functional as F
-from .base import LearningModel
+from learn.base import LearningModel
 import xarray as xa
 import numpy as np
 from spectraclass.data.base import DataManager

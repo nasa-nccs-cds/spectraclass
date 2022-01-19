@@ -1,5 +1,6 @@
 import xarray as xa
 import time, traceback, abc
+from sklearn.model_selection import train_test_split
 import numpy as np
 import scipy, sklearn
 from tensorflow.keras.models import Model
@@ -10,10 +11,8 @@ import traitlets.config as tlc
 import ipywidgets as ipw
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
-import torch
-from torch.autograd import Variable
-from torch.nn import Linear, ReLU, CrossEntropyLoss, Sequential, Conv2d, MaxPool2d, Module, Softmax, BatchNorm2d, Dropout
-from torch.optim import Adam, SGD
+import tensorflow as tf
+from tensorflow.keras import datasets, layers, models
 
 class LearningModel:
 
@@ -51,54 +50,27 @@ class LearningModel:
         raise Exception( "abstract method LearningModel.predict called")
 
 
-class LearningModelWrapper(LearningModel):
+class KerasModelWrapper(LearningModel):
 
-    def __init__(self, name: str,  model: Model, **kwargs ):
+    def __init__(self, name: str,  model: models.Model, **kwargs ):
         LearningModel.__init__( self, name,  **kwargs )
-        self._model = model
-        self.optimizer = self.get_optimizer( **kwargs )
-        self.criterion = CrossEntropyLoss()
-        if torch.cuda.is_available():
-            self._model = self._model.cuda()
-            self.criterion = self.criterion.cuda()
+        opt = str(kwargs.pop('opt', 'adam')).lower()
+        self._model: models.Model = model
+        self._model.compile(optimizer=opt, loss=self.get_loss(**kwargs),  metrics=['accuracy'], **kwargs )
 
-    def get_optimizer( self, **kwargs ):
-        opt = str(kwargs.get( 'opt', 'SGD' )).lower()
-        parms = self._model.parameters()
-        if opt == "sgd": return SGD( parms, lr=0.07)
-        elif opt == "adam": return Adam(parms, lr=0.07)
-        else: raise Exception( f"Unknown optimizer: {opt}" )
+    def get_loss( self, **kwargs ):
+        loss = str( kwargs.get( 'loss', 'cross_entropy' ) ).lower()
+        if loss == "cross_entropy": return tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        else: raise Exception( f"Unknown loss: {loss}" )
 
-    def predict( self, data: np.ndarray, **kwargs ):
-        raise Exception( "abstract method LearningModel.predict called")
+    def predict( self, data: np.ndarray, **kwargs ) -> np.ndarray:
+        return self._model.predict( data, **kwargs )
 
-
-    def fit(self, data: np.ndarray, labels: np.ndarray, **kwargs):
-        raise Exception( "abstract method LearningModel.fit called")
-
-    def train( self, epoch ):
-        self._model.train()
-        tr_loss = 0
-        x_train, y_train = Variable(train_x), Variable(train_y)
-        # getting the validation set
-        x_val, y_val = Variable(val_x), Variable(val_y)
-        if torch.cuda.is_available():
-            x_train = x_train.cuda()
-            y_train = y_train.cuda()
-            x_val = x_val.cuda()
-            y_val = y_val.cuda()
-        self.optimizer.zero_grad()
-        output_train = self._model(x_train)
-        output_val = self._model(x_val)
-        loss_train = self.criterion(output_train, y_train)
-        loss_val = self.criterion(output_val, y_val)
-        train_losses.append(loss_train)
-        val_losses.append(loss_val)
-        loss_train.backward()
-        self.optimizer.step()
-        tr_loss = loss_train.item()
-        if epoch % 2 == 0:
-            print('Epoch : ', epoch + 1, '\t', 'loss :', loss_val)
+    def fit(self, data: np.ndarray, labels: np.ndarray, **kwargs ):
+        nepochs = kwargs.pop( 'nepochs', 25 )
+        test_size = kwargs.pop( 'test_size', 0.1 )
+        tx, vx, ty, vy = train_test_split( data, labels, test_size=test_size )
+        self._model.fit( tx, ty, epochs=nepochs, validation_data=(vx,vy), **kwargs )
 
 
 

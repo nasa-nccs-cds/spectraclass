@@ -1,8 +1,7 @@
-import random, numpy as np, torch
-from typing import List, Union, Tuple, Optional, Dict, Callable
+import numpy as np, torch
 from spectraclass.data.base import DataManager
 from spectraclass.gui.spatial.image import plot_results, toXA
-from spectraclass.learn.cnn import CNN
+from learn.SCRAP.cnn import CNN
 from torch_geometric.data import Data
 import xarray as xa
 

@@ -1,8 +1,8 @@
-import time, random, numpy as np, torch
-from typing import List, Union, Tuple, Optional, Dict, Callable
+import time, numpy as np, torch
+from typing import List, Dict
 from spectraclass.data.base import DataManager
 import torch_geometric
-from spectraclass.learn.gcn import GCN
+from learn.SCRAP.gcn import GCN
 from torch_geometric.data import Data
 from spectraclass.gui.spatial.image import plot_results
 import xarray as xa

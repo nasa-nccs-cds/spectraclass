@@ -5,7 +5,7 @@ import xarray as xa
 from typing import List, Union, Tuple, Optional, Dict, Callable
 from torch_geometric.nn import GCNConv, knn_graph
 from torch_geometric.data import Data
-from .base import LearningModel
+from learn.base import LearningModel
 
 class GCN(torch.nn.Module):
     def __init__( self, num_features: int, num_hidden: int, num_classes: int ):
