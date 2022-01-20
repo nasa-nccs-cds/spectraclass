@@ -141,13 +141,16 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.learn.manager import ClassificationManager, cm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.model.labels import LabelsManager, Action, lm
+        ufm().show("Learning Classification Mapping... ")
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> LEARN ")
         embedding: xa.DataArray = dm().getModelData()
         labels_data: xa.DataArray = lm().getLabelsArray()
         labels_mask = (labels_data > 0)
         filtered_labels: np.ndarray = labels_data.where(labels_mask, drop=True).astype(np.int32).values
         filtered_point_data: np.ndarray = embedding.where(labels_mask, drop=True).values
+        lgm().log(f"SHAPES--> embedding: {embedding.shape}, labels_data: {labels_data.shape}, filtered_labels: {filtered_labels.shape}, filtered_point_data: {filtered_point_data.shape}" )
         cm().learn_classification( filtered_point_data, filtered_labels )
+        ufm().show( "Classification Mapping learned" )
 
     @exception_handled
     def spread_selection(self, niters=1):

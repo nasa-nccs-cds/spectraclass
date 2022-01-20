@@ -217,7 +217,6 @@ class Block(DataContainer):
         return ( x0, x0+self.shape[1] ), ( y0, y0+self.shape[0] )
 
     def getPointData( self ) -> Tuple[xa.DataArray,Dict]:
-        from spectraclass.data.spatial.manager import SpatialDataManager
         if self._point_data is None:
             result, mask =  self.raster2points( self.data )
             self._point_coords: Dict[str,np.ndarray] = dict( y=self.data.y.values, x=self.data.x.values, mask=mask )

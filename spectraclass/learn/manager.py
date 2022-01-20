@@ -95,9 +95,16 @@ class ClassificationManager(SCSingletonConfigurable):
         from .svc import SVCLearningModel
         self._models['svc'] = SVCLearningModel()
         self._models['cnn'] = self.create_default_cnn()
+        self._models['mlp'] = self.create_default_mlp()
 
     def create_default_cnn(self) -> "LearningModel":
         pass
+
+    def create_default_mlp(self) -> "LearningModel":
+        from .mlp import MLP
+        from .base import KerasModelWrapper
+        mlp = MLP()
+        return KerasModelWrapper( "mlp", mlp )
 
     def addLearningModel(self, mid: str, model: "LearningModel" ):
         self._models[ mid ] = model
@@ -120,9 +127,7 @@ class ClassificationManager(SCSingletonConfigurable):
     @exception_handled
     def learn_classification( self, filtered_point_data: np.ndarray, filtered_labels: np.ndarray, **kwargs  ):
         lgm().log( f"\n learn_classification-> point_data: {filtered_point_data.shape}, labels: {filtered_labels.shape} \n")
-        ufm().show("Learning Classification Mapping... ")
         self.model.learn_classification( filtered_point_data, filtered_labels, **kwargs  )
-        ufm().show( "Classification Mapping learned" )
 
     @exception_handled
     def apply_classification( self, embedding: xa.DataArray, **kwargs ) -> xa.DataArray:
