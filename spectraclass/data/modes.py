@@ -215,8 +215,8 @@ class ModeDataManager(SCSingletonConfigurable):
 
     @exception_handled
     def loadDataset(self, **kwargs) -> Optional[xa.Dataset]:
-        lgm().log(f"Load dataset {self.dsid()}, current datasets = {self.datasets.keys()}")
         if self.dsid() not in self.datasets:
+            lgm().log(f"Load dataset {self.dsid()}, current datasets = {self.datasets.keys()}")
             dataset: xa.Dataset = self.loadDataFile(**kwargs)
             if len(dataset.variables.keys()) == 0:
                 lgm().log(f"Warning: Attempt to Load empty dataset {self.dataFile( **kwargs )}", print=True)

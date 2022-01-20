@@ -45,8 +45,10 @@ class LearningModel:
     def apply_classification( self, data: xa.DataArray, **kwargs ) -> xa.DataArray:
         t1 = time.time()
         prediction: np.ndarray = self.predict( data.values, **kwargs )
+        if prediction.ndim == 1: prediction = prediction.reshape( [ prediction.size, 1 ] )
         lgm().log(f"Applied classication with input shape {data.shape[0]} in {time.time() - t1} sec.")
-        return xa.DataArray( prediction, dims=['samples'], coords=dict( samples=data.coords['samples'] ) )
+        return xa.DataArray( prediction,  dims=['samples','classes'],
+                             coords=dict( samples=data.coords['samples'], classes=range(prediction.shape[1]) ) )
 
     def predict( self, data: np.ndarray, **kwargs ):
         raise Exception( "abstract method LearningModel.predict called")

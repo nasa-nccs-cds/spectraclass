@@ -133,21 +133,6 @@ class SpatialDataManager(ModeDataManager):
         return result
 
     @classmethod
-    def raster2points( cls, base_raster: xa.DataArray ) -> Tuple[xa.DataArray,np.ndarray]:   #  base_raster dims: [ band, y, x ]
-        t0 = time.time()
-        point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
-        npts0 = point_data.shape[0]
-        if '_FillValue' in point_data.attrs:
-            nodata = point_data.attrs['_FillValue']
-            point_data = point_data.where( point_data != nodata )
-        mask: np.ndarray = ~ma.masked_invalid( point_data[:,0] ).mask
-        filtered_point_data: xa.DataArray = point_data[ mask ]
-        filtered_point_data.attrs['dsid'] = base_raster.name
-        lgm().log( f"raster2points -> [{base_raster.name}]: filtered_point_data shape = {filtered_point_data.shape}" )
-        lgm().log( f" --> mask shape = {mask.shape}, mask #valid = {np.count_nonzero(mask)}/{mask.size}, completed in {time.time()-t0} sec" )
-        return filtered_point_data, mask
-
-    @classmethod
     def addTextureBands(cls, base_raster: xa.DataArray ) -> xa.DataArray:   #  base_raster dims: [ band, y, x ]
         from spectraclass.features.texture.manager import texm
         return texm().addTextureBands( base_raster )
@@ -161,51 +146,51 @@ class SpatialDataManager(ModeDataManager):
             ufm().show( msg, "red" ); lgm().log( "\n" +  msg + "\n"  )
         return dict( vmin= ave - std * cls.colorstretch, vmax= ave + std * cls.colorstretch  )
 
-    @classmethod
-    def plotRaster(cls, raster: xa.DataArray, **kwargs ):
-        from matplotlib.colorbar import Colorbar
-        from spectraclass.application.controller import app
-        ax = kwargs.pop( 'ax', None )
-        showplot = ( ax is None )
-        if showplot: fig, ax = plt.subplots(1,1)
-        itype = kwargs.pop('itype', 'base' )
-        title = kwargs.pop( 'title', raster.name )
-        zeros = kwargs.pop('zeros', False)
-#        rescale = kwargs.pop( 'rescale', None )
-        colorbar = kwargs.pop( 'colorbar', True )
-        defaults = dict( origin= 'upper', interpolation= 'nearest' )
-        defaults["alpha"] = kwargs.get( "alpha", 1.0 )
-        cbar_kwargs = {}
-        if itype ==  'base':
-            defaults.update( dict( cmap=app().color_map ) )
-        else:
-            cspecs = lm().get_labels_colormap()
-            cbar_kwargs.update( cspecs )
-            defaults.update(  cmap=cspecs['cmap'], norm=cspecs['norm'] )
-        if not hasattr(ax, 'projection'): defaults['aspect'] = 'auto'
-        vrange = kwargs.pop( 'vrange', None )
-        if vrange is not None:
-            defaults['vmin'] = vrange[0]
-            defaults['vmax'] = vrange[1]
-        if (itype ==  'base') and ("vmax" not in defaults):
-            defaults.update( cls.get_color_bounds( raster ) )
-        xlim = kwargs.pop('xlim', [] )
-        ylim = kwargs.pop('ylim', [] )
-        defaults['extent'] = xlim + ylim
-        defaults.update(kwargs)
-#        if defaults['origin'] == 'upper':   defaults['extent'] = [left, right, bottom, top]
-#        else:                               defaults['extent'] = [left, right, top, bottom]
-#        if rescale is not None:
-#            raster = cls.scale_to_bounds(raster, rescale)
-        lgm().log( f"$$$COLOR: Plotting tile image with parameters: {defaults}")
-        img_data = raster.data if not zeros else np.zeros( raster.shape, np.int )
-        img = ax.imshow( img_data, zorder=1, **defaults )
-        ax.set_title(title)
-        if colorbar:
-            cbar: Colorbar = ax.figure.colorbar(img, ax=ax, **cbar_kwargs )
-            cbar.set_ticklabels( [ cval[1] for cval in lm().labeledColors ] )
- #       if showplot: plt.show()
-        return img
+#     @classmethod
+#     def plotRaster(cls, raster: xa.DataArray, **kwargs ):
+#         from matplotlib.colorbar import Colorbar
+#         from spectraclass.application.controller import app
+#         ax = kwargs.pop( 'ax', None )
+#         showplot = ( ax is None )
+#         if showplot: fig, ax = plt.subplots(1,1)
+#         itype = kwargs.pop('itype', 'base' )
+#         title = kwargs.pop( 'title', raster.name )
+#         zeros = kwargs.pop('zeros', False)
+# #        rescale = kwargs.pop( 'rescale', None )
+#         colorbar = kwargs.pop( 'colorbar', True )
+#         defaults = dict( origin= 'upper', interpolation= 'nearest' )
+#         defaults["alpha"] = kwargs.get( "alpha", 1.0 )
+#         cbar_kwargs = {}
+#         if itype ==  'base':
+#             defaults.update( dict( cmap=app().color_map ) )
+#         else:
+#             cspecs = lm().get_labels_colormap()
+#             cbar_kwargs.update( cspecs )
+#             defaults.update(  cmap=cspecs['cmap'], norm=cspecs['norm'] )
+#         if not hasattr(ax, 'projection'): defaults['aspect'] = 'auto'
+#         vrange = kwargs.pop( 'vrange', None )
+#         if vrange is not None:
+#             defaults['vmin'] = vrange[0]
+#             defaults['vmax'] = vrange[1]
+#         if (itype ==  'base') and ("vmax" not in defaults):
+#             defaults.update( cls.get_color_bounds( raster ) )
+#         xlim = kwargs.pop('xlim', [] )
+#         ylim = kwargs.pop('ylim', [] )
+#         defaults['extent'] = xlim + ylim
+#         defaults.update(kwargs)
+# #        if defaults['origin'] == 'upper':   defaults['extent'] = [left, right, bottom, top]
+# #        else:                               defaults['extent'] = [left, right, top, bottom]
+# #        if rescale is not None:
+# #            raster = cls.scale_to_bounds(raster, rescale)
+#         lgm().log( f"$$$COLOR: Plotting tile image with parameters: {defaults}")
+#         img_data = raster.data if not zeros else np.zeros( raster.shape, np.int )
+#         img = ax.imshow( img_data, zorder=1, **defaults )
+#         ax.set_title(title)
+#         if colorbar:
+#             cbar: Colorbar = ax.figure.colorbar(img, ax=ax, **cbar_kwargs )
+#             cbar.set_ticklabels( [ cval[1] for cval in lm().labeledColors ] )
+#  #       if showplot: plt.show()
+#         return img
 
     @classmethod
     def plotOverlayImage(cls, raster: np.ndarray, ax, extent: Tuple[float], **kwargs):

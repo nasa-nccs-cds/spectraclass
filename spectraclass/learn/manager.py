@@ -120,12 +120,14 @@ class ClassificationManager(SCSingletonConfigurable):
     @exception_handled
     def learn_classification( self, filtered_point_data: np.ndarray, filtered_labels: np.ndarray, **kwargs  ):
         lgm().log( f"\n learn_classification-> point_data: {filtered_point_data.shape}, labels: {filtered_labels.shape} \n")
+        ufm().show("Learning Classification Mapping... ")
         self.model.learn_classification( filtered_point_data, filtered_labels, **kwargs  )
         ufm().show( "Classification Mapping learned" )
 
     @exception_handled
     def apply_classification( self, embedding: xa.DataArray, **kwargs ) -> xa.DataArray:
         try:
+            ufm().show("Applying Classification... ")
             sample_labels: xa.DataArray = self.model.apply_classification( embedding, **kwargs  )
             return sample_labels
         except sklearn.exceptions.NotFittedError:

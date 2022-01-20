@@ -124,11 +124,13 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.model.labels import LabelsManager, Action, lm
-
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> CLASSIFY ")
+        block = tm().getBlock()
         embedding: xa.DataArray = dm().getModelData()
         classification: xa.DataArray = cm().apply_classification( embedding )
         if self.pcm_active: pcm().color_by_index( classification.data, lm().colors )
-        overlay_image = classification.data.reshape( mm().image_template.shape )
+        overlay_image: xa.DataArray = block.points2raster( classification )
         mm().plot_labels_image( overlay_image )
        # spm().plot_overlay_image( mm().image_template.copy( data=labels_image ), mm().overlay_alpha )
         lm().addAction("color", "points")
@@ -139,6 +141,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.learn.manager import ClassificationManager, cm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.model.labels import LabelsManager, Action, lm
+        lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> LEARN ")
         embedding: xa.DataArray = dm().getModelData()
         labels_data: xa.DataArray = lm().getLabelsArray()
         labels_mask = (labels_data > 0)
@@ -171,7 +174,7 @@ class SpectraclassController(SCSingletonConfigurable):
                         lgm().log(f" @@@ spread_selection: cid={cid}, label={label}, #new_indices={len(new_indices)}" )
                         lm().mark_points( new_indices, cid, "labels" )
                         if self.pcm_active: pcm().update_marked_points(cid)
-            mm().plot_labels_image()
+            mm().update_canvas()
 
  #           gpm().plot_graph()
         lm().log_markers("post-spread")

@@ -1,10 +1,11 @@
 from skimage.transform import ProjectiveTransform
 import numpy as np
+import numpy.ma as ma
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from pyproj import Transformer
 import xarray as xa
 from typing import List, Union, Tuple, Optional, Dict
-import os, math, pickle
+import os, math, pickle, time
 
 class DataContainer:
 
@@ -218,7 +219,7 @@ class Block(DataContainer):
     def getPointData( self ) -> Tuple[xa.DataArray,Dict]:
         from spectraclass.data.spatial.manager import SpatialDataManager
         if self._point_data is None:
-            result, mask =  SpatialDataManager.raster2points( self.data )
+            result, mask =  self.raster2points( self.data )
             self._point_coords: Dict[str,np.ndarray] = dict( y=self.data.y.values, x=self.data.x.values, mask=mask )
             npts = self.data.y.size * self.data.x.size
             self._point_data = result.assign_coords( samples = np.arange( 0, result.shape[0] ) )
@@ -248,18 +249,18 @@ class Block(DataContainer):
         index = self.coords2indices(cy, cx)
         return self.data[ :, index['iy'], index['ix'] ].values.reshape(1, -1)
 
-    def plot(self,  **kwargs ) -> xa.DataArray:
-        from spectraclass.data.spatial.manager import SpatialDataManager
-        color_band = kwargs.pop( 'color_band', None )
-        band_range = kwargs.pop( 'band_range', None )
-        if color_band is not None:
-            plot_data = self.data[color_band]
-        elif band_range is not None:
-            plot_data = self.data.isel( band=slice( band_range[0], band_range[1] ) ).mean(dim="band", skipna=True)
-        else:
-            plot_data =  SpatialDataManager.getRGB(self.data)
-        SpatialDataManager.plotRaster( plot_data, **kwargs )
-        return plot_data
+    # def plot(self,  **kwargs ) -> xa.DataArray:
+    #     from spectraclass.data.spatial.manager import SpatialDataManager
+    #     color_band = kwargs.pop( 'color_band', None )
+    #     band_range = kwargs.pop( 'band_range', None )
+    #     if color_band is not None:
+    #         plot_data = self.data[color_band]
+    #     elif band_range is not None:
+    #         plot_data = self.data.isel( band=slice( band_range[0], band_range[1] ) ).mean(dim="band", skipna=True)
+    #     else:
+    #         plot_data =  SpatialDataManager.getRGB(self.data)
+    #     SpatialDataManager.plotRaster( plot_data, **kwargs )
+    #     return plot_data
 
     def coords2indices(self, cy, cx) -> Dict:
         coords = self.ptransform.inverse(np.array([[cx, cy], ]))
@@ -296,13 +297,29 @@ class Block(DataContainer):
         return self.index_array.values[ iy, ix ]
 
     def points2raster(self, points_data: xa.DataArray ):
+        lgm().log( f"points->raster, points: dims={points_data.dims}, shape={points_data.shape}")
         dims = [points_data.dims[1], self.data.dims[1], self.data.dims[2]]
         coords = [(dims[0], points_data[dims[0]].data), (dims[1], self.data[dims[1]].data), (dims[2], self.data[dims[2]].data)]
         raster_data = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
         raster_data[ self.mask ] = points_data.data
         raster_data = raster_data.transpose().reshape([points_data.shape[1], self.data.shape[1], self.data.shape[2]])
-        lgm().log( f"Got Model Data{points_data.dims}: {points_data.shape} -> {raster_data.shape} using mask ({self.mask.shape})")
-        return xa.DataArray(raster_data, coords, dims, points_data.name, points_data.attrs)
+        lgm().log( f"Generated Raster data, shape={raster_data.shape}, dims={dims}, with mask shape={self.mask.shape}" )
+        return xa.DataArray( raster_data, coords, dims, points_data.name, points_data.attrs )
+
+    @classmethod
+    def raster2points( cls, base_raster: xa.DataArray ) -> Tuple[xa.DataArray,np.ndarray]:   #  base_raster dims: [ band, y, x ]
+        t0 = time.time()
+        point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
+        npts0 = point_data.shape[0]
+        if '_FillValue' in point_data.attrs:
+            nodata = point_data.attrs['_FillValue']
+            point_data = point_data.where( point_data != nodata )
+        mask: np.ndarray = ~ma.masked_invalid( point_data[:,0] ).mask
+        filtered_point_data: xa.DataArray = point_data[ mask ]
+        filtered_point_data.attrs['dsid'] = base_raster.name
+        lgm().log( f"raster2points -> [{base_raster.name}]: filtered_point_data shape = {filtered_point_data.shape}" )
+        lgm().log( f" --> mask shape = {mask.shape}, mask #valid = {np.count_nonzero(mask)}/{mask.size}, completed in {time.time()-t0} sec" )
+        return filtered_point_data, mask
 
     def coords2pindex( self, cy, cx ) -> int:
         try:

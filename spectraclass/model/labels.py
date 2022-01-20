@@ -135,7 +135,9 @@ class LabelsManager(SCSingletonConfigurable):
         cmap: ListedColormap = ListedColormap(rgbs)
         color_values = [float(cval[0]) for cval in self.labeledColors]
         color_bounds = get_color_bounds(color_values)
-        norm = mpl.colors.BoundaryNorm(color_bounds, len(self.labeledColors))
+        ncolors = len(self.labeledColors)
+        norm = mpl.colors.BoundaryNorm( color_bounds, ncolors, clip=True )
+#        lgm().log( f"labels_colormap: colors={rgbs}, color_values={color_values}, color_bounds={color_bounds}, ncolors={ncolors}")
         result =  dict(cmap=cmap, norm=norm, boundaries=color_bounds, ticks=color_values, spacing='proportional')
         return result
 

@@ -52,7 +52,7 @@ class MapManager(SCSingletonConfigurable):
         self.points_selection: MarkerManager = None
         self._use_model_data = False
         self._cidpress = -1
-        self._classification_data = None
+        self._classification_data: xa.DataArray = None
         self.layers = LayersManager( self.on_layer_change )
         self.band_slider: PageSlider = None
         self.model_slider: PageSlider = None
@@ -62,8 +62,8 @@ class MapManager(SCSingletonConfigurable):
         self.labels_image: Optional[AxesImage] = None
         self.layers.add( 'basemap', 1.0, True)
         self.layers.add( 'bands', 1.0, True )
-        self.layers.add( 'markers', 0.5, False )
-        self.layers.add( 'labels', 0.5, False )
+        self.layers.add( 'markers', 1.0, True )
+        self.layers.add( 'labels', 0.5, True )
         self.menu_actions = OrderedDict( Layers = [ [ "Increase Labels Alpha", 'Ctrl+>', None, partial( self.update_image_alpha, "labels", True ) ],
                                                     [ "Decrease Labels Alpha", 'Ctrl+<', None, partial( self.update_image_alpha, "labels", False ) ],
                                                     [ "Increase Band Alpha",   'Alt+>',  None, partial( self.update_image_alpha, "bands", True ) ],
@@ -95,6 +95,7 @@ class MapManager(SCSingletonConfigurable):
         self.label_map.name = f"{self.block.data.name}_labels"
         self.label_map.attrs[ 'long_name' ] =  "labels"
         cspecs = lm().get_labels_colormap()
+        lgm().log( f"\nInit label map, value range = [{self.label_map.values.min()} {self.label_map.values.max()}]\n")
         self.labels_image = self.label_map.plot.imshow( ax=self.base.gax, alpha=self.layers('labels').visibility,
                                                         cmap=cspecs['cmap'], add_colorbar=False, norm=cspecs['norm'] )
 
@@ -164,12 +165,19 @@ class MapManager(SCSingletonConfigurable):
         self.model_slider_cid = self.model_slider.on_changed(self._update)
 
     @exception_handled
-    def plot_labels_image(self):
-        self._classification_data = lm().get_label_map( self.block )
-        lgm().log( f"\n plot labels image, shape = {self._classification_data.shape}, vrange = {[ self._classification_data.min(), self._classification_data.max() ]}\n" )
-        self.labels_image.set_data( self._classification_data )
-        self.labels_image.set_alpha( self.layers( 'labels' ).visibility )
-        self.update_canvas()
+    def plot_labels_image(self, classification: xa.DataArray = None ):
+        if classification is None:
+            if self._classification_data is not None:
+                self._classification_data = xa.zeros_like( self._classification_data )
+        else:
+            self._classification_data = classification
+
+        if self._classification_data is not None:
+            vrange = [ fp(self._classification_data.values) for fp in [np.nanmin,np.nanmax] ]
+            lgm().log( f"\n plot labels image, shape = {self._classification_data.shape}, vrange = {vrange}\n" )
+            self.labels_image.set_data( self._classification_data.values.squeeze() )
+            self.labels_image.set_alpha( self.layers( 'labels' ).visibility )
+            self.update_canvas()
 
     def layer_managers( self, name: str ) -> List:
         if name == "basemap":  mgrs = [self.base]
