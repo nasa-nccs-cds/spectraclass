@@ -134,11 +134,12 @@ class LabelsManager(SCSingletonConfigurable):
         rgbs = [cval[2] for cval in self.labeledColors]
         cmap: ListedColormap = ListedColormap(rgbs)
         color_values = [float(cval[0]) for cval in self.labeledColors]
-        color_bounds = get_color_bounds(color_values)
+#        color_bounds = get_color_bounds(color_values)
         ncolors = len(self.labeledColors)
+        color_bounds = np.linspace( -0.5, ncolors-0.5, ncolors+1 )
         norm = mpl.colors.BoundaryNorm( color_bounds, ncolors, clip=True )
-#        lgm().log( f"labels_colormap: colors={rgbs}, color_values={color_values}, color_bounds={color_bounds}, ncolors={ncolors}")
-        result =  dict(cmap=cmap, norm=norm, boundaries=color_bounds, ticks=color_values, spacing='proportional')
+        lgm().log( f"labels_colormap: colors={rgbs}, color_values={color_values}, color_bounds={color_bounds}, ncolors={ncolors}")
+        result =  dict( cmap=cmap, norm=norm, boundaries=color_bounds, ticks=color_values, spacing='proportional')
         return result
 
     def flow(self) -> Optional[ActivationFlow]:

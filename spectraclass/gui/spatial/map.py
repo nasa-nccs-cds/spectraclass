@@ -63,7 +63,7 @@ class MapManager(SCSingletonConfigurable):
         self.layers.add( 'basemap', 1.0, True)
         self.layers.add( 'bands', 1.0, True )
         self.layers.add( 'markers', 1.0, True )
-        self.layers.add( 'labels', 0.5, True )
+        self.layers.add( 'labels', 0.5, False )
         self.menu_actions = OrderedDict( Layers = [ [ "Increase Labels Alpha", 'Ctrl+>', None, partial( self.update_image_alpha, "labels", True ) ],
                                                     [ "Decrease Labels Alpha", 'Ctrl+<', None, partial( self.update_image_alpha, "labels", False ) ],
                                                     [ "Increase Band Alpha",   'Alt+>',  None, partial( self.update_image_alpha, "bands", True ) ],
@@ -90,8 +90,8 @@ class MapManager(SCSingletonConfigurable):
     def initLabels(self):
         nodata_value = -2
         template = self.block.data[0].squeeze( drop=True )
-        self.label_map: xa.DataArray = xa.full_like( template, 0, dtype=np.dtype(np.int32) ).where( template.notnull(), nodata_value )
-        self.label_map.attrs['_FillValue'] = nodata_value
+        self.label_map: xa.DataArray = xa.full_like( template, 0, dtype=np.dtype(np.int32) ) # .where( template.notnull(), nodata_value )
+#        self.label_map.attrs['_FillValue'] = nodata_value
         self.label_map.name = f"{self.block.data.name}_labels"
         self.label_map.attrs[ 'long_name' ] =  "labels"
         cspecs = lm().get_labels_colormap()
@@ -173,10 +173,12 @@ class MapManager(SCSingletonConfigurable):
             self._classification_data = classification
 
         if self._classification_data is not None:
-            vrange = [ fp(self._classification_data.values) for fp in [np.nanmin,np.nanmax] ]
-            lgm().log( f"\n plot labels image, shape = {self._classification_data.shape}, vrange = {vrange}\n" )
-            self.labels_image.set_data( self._classification_data.values.squeeze() )
-            self.labels_image.set_alpha( self.layers( 'labels' ).visibility )
+            cdata = np.nan_to_num( self._classification_data.values.squeeze() ).astype( np.dtype(np.int32) )
+            vrange = [ fp(cdata) for fp in [np.nanmin,np.nanmax] ]
+            lgm().log( f"\n plot labels image, shape = {cdata.shape}, vrange = {vrange}\n" )
+            self.labels_image.set_data( cdata )
+            self.layers.set_visibility( "labels", 0.5, True, notify=False )
+            self.labels_image.set_alpha( 0.5 )
             self.update_canvas()
 
     def layer_managers( self, name: str ) -> List:

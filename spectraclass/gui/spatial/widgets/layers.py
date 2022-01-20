@@ -18,6 +18,7 @@ class Layer(tlc.Configurable):
         self.alpha = alpha
         self.callback = callback
         self.visible = visible
+        self._notify = True
         self._label = ipw.Label( value=name, layout = ipw.Layout( width = "100px" ) )
         self._slider = self.getSlider()
         self._checkbox = self.getCheckBox()
@@ -25,7 +26,8 @@ class Layer(tlc.Configurable):
 
     def on_alpha_change( self, *args ):
  #       lgm().log( f' ** on_alpha_change[{self.name}]: alpha={self.alpha}, visible={self.visible}, args={args}' )
-        self.callback( self )
+        if self._notify:
+            self.callback( self )
 
     @property
     def visibility(self) -> float:
@@ -42,9 +44,11 @@ class Layer(tlc.Configurable):
         tl.link((checkbox, "value"), (self, 'visible') )
         return checkbox
 
-    def update(self, alpha: float, enabled: bool ):
+    def update(self, alpha: float, enabled: bool, **kwargs ):
+        self._notify = kwargs.get('notify',False)
         self._slider.value = alpha
         self._checkbox.value = enabled
+        self._notify = True
 
     def increment( self, increase: bool ):
         if increase:   self.alpha = min( 1.0, self.alpha + 0.1 )
@@ -62,6 +66,9 @@ class LayersManager(object):
 
     def gui( self ) -> ipw.Box:
         return ipw.VBox( [ layer.gui() for layer in self._layers.values() ], layout = ipw.Layout( width = "100%" ) )
+
+    def set_visibility(self, lname: str, alpha: float, enabled: bool, **kwargs ):
+        self._layers[lname].update( alpha, enabled, **kwargs )
 
     def add( self, name: str, alpha: float, visible: bool ):
         self._layers[name] = Layer(name, alpha, visible, self.callback)
