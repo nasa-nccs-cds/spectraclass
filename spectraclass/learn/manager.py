@@ -93,9 +93,9 @@ class ClassificationManager(SCSingletonConfigurable):
 
     def import_models(self):
         from .svc import SVCLearningModel
+        self._models['mlp'] = self.create_default_mlp()
         self._models['svc'] = SVCLearningModel()
         self._models['cnn'] = self.create_default_cnn()
-        self._models['mlp'] = self.create_default_mlp()
 
     def create_default_cnn(self) -> "LearningModel":
         pass
@@ -109,7 +109,7 @@ class ClassificationManager(SCSingletonConfigurable):
     def addLearningModel(self, mid: str, model: "LearningModel" ):
         self._models[ mid ] = model
 
-    def addNetworkModel(self, mid: str, model: Model, **kwargs ):
+    def addNNModel(self, mid: str, model: Model, **kwargs):
         self._models[ mid ] = KerasModelWrapper(mid, model, **kwargs)
 
     def gui(self):

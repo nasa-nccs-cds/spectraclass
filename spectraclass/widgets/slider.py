@@ -20,14 +20,15 @@ class PageSlider(Slider):
         self.poly.set_visible(False)
         self.vline.set_visible(False)
         self.pageRects = []
-        indexMod = self.numpages // 12
-        for i in range(numpages):
-            facecolor = self.activecolor if i==valinit else self.facecolor
-            r  = Rectangle((float(i)/numpages, 0), 1./numpages, 1, transform=ax.transAxes, facecolor=facecolor)
-            ax.add_artist(r)
-            self.pageRects.append(r)
-            if i % indexMod == 0:
-                ax.text(float(i)/numpages+0.5/numpages, 0.5, str(i+1), ha="center", va="center", transform=ax.transAxes, fontsize=self.fontsize)
+        if self.numpages > 0:
+            indexMod = max( self.numpages // 10, 1 )
+            for i in range(numpages):
+                facecolor = self.activecolor if i==valinit else self.facecolor
+                r  = Rectangle((float(i)/numpages, 0), 1./numpages, 1, transform=ax.transAxes, facecolor=facecolor)
+                ax.add_artist(r)
+                self.pageRects.append(r)
+                if i % indexMod == 0:
+                    ax.text(float(i)/numpages+0.5/numpages, 0.5, str(i+1), ha="center", va="center", transform=ax.transAxes, fontsize=self.fontsize)
         self.valtext.set_visible(False)
 
         divider = make_axes_locatable(ax)

@@ -19,5 +19,5 @@ class MLP(models.Model):
         model = models.Sequential()
         model.add( layers.Dense(input_shape[1], activation='relu', input_shape=input_shape ) )
         model.add( layers.Dense(input_shape[1], activation='relu') )
-        model.add( layers.Dense( lm().nLabels ) )
+        model.add( layers.Dense( lm().nLabels+1 ) )
         return model

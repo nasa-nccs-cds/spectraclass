@@ -30,15 +30,23 @@ class LearningModel:
         return self._score
 
     @exception_handled
-    def learn_classification( self, point_data: np.ndarray, labels: np.ndarray, **kwargs ):
+    def learn_classification( self, point_data: np.ndarray, class_data: np.ndarray, **kwargs ):
         t1 = time.time()
-        if np.count_nonzero( labels > 0 ) == 0:
+        if np.count_nonzero( class_data > 0 ) == 0:
             ufm().show( "Must label some points before learning the classification" )
             return None
-        self.fit( point_data, labels, **kwargs )
-        lgm().log(f"Learned mapping with {labels.shape[0]} labels in {time.time()-t1} sec.")
+        if class_data.ndim == 1:
+            class_data = self.index_to_one_hot( class_data )
+        self.fit( point_data, class_data, **kwargs )
+        lgm().log(f"Learned mapping with {class_data.shape[0]} labels in {time.time()-t1} sec.")
 
-    def fit(self, data: np.ndarray, labels: np.ndarray, **kwargs):
+    def index_to_one_hot(self, class_data: np.ndarray) -> np.ndarray:
+        from spectraclass.model.labels import lm
+        one_hot = np.zeros((class_data.size, lm().nLabels + 1))
+        one_hot[np.arange(class_data.size), class_data] = 1
+        return one_hot
+
+    def fit(self, data: np.ndarray, class_data: np.ndarray, **kwargs):
         raise Exception( "abstract method LearningModel.fit called")
 
     @exception_handled
@@ -70,10 +78,10 @@ class KerasModelWrapper(LearningModel):
     def predict( self, data: np.ndarray, **kwargs ) -> np.ndarray:
         return self._model.predict( data, **kwargs )
 
-    def fit(self, data: np.ndarray, labels: np.ndarray, **kwargs ):
+    def fit(self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
         nepochs = kwargs.pop( 'nepochs', 25 )
         test_size = kwargs.pop( 'test_size', 0.1 )
-        tx, vx, ty, vy = train_test_split( data, labels, test_size=test_size )
+        tx, vx, ty, vy = train_test_split( data, class_data, test_size=test_size )
         self._model.fit( tx, ty, epochs=nepochs, validation_data=(vx,vy), **kwargs )
 
 

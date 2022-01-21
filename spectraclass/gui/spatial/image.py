@@ -7,6 +7,7 @@ import contextlib, time
 from typing import List, Optional, Dict, Tuple
 from matplotlib.image import AxesImage
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
+from spectraclass.gui.spatial.source import WMTSRasterSource
 import matplotlib.artist
 
 def toXA( vname: str, nparray: np.ndarray, format="np", transpose = False ):
@@ -26,8 +27,8 @@ def toXA( vname: str, nparray: np.ndarray, format="np", transpose = False ):
 
 class TileServiceImage(AxesImage):
 
-    def __init__(self, ax: Axes, raster_source, projection, **kwargs):
-        self.raster_source = raster_source
+    def __init__(self, ax: Axes, raster_source: WMTSRasterSource, projection, **kwargs):
+        self.raster_source: WMTSRasterSource = raster_source
         xrange = kwargs.pop('xrange',None)
         yrange = kwargs.pop('yrange', None)
         kwargs.setdefault('in_layout', False)
@@ -40,7 +41,6 @@ class TileServiceImage(AxesImage):
         self._block_selection_callback = None
         self._selected_block: Rectangle = None
         self._blocks: List[Rectangle] = []
-
         self.axes.figure.canvas.mpl_connect('button_press_event', self.on_press)
         self.axes.figure.canvas.mpl_connect('button_release_event', self.on_release)
         self.axes.figure.canvas.mpl_connect('pick_event', self.on_pick)

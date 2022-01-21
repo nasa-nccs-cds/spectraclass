@@ -52,6 +52,7 @@ class MapManager(SCSingletonConfigurable):
         self.points_selection: MarkerManager = None
         self._use_model_data = False
         self._cidpress = -1
+        self.cspecs=None
         self._classification_data: xa.DataArray = None
         self.layers = LayersManager( self.on_layer_change )
         self.band_slider: PageSlider = None
@@ -94,10 +95,10 @@ class MapManager(SCSingletonConfigurable):
 #        self.label_map.attrs['_FillValue'] = nodata_value
         self.label_map.name = f"{self.block.data.name}_labels"
         self.label_map.attrs[ 'long_name' ] =  "labels"
-        cspecs = lm().get_labels_colormap()
+        self.cspecs = lm().get_labels_colormap()
         lgm().log( f"\nInit label map, value range = [{self.label_map.values.min()} {self.label_map.values.max()}]\n")
         self.labels_image = self.label_map.plot.imshow( ax=self.base.gax, alpha=self.layers('labels').visibility,
-                                                        cmap=cspecs['cmap'], add_colorbar=False, norm=cspecs['norm'] )
+                                                        cmap=self.cspecs['cmap'], add_colorbar=False, norm=self.cspecs['norm'] )
 
     def clearLabels( self):
         if self.block is not None:
@@ -170,15 +171,16 @@ class MapManager(SCSingletonConfigurable):
             if self._classification_data is not None:
                 self._classification_data = xa.zeros_like( self._classification_data )
         else:
-            self._classification_data = classification
+            self._classification_data = classification.fillna(0.0).squeeze()
 
         if self._classification_data is not None:
-            cdata = np.nan_to_num( self._classification_data.values.squeeze() ).astype( np.dtype(np.int32) )
-            vrange = [ fp(cdata) for fp in [np.nanmin,np.nanmax] ]
-            lgm().log( f"\n plot labels image, shape = {cdata.shape}, vrange = {vrange}\n" )
-            self.labels_image.set_data( cdata )
+            vrange = [ self._classification_data.values.min, self._classification_data.values.max ]
+            lgm().log( f"\n plot labels image, shape = {self._classification_data.shape}, vrange = {vrange}\n" )
+            try: self.labels_image.remove()
+            except Exception: pass
+            self.labels_image = self._classification_data.plot.imshow(ax=self.base.gax, alpha=0.5, cmap=self.cspecs['cmap'],
+                                                           add_colorbar=False, norm=self.cspecs['norm'])
             self.layers.set_visibility( "labels", 0.5, True, notify=False )
-            self.labels_image.set_alpha( 0.5 )
             self.update_canvas()
 
     def layer_managers( self, name: str ) -> List:
@@ -262,10 +264,6 @@ class MapManager(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         use_model = kwargs.get( 'model', self._use_model_data )
         return dm().getModelData().shape[1] if use_model else self.data.shape[0]
-
-    @property
-    def block_data(self):
-        return
 
     @property
     def frame_data(self) -> Optional[xa.DataArray]:

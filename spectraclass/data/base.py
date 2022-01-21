@@ -4,6 +4,7 @@ from typing import List, Union, Tuple, Optional, Dict, Type
 import os, warnings
 from enum import Enum
 import ipywidgets as ip
+from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.application.controller import SpectraclassController
 import xarray as xa
 import traitlets as tl
@@ -229,14 +230,18 @@ class DataManager(SCSingletonConfigurable):
         self.preprocess_data()
         project_data = self._mode_data_manager_.loadCurrentProject()
         assert project_data is not None, "Project initialization failed- check log file for details"
-        lgm().log(f"Loaded project data:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
+        ns = project_data.variables['samples'].size
+        lgm().log(f"Loaded project data[{ns}]:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
+        if ns == 0: ufm().show( "This tile contains no data","red")
         return project_data
 
     def loadProject(self, dsid: str ) -> xa.Dataset:
         self._mode_data_manager_.setDatasetId(dsid)
         project_data = self._mode_data_manager_.loadCurrentProject()
         if project_data is not None:
-            lgm().log(f"Loaded project data:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
+            ns = project_data.variables['samples'].size
+            lgm().log(f"Loaded project data[{ns}]:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
+            if ns == 0: ufm().show("This tile contains no data", "red")
         return project_data
 
     def prepare_inputs( self, **kwargs ) -> Dict[Tuple,int]:
