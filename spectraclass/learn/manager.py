@@ -102,9 +102,10 @@ class ClassificationManager(SCSingletonConfigurable):
 
     def create_default_mlp(self) -> "LearningModel":
         from .mlp import MLP
+        from spectraclass.model.labels import lm
+        from spectraclass.data.base import DataManager, dm
         from .base import KerasModelWrapper
-        mlp = MLP()
-        return KerasModelWrapper( "mlp", mlp )
+        return KerasModelWrapper( "mlp", MLP.build( dm().modal.model_dims, lm().nLabels ) )
 
     def addLearningModel(self, mid: str, model: "LearningModel" ):
         self._models[ mid ] = model

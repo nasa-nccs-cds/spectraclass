@@ -37,14 +37,25 @@ class LearningModel:
             return None
         if class_data.ndim == 1:
             class_data = self.index_to_one_hot( class_data )
+        lgm().log(f"Learning mapping with shapes: point_data{point_data.shape}, class_data{class_data.shape}")
         self.fit( point_data, class_data, **kwargs )
-        lgm().log(f"Learned mapping with {class_data.shape[0]} labels in {time.time()-t1} sec.")
+        lgm().log(f"Completed learning in {time.time() - t1} sec.")
 
-    def index_to_one_hot(self, class_data: np.ndarray) -> np.ndarray:
+
+    @classmethod
+    def index_to_one_hot(cls, class_data: np.ndarray) -> np.ndarray:
         from spectraclass.model.labels import lm
-        one_hot = np.zeros((class_data.size, lm().nLabels + 1))
-        one_hot[np.arange(class_data.size), class_data] = 1
+        one_hot = np.zeros( (class_data.size, lm().nLabels) )
+        one_hot[ np.arange(class_data.size), class_data ] = 1
         return one_hot
+
+    @classmethod
+    def one_hot_to_index(cls, class_data: np.ndarray) -> np.ndarray:
+        indices = np.zeros( ( class_data.shape[0], ) )
+        for ic in range( class_data.shape[1] ):
+            mask = ( class_data[:,ic] > 0 ).squeeze()
+            indices[ mask ] = ic
+        return indices
 
     def fit(self, data: np.ndarray, class_data: np.ndarray, **kwargs):
         raise Exception( "abstract method LearningModel.fit called")
@@ -80,9 +91,13 @@ class KerasModelWrapper(LearningModel):
 
     def fit(self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
         nepochs = kwargs.pop( 'nepochs', 25 )
-        test_size = kwargs.pop( 'test_size', 0.1 )
-        tx, vx, ty, vy = train_test_split( data, class_data, test_size=test_size )
-        self._model.fit( tx, ty, epochs=nepochs, validation_data=(vx,vy), **kwargs )
+        test_size = kwargs.pop( 'test_size', 0.0 )
+        if test_size > 0.0:
+            tx, vx, ty, vy = train_test_split( data, class_data, test_size=test_size )
+            self._model.fit( tx, ty, epochs=nepochs, validation_data=(vx,vy), **kwargs )
+        else:
+            lgm().log( f"model.fit, shapes: point_data{data.shape}, class_data{class_data.shape} " )
+            self._model.fit( data, class_data, epochs=nepochs, **kwargs )
 
 
 
