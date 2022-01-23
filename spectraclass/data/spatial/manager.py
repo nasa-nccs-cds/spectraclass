@@ -262,7 +262,7 @@ class SpatialDataManager(ModeDataManager):
                 if blocks_point_data.size > 0:
                     normed_data: xa.DataArray = self.pnorm(blocks_point_data)
                     prange = ( normed_data.values.min(), normed_data.values.max(), normed_data.values.mean() )
-                    lgm().log(f" Preparing point data with shape {normed_data.shape}, range={prange}", print=True)
+                    lgm().log(f" Preparing point data with shape {normed_data.shape}, range={prange}, #nan={np.count_nonzero(np.isnan(blocks_point_data))}", print=True)
                     blocks_reduction = rm().reduce( normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
                 else:
                     em2 = np.empty(shape=[0,self.model_dims], dtype=np.float)

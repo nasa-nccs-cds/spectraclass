@@ -181,6 +181,7 @@ class TileManager(SCSingletonConfigurable):
             lgm().log( f"\nWarning: can't read config file '{file_path}': {err}\n")
         return mdata
 
+    @exception_handled
     def saveMetadata( self, block_data: Dict[Tuple,int] ):
         file_path = DataManager.instance().modal.getMetadataFilePath()
         print( f"Writing metadata file: {file_path}")

@@ -86,8 +86,11 @@ class DataManager(SCSingletonConfigurable):
         lgm().log("Logging configured")
         return dataManager
 
+    def hasMetadata(self):
+        return os.path.isfile( DataManager.instance().modal.getMetadataFilePath() )
+
     def preprocess_data(self):
-        if not self.modal.hasBlockData():
+        if not self.modal.hasBlockData() or not self.hasMetadata():
             block_data =  self.prepare_inputs( )
             self.save_config( block_data )
 
@@ -127,6 +130,7 @@ class DataManager(SCSingletonConfigurable):
         os.makedirs( output_dir, exist_ok=True)
         return os.path.join( output_dir, f"{self.dsid()}-masks.nc" )
 
+    @exception_handled
     def save_config( self, block_data: Dict[Tuple,int] ):
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.data.spatial.tile.manager import TileManager, tm
