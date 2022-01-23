@@ -1,5 +1,5 @@
 import ipywidgets as ip
-from matplotlib.backend_bases import PickEvent, MouseEvent, MouseButton  # , NavigationToolbar2
+from matplotlib.backend_bases import PickEvent, MouseEvent, MouseButton, KeyEvent  # , NavigationToolbar2
 from matplotlib.lines import Line2D
 from typing import List, Union, Tuple, Optional, Dict, Callable, Set
 import xarray as xa
@@ -38,7 +38,6 @@ class mplGraphPlot:
         self.lines: List[Line2D] = None
         self._markers: List[Marker] = []
         self._regions: Dict[int,Marker] = {}
-        self._points = Dict[int, Marker]
         self.init_figure( **kwargs )
 
     def use_model_data( self, use: bool ):
@@ -56,6 +55,7 @@ class mplGraphPlot:
             self.ax.set_autoscaley_on(True)
             self.ax.set_title(f'Point Spectra {self.index}', fontsize=12)
             self.fig.canvas.mpl_connect('pick_event', self.onpick )
+            self.fig.canvas.mpl_connect('key_press_event', self.on_key_press)
             if not self.standalone: plt.ion()
 
     def gui(self):
@@ -145,7 +145,7 @@ class mplGraphPlot:
         if self.selected_index == -1:
             alphas = [ 1.0 ] * self.nlines
         else:
-            alphas = [ 0.1 ] * self.nlines
+            alphas = [ 0.2 ] * self.nlines
             alphas[ self.selected_index ] = 1.0
         return alphas
 
@@ -178,6 +178,22 @@ class mplGraphPlot:
         line: Line2D = event.artist
         self.selected_index = self.lines.index(line)
         self.plot()
+
+    @exception_handled
+    def on_key_press(self, event: KeyEvent ):
+        if (self.selected_index >= 0) and (event.inaxes == self.ax):
+            if event.key == 'backspace': self.delete_selection()
+
+    def delete_selection(self):
+        from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.gui.spatial.map import MapManager, mm
+        if (self.selected_index >= 0):
+            line = self.lines.pop(self.selected_index)
+            line.remove()
+            pid = self._selected_pids.pop(self.selected_index)
+            lm().deletePid( pid )
+            mm().plot_markers_image()
+            self.plot()
 
     @property
     def nlines(self) -> int:

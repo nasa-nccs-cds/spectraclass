@@ -308,18 +308,14 @@ class Block(DataContainer):
     def raster2points( cls, base_raster: xa.DataArray ) -> Tuple[xa.DataArray,np.ndarray]:   #  base_raster dims: [ band, y, x ]
         t0 = time.time()
         point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
-        lgm().log(f"raster2points -> point_data, num_nan = {np.count_nonzero(np.isnan(point_data.values))}")
         if '_FillValue' in point_data.attrs:
             nodata = point_data.attrs['_FillValue']
-            lgm().log(f"raster2points -> # nodata = {np.count_nonzero(point_data == nodata)}")
             point_data = point_data if np.isnan( nodata ) else point_data.where( point_data != nodata, np.nan )
-            lgm().log(f"  filtered -> # nodata = {np.count_nonzero(point_data == nodata)}")
         mask: np.ndarray = ~np.isnan(point_data.values).any(axis=1)
         filtered_point_data: xa.DataArray = point_data[ mask, : ]
         filtered_point_data.attrs['dsid'] = base_raster.name
         lgm().log( f"raster2points -> [{base_raster.name}]: filtered_point_data shape = {filtered_point_data.shape}" )
         lgm().log( f" --> mask shape = {mask.shape}, mask #valid = {np.count_nonzero(mask)}/{mask.size}, completed in {time.time()-t0} sec" )
-        lgm().log( f" --> #nan: filtered = {np.count_nonzero(np.isnan(filtered_point_data.values))}")
         return filtered_point_data, mask
 
     def coords2pindex( self, cy, cx ) -> int:

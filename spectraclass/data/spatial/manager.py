@@ -230,6 +230,7 @@ class SpatialDataManager(ModeDataManager):
 
     @exception_handled
     def prepare_inputs(self, **kwargs ) -> Dict[Tuple,int]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         lgm().log(f" Preparing inputs", print=True)
         reprocess = kwargs.get( 'reprocess',False )
         block_nsamples = {}
@@ -292,6 +293,7 @@ class SpatialDataManager(ModeDataManager):
 #                        print(f"Writing raster file: '{self._reduced_raster_file}' with dims={reduced_dataArray.dims}, attrs = {reduced_dataArray.attrs}")
 #                        reduced_dataArray.rio.set_spatial_dims()
 #                        raw_data.rio.to_raster( self._reduced_raster_file )
+            tm().saveMetadata( block_nsamples )
         return block_nsamples
 
     def getFilePath(self) -> str:
