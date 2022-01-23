@@ -18,5 +18,5 @@ class MLP:
         model = models.Sequential()
         model.add( layers.Dense( nfeatures, activation='relu', input_shape=(nfeatures,) ) )
         model.add( layers.Dense( nfeatures, activation='relu') )
-        model.add( layers.Dense( nclasses ) )
+        model.add( layers.Dense( nclasses, activation='softmax' ) )
         return model

@@ -1,4 +1,6 @@
 import ipywidgets as ip
+from matplotlib.backend_bases import PickEvent, MouseEvent, MouseButton  # , NavigationToolbar2
+from matplotlib.lines import Line2D
 from typing import List, Union, Tuple, Optional, Dict, Callable, Set
 import xarray as xa
 import numpy as np
@@ -29,10 +31,11 @@ class mplGraphPlot:
         self.index = index
         self.standalone = kwargs.pop('standalone', False)
         self.init_data(**kwargs)
+        self.selected_index = -1
         self._selected_pids: List[int] = []
         self.ax : plt.Axes = None
         self.fig : plt.Figure = None
-        self.lines: plt.Line2D = None
+        self.lines: List[Line2D] = None
         self._markers: List[Marker] = []
         self._regions: Dict[int,Marker] = {}
         self._points = Dict[int, Marker]
@@ -52,6 +55,7 @@ class mplGraphPlot:
             self.ax.grid(True)
             self.ax.set_autoscaley_on(True)
             self.ax.set_title(f'Point Spectra {self.index}', fontsize=12)
+            self.fig.canvas.mpl_connect('pick_event', self.onpick )
             if not self.standalone: plt.ion()
 
     def gui(self):
@@ -137,6 +141,20 @@ class mplGraphPlot:
     def get_colors(self):
         return sum( [m.colors for m in self._markers], [] )
 
+    def get_alphas(self):
+        if self.selected_index == -1:
+            alphas = [ 1.0 ] * self.nlines
+        else:
+            alphas = [ 0.1 ] * self.nlines
+            alphas[ self.selected_index ] = 1.0
+        return alphas
+
+    def get_linewidths(self):
+        linewidths = [1.0] * self.nlines
+        if self.selected_index == -1:
+            linewidths[self.selected_index] = 4.0
+        return linewidths
+
     def get_pids( self ):
         return sum( [m.pids.tolist() for m in self._markers], [] )
 
@@ -147,13 +165,19 @@ class mplGraphPlot:
         if nsel == 1:
             self.update_graph( self.x, self.y2 )
         elif nsel > 1:
-            self.ax.set_prop_cycle( color=self.get_colors() )
+            self.ax.set_prop_cycle( color=self.get_colors(), alpha=self.get_alphas(), linewidth=self.get_linewidths() )
             self.update_graph( self.x, self.y )
 
     def update_graph(self, x:  np.ndarray, y: np.ndarray, **kwargs ):
         lgm().log( f"Plotting lines, xs = {x.shape}, ys = {y.shape}, xrange = {[x.min(),x.max()]}, yrange = {[y.min(),y.max()]}, args = {kwargs}")
-        self.lines = self.ax.plot( x, y, **kwargs )
+        self.lines: List[Line2D] = self.ax.plot( x, y, picker=True, pickradius=2, **kwargs )
         self.fig.canvas.draw()
+
+    @exception_handled
+    def onpick(self, event: PickEvent ):
+        line: Line2D = event.artist
+        self.selected_index = self.lines.index(line)
+        self.plot()
 
     @property
     def nlines(self) -> int:

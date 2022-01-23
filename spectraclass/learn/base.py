@@ -11,6 +11,7 @@ import traitlets.config as tlc
 import ipywidgets as ipw
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
+from tensorflow.keras.utils import to_categorical
 import tensorflow as tf
 from tensorflow.keras import datasets, layers, models
 
@@ -31,6 +32,7 @@ class LearningModel:
 
     @exception_handled
     def learn_classification( self, point_data: np.ndarray, class_data: np.ndarray, **kwargs ):
+        from spectraclass.model.labels import LabelsManager, lm
         t1 = time.time()
         if np.count_nonzero( class_data > 0 ) == 0:
             ufm().show( "Must label some points before learning the classification" )
@@ -43,19 +45,13 @@ class LearningModel:
 
 
     @classmethod
-    def index_to_one_hot(cls, class_data: np.ndarray) -> np.ndarray:
+    def index_to_one_hot( cls, class_data: np.ndarray ) -> np.ndarray:
         from spectraclass.model.labels import lm
-        one_hot = np.zeros( (class_data.size, lm().nLabels) )
-        one_hot[ np.arange(class_data.size), class_data ] = 1
-        return one_hot
+        return to_categorical( class_data, lm().nLabels )
 
     @classmethod
     def one_hot_to_index(cls, class_data: np.ndarray) -> np.ndarray:
-        indices = np.zeros( ( class_data.shape[0], ) )
-        for ic in range( class_data.shape[1] ):
-            mask = ( class_data[:,ic] > 0 ).squeeze()
-            indices[ mask ] = ic
-        return indices
+        return np.argmax( class_data, axis=0  ).squeeze()
 
     def fit(self, data: np.ndarray, class_data: np.ndarray, **kwargs):
         raise Exception( "abstract method LearningModel.fit called")
@@ -78,13 +74,9 @@ class KerasModelWrapper(LearningModel):
     def __init__(self, name: str,  model: models.Model, **kwargs ):
         LearningModel.__init__( self, name,  **kwargs )
         opt = str(kwargs.pop('opt', 'adam')).lower()
+        loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
         self._model: models.Model = model
-        self._model.compile(optimizer=opt, loss=self.get_loss(**kwargs),  metrics=['accuracy'], **kwargs )
-
-    def get_loss( self, **kwargs ):
-        loss = str( kwargs.get( 'loss', 'cross_entropy' ) ).lower()
-        if loss == "cross_entropy": return tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-        else: raise Exception( f"Unknown loss: {loss}" )
+        self._model.compile(optimizer=opt, loss=loss,  metrics=['accuracy'], **kwargs )
 
     def predict( self, data: np.ndarray, **kwargs ) -> np.ndarray:
         return self._model.predict( data, **kwargs )

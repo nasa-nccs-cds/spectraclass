@@ -166,9 +166,7 @@ class MapManager(SCSingletonConfigurable):
         self.model_slider_cid = self.model_slider.on_changed(self._update)
 
     def one_hot_to_index(self, class_data: xa.DataArray) -> xa.DataArray:
-        from spectraclass.learn.base import LearningModel
-        cdata: np.ndarray = LearningModel.one_hot_to_index( class_data.values )
-        return xa.DataArray( cdata, dims=class_data.dims[0], coords = class_data.coords[class_data.dims[0]] )
+        return class_data.argmax( axis=0, skipna=True, keep_attrs=True ).squeeze()
 
     @exception_handled
     def plot_labels_image(self, classification: xa.DataArray = None ):
@@ -182,7 +180,7 @@ class MapManager(SCSingletonConfigurable):
                 self._classification_data = self.one_hot_to_index( self._classification_data )
 
         if self._classification_data is not None:
-            vrange = [ self._classification_data.values.min, self._classification_data.values.max ]
+            vrange = [ self._classification_data.values.min(), self._classification_data.values.max() ]
             lgm().log( f"\n plot labels image, shape = {self._classification_data.shape}, vrange = {vrange}\n" )
             try: self.labels_image.remove()
             except Exception: pass
