@@ -32,6 +32,7 @@ class mplGraphPlot:
         self.standalone = kwargs.pop('standalone', False)
         self.init_data(**kwargs)
         self.selected_line: int = -1
+        self.selected_index: int = -1
         self._selected_pids: List[int] = []
         self.ax : plt.Axes = None
         self.fig : plt.Figure = None
@@ -148,24 +149,17 @@ class mplGraphPlot:
         lgm().log(f"selected_pid, pid={pid}, line={self.selected_line}, lines={lids}, inlist={self.selected_line in lids}")
         return pid
 
-    @property
-    def selected_index(self) -> int:
-        line, pid, lIndex = self.lines.get( self.selected_line, (None,-1, -1) )
-        lgm().log(f"selected_index, lIndex={lIndex}")
-        return lIndex
-
     def get_alphas(self):
-        if self.selected_line == -1:
+        if self.selected_index == -1:
             alphas = [ 1.0 ] * self.nlines
         else:
             alphas = [ 0.2 ] * self.nlines
-            lid = self.selected_index
-            alphas[ lid ] = 1.0
+            alphas[ self.selected_index ] = 1.0
         return alphas
 
     def get_linewidths(self):
         linewidths = [1.0] * self.nlines
-        if self.selected_line >= 0:
+        if self.selected_index >= 0:
             linewidths[self.selected_index] = 2.0
         return linewidths
 
@@ -173,7 +167,7 @@ class mplGraphPlot:
         return sum( [m.pids.tolist() for m in self._markers], [] )
 
     def plot( self ):
-#        self.clear()
+        self.clear()
         self.ax.title.text = self.title
         nsel = len(self._selected_pids)
         if nsel == 1:
@@ -194,6 +188,8 @@ class mplGraphPlot:
     def onpick(self, event: PickEvent ):
         line: Line2D = event.artist
         self.selected_line = id(line)
+        ( line, pid, lid ) = self.lines[ self.selected_line ]
+        self.selected_index = lid
         self.plot()
 
     @exception_handled
