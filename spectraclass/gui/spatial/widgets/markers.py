@@ -41,7 +41,7 @@ class Marker:
         return not self.__eq__( m )
 
     def __str__(self):
-        return f"Marker[{self.cid}]: {self._pids.size()} pids"
+        return f"Marker[{self.cid}]: {self.size} pids"
 
     @property
     def size(self):

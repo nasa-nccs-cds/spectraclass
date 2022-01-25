@@ -34,9 +34,10 @@ class mplGraphPlot:
         self.selected_line: int = -1
         self.selected_index: int = -1
         self._selected_pids: List[int] = []
+        self._selected_cids: List[int] = []
         self.ax : plt.Axes = None
         self.fig : plt.Figure = None
-        self.lines: Dict[int,Tuple[Line2D,int,int]] = {}
+        self.lines: Dict[int,Tuple[Line2D,int,int,int]] = {}
         self._markers: List[Marker] = []
         self._regions: Dict[int,Marker] = {}
         self.init_figure( **kwargs )
@@ -67,10 +68,13 @@ class mplGraphPlot:
         cls._x = None
         cls.init_data()
 
-    def clear(self):
-        for (line,pid,iL) in self.lines.values():
+    def clear(self, clear_index = False ):
+        for (line,pid,cid,iL) in self.lines.values():
             line.remove()
         self.lines = {}
+        self.selected_line = -1
+        if clear_index:
+            self.selected_index = -1
 
     @classmethod
     def init_data(cls, **kwargs ):
@@ -114,6 +118,7 @@ class mplGraphPlot:
             try:
                 self._markers.remove(marker)
                 self._selected_pids = self.get_pids()
+                self._selected_cids = self.get_cids()
                 self.plot()
             except:
                 lgm().log( f"Error in removeMarker: #markers={len(self._markers)}, marker = {marker}")
@@ -127,16 +132,22 @@ class mplGraphPlot:
             if marker.empty or (marker.pids[0] == pid):
                 self.removeMarker(marker)
 
+    @exception_handled
     def clear_transients( self, m: Marker ):
         has_transient = (len(self._markers) == 1) and (self._markers[0].cid == 0)
+        lgm().log(f"clear_transients: cid={self._markers[0].cid}, nmarkers = {len(self._markers)}, has_transient={has_transient}")
         if has_transient or (m.cid == 0):
             self._markers = []
+            self.clear( True )
+
 
     @log_timing
     def addMarker( self, m: Marker ):
         self.clear_transients( m )
         self._markers.append( m )
         self._selected_pids = self.get_pids()
+        self._selected_cids = self.get_cids()
+        lgm().log(f"Add Marker: cid={m.cid}, pids = {m.pids}, selected_pids = {self._selected_pids}")
         self.plot()
 
     def get_colors(self):
@@ -144,7 +155,7 @@ class mplGraphPlot:
 
     @property
     def selected_pid(self) -> int:
-        line, pid, lIndex = self.lines.get( self.selected_line, (None,-1, -1) )
+        line, pid, cid, lIndex = self.lines.get( self.selected_line, (None,-1, -1) )
         lids = self.lines.keys()
         lgm().log(f"selected_pid, pid={pid}, line={self.selected_line}, lines={lids}, inlist={self.selected_line in lids}")
         return pid
@@ -166,21 +177,24 @@ class mplGraphPlot:
     def get_pids( self ):
         return sum( [m.pids.tolist() for m in self._markers], [] )
 
+    def get_cids( self ):
+        return sum( [ [m.cid]*m.size for m in self._markers ], [] )
+
     def plot( self ):
         self.clear()
         self.ax.title.text = self.title
-        nsel = len(self._selected_pids)
-        if nsel == 1:
+        if (len( self._markers ) == 1) and ( self._markers[0].cid == 0 ):
             self.update_graph( self.y2 )
-        elif nsel > 1:
+        else:
             self.ax.set_prop_cycle( color=self.get_colors(), alpha=self.get_alphas(), linewidth=self.get_linewidths() )
             self.update_graph( self.y )
 
     def update_graph(self, y: np.ndarray, **kwargs ):
         lgm().log( f"Plotting lines, xs = {self.x.shape}, ys = {y.shape}, xrange = {[self.x.min(),self.x.max()]}, yrange = {[y.min(),y.max()]}, args = {kwargs}")
         lines: List[Line2D] = self.ax.plot( self.x, y, picker=True, pickradius=2, **kwargs )
-        for iL, (line, pid) in enumerate( zip( lines,self._selected_pids ) ):
-            self.lines[id(line)] = ( line, pid, iL )
+        for iL, (line, pid, cid ) in enumerate( zip( lines,self._selected_pids, self._selected_cids ) ):
+            self.lines[id(line)] = ( line, pid, cid, iL )
+            if self.selected_index == iL: self.selected_line = id(line)
         lgm().log(f" ---> LINES: {self.lines.keys()}")
         self.fig.canvas.draw()
 
@@ -188,9 +202,13 @@ class mplGraphPlot:
     def onpick(self, event: PickEvent ):
         line: Line2D = event.artist
         self.selected_line = id(line)
-        ( line, pid, lid ) = self.lines[ self.selected_line ]
-        self.selected_index = lid
-        self.plot()
+        try:
+            ( line, pid, cid, lid ) = self.lines[ self.selected_line ]
+            self.selected_index = lid
+            lgm().log(f"\n\nonpick: selected_line: {self.selected_line}")
+            self.plot()
+        except KeyError:
+            lgm().log( f"\n\nonpick: missing line: {self.selected_line}, lines = {self.lines.keys()}, inList = {self.selected_line in self.lines.keys()}")
 
     @exception_handled
     def on_key_press(self, event: KeyEvent ):
@@ -200,14 +218,27 @@ class mplGraphPlot:
     def delete_selection(self):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.map import MapManager, mm
-        if self.selected_line >= 0:
-            line, pid, lid = self.lines.pop( self.selected_line )
-            line.remove()
+        nsel = len(self._selected_pids)
+        if nsel == 1:
+            for (line, pid, cid, iL) in self.lines.values():
+                line.remove()
+                lm().deletePid(pid)
+            self.lines = {}
             self.selected_line = -1
-            self._selected_pids.remove(pid )
-            lm().deletePid( pid )
-            mm().plot_markers_image()
-            self.plot()
+            self.selected_index = -1
+        else:
+            if self.selected_line >= 0:
+                try:
+                    line, pid, cid, lid = self.lines.pop( self.selected_line )
+                    line.remove()
+                    self.selected_line = -1
+                    self.selected_index = -1
+                    self._selected_pids.remove(pid )
+                    lm().deletePid( pid )
+                except KeyError:
+                    lgm().log(f"\n\ndelete_selection: missing line: {self.selected_line}, lines = {self.lines.keys()}, inList = {self.selected_line in self.lines.keys()}")
+        mm().plot_markers_image()
+        self.plot()
 
     @property
     def nlines(self) -> int:
