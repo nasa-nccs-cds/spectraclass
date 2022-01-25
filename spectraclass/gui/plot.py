@@ -31,11 +31,11 @@ class mplGraphPlot:
         self.index = index
         self.standalone = kwargs.pop('standalone', False)
         self.init_data(**kwargs)
-        self.selected_index = -1
+        self.selected_line: int = -1
         self._selected_pids: List[int] = []
         self.ax : plt.Axes = None
         self.fig : plt.Figure = None
-        self.lines: List[Line2D] = None
+        self.lines: Dict[int,Tuple[Line2D,int,int]] = {}
         self._markers: List[Marker] = []
         self._regions: Dict[int,Marker] = {}
         self.init_figure( **kwargs )
@@ -67,9 +67,9 @@ class mplGraphPlot:
         cls.init_data()
 
     def clear(self):
-        self.ax.clear()
-        self.lines = None
-        self.ax.grid(True)
+        for (line,pid,iL) in self.lines.values():
+            line.remove()
+        self.lines = {}
 
     @classmethod
     def init_data(cls, **kwargs ):
@@ -141,56 +141,74 @@ class mplGraphPlot:
     def get_colors(self):
         return sum( [m.colors for m in self._markers], [] )
 
+    @property
+    def selected_pid(self) -> int:
+        line, pid, lIndex = self.lines.get( self.selected_line, (None,-1, -1) )
+        lids = self.lines.keys()
+        lgm().log(f"selected_pid, pid={pid}, line={self.selected_line}, lines={lids}, inlist={self.selected_line in lids}")
+        return pid
+
+    @property
+    def selected_index(self) -> int:
+        line, pid, lIndex = self.lines.get( self.selected_line, (None,-1, -1) )
+        lgm().log(f"selected_index, lIndex={lIndex}")
+        return lIndex
+
     def get_alphas(self):
-        if self.selected_index == -1:
+        if self.selected_line == -1:
             alphas = [ 1.0 ] * self.nlines
         else:
             alphas = [ 0.2 ] * self.nlines
-            alphas[ self.selected_index ] = 1.0
+            lid = self.selected_index
+            alphas[ lid ] = 1.0
         return alphas
 
     def get_linewidths(self):
         linewidths = [1.0] * self.nlines
-        if self.selected_index == -1:
-            linewidths[self.selected_index] = 4.0
+        if self.selected_line >= 0:
+            linewidths[self.selected_index] = 2.0
         return linewidths
 
     def get_pids( self ):
         return sum( [m.pids.tolist() for m in self._markers], [] )
 
     def plot( self ):
-        self.clear()
+#        self.clear()
         self.ax.title.text = self.title
         nsel = len(self._selected_pids)
         if nsel == 1:
-            self.update_graph( self.x, self.y2 )
+            self.update_graph( self.y2 )
         elif nsel > 1:
             self.ax.set_prop_cycle( color=self.get_colors(), alpha=self.get_alphas(), linewidth=self.get_linewidths() )
-            self.update_graph( self.x, self.y )
+            self.update_graph( self.y )
 
-    def update_graph(self, x:  np.ndarray, y: np.ndarray, **kwargs ):
-        lgm().log( f"Plotting lines, xs = {x.shape}, ys = {y.shape}, xrange = {[x.min(),x.max()]}, yrange = {[y.min(),y.max()]}, args = {kwargs}")
-        self.lines: List[Line2D] = self.ax.plot( x, y, picker=True, pickradius=2, **kwargs )
+    def update_graph(self, y: np.ndarray, **kwargs ):
+        lgm().log( f"Plotting lines, xs = {self.x.shape}, ys = {y.shape}, xrange = {[self.x.min(),self.x.max()]}, yrange = {[y.min(),y.max()]}, args = {kwargs}")
+        lines: List[Line2D] = self.ax.plot( self.x, y, picker=True, pickradius=2, **kwargs )
+        for iL, (line, pid) in enumerate( zip( lines,self._selected_pids ) ):
+            self.lines[id(line)] = ( line, pid, iL )
+        lgm().log(f" ---> LINES: {self.lines.keys()}")
         self.fig.canvas.draw()
 
     @exception_handled
     def onpick(self, event: PickEvent ):
         line: Line2D = event.artist
-        self.selected_index = self.lines.index(line)
+        self.selected_line = id(line)
         self.plot()
 
     @exception_handled
     def on_key_press(self, event: KeyEvent ):
-        if (self.selected_index >= 0) and (event.inaxes == self.ax):
+        if event.inaxes == self.ax:
             if event.key == 'backspace': self.delete_selection()
 
     def delete_selection(self):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.map import MapManager, mm
-        if (self.selected_index >= 0):
-            line = self.lines.pop(self.selected_index)
+        if self.selected_line >= 0:
+            line, pid, lid = self.lines.pop( self.selected_line )
             line.remove()
-            pid = self._selected_pids.pop(self.selected_index)
+            self.selected_line = -1
+            self._selected_pids.remove(pid )
             lm().deletePid( pid )
             mm().plot_markers_image()
             self.plot()
