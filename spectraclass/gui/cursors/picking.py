@@ -301,7 +301,7 @@ def _(artist, event):
                 data_xy[argmin], data_screen_xy[argmin], artist.axes)
             sels.append(
                 Selection(artist, target, argmin, ds[argmin], None, None))
-    # If lines are visible, find the closest projection.
+    # If lrecs are visible, find the closest projection.
     if (artist.get_linestyle() not in ["None", "none", " ", "", None]
             and len(artist.get_xydata()) > 1):
         sel = _compute_projection_pick(artist, artist.get_path(), xy)

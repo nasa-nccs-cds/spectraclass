@@ -159,10 +159,8 @@ class LabelsManager(SCSingletonConfigurable):
         return self._label_maps[-1]
 
     def addMarker(self, marker: Marker ):
-        top_marker = self.topMarker
-        if not marker.empty and (marker != top_marker):
-            self.clearTransientMarkers(marker)
-            self._markers.append( marker )
+        self.clearTransientMarkers(marker)
+        self._markers.append( marker )
 
     @property
     def markers(self):
@@ -359,6 +357,10 @@ class LabelsManager(SCSingletonConfigurable):
     @property
     def colors(self)-> List[str]:
         return self._colors
+
+    @property
+    def graph_colors(self)-> List[str]:
+        return [ 'black' ] + self._colors[1:]
 
     @property
     def labels(self) -> List[str]:

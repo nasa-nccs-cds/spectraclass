@@ -87,7 +87,7 @@ def _iter_axes_subartists(ax):
     r"""Yield all child `Artist`\s (*not* `Container`\s) of *ax*."""
     yield from ax.collections
     yield from ax.images
-    yield from ax.lines
+    yield from ax.lrecs
     yield from ax.patches
     yield from ax.texts
 
