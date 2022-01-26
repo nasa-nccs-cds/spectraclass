@@ -32,12 +32,12 @@ class LineRec:
             self.line = None
 
     @property
-    def id(self) -> float:
+    def id(self) -> int:
         return -1 if self.line is None else self.lid(self.line)
 
     @classmethod
-    def lid( cls, line: Line2D ) -> float:
-        return line.get_ydata().mean()
+    def lid( cls, line: Line2D ) -> int:
+        return id(line) # line.get_ydata().mean()
 
 class mplGraphPlot:
     _x: np.ndarray = None
@@ -56,7 +56,6 @@ class mplGraphPlot:
         self.fig: plt.Figure = None
         self.selected_pid: int = -1
         self.lrecs: OrderedDict[int, LineRec] = OrderedDict()
-        self._regions: Dict[int,Marker] = {}
         self.init_figure( **kwargs )
 
     @property
@@ -136,7 +135,6 @@ class mplGraphPlot:
         mask: np.ndarray = svect.contains( polygon, MX, MY ).flatten()
         pids = idx2pid[ PID[mask] ]
         marker = Marker( "label", pids[ pids > -1 ].tolist(), cid )
-        self._regions[ prec.polyId ] = marker
         return marker
 
     def plot_region(self, prec: PolyRec, cid: int ) -> Marker:
@@ -210,6 +208,21 @@ class mplGraphPlot:
             lm().deletePid( self.selected_pid )
             mm().plot_markers_image()
             self.plot(True)
+
+    def remove_region(self, region: PolyRec ):
+        marker = self.get_region_marker( region, 0 )
+        for pid in marker.pids:
+            lrec = self.lrecs.pop( pid, None )
+            if lrec is not None:
+                lrec.clear()
+        self.plot()
+        return marker
+
+    def remove_point( self, pid: int ):
+        lrec = self.lrecs.pop( pid, None )
+        if lrec is not None:
+            lrec.clear()
+            self.plot()
 
     @property
     def nlines(self) -> int:

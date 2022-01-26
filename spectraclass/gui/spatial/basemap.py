@@ -44,7 +44,7 @@ class TileServiceBasemap(SCSingletonConfigurable):
         parallel = kwargs.pop('parallel', True)
         use_slider = kwargs.pop( 'slider', True )
         self.figure: Figure = plt.figure( fig_index, figsize=fig_size )
-        self.figure.suptitle( title )
+        self.figure.suptitle( title, color="yellow" )
         if not standalone: plt.ion()
 
         bounds = [0.01, 0.07, 0.98, 0.93] if use_slider else [0.01, 0.01, 0.98, 0.98]
