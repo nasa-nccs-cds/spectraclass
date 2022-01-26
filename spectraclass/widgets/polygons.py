@@ -92,8 +92,8 @@ class PolygonInteractor:
         from spectraclass.gui.plot import GraphPlotManager, gpm
         if self.prec is not None:
             self.polys.remove( self.prec )
-            self.prec.poly.remove()
-            self.prec.line.remove()
+            self.prec.poly.clear()
+            self.prec.line.clear()
             gpm().remove_region(self.prec)
             self.prec = None
             self.canvas.draw_idle()

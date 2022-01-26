@@ -17,8 +17,8 @@ class Marker:
         self._pids: np.ndarray = pids if isinstance( pids, np.ndarray ) else np.array(pids)
 
     @property
-    def pids(self) -> np.ndarray:
-        return self._pids
+    def pids(self) -> List[int]:
+        return self._pids.tolist()
 
     @property
     def colors(self) -> List[str]:
@@ -35,7 +35,7 @@ class Marker:
         return self.props.get(key,None)
 
     def __eq__(self, m ):
-        return isinstance( m, Marker ) and ( m.cid == self.cid ) and ( m.pids.tolist() == self._pids.tolist() )
+        return isinstance( m, Marker ) and ( m.cid == self.cid ) and ( m.pids == self.pids )
 
     def __ne__(self, m ):
         return not self.__eq__( m )

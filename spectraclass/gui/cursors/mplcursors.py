@@ -381,7 +381,7 @@ class Cursor:
         # Move the Annotation's ownership from the Axes to the Figure, so that
         # it gets drawn even above twinned axes.  But ann.axes must stay set,
         # so that e.g. unit converters get correctly applied.
-        ann.remove()
+        ann.clear()
         ann.axes = axes
         figure.add_artist(ann)
         ann.draggable(use_blit=not self._multiple)
@@ -534,7 +534,7 @@ class Cursor:
             self.remove_selection(sel)
         for s in type(self)._keep_alive.values():
             with suppress(KeyError):
-                s.remove(self)
+                s.clear(self)
 
     def _on_pick(self, event):
         # Avoid creating a new annotation when dragging a preexisting
@@ -651,10 +651,10 @@ class Cursor:
         figures = {artist.figure for artist in [sel.annotation] + sel.extras}
         # ValueError is raised if the artist has already been removed.
         with suppress(ValueError):
-            sel.annotation.remove()
+            sel.annotation.clear()
         for artist in sel.extras:
             with suppress(ValueError):
-                artist.remove()
+                artist.clear()
         for cb in self._callbacks["remove"]:
             cb(sel)
         for figure in figures:

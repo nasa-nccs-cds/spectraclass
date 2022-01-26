@@ -270,7 +270,7 @@ class LabelsManager(SCSingletonConfigurable):
             marker.deletePid(pid)
             if marker.empty: empty_markers.append( marker )
         for m in empty_markers:
-            lgm().log( f"Removing marker: {m}")
+            lgm().log( f"LM: Removing marker: {m}")
             self._markers.remove( m )
 
 

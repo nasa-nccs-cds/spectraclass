@@ -26,12 +26,18 @@ class LineRec:
         self.pid: int = pid
         self.cid: int = cid
 
-    def remove(self):
-        self.line.remove()
+    def clear(self):
+        if self.line is not None:
+            self.line.remove()
+            self.line = None
 
     @property
-    def id(self) -> int:
-        return id(self.line)
+    def id(self) -> float:
+        return -1 if self.line is None else self.lid(self.line)
+
+    @classmethod
+    def lid( cls, line: Line2D ) -> float:
+        return line.get_ydata().mean()
 
 class mplGraphPlot:
     _x: np.ndarray = None
@@ -50,13 +56,17 @@ class mplGraphPlot:
         self.fig: plt.Figure = None
         self.selected_pid: int = -1
         self.lrecs: OrderedDict[int, LineRec] = OrderedDict()
-        self._markers: List[Marker] = []
         self._regions: Dict[int,Marker] = {}
         self.init_figure( **kwargs )
 
-    def get_lrec( self, id: int ) -> Optional[LineRec]:
+    @property
+    def ids(self) -> List[float]:
+        return [lrec.id for lrec in self.lrecs.values()]
+
+    def get_lrec( self, line: Line2D ) -> Optional[LineRec]:
+        lid = LineRec.lid( line )
         for lrec in self.lrecs.values():
-            if lrec.id == id: return lrec
+            if lrec.id == lid: return lrec
         return None
 
     def get_selected_lrec( self ) -> Optional[LineRec]:
@@ -94,7 +104,7 @@ class mplGraphPlot:
         cls.init_data()
 
     def clear(self):
-        for line in self.lrecs.values(): line.remove()
+        for line in self.lrecs.values(): line.clear()
         self.lrecs = OrderedDict()
 
     @classmethod
@@ -134,68 +144,56 @@ class mplGraphPlot:
         self.addMarker( marker )
         return marker
 
-    def removeMarker(self, marker: Marker ):
-        if marker is not None:
-            try:
-                self._markers.remove(marker)
-                self._selected_pids = self.get_pids()
-                self._selected_cids = self.get_cids()
-                self.plot()
-            except:
-                lgm().log( f"Error in removeMarker: #markers={len(self._markers)}, marker = {marker}")
-
-    def remove_region(self, prec: PolyRec ):
-        marker = self._regions.pop( prec.polyId, None )
-        self.removeMarker( marker )
-
-    def remove_point(self, pid: int):
-        for marker in self._markers:
-            if marker.empty or (marker.pids[0] == pid):
-                self.removeMarker(marker)
-
     @log_timing
     def addMarker( self, m: Marker ):
-        self._markers.append( m )
-        for pid in m.pids:
-            self.lrecs[pid] = LineRec( None, pid, m.cid )
-        lgm().log(f"Add Marker: cid={m.cid}, pids = {m.pids}")
-        self.plot()
+        lgm().log(f"Add Marker[{m.size}]: cid={m.cid}, pids = {m.pids}")
+        if m.size > 0:
+            for pid in m.pids:
+                self.lrecs[pid] = LineRec( None, pid, m.cid )
+            self.plot()
 
+    @exception_handled
     def get_plotspecs(self):
         from spectraclass.model.labels import LabelsManager, lm
         colors, alphas, lws = [], [], []
         selected: bool = (self.selected_pid >= 0)
+        lgm().log( f"create plotspecs for {len(self.lrecs.items())} lines, pids({self.selected_pid})->{self.pids}")
         for (pid, lrec) in self.lrecs.items():
             selection = ( pid == self.selected_pid )
-            alphas.append( 0.2 if (selection and not selected) else 1.0 )
+            alphas.append( (1.0 if selection else 0.2) if selected else 1.0 )
             colors.append( lm().graph_colors[ lrec.cid ] )
-            lws.append( 2.0 if selected else 1.0 )
+            lws.append( 2.0 if selection else 1.0 )
         return dict( color=colors, alpha=alphas, lw=lws)
 
-    def get_pids( self ):
-        return sum( [m.pids.tolist() for m in self._markers], [] )
+    @property
+    def cids( self ):
+        return  [ lrec.cid for lrec in self.lrecs.values() ]
 
-    def get_cids( self ):
-        return sum( [ [m.cid]*m.size for m in self._markers ], [] )
-
-    def plot( self ):
+    def plot( self, clear_selection = False ):
         self.ax.title.text = self.title
+        if clear_selection: self.selected_pid = -1
         ps = self.get_plotspecs()
+        lgm().log( f"set_prop_cycle: color={ps['color']}, alpha={ps['alpha']}, linewidth={ps['lw']}")
         self.ax.set_prop_cycle( color=ps['color'], alpha=ps['alpha'], linewidth=ps['lw'] )
         self.update_graph()
 
     def update_graph(self, **kwargs ):
-        lgm().log( f"Plotting lines, xs = {self.x.shape}, ys = {self.y.shape}, xrange = {[self.x.min(),self.x.max()]}, yrange = {[self.y.min(),self.y.max()]}, args = {kwargs}")
+        for lrec in self.lrecs.values(): lrec.clear()
+        lgm().log( f"\nPlotting lines, xs = {self.x.shape}, ys = {self.y.shape}, xrange = {[self.x.min(),self.x.max()]}, yrange = {[self.y.min(),self.y.max()]}, args = {kwargs}")
         lines: List[Line2D] = self.ax.plot( self.x, self.y, picker=True, pickradius=2, **kwargs )
         for (line, lrec) in zip(lines, self.lrecs.values()): lrec.line = line
+        lgm().log(f" --> lines = {self.ids}")
         self.fig.canvas.draw()
 
     @exception_handled
     def onpick(self, event: PickEvent ):
         line: Line2D = event.artist
-        selected_lrec = self.get_lrec( id(line) )
-        self.selected_pid = selected_lrec.pid
-        self.plot()
+        selected_lrec = self.get_lrec( line )
+        if selected_lrec is None:
+            lgm().log( f"\nonpick: line={LineRec.lid(line)}, lines={self.ids}, inlist={LineRec.lid(line) in self.ids}")
+        else:
+            self.selected_pid = selected_lrec.pid
+            self.plot()
 
     @exception_handled
     def on_key_press(self, event: KeyEvent ):
@@ -205,12 +203,13 @@ class mplGraphPlot:
     def delete_selection(self):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.map import MapManager, mm
-        if self.selected_pid >= 0:
-            lrec = self.lrecs.pop( self.selected_pid )
-            lrec.remove()
+        lrec = self.lrecs.pop( self.selected_pid, None )
+        lgm().log( f" delete_selection[{self.selected_pid}]: {lrec}")
+        if lrec is not None:
+            lrec.clear()
             lm().deletePid( self.selected_pid )
             mm().plot_markers_image()
-            self.plot()
+            self.plot(True)
 
     @property
     def nlines(self) -> int:
