@@ -211,17 +211,18 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def gui(self, **kwargs ):
         if self._gui is None:
-            # try:
-            #     self.init_data()
-            #     invert = False
-            #     bin_colors = [ x[:3] for x in self.get_bin_colors( self.color_map, invert ) ]
-            #     label_colors = [ colors.to_rgb(c) for c in lm().colors[::-1] ]
-            #     self.standard_colors =   [ [1.0, 1.0, 1.0], ] + bin_colors + label_colors
-            #     pt_alphas = [ self.standard_opacity ] * ( self._n_point_bins + 1 ) + [ 1.0 ] * lm().nLabels
-            #     ptsizes = [1] + [1]*self._n_point_bins + [8]*lm().nLabels
-            #     self._gui = view( point_sets = self.point_sets, point_set_sizes=ptsizes, point_set_colors=self.standard_colors, point_set_opacities=pt_alphas, background=[0,0,0] )
-            #     self._gui.layout = dict( width= '100%', flex= '1 0 1200px' )
-            # except ModuleNotFoundError:
+            try:
+                from itkwidgets import view
+                self.init_data()
+                invert = False
+                bin_colors = [ x[:3] for x in self.get_bin_colors( self.color_map, invert ) ]
+                label_colors = [ colors.to_rgb(c) for c in lm().colors[::-1] ]
+                self.standard_colors =   [ [1.0, 1.0, 1.0], ] + bin_colors + label_colors
+                pt_alphas = [ self.standard_opacity ] * ( self._n_point_bins + 1 ) + [ 1.0 ] * lm().nLabels
+                ptsizes = [1] + [1]*self._n_point_bins + [8]*lm().nLabels
+                self._gui = view( point_sets = self.point_sets, point_set_sizes=ptsizes, point_set_colors=self.standard_colors, point_set_opacities=pt_alphas, background=[0,0,0] )
+                self._gui.layout = dict( width= '100%', flex= '1 0 1200px' )
+            except ModuleNotFoundError:
                 self._gui = ip.HBox( [] )
         return self._gui
 

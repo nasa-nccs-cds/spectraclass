@@ -336,11 +336,14 @@ class LabelsManager(SCSingletonConfigurable):
         return label_map
 
     @log_timing
-    def get_label_map(self, block: Block, type: str = None ) -> xa.DataArray:
+    def get_label_map( self, **kwargs ) -> xa.DataArray:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        block = kwargs.get( 'block', tm().getBlock() )
+        mtype = kwargs.get( 'type' )
         cmap: xa.DataArray = block.classmap()
         for marker in lm().markers:
-            if (type is None) or (marker.type == type):
-                lgm().log( f"\nSetting {marker.pids.size} labels for cid = {marker.cid}")
+            if (mtype is None) or (marker.type == mtype):
+                lgm().log( f"\nSetting {len(marker.pids)} labels for cid = {marker.cid}")
                 for pid in marker.pids:
                     idx = block.pid2indices(pid)
                     cmap[ idx['iy'], idx['ix'] ] = marker.cid

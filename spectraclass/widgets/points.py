@@ -77,7 +77,7 @@ class PointsInteractor:
         if kwargs.get('clear_highlights', False): self._highlight_points = []
         ycoords, xcoords, cids = self.get_highlight_points()
         if len(ycoords) > 0:
-            lgm().log(f" --> Hightlghting {len(ycoords)} points: {self._highlight_points} ")
+            lgm().log(f" --> Hightlghting {len(ycoords)} points: {tuple(self._highlight_points)} ")
             self.highlights.set_offsets(np.c_[xcoords, ycoords])
         else:
             offsets = np.ma.column_stack([[], []])

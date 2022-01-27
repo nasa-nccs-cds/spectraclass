@@ -33,8 +33,8 @@ class ActionsManager(SCSingletonConfigurable):
             app().embed()
         elif task == "mark":
             app().mark()
-        elif task == "label":
-            app().spread_selection()
+        elif task == "propagate":
+            app().propagate_selection()
         elif task == "clear":
             app().clear()
         elif task == "undo":
@@ -51,7 +51,7 @@ class ActionsManager(SCSingletonConfigurable):
     def _createGui( self, **kwargs ) -> ipw.Box:
         from spectraclass.model.labels import LabelsManager
 #        for task in [ "embed", "mark", "spread", "distance", "learn", "classify", "mask", "undo", "clear" ]:
-        for task in [ "label", "learn", "apply", "undo", "clear"]:
+        for task in [ "propagate", "learn", "apply", "undo", "clear"]:
             button = ipw.Button( description=task, border= '1px solid gray' )
             button.layout = ipw.Layout( width='auto', flex="1 0 auto" )
             button.on_click( partial( self.on_button_click, task ) )

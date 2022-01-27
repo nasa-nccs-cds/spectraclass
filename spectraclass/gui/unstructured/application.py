@@ -50,9 +50,9 @@ class Spectraclass(SpectraclassController):
         super(Spectraclass, self).undo_action()
         lgm().log(f"      *UNSTRUCTURED CONTROLLER -> UNDO ")
 
-    def spread_selection(self, niters=1):
+    def propagate_selection(self, niters=1):
         from spectraclass.gui.unstructured.table import tm
-        super(Spectraclass, self).spread_selection()
+        super(Spectraclass, self).propagate_selection()
         lgm().log(f"      *UNSTRUCTURED CONTROLLER -> SPREAD ")
 
     def add_marker(self, source: str, marker: Marker):

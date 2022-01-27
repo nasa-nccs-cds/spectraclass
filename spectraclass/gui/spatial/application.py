@@ -21,8 +21,8 @@ class Spectraclass(SpectraclassController):
         embed: bool = kwargs.pop('embed',False)
         self.set_spectraclass_theme()
         css_border = '1px solid blue'
-        plot_collapsibles = ipw.Accordion( children = [ dm().gui(), pm().gui() ], layout=ipw.Layout(width='100%'))     # , pcm().gui()
-        for iT, title in enumerate(['data', 'controls']): plot_collapsibles.set_title(iT, title) # , 'embedding'
+        plot_collapsibles = ipw.Accordion( children = [ dm().gui(), pm().gui(), pcm().gui() ], layout=ipw.Layout(width='100%'))
+        for iT, title in enumerate(['data', 'controls', 'embedding' ]): plot_collapsibles.set_title(iT, title)
         plot_collapsibles.selected_index = 1
         plot = ipw.VBox([ ufm().gui(), plot_collapsibles, gpm().gui() ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
         smap = mm().gui( basemap=basemap )
@@ -50,9 +50,9 @@ class Spectraclass(SpectraclassController):
             if action.type == "mark":
                 mm().plot_markers_image()
 
-    def spread_selection(self, niters=1):
+    def propagate_selection(self, niters=1):
         from spectraclass.gui.spatial.map import MapManager, mm
-        if super(Spectraclass, self).spread_selection()  is not None:
+        if super(Spectraclass, self).propagate_selection()  is not None:
             mm().plot_markers_image()
 
     def add_marker(self, source: str, marker: Marker):

@@ -153,7 +153,7 @@ class SpectraclassController(SCSingletonConfigurable):
         ufm().show( "Classification Mapping learned" )
 
     @exception_handled
-    def spread_selection(self, niters=1):
+    def propagate_selection(self, niters=1):
         from spectraclass.gui.points import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.gui.spatial.map import MapManager, mm
@@ -177,8 +177,7 @@ class SpectraclassController(SCSingletonConfigurable):
                         lgm().log(f" @@@ spread_selection: cid={cid}, label={label}, #new_indices={len(new_indices)}" )
                         lm().mark_points( new_indices, cid, "labels" )
                         if self.pcm_active: pcm().update_marked_points(cid)
-            mm().update_canvas()
-
+            mm().plot_labels_image( lm().get_label_map() )
  #           gpm().plot_graph()
         lm().log_markers("post-spread")
         return converged
