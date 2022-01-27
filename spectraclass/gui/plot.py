@@ -51,6 +51,7 @@ class mplGraphPlot:
     def __init__( self, index: int, **kwargs ):
         self.index: int = index
         self.standalone: bool = kwargs.pop('standalone', False)
+        self.rlines: List[Line2D] = []
         self.init_data(**kwargs)
         self.ax: plt.Axes = None
         self.fig: plt.Figure = None
@@ -75,6 +76,10 @@ class mplGraphPlot:
     @property
     def pids(self) -> List[int]:
         return list( self.lrecs.keys() )
+
+    @property
+    def tpids(self) -> List[int]:
+        return [ pid for (pid,lrec) in self.lrecs.items() if (lrec.cid == 0) ]
 
     def use_model_data( self, use: bool ):
         self._use_model = use
@@ -102,9 +107,11 @@ class mplGraphPlot:
         cls._x = None
         cls.init_data()
 
-    def clear(self):
-        for line in self.lrecs.values(): line.clear()
-        self.lrecs = OrderedDict()
+    def clear(self, reset: bool = True ):
+        for lrec in self.lrecs.values(): lrec.clear()
+        for rline in self.rlines: rline.remove()
+        self.rlines = []
+        if reset: self.lrecs = OrderedDict()
 
     @classmethod
     def init_data(cls, **kwargs ):
@@ -142,10 +149,18 @@ class mplGraphPlot:
         self.addMarker( marker )
         return marker
 
+    def clearTransients(self):
+        new_lrecs = {}
+        for (pid, lrec) in self.lrecs.items():
+            if lrec.cid == 0: lrec.clear()
+            else: new_lrecs[pid] = lrec
+        self.lrecs = new_lrecs
+
     @log_timing
     def addMarker( self, m: Marker ):
         lgm().log(f"Add Marker[{m.size}]: cid={m.cid}, pids = {m.pids}")
         if m.size > 0:
+            self.clearTransients()
             for pid in m.pids:
                 self.lrecs[pid] = LineRec( None, pid, m.cid )
             self.plot()
@@ -155,7 +170,7 @@ class mplGraphPlot:
         from spectraclass.model.labels import LabelsManager, lm
         colors, alphas, lws = [], [], []
         selected: bool = (self.selected_pid >= 0)
-        lgm().log( f"create plotspecs for {len(self.lrecs.items())} lines, pids({self.selected_pid})->{self.pids}")
+     #   lgm().log( f"create plotspecs for {len(self.lrecs.items())} lines, pids({self.selected_pid})->{self.pids}")
         for (pid, lrec) in self.lrecs.items():
             selection = ( pid == self.selected_pid )
             alphas.append( (1.0 if selection else 0.2) if selected else 1.0 )
@@ -171,26 +186,29 @@ class mplGraphPlot:
         self.ax.title.text = self.title
         if clear_selection: self.selected_pid = -1
         ps = self.get_plotspecs()
-        lgm().log( f"set_prop_cycle: color={ps['color']}, alpha={ps['alpha']}, linewidth={ps['lw']}")
+       # lgm().log( f"set_prop_cycle: color={ps['color']}, alpha={ps['alpha']}, linewidth={ps['lw']}")
         self.ax.set_prop_cycle( color=ps['color'], alpha=ps['alpha'], linewidth=ps['lw'] )
         self.update_graph()
 
     def update_graph(self, **kwargs ):
-        for lrec in self.lrecs.values(): lrec.clear()
+        self.clear( False )
         lgm().log( f"\nPlotting lines, xs = {self.x.shape}, ys = {self.y.shape}, xrange = {[self.x.min(),self.x.max()]}, yrange = {[self.y.min(),self.y.max()]}, args = {kwargs}")
         lines: List[Line2D] = self.ax.plot( self.x, self.y, picker=True, pickradius=2, **kwargs )
+        if self.ry.size > 0:
+            self.rlines: List[Line2D] = self.ax.plot( self.x, self.ry, color="grey", **kwargs )
         for (line, lrec) in zip(lines, self.lrecs.values()): lrec.line = line
-        lgm().log(f" --> lines = {self.ids}")
         self.fig.canvas.draw()
 
     @exception_handled
     def onpick(self, event: PickEvent ):
+        from spectraclass.gui.spatial.map import MapManager, mm
         line: Line2D = event.artist
         selected_lrec = self.get_lrec( line )
         if selected_lrec is None:
             lgm().log( f"\nonpick: line={LineRec.lid(line)}, lines={self.ids}, inlist={LineRec.lid(line) in self.ids}")
         else:
             self.selected_pid = selected_lrec.pid
+            mm().highlight_points( [self.selected_pid] )
             self.plot()
 
     @exception_handled
@@ -202,11 +220,10 @@ class mplGraphPlot:
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.map import MapManager, mm
         lrec = self.lrecs.pop( self.selected_pid, None )
-        lgm().log( f" delete_selection[{self.selected_pid}]: {lrec}")
         if lrec is not None:
             lrec.clear()
             lm().deletePid( self.selected_pid )
-            mm().plot_markers_image()
+            mm().plot_markers_image( clear_highlights=True )
             self.plot(True)
 
     def remove_region(self, region: PolyRec ):
@@ -235,26 +252,18 @@ class mplGraphPlot:
         else:              return  xv[ self.pids ]
 
     @property
-    def ydata( self )  -> np.ndarray:
-        return self._mploty[self.pids] if self._use_model else self._ploty[self.pids]
-
-    @property
     def y( self ) -> np.ndarray :
-        return self.ydata.transpose()
+        ydata = self._mploty[self.pids] if self._use_model else self._ploty[self.pids]
+        return ydata.transpose()
 
     @property
     def ry( self ) ->  np.ndarray:
-        return  self._rploty[self.pids]
-
-    @property
-    def y2( self ) -> np.ndarray:
-        idx = self.pids[0]
-        if self._use_model: return self._mploty[idx]
-        else:               return np.concatenate( [ np.expand_dims(self._ploty[idx],1), np.expand_dims(self._rploty[idx],1) ], axis=1 )
+        ydata = self._rploty[ self.tpids ]
+        return ydata.transpose()
 
     @property
     def yrange(self):
-        ydata: np.ndarray = self.ydata
+        ydata: np.ndarray = self._mploty[self.pids] if self._use_model else self._ploty[self.pids]
         ymean: np.ndarray = ydata.mean( axis=1 )
         ys = ydata / ymean.reshape( ymean.shape[0], 1 )
         return ( ys.min(), ys.max() )

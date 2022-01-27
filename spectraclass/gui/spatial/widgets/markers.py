@@ -54,7 +54,7 @@ class Marker:
     def deletePid( self, pid: int ) -> bool:
         try:
             new_PIDS = self._pids[ self._pids != pid ]
-            lgm().log( f"  ********>> Marker[{self.cid}].deletePid[{pid}]: {self._pids.tolist()} -> {new_PIDS.tolist()}")
+       #     lgm().log( f"  ********>> Marker[{self.cid}].deletePid[{pid}]: {self._pids.tolist()} -> {new_PIDS.tolist()}")
             self._pids = new_PIDS
             return True
         except: return False
@@ -100,6 +100,16 @@ class MarkerManager( PointsInteractor ):
                 self.remove( pid )
         self.plot()
 
+    @exception_handled
+    def get_highlight_points( self ) -> Tuple[ List[float], List[float] ]:
+        ycoords, xcoords = [], []
+        for pid in self._highlight_pids:
+            coords = self._block.pindex2coords( pid )
+            if (coords is not None) and self._block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
+                ycoords.append( coords['y'] )
+                xcoords.append( coords['x'] )
+        return (ycoords, xcoords)
+
     @log_timing
     def get_points( self ) -> Tuple[ List[float], List[float], List[str] ]:
         from spectraclass.model.labels import LabelsManager, lm
@@ -108,10 +118,12 @@ class MarkerManager( PointsInteractor ):
             if marker.type == "marker":
                 point = marker['point']
                 if point is not None:
+                    lgm().log(f" ** get_points, point = {marker.pids}")
                     ycoords.append(point[1])
                     xcoords.append(point[0])
                     colors.append(lm().colors[marker.cid])
                 else:
+                    lgm().log( f" ** get_points, markers = {marker.pids}")
                     for pid in marker.pids:
                         coords = self._block.pindex2coords( pid )
                         if (coords is not None) and self._block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):

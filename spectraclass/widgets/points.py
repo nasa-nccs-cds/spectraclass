@@ -10,6 +10,7 @@ class PointsInteractor:
     def __init__(self, ax):
         self.canvas = ax.figure.canvas
         self.ax = ax
+        self._highlight_pids: List[int] = []
         self.init_plot()
         self._enabled = False
         self.axis_to_data = ax.transAxes + ax.transData.inverted()
@@ -25,9 +26,12 @@ class PointsInteractor:
         self.points.set_alpha( alpha )
 
     def init_plot(self):
-        self.points: PathCollection = self.ax.scatter([], [], s=50, zorder=3, alpha=1.0 )
+        self.points: PathCollection = self.ax.scatter([], [], s=50, zorder=5, alpha=1.0 )
         self.points.set_edgecolor([0, 0, 0])
         self.points.set_linewidth(2)
+        self.highlights: PathCollection = self.ax.scatter([], [], s=50, zorder=100, color="white", alpha=0.5 )
+        self.highlights.set_edgecolor( "yellow" )
+        self.highlights.set_linewidth(2)
         self._cidkey, self._cidmouse = -1, -1
         self.plot()
 
@@ -39,9 +43,20 @@ class PointsInteractor:
         for cid in [ self._cidkey, self._cidmouse ]:
             self.canvas.mpl_disconnect( cid )
 
+    def highlight_points(self, pids: List[int] ):
+        self._highlight_pids = pids
+        self.plot()
+
+    def clear_highlights(self ):
+        self.plot( clear_highlights = True )
+
     def get_points( self ) -> Tuple[ List[float], List[float], List[str] ]:
-        lgm().log( f"Attempt to call unimplemented method PointsInteractor.get_markers")
+        lgm().log( f"Attempt to call unimplemented method PointsInteractor.get_points")
         return [], [], []
+
+    def get_highlight_points( self ) -> Tuple[ List[float], List[float] ]:
+        lgm().log( f"Attempt to call unimplemented method PointsInteractor.get_highlight_points")
+        return [], []
 
     def on_key_press(self, event: KeyEvent ):
         lgm().log( f"Attempt to call unimplemented method PointsInteractor.on_key_press")
@@ -50,25 +65,33 @@ class PointsInteractor:
         lgm().log( f"Attempt to call unimplemented method PointsInteractor.on_button_press")
 
     @exception_handled
-    def plot( self ):
+    def plot( self, **kwargs ):
         ycoords, xcoords, colors = self.get_points()
-        lgm().log(f" ** plot point_selection image, nmarkers = {len(ycoords)}")
-        lgm().log(f"  --> xcoords = {xcoords}")
-        lgm().log(f"  --> ycoords = {ycoords}")
         if len(ycoords) > 0:
             self.points.set_offsets(np.c_[xcoords, ycoords])
             self.points.set_facecolor(colors)
         else:
             offsets = np.ma.column_stack([[], []])
             self.points.set_offsets(offsets)
+
+        if kwargs.get('clear_highlights', False): self._highlight_pids = []
+        ycoords, xcoords = self.get_highlight_points()
+        if len(ycoords) > 0:
+            lgm().log(f" --> Hightlghting {len(ycoords)} points: {self._highlight_pids} ")
+            self.highlights.set_offsets(np.c_[xcoords, ycoords])
+        else:
+            offsets = np.ma.column_stack([[], []])
+            self.highlights.set_offsets(offsets)
         self.canvas.draw_idle()
 
     def clear( self ):
         offsets = np.ma.column_stack([[], []])
         self.points.set_offsets( offsets )
+        self.highlights.set_offsets(offsets)
         self.plot()
 
     def toggleVisible(self):
-        new_alpha = 1.0 if (self.points.get_alpha() == 0.0) else 0.0
-        self.points.set_alpha( new_alpha )
+        new_alphas = (1.0,0.5) if (self.points.get_alpha() == 0.0) else (0.0,0.0)
+        self.points.set_alpha( new_alphas[0] )
+        self.highlights.set_alpha( new_alphas[1] )
         self.canvas.draw_idle()

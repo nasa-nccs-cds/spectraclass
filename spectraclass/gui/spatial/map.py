@@ -197,6 +197,12 @@ class MapManager(SCSingletonConfigurable):
         else: raise Exception( f"Unknown Layer: {name}")
         return mgrs
 
+    def highlight_points(self, pids: List[int] ):
+        self.points_selection.highlight_points( pids )
+
+    def clear_highlights(self ):
+        self.points_selection.clear_highlights()
+
     def on_layer_change( self, layer: Layer ):
         for mgr in self.layer_managers( layer.name ):
  #           lgm().log( f" **** layer_change[{layer.name}]: {id(mgr)} -> alpha_change[{layer.visibility}]")
@@ -354,8 +360,8 @@ class MapManager(SCSingletonConfigurable):
             return "x: {}, y: {}".format(x, y)
         self.base.gax.format_coord = format_coord
 
-    def plot_markers_image(self):
-        self.points_selection.plot()
+    def plot_markers_image(self, **kwargs ):
+        self.points_selection.plot( **kwargs )
 
     def init_map(self):
         self.update_spectral_image()
