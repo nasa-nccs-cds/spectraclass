@@ -90,7 +90,7 @@ class TileServiceImage(AxesImage):
 
     def on_press(self, event: MouseEvent =None):
         self.user_is_interacting = True
-        lgm().log( f" Button Press: {(event.xdata,event.ydata)}")
+ #       lgm().log( f" Button Press: {(event.xdata,event.ydata)}")
 
     def on_release(self, event=None):
         self.user_is_interacting = False

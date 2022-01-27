@@ -158,7 +158,7 @@ class mplGraphPlot:
 
     @log_timing
     def addMarker( self, m: Marker ):
-        lgm().log(f"Add Marker[{m.size}]: cid={m.cid}, pids = {m.pids}")
+        lgm().log(f"Add Marker[{m.size}]: cid={m.cid}, #pids = {len(m.pids)}")
         if m.size > 0:
             self.clearTransients()
             for pid in m.pids:

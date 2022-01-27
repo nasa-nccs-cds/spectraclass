@@ -29,9 +29,9 @@ class PointsInteractor:
         self.points: PathCollection = self.ax.scatter([], [], s=50, zorder=5, alpha=1.0 )
         self.points.set_edgecolor([0, 0, 0])
         self.points.set_linewidth(2)
-        self.highlights: PathCollection = self.ax.scatter([], [], s=50, zorder=100, color="white", alpha=0.5 )
-        self.highlights.set_edgecolor( "yellow" )
-        self.highlights.set_linewidth(2)
+        self.highlights: PathCollection = self.ax.scatter([], [], s=100, zorder=100, alpha=0.5, marker="X", color="white" )
+        self.highlights.set_linewidth(1)
+        self.highlights.set_edgecolor( "black" )
         self._cidkey, self._cidmouse = -1, -1
         self.plot()
 
@@ -91,7 +91,7 @@ class PointsInteractor:
         self.plot()
 
     def toggleVisible(self):
-        new_alphas = (1.0,0.5) if (self.points.get_alpha() == 0.0) else (0.0,0.0)
-        self.points.set_alpha( new_alphas[0] )
-        self.highlights.set_alpha( new_alphas[1] )
+        new_alpha = 1.0 if (self.points.get_alpha() == 0.0) else 0.0
+        self.points.set_alpha( new_alpha )
+        self.highlights.set_alpha( new_alpha )
         self.canvas.draw_idle()

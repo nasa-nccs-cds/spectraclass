@@ -135,6 +135,7 @@ class Block(DataContainer):
         self.block_coords = (ix,iy)
         self.validate_parameters()
         self._index_array: xa.DataArray = None
+        self._pid_array: np.ndarray = None
         self._flow = None
         self._samples_axis: Optional[xa.DataArray] = None
         self._point_data: Optional[xa.DataArray] = None
@@ -149,6 +150,12 @@ class Block(DataContainer):
         if self._index_array is None:
             self._index_array = self.get_index_array()
         return self._index_array
+
+    @property
+    def pid_array(self):
+        if self._pid_array is None:
+            self._pid_array = self.get_pid_array()
+        return self._pid_array
 
     def dsid( self ):
         from spectraclass.data.spatial.tile.manager import TileManager
@@ -202,6 +209,11 @@ class Block(DataContainer):
         point_indices = xa.DataArray( indices, dims=['samples'], coords=dict(samples=filtered_samples.samples) )
         result = point_indices.reindex( samples=stacked_data.samples, fill_value= -1 )
         return result.unstack()
+
+    def get_pid_array(self) -> np.ndarray:
+        d0: np.ndarray = self.data.values[0].squeeze().flatten()
+        pids = np.arange(d0.size)
+        return pids[ ~np.isnan(d0) ]
 
     @property
     def shape(self) -> Tuple[int,int]:
@@ -274,7 +286,8 @@ class Block(DataContainer):
         (iy,ix) = self.ptransform(np.array([[ix+0.5, iy+0.5], ]))
         return dict( iy = iy, ix = ix )
 
-    def pindex2coords(self, point_index: int) -> Dict:
+    def pid2coords(self, pid: int) -> Dict:
+        point_index = self.pid_array[pid]
         xs = self.point_coords['x'].size
         pi = dict( x= point_index % xs,  y= point_index // xs )
         try:
@@ -282,7 +295,8 @@ class Block(DataContainer):
         except Exception as err:
             lgm().log( f" --> pindex2coords Error: {err}, pid = {point_index}, coords = {pi}" )
 
-    def pindex2indices(self, point_index: int) -> Dict:
+    def pid2indices(self, pid: int) -> Dict:
+        point_index = self.pid_array[pid]
         xs = self.point_coords['x'].size
         pi = dict( x= point_index % xs,  y= point_index // xs )
         try:
@@ -290,9 +304,6 @@ class Block(DataContainer):
             return self.coords2indices( selected_sample[0], selected_sample[1] )
         except Exception as err:
             lgm().log( f" --> pindex2indices Error: {err}, pid = {point_index}, coords = {pi}" )
-
-    def indices2pindex( self, iy, ix ) -> int:
-        return self.index_array.values[ iy, ix ]
 
     def points2raster(self, points_data: xa.DataArray ):
         lgm().log( f"points->raster, points: dims={points_data.dims}, shape={points_data.shape}")

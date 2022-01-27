@@ -104,7 +104,7 @@ class MarkerManager( PointsInteractor ):
     def get_highlight_points( self ) -> Tuple[ List[float], List[float] ]:
         ycoords, xcoords = [], []
         for pid in self._highlight_pids:
-            coords = self._block.pindex2coords( pid )
+            coords = self._block.pid2coords(pid)
             if (coords is not None) and self._block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
                 ycoords.append( coords['y'] )
                 xcoords.append( coords['x'] )
@@ -118,14 +118,14 @@ class MarkerManager( PointsInteractor ):
             if marker.type == "marker":
                 point = marker['point']
                 if point is not None:
-                    lgm().log(f" ** get_points, point = {marker.pids}")
+               #     lgm().log(f" ** get_points, point = {marker.pids}")
                     ycoords.append(point[1])
                     xcoords.append(point[0])
                     colors.append(lm().colors[marker.cid])
                 else:
                     lgm().log( f" ** get_points, markers = {marker.pids}")
                     for pid in marker.pids:
-                        coords = self._block.pindex2coords( pid )
+                        coords = self._block.pid2coords(pid)
                         if (coords is not None) and self._block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
                             ycoords.append( coords['y'] )
                             xcoords.append( coords['x'] )
@@ -139,7 +139,7 @@ class MarkerManager( PointsInteractor ):
         for marker in lm().markers:
             if marker.type == "label":
                 for pid in marker.pids:
-                    idx = self._block.pindex2indices( pid )
+                    idx = self._block.pid2indices(pid)
                     cmap[ idx['iy'], idx['ix'] ] = marker.cid
         return cmap
 

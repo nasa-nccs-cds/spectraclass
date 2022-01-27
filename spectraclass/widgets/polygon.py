@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib.lines import Line2D
+from matplotlib.collections import PatchCollection, PolyCollection
 from matplotlib.patches import Polygon
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from shapely.geometry import Polygon as SPolygon
@@ -25,8 +26,8 @@ class PolyRec:
         self.line = Line2D(x, y, marker='o', markerfacecolor='r' )
         if on_change: self.cid = self.poly.add_callback( on_change )
         else: self.cid = None
-        ax.add_patch(self.poly)
-        ax.add_line(self.line)
+        ax.add_collection( PolyCollection( [self.poly], zorder=50 ) )
+        ax.add_line( self.line )
         self.indx = -1
 
     def set_alpha(self, alpha: float ):

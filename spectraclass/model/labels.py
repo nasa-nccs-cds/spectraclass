@@ -342,7 +342,7 @@ class LabelsManager(SCSingletonConfigurable):
             if (type is None) or (marker.type == type):
                 lgm().log( f"\nSetting {marker.pids.size} labels for cid = {marker.cid}")
                 for pid in marker.pids:
-                    idx = block.pindex2indices( pid )
+                    idx = block.pid2indices(pid)
                     cmap[ idx['iy'], idx['ix'] ] = marker.cid
         return cmap
 
