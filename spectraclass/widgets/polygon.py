@@ -26,16 +26,13 @@ class PolyRec:
         self.line = Line2D(x, y, marker='o', markerfacecolor='r' )
         if on_change: self.cid = self.poly.add_callback( on_change )
         else: self.cid = None
-        ax.add_collection( PolyCollection( [self.poly], zorder=50 ) )
+        self.poly.set_zorder(25)
+        ax.add_patch( self.poly )
         ax.add_line( self.line )
         self.indx = -1
 
     def set_alpha(self, alpha: float ):
         self.poly.set_alpha( alpha )
-
-    @property
-    def geometry(self) -> List[Dict]:
-        return [ dict( type='Polygon', coordinates=[ self.poly.get_xy().tolist() ] ) ]
 
     def to_shapely(self) -> SPolygon:
         return SPolygon( self.poly.get_xy() )

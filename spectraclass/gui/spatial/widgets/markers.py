@@ -101,16 +101,16 @@ class MarkerManager( PointsInteractor ):
         self.plot()
 
     @exception_handled
-    def get_highlight_points( self ) -> Tuple[ List[float], List[float] ]:
-        ycoords, xcoords = [], []
-        for pid in self._highlight_pids:
+    def get_highlight_points( self ) -> Tuple[ List[float], List[float], List[int] ]:
+        ycoords, xcoords, cids = [], [], []
+        for (pid,cid) in self._highlight_points:
             coords = self._block.pid2coords(pid)
             if (coords is not None) and self._block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
                 ycoords.append( coords['y'] )
                 xcoords.append( coords['x'] )
-        return (ycoords, xcoords)
+                cids.append( cid )
+        return ( ycoords, xcoords, cids )
 
-    @log_timing
     def get_points( self ) -> Tuple[ List[float], List[float], List[str] ]:
         from spectraclass.model.labels import LabelsManager, lm
         ycoords, xcoords, colors, markers = [], [], [], lm().markers

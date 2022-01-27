@@ -208,7 +208,7 @@ class mplGraphPlot:
             lgm().log( f"\nonpick: line={LineRec.lid(line)}, lines={self.ids}, inlist={LineRec.lid(line) in self.ids}")
         else:
             self.selected_pid = selected_lrec.pid
-            mm().highlight_points( [self.selected_pid] )
+            mm().highlight_points( [self.selected_pid], [selected_lrec.cid] )
             self.plot()
 
     @exception_handled

@@ -63,7 +63,7 @@ class MapManager(SCSingletonConfigurable):
         self.labels_image: Optional[AxesImage] = None
         self.layers.add( 'basemap', 1.0, True)
         self.layers.add( 'bands', 1.0, True )
-        self.layers.add( 'markers', 1.0, True )
+        self.layers.add( 'markers', 0.5, True )
         self.layers.add( 'labels', 0.5, False )
         self.menu_actions = OrderedDict( Layers = [ [ "Increase Labels Alpha", 'Ctrl+>', None, partial( self.update_image_alpha, "labels", True ) ],
                                                     [ "Decrease Labels Alpha", 'Ctrl+<', None, partial( self.update_image_alpha, "labels", False ) ],
@@ -197,8 +197,8 @@ class MapManager(SCSingletonConfigurable):
         else: raise Exception( f"Unknown Layer: {name}")
         return mgrs
 
-    def highlight_points(self, pids: List[int] ):
-        self.points_selection.highlight_points( pids )
+    def highlight_points(self, pids: List[int], cids: List[int] ):
+        self.points_selection.highlight_points( pids, cids )
 
     def clear_highlights(self ):
         self.points_selection.clear_highlights()
