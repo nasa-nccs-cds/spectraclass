@@ -9,7 +9,7 @@ Conda CPU Environment Setup
     > conda create -n spectraclass python=3.7
     > conda activate spectraclass
     > conda install -c conda-forge mamba
-    > mamba install -c conda-forge nb_conda_kernels nodejs jupyterlab jupyterlab_server ipywidgets ipympl matplotlib mplcursors contextily kdtree numpy pynndescent xarray rasterio umap-learn scipy scikit-learn dask netcdf4 scikit-image gdal owslib pyepsg rioxarray cartopy shapely bottleneck geopandas utm keras tensorflow
+    > mamba install -c conda-forge nb_conda_kernels nodejs jupyterlab jupyterlab_server ipywidgets ipympl matplotlib mplcursors pythreejs contextily kdtree numpy pynndescent xarray rasterio umap-learn scipy scikit-learn dask netcdf4 scikit-image gdal owslib pyepsg rioxarray cartopy shapely bottleneck geopandas utm keras tensorflow
     > mamba install pytorch -c pytorch
 
 Installation

@@ -31,7 +31,7 @@ class SpectraclassController(SCSingletonConfigurable):
     def __init__(self):
         super(SpectraclassController, self).__init__()
         self._action_events = []
-        self.pcm_active = False
+        self.pcm_active = True
 
     @classmethod
     def set_spectraclass_theme(cls):
