@@ -59,7 +59,7 @@ class SpectraclassController(SCSingletonConfigurable):
 
     @property
     def color_map(self) -> str:
-        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.points3js import PointCloudManager, pcm
         if self.pcm_active: return pcm().color_map
 
     @exception_handled
@@ -77,7 +77,7 @@ class SpectraclassController(SCSingletonConfigurable):
     @exception_handled
     def mark(self):
         from spectraclass.model.labels import LabelsManager, lm
-        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.points3js import PointCloudManager, pcm
     #    lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> MARK ")
 
     @exception_handled
@@ -89,7 +89,7 @@ class SpectraclassController(SCSingletonConfigurable):
 
     @exception_handled
     def clear(self):
-        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.points3js import PointCloudManager, pcm
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.map import MapManager, mm
@@ -101,7 +101,7 @@ class SpectraclassController(SCSingletonConfigurable):
 
     @exception_handled
     def embed(self):
-        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.points3js import PointCloudManager, pcm
         from spectraclass.reduction.embedding import ReductionManager, rm
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> EMBED ")
         ufm().show( "Computing 3D embedding")
@@ -111,7 +111,7 @@ class SpectraclassController(SCSingletonConfigurable):
 
     @exception_handled
     def undo_action(self):
-        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.points3js import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.gui.plot import GraphPlotManager, gpm
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> UNDO ")
@@ -120,7 +120,7 @@ class SpectraclassController(SCSingletonConfigurable):
     @exception_handled
     def classify(self) -> xa.DataArray:
         from spectraclass.learn.manager import ClassificationManager, cm
-        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.points3js import PointCloudManager, pcm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.model.labels import LabelsManager, Action, lm
@@ -154,7 +154,7 @@ class SpectraclassController(SCSingletonConfigurable):
 
     @exception_handled
     def propagate_selection(self, niters=1):
-        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.points3js import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.gui.plot import GraphPlotManager, gpm
@@ -186,7 +186,7 @@ class SpectraclassController(SCSingletonConfigurable):
     def display_distance(self, niters=100):
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
         from spectraclass.model.labels import LabelsManager, Action, lm
-        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.points3js import PointCloudManager, pcm
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> DISTANCE ")
         seed_points: xa.DataArray = lm().getSeedPointMask()
         flow: ActivationFlow = afm().getActivationFlow()
@@ -198,7 +198,7 @@ class SpectraclassController(SCSingletonConfigurable):
     def add_marker(self, source: str, marker: Marker):
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.gui.plot import GraphPlotManager, gpm
-        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.points3js import PointCloudManager, pcm
         if marker is not None:
             lm().addMarker( marker )
             gpm().plot_graph( marker )
@@ -215,7 +215,7 @@ class SpectraclassController(SCSingletonConfigurable):
 
     @exception_handled
     def color_pointcloud( self, color_data: np.ndarray = None, **kwargs ):
-        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.points3js import PointCloudManager, pcm
         if self.pcm_active: pcm().color_by_value( color_data, **kwargs )
 
 

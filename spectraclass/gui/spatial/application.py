@@ -13,7 +13,7 @@ class Spectraclass(SpectraclassController):
     def gui( self, **kwargs ):
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.data.base import DataManager, dm
-        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.points3js import PointCloudManager, pcm
         from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
         from spectraclass.gui.spatial.map import MapManager, mm
         print( f"Initializing GUI using controller {str(self.__class__)}")

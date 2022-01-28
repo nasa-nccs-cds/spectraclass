@@ -136,7 +136,7 @@ class DataManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.reduction.embedding import ReductionManager, rm
         from spectraclass.features.texture.manager import TextureManager, texm
-        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.points3js import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
         if block_data and len( block_data ) > 0:

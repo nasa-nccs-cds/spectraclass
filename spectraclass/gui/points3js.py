@@ -11,6 +11,9 @@ import traitlets as tl
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.model.base import SCSingletonConfigurable
 
+def pcm() -> "PointCloudManager":
+    return PointCloudManager.instance()
+
 class PointCloudManager(SCSingletonConfigurable):
 
     color_map = tl.Unicode("gist_rainbow").tag(config=True)  # "gist_rainbow" "jet"
@@ -19,6 +22,10 @@ class PointCloudManager(SCSingletonConfigurable):
         super(PointCloudManager, self).__init__()
         self._gui = None
         self.xyz: np.ndarray = None
+        self.points = None
+        self.scene = None
+        self.renderer = None
+        self.widgets = None
         self._n_point_bins = 27
         self._color_values = None
         self.reduced_opacity = 0.111111
@@ -86,30 +93,26 @@ class PointCloudManager(SCSingletonConfigurable):
         points_material = p3js.PointsMaterial( vertexColors='VertexColors')
         return p3js.Points( geometry=points_geometry, material=points_material)
 
+    def getControlsWidget(self):
+        initial_point_size = self.xyz.ptp() / 100
+        size = ipw.FloatSlider( value=initial_point_size, min=0.0, max=initial_point_size * 10, step=initial_point_size / 100)
+        ipw.jslink( (size,'value'), (self.points.material,'size') )
+        color = ipw.ColorPicker( value="black" )
+        ipw.jslink( (color,'value'), (self.scene,'background') )
+        psw = ipw.HBox( [ ipw.Label('Point size:'), size ] )
+        bcw = ipw.HBox( [ ipw.Label('Background color:'), color ] )
+        return ipw.VBox( [ psw, bcw ] )
+
     def _get_gui( self, **kwargs ) -> ipw.DOMWidget:
         colors = self.getColors()
-        ptp = self.xyz.ptp()
-        children = []
-        widgets = []
-        points = self.getPoints( colors )
-        children.append(points)
-        initial_point_size = kwargs["initial_point_size"] or ptp / 10
-        size = ipw.FloatSlider( value=initial_point_size, min=0.0, max=initial_point_size * 10, step=initial_point_size / 100)
-        ipw.jslink((size, 'value'), (points.material, 'size'))
-        widgets.append(ipw.Label('Point size:'))
-        widgets.append(size)
-        children.append(self.camera)
-        scene = p3js.Scene(children=children)
-        renderer = p3js.Renderer( scene=scene, camera=self.camera, controls=[self.orbit_controls], width=kwargs["width"], height=kwargs["height"])
-
-        color = ipw.ColorPicker(value=kwargs["background"])
-        ipw.jslink((color, 'value'), (scene, 'background'))
-        widgets.append(ipw.Label('Background color:'))
-        widgets.append(color)
-
-        return ipw.VBox( [ renderer, ipw.HBox( widgets ) ]  )
+        self.points = self.getPoints( colors )
+        self.scene = p3js.Scene( children=[ self.points, self.camera ] )
+        self.renderer = p3js.Renderer( scene=self.scene, camera=self.camera, controls=[self.orbit_controls], width=1000, height=600 )
+        self.widgets = self.getControlsWidget()
+        return ipw.VBox( [ self.renderer, self.widgets ]  )
 
     def gui(self, **kwargs ) -> ipw.DOMWidget:
         if self._gui is None:
-                self._gui = self._get_gui( **kwargs  )
+            self.init_data( **kwargs )
+            self._gui = self._get_gui( **kwargs  )
         return self._gui

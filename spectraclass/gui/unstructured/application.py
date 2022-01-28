@@ -16,7 +16,7 @@ class Spectraclass(SpectraclassController):
     def gui( self, **kwargs ):
         from bokeh.io import output_notebook
         from spectraclass.gui.plot import GraphPlotManager, gpm
-        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.points3js import PointCloudManager, pcm
         from spectraclass.gui.unstructured.table import tm
         from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
         from spectraclass.data.base import DataManager, dm
