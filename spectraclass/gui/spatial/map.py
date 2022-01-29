@@ -244,6 +244,7 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def update_plots(self, **kwargs ):
+        from spectraclass.gui.points3js import PointCloudManager, pcm
         from spectraclass.data.spatial.manager import SpatialDataManager
         from spectraclass.data.base import DataManager, dm
         new_image = kwargs.get( 'new_image', None )
@@ -259,6 +260,7 @@ class MapManager(SCSingletonConfigurable):
                 drange = self.get_color_bounds(fdata)
                 alpha = self.layers('bands').visibility
                 norm = Normalize(**drange)
+                pcm().update_points( cdata=fdata.values, norm=norm )
                 self._spectral_image.set_data(fdata.values)
                 self._spectral_image.set_norm(norm)
                 self._spectral_image.set_alpha(alpha)

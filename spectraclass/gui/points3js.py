@@ -6,7 +6,7 @@ from typing import List, Union, Tuple, Optional, Dict, Callable, Iterable
 from matplotlib import cm
 import numpy.ma as ma
 import xarray as xa
-from matplotlib import colors
+from matplotlib.colors import Normalize
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import traitlets as tl
 from spectraclass.model.labels import LabelsManager, lm
@@ -78,16 +78,19 @@ class PointCloudManager(SCSingletonConfigurable):
     def normalize(self, point_data: np.ndarray):
         return (point_data - point_data.mean()) / point_data.std()
 
-    def getColors(self, cmap=None, colors=None ):
-        if colors is None:
-            colors = np.repeat([[250, 255, 255]], self.xyz.shape[0], axis=0)
-        else:
-            s_m = plt.cm.ScalarMappable(cmap=cmap)
-            colors = s_m.to_rgba(colors)[:, :-1] * 255
+    def getColors( self, **kwargs ):
+        from spectraclass.gui.spatial.map import MapManager, mm
+        norm: Normalize = kwargs.get('norm')
+        cdata = kwargs.get( 'cdata', mm().frame_data )
+        if norm is None:
+            vr = mm().get_color_bounds( cdata )
+            norm = Normalize( vr['vmin'], vr['vmax'] )
+        mapper = plt.cm.ScalarMappable( norm = norm, cmap="jet" )
+        colors = mapper.to_rgba( cdata.values )[:, :-1] * 255
         return colors.astype(np.uint8)
 
-    def getPoints( self ) -> p3js.Points:
-        colors = self.getColors()
+    def getPoints( self, **kwargs ) -> p3js.Points:
+        colors = self.getColors( **kwargs )
         attrs = dict( position=p3js.BufferAttribute( self.xyz, normalized=False ),
                       color=p3js.BufferAttribute(list(map(tuple, colors))))
         points_geometry = p3js.BufferGeometry( attributes=attrs )
@@ -135,7 +138,7 @@ class PointCloudManager(SCSingletonConfigurable):
         if self._gui is not None:
             lgm().log( " *** update point cloud data *** " )
             self.scene.remove( self.points )
-            self.points = self.getPoints()
+            self.points = self.getPoints( **kwargs )
             self.scene.add( self.points )
 
 #            if 'alphas' in kwargs: self._gui.point_set_opacities = kwargs['alphas']
@@ -146,8 +149,8 @@ class PointCloudManager(SCSingletonConfigurable):
         self.update_markers(selection)
         self.update_plot()
 
-    def update_points(self, new_points: np.ndarray):
-        self.update_plot( points=new_points )
+    def update_points(self, **kwargs ):
+        self.update_plot( **kwargs )
 
     def update_markers(self, pids: List[int] = None, **kwargs):
         if pids is None:
