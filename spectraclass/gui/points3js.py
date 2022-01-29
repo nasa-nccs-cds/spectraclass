@@ -27,11 +27,12 @@ class PointCloudManager(SCSingletonConfigurable):
         super(PointCloudManager, self).__init__()
         self._gui = None
         self.xyz: np.ndarray = None
-        self.points = None
-        self.scene = None
-        self.renderer = None
-        self.widgets = None
-        self._n_point_bins = 27
+        self.points: p3js.Points = None
+        self.scene: p3js.Scene = None
+        self.renderer: p3js.Renderer = None
+        self.picker: p3js.Picker = None
+        self.control_panel: ipw.DOMWidget = None
+        self.size_control: ipw.FloatSlider = None
         self._color_values = None
         self.reduced_opacity = 0.111111
         self.standard_opacity = 0.411111
@@ -43,7 +44,6 @@ class PointCloudManager(SCSingletonConfigurable):
         self.initialize_points()
 
     def initialize_points(self):
-        self._binned_points: List[np.ndarray] = [self.empty_pointset for ic in range(self._n_point_bins)]
         self.xyz: np.ndarray = self.empty_pointset
         self._marker_points: List[np.ndarray] = None
         self._marker_pids: List[np.ndarray] = None
@@ -59,11 +59,6 @@ class PointCloudManager(SCSingletonConfigurable):
     @property
     def empty_pointset(self) -> np.ndarray:
         return np.empty(shape=[0, 3], dtype=np.float)
-
-    def get_bin_colors(self, cmname: str, invert=False):
-        x: np.ndarray = np.linspace(0.0, 1.0, self._n_point_bins)
-        cmap = cm.get_cmap(cmname)(x).tolist()
-        return cmap[::-1] if invert else cmap
 
     @property
     def empty_pids(self) -> np.ndarray:
@@ -85,57 +80,66 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def getColors(self, cmap=None, colors=None ):
         if colors is None:
-            colors = np.repeat([[255, 125, 0]], self.xyz.shape[0], axis=0)
+            colors = np.repeat([[250, 255, 255]], self.xyz.shape[0], axis=0)
         else:
             s_m = plt.cm.ScalarMappable(cmap=cmap)
             colors = s_m.to_rgba(colors)[:, :-1] * 255
         return colors.astype(np.uint8)
 
-    def getPoints(self, colors):
+    def getPoints( self ) -> p3js.Points:
+        colors = self.getColors()
         attrs = dict( position=p3js.BufferAttribute( self.xyz, normalized=False ),
                       color=p3js.BufferAttribute(list(map(tuple, colors))))
         points_geometry = p3js.BufferGeometry( attributes=attrs )
         points_material = p3js.PointsMaterial( vertexColors='VertexColors')
-        return p3js.Points( geometry=points_geometry, material=points_material)
+        points = p3js.Points( geometry=points_geometry, material=points_material)
+        if self.size_control is not None:
+            ipw.jslink( (self.size_control, 'value'), ( points_material, 'size' ) )
+        if self.picker is not None:
+            self.picker.controlling = points
+        return points
 
-    def getControlsWidget(self):
-        initial_point_size = self.xyz.ptp() / 100
-        size = ipw.FloatSlider( value=initial_point_size, min=0.0, max=initial_point_size * 10, step=initial_point_size / 100)
-        ipw.jslink( (size,'value'), (self.points.material,'size') )
+    def getControlsWidget(self) -> ipw.DOMWidget:
+        self.size_control = ipw.FloatSlider( value=0.02, min=0.0, max=0.05, step=0.0002 )
+        ipw.jslink( (self.size_control,'value'), (self.points.material,'size') )
         color = ipw.ColorPicker( value="black" )
         ipw.jslink( (color,'value'), (self.scene,'background') )
-        psw = ipw.HBox( [ ipw.Label('Point size:'), size ] )
+        psw = ipw.HBox( [ ipw.Label('Point size:'), self.size_control ] )
         bcw = ipw.HBox( [ ipw.Label('Background color:'), color ] )
         return ipw.VBox( [ psw, bcw ] )
 
-    def _get_gui( self, **kwargs ) -> ipw.DOMWidget:
-        pcolors = self.getColors()
-        bin_colors = [ x[:3] for x in self.get_bin_colors(self.color_map) ]
-        label_colors = [ colors.to_rgb(c) for c in lm().colors[::-1]]
-        self.standard_colors = [[1.0, 1.0, 1.0], ] + bin_colors + label_colors
-        self.points = self.getPoints( pcolors )
+    def _get_gui( self ) -> ipw.DOMWidget:
+        self.points = self.getPoints()
         self.scene = p3js.Scene( children=[ self.points, self.camera ] )
-        self.renderer = p3js.Renderer( scene=self.scene, camera=self.camera, controls=[self.orbit_controls], width=1000, height=600 )
-        self.widgets = self.getControlsWidget()
-        return ipw.VBox( [ self.renderer, self.widgets ]  )
+        self.renderer = p3js.Renderer( scene=self.scene, camera=self.camera, controls=[self.orbit_controls], width=800, height=500 )
+        self.picker = p3js.Picker( controlling=self.points, event='click')
+        self.picker.observe( self.on_pick, names=['point'])
+        self.control_panel = self.getControlsWidget()
+        return ipw.VBox( [ self.renderer, self.control_panel ]  )
+
+    def on_pick( self, event ):
+        lgm().log( f"on_pick: {event}" )
 
     def gui(self, **kwargs ) -> ipw.DOMWidget:
         if self._gui is None:
             self.init_data( **kwargs )
-            self._gui = self._get_gui( **kwargs  )
+            self._gui = self._get_gui()
         return self._gui
 
     def reembed(self, embedding):
-        self.clear_bins()
         self.update_plot( points=embedding )
 
     def update_plot(self, **kwargs):
-        if 'points' in kwargs: self._points = self.normalize(kwargs['points'])
+        if 'points' in kwargs:
+            self.xyz = self.normalize(kwargs['points'])
         if self._gui is not None:
-            lgm().log(f"Updating point sets, sizes: {[ps.shape[0] for ps in self.point_sets]}")
-            self._gui.point_sets = self.point_sets
-            if 'alphas' in kwargs: self._gui.point_set_opacities = kwargs['alphas']
-            self._gui.update_rendered_image()
+            lgm().log( " *** update point cloud data *** " )
+            self.scene.remove( self.points )
+            self.points = self.getPoints()
+            self.scene.add( self.points )
+
+#            if 'alphas' in kwargs: self._gui.point_set_opacities = kwargs['alphas']
+#            self._gui.update_rendered_image()
 
     def on_selection(self, selection_event: Dict):
         selection = selection_event['pids']
@@ -143,8 +147,7 @@ class PointCloudManager(SCSingletonConfigurable):
         self.update_plot()
 
     def update_points(self, new_points: np.ndarray):
-        self.update_markers(points=new_points)
-        self.color_by_value()
+        self.update_plot( points=new_points )
 
     def update_markers(self, pids: List[int] = None, **kwargs):
         if pids is None:
@@ -174,34 +177,9 @@ class PointCloudManager(SCSingletonConfigurable):
         self.set_base_points_alpha(self.reduced_opacity)
         self.update_plot()
 
-    def clear_bins(self):
-        lgm().log(f"PointCloudManager.clear_bins")
-        for iC in range(0, self._n_point_bins):
-            self._binned_points[iC] = self.empty_pointset
-        if self._gui.point_set_opacities[0] == self.reduced_opacity:
-            self.set_base_points_alpha(self.standard_opacity)
-        self.update_plot()
-
     def clear(self):
-        self.clear_bins()
         self.initialize_markers(True)
         self.update_plot()
-
-    def set_bin_colors(self, bin_colors: List[str]):
-        from matplotlib import colors
-        new_colors = self.standard_colors.copy()
-        for iC, color in enumerate(bin_colors):
-            new_colors[iC + 1] = colors.to_rgb(color)
-        self._gui.point_set_colors = new_colors
-
-    def color_by_index(self, indices: np.ndarray, colors: List, **kwargs):
-        pts: np.ndarray = ma.masked_invalid(self._points).filled(-1)
-        imax = indices.max()
-        for iC in range(0, self._n_point_bins):
-            self._binned_points[iC] = pts[(indices == iC)] if iC <= imax else self.empty_pointset
-        self.set_base_points_alpha(self.reduced_opacity)
-        self.set_bin_colors(colors)
-        self.update_plot(**kwargs)
 
     def color_by_value(self, values: np.ndarray = None, **kwargs):
         is_distance = kwargs.get('distance', False)
@@ -223,10 +201,9 @@ class PointCloudManager(SCSingletonConfigurable):
                     mask = (colors > lspace[iC]) & (colors < sys.float_info.max)
                 else:
                     mask = (colors > lspace[iC]) & (colors <= lspace[iC + 1])
-                self._binned_points[iC] = pts[mask]
+#                self._binned_points[iC] = pts[mask]
             #                lgm().log(f" $$$COLOR: BIN-{iC}, [ {lspace[iC]} -> {lspace[iC+1]} ], nvals = {self._binned_points[iC].shape[0]}, #mask-points = {np.count_nonzero(mask)}" )
             self.set_base_points_alpha(self.reduced_opacity)
-            self._gui.point_set_colors = self.standard_colors
             self.update_plot(**kwargs)
 
     def get_color_bounds(self):
@@ -268,11 +245,6 @@ class PointCloudManager(SCSingletonConfigurable):
 
     #            lgm().log(f"clear_points: reduced marker_pids = {self._marker_pids[icid]} -> points = {self._marker_points[ icid ]}")
 
-    @property
-    def point_sets(self):
-        self.initialize_markers()
-        return [self._points] + self._binned_points + self._marker_points[::-1]
-
     def set_base_points_alpha( self, alpha: float ):
         alphas = list( self._gui.point_set_opacities )
         alphas[0] = alpha
@@ -280,15 +252,7 @@ class PointCloudManager(SCSingletonConfigurable):
         lgm().log(f"Set point set opacities: {self._gui.point_set_opacities}")
         self.update_plot( alphas = alphas )
 
-    def toggle_marker_visibility(self):
-        midx = len( self._binned_points ) + 1
-        alphas = np.array( list( self._gui.point_set_opacities ) )
-        alphas[midx:] =  0.0 if ( alphas[ midx ] > 0.0 ) else 1.0
-        lgm().log(f"Set point set opacities: {self._gui.point_set_opacities}")
-        self.update_plot( alphas = alphas.tolist() )
-
     def refresh(self):
-        self.clear_bins()
         self.initialize_points()
         self.initialize_markers( True )
         self.init_data()

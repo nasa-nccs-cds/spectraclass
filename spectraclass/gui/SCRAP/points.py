@@ -89,8 +89,7 @@ class PointCloudManager(SCSingletonConfigurable):
         self.update_plot()
 
     def update_points(self, new_points: np.ndarray ):
-        self.update_markers(points=new_points)
-        self.color_by_value()
+        self.update_plot( points=new_points )
 
     def update_markers(self, pids: List[int] = None, **kwargs ):
         if pids is None:

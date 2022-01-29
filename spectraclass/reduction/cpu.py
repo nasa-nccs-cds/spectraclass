@@ -11,7 +11,6 @@ except ImportError:
     # sklearn.externals.joblib is deprecated in 0.21, will be removed in 0.23
     from sklearn.externals import joblib
 import numpy as np
-import xarray as xa
 import scipy.sparse
 import scipy.sparse.csgraph
 import umap.distances as dist
@@ -1015,7 +1014,7 @@ def optimize_layout_euclidean(
     embedding: array of shape (n_samples, n_components)
         The optimized embedding.
     """
-    from spectraclass.gui.points import  PointCloudManager
+    from spectraclass.gui.points3js import  PointCloudManager
     dim = head_embedding.shape[1]
     move_other = head_embedding.shape[0] == tail_embedding.shape[0]
     alpha = initial_alpha
