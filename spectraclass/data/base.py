@@ -1,3 +1,5 @@
+import warnings
+warnings.simplefilter("ignore", FutureWarning)
 import numpy as np
 import ipywidgets as ipw
 from typing import List, Union, Tuple, Optional, Dict, Type

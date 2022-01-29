@@ -37,7 +37,7 @@ class PointCloudManager(SCSingletonConfigurable):
         self.reduced_opacity = 0.111111
         self.standard_opacity = 0.411111
         self.centroid = (0,0,0)
-        self.camera = p3js.PerspectiveCamera( fov=90, aspect=1, position=[5,5,1], up=[0,0,1] )
+        self.camera = p3js.PerspectiveCamera( fov=90, aspect=1, position=[3.5,3.5,0], up=[0,0,1] )
         self.camera.lookAt( self.centroid )
         self.orbit_controls = p3js.OrbitControls( controlling=self.camera )
         self.orbit_controls.target = self.centroid
@@ -129,9 +129,6 @@ class PointCloudManager(SCSingletonConfigurable):
             self._gui = self._get_gui()
         return self._gui
 
-    def reembed(self, embedding):
-        self.update_plot( points=embedding )
-
     def update_plot(self, **kwargs):
         if 'points' in kwargs:
             self.xyz = self.normalize(kwargs['points'])
@@ -148,9 +145,6 @@ class PointCloudManager(SCSingletonConfigurable):
         selection = selection_event['pids']
         self.update_markers(selection)
         self.update_plot()
-
-    def update_points(self, **kwargs ):
-        self.update_plot( **kwargs )
 
     def update_markers(self, pids: List[int] = None, **kwargs):
         if pids is None:

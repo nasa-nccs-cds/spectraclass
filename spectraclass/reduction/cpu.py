@@ -1029,7 +1029,7 @@ def optimize_layout_euclidean(
       print( f" >>> Embed n_epochs={n_epochs}, alpha={alpha} ")
       plot_update_period = n_epochs//3
       for n in range(n_epochs):
-        if ( dim == 3 ) and ( ((n % plot_update_period) == 0) or (n==1) ): pcm.update_points( head_embedding )
+        if ( dim == 3 ) and ( ((n % plot_update_period) == 0) or (n==1) ): pcm.update_plot( points=head_embedding )
         optimize_fn(
             head_embedding,
             tail_embedding,
@@ -1055,7 +1055,7 @@ def optimize_layout_euclidean(
         if verbose and n % int(n_epochs / 10) == 0:
             print("\tcompleted ", n, " / ", n_epochs, "epochs")
 
-    pcm.update_points( head_embedding )
+    pcm.update_plot( points=head_embedding )
     return head_embedding
 
 @numba.njit()

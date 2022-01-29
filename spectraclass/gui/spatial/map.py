@@ -216,6 +216,7 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def _update( self, val ):
         self.currentFrame = int( self.slider.val )
+        self.slider.refesh()
         self.update_plots()
 
     def update_image_alpha( self, layer: str, increase: bool, *args, **kwargs ):
@@ -260,7 +261,6 @@ class MapManager(SCSingletonConfigurable):
                 drange = self.get_color_bounds(fdata)
                 alpha = self.layers('bands').visibility
                 norm = Normalize(**drange)
-                pcm().update_points( cdata=fdata.values, norm=norm )
                 self._spectral_image.set_data(fdata.values)
                 self._spectral_image.set_norm(norm)
                 self._spectral_image.set_alpha(alpha)
@@ -270,6 +270,7 @@ class MapManager(SCSingletonConfigurable):
                 self.update_canvas()
                 lgm().log(f" --> AXIS: xlim={fs(self.plot_axes.get_xlim())}, ylim={fs(self.plot_axes.get_ylim())}")
                 lgm().log(f" --> DATA: extent={fs(SpatialDataManager.extent(fdata))}")
+                pcm().update_plot(cdata=fdata, norm=norm)
 
     def update_canvas(self):
         self.figure.canvas.draw_idle()
