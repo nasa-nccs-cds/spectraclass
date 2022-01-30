@@ -77,6 +77,11 @@ class MapManager(SCSingletonConfigurable):
             self.update_slider_visibility()
             self.update_plots()
 
+    def getPointData(self, **kwargs ) -> xa.DataArray:
+        current_frame = kwargs.get('current_frame',False)
+        pdata, coords = self.block.getPointData()
+        return pdata[:,self.currentFrame] if current_frame else pdata
+
     @property
     def spectral_image(self) -> Optional[AxesImage]:
         return self._spectral_image
@@ -255,7 +260,7 @@ class MapManager(SCSingletonConfigurable):
             dm().modal.update_extent()
             lgm().log(f"\n <------> Loading new image: {os.path.basename(new_image)} <------> \n")
         if self._spectral_image is not None:
-            fdata: xa.DataArray = self.frame_data
+            fdata: xa.DataArray = self.frame_data.squeeze(drop=True)
             lgm().log(f"update_plots: block data shape = {self.data.shape}" )
             if fdata is not None:
                 drange = self.get_color_bounds(fdata)
@@ -285,7 +290,7 @@ class MapManager(SCSingletonConfigurable):
         if self.currentFrame >= self.nFrames(): return None
         # lgm().log( f" color_pointcloud: currentFrame = {self.currentFrame}, frame data shape = {frame_data.shape}")
         # app().color_pointcloud( frame_data.values.flatten(), **kwargs )
-        return self.data[self.currentFrame].squeeze(drop=True)
+        return self.data[self.currentFrame]
 
     @property
     def figure(self) -> Figure:
