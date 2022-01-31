@@ -33,6 +33,7 @@ class PointCloudManager(SCSingletonConfigurable):
         self.picker: p3js.Picker = None
         self.control_panel: ipw.DOMWidget = None
         self.size_control: ipw.FloatSlider = None
+        self.point_locator: np.ndarray = None
         self._color_values = None
         self.reduced_opacity = 0.111111
         self.standard_opacity = 0.411111
@@ -73,6 +74,7 @@ class PointCloudManager(SCSingletonConfigurable):
         lgm().log(f"UMAP init, init data shape = {reduced_data.shape}")
         embedding = rm().umap_init(reduced_data, **kwargs)
         self.xyz = self.normalize(embedding)
+        self.init_locator()
         self.initialize_markers()
 
     def normalize(self, point_data: np.ndarray):
@@ -93,11 +95,12 @@ class PointCloudManager(SCSingletonConfigurable):
     def getPoints( self, **kwargs ) -> p3js.Points:
         colors = self.getColors( **kwargs )
         lgm().log(f"getColors: xyz shape = {self.xyz.shape}")
-        attrs = dict( position=p3js.BufferAttribute( self.xyz, normalized=False ),
-                      color=p3js.BufferAttribute(list(map(tuple, colors))))
+        attrs = dict( position = p3js.BufferAttribute( self.xyz, normalized=False ),
+                      color =    p3js.BufferAttribute( list(map(tuple, colors)) ),
+                      pid =      p3js.BufferAttribute( np.arange(self.xyz.shape[0]) ) )
         points_geometry = p3js.BufferGeometry( attributes=attrs )
         points_material = p3js.PointsMaterial( vertexColors='VertexColors')
-        points = p3js.Points( geometry=points_geometry, material=points_material)
+        points = p3js.Points( geometry=points_geometry, material=points_material )
         if self.size_control is not None:
             ipw.jslink( (self.size_control, 'value'), ( points_material, 'size' ) )
         if self.picker is not None:
@@ -118,12 +121,15 @@ class PointCloudManager(SCSingletonConfigurable):
         self.scene = p3js.Scene( children=[ self.points, self.camera ] )
         self.renderer = p3js.Renderer( scene=self.scene, camera=self.camera, controls=[self.orbit_controls], width=800, height=500 )
         self.picker = p3js.Picker( controlling=self.points, event='click')
-        self.picker.observe( self.on_pick, names=['point'])
+        self.picker.observe( self.on_pick, names=['point'] )
+        self.renderer.controls = self.renderer.controls + [ self.picker ]
         self.control_panel = self.getControlsWidget()
         return ipw.VBox( [ self.renderer, self.control_panel ]  )
 
-    def on_pick( self, event ):
-        lgm().log( f"on_pick: {event}" )
+    def on_pick( self, event: Dict ):
+        point = list(event["new"])
+        pid = self.get_index_from_point( point )
+        lgm().log( f"----------------> on_pick[{pid}]: {point} " )
 
     def gui(self, **kwargs ) -> ipw.DOMWidget:
         if self._gui is None:
@@ -131,9 +137,18 @@ class PointCloudManager(SCSingletonConfigurable):
             self._gui = self._get_gui()
         return self._gui
 
+    def init_locator(self):
+        lgm().log(f" update xyz, shape = {self.xyz.shape} ")
+        self.point_locator = self.xyz.sum(axis=1)
+        lgm().log(f" *** init_locator, shape = {self.point_locator.shape} ")
+
+    def get_index_from_point(self, point: List[float] ):
+        return np.argmin( self.point_locator - sum(point) )
+
     def update_plot(self, **kwargs):
         if 'points' in kwargs:
             self.xyz = self.normalize(kwargs['points'])
+            self.init_locator()
         if self._gui is not None:
             lgm().log( " *** update point cloud data *** " )
             self.scene.remove( self.points )
