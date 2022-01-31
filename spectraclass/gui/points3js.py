@@ -31,7 +31,6 @@ class PointCloudManager(SCSingletonConfigurable):
         self.scene: p3js.Scene = None
         self.renderer: p3js.Renderer = None
         self.raycaster = p3js.Raycaster()
-        self.raycaster.params.Points.threshold = 2
         self.picker: p3js.Picker = None
         self.control_panel: ipw.DOMWidget = None
         self.size_control: ipw.FloatSlider = None
@@ -132,8 +131,8 @@ class PointCloudManager(SCSingletonConfigurable):
         self.points = self.getPoints()
         self.scene = p3js.Scene( children=[ self.points, self.camera, p3js.AmbientLight(intensity=0.8)  ] )
         self.renderer = p3js.Renderer( scene=self.scene, camera=self.camera, controls=[self.orbit_controls], width=800, height=500 )
-        self.picker = p3js.Picker( controlling=self.points, event='mousemove')
-#        self.picker.observe( self.on_pick, names=['point'] )
+        self.picker = p3js.Picker( controlling=self.points, event='click')
+        self.picker.observe( self.on_pick, names=['point'] )
         self.renderer.controls = self.renderer.controls + [ self.picker ]
         self.control_panel = self.getControlsWidget()
         self.pick_point = p3js.Mesh( geometry=p3js.SphereGeometry(radius=0.02), material=p3js.MeshLambertMaterial() )
@@ -143,12 +142,27 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @exception_handled
     def on_pick( self, event: Dict ):
-        from spectraclass.gui.spatial.map import MapManager, mm
-        point = list(event["new"])
-        pid: int = self.get_index_from_point( point )
-        pos = mm().mark_point( pid, cid=0 )
-        if pos is not None: self.pick_point.position = point
-        lgm().log( f"----------------> on_pick[{pid}]: {point} " )
+        lgm().log(f"\n----------------> on_pick: {event['new']}")
+        lgm().log(f" * point={self.picker.point}")
+        lgm().log(f" * indices={self.picker.indices}")
+        lgm().log(f" * picked={self.picker.picked}")
+        lgm().log(f" * distance={self.picker.distance}")
+        lgm().log(f" * uv={self.picker.uv}")
+
+        # from spectraclass.gui.spatial.map import MapManager, mm
+        # point = list(event["new"])
+        # self.raycaster.setFromCamera( coords2D, self.camera )
+        # intersects = self.raycaster.intersectObject( self.points )
+        # if (intersects.length):
+        #     newColor = p3js.Color("#ffffff")
+        #     index = intersects[0].index
+        #     self.points.geometry.colors[index] = newColor
+        #     self.points.geometry.colorsNeedUpdate = True
+        #
+        # # pid: int = self.get_index_from_point( point )
+        # # pos = mm().mark_point( pid, cid=0 )
+        # # if pos is not None: self.pick_point.position = point
+        # # lgm().log( f"----------------> on_pick[{pid}]: {point} " )
 
     def gui(self, **kwargs ) -> ipw.DOMWidget:
         if self._gui is None:
