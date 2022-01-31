@@ -280,20 +280,22 @@ class SpatialDataManager(ModeDataManager):
                         reduced_dataArray =  xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
                         data_vars['reduction'] = reduced_dataArray
                         data_vars['reproduction'] = reproduction
-                        data_vars['mask'] = coord_data['mask']
+                        data_vars['mask'] = xa.DataArray( coord_data['mask'], dims=('y','x'), coords={ d: raw_data.coords[d] for d in ['y','x'] } )
                         result_dataset = xa.Dataset( data_vars )
 #                       self._reduced_raster_file = os.path.join(self.datasetDir, self.dataset + ".tif")
                         lgm().log(f" Writing reduced output to {block_data_file} with {blocks_point_data.size} samples, dset attrs:")
                         for varname, da in result_dataset.data_vars.items():
                             da.attrs['long_name'] = ".".join( [ point_data.attrs['file_name'], varname ] )
-                        print( f"Writing output file: '{block_data_file}' with {blocks_point_data.size} samples")
+                        lgm().log( f"Writing output file: '{block_data_file}' with {blocks_point_data.size} samples")
+                        for vname, v in data_vars.items():
+                            lgm().log(f" ---> {vname}: shape={v.shape}, size={v.size}, dims={v.dims}, coords={[':'.join([cid,str(c.shape)]) for (cid,c) in v.coords.items()]}")
                         if os.path.exists( block_data_file ): os.remove( block_data_file )
                         else: os.makedirs( os.path.dirname( block_data_file ), exist_ok=True )
                         result_dataset.to_netcdf( block_data_file )
 #                        print(f"Writing raster file: '{self._reduced_raster_file}' with dims={reduced_dataArray.dims}, attrs = {reduced_dataArray.attrs}")
 #                        reduced_dataArray.rio.set_spatial_dims()
 #                        raw_data.rio.to_raster( self._reduced_raster_file )
-            tm().saveMetadata( block_nsamples )
+                tm().saveMetadata( block_nsamples )
         return block_nsamples
 
     def getFilePath(self) -> str:

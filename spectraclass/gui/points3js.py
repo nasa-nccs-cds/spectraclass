@@ -26,10 +26,12 @@ class PointCloudManager(SCSingletonConfigurable):
     def __init__( self):
         super(PointCloudManager, self).__init__()
         self._gui = None
-        self.xyz: np.ndarray = None
+        self._xyz: np.ndarray = None
         self.points: p3js.Points = None
         self.scene: p3js.Scene = None
         self.renderer: p3js.Renderer = None
+        self.raycaster = p3js.Raycaster()
+        self.raycaster.params.Points.threshold = 2
         self.picker: p3js.Picker = None
         self.control_panel: ipw.DOMWidget = None
         self.size_control: ipw.FloatSlider = None
@@ -38,14 +40,25 @@ class PointCloudManager(SCSingletonConfigurable):
         self.reduced_opacity = 0.111111
         self.standard_opacity = 0.411111
         self.centroid = (0,0,0)
-        self.camera = p3js.PerspectiveCamera( fov=90, aspect=1, position=[3.5,3.5,0], up=[0,0,1] )
+        key_light = p3js.DirectionalLight( color='white', position=[5,5,1], intensity=0.4 )
+        self.camera = p3js.PerspectiveCamera( fov=90, aspect=1, position=[3.5,3.5,0], up=[0,0,1], children=[key_light] )
         self.camera.lookAt( self.centroid )
         self.orbit_controls = p3js.OrbitControls( controlling=self.camera )
         self.orbit_controls.target = self.centroid
+        self.pick_point = None
         self.initialize_points()
 
+    @property
+    def xyz(self)-> np.ndarray:
+        return self._xyz
+
+    @xyz.setter
+    def xyz(self, value: np.ndarray):
+        self._xyz = value
+        self.point_locator = value.sum(axis=1)
+
     def initialize_points(self):
-        self.xyz: np.ndarray = self.empty_pointset
+        self._xyz: np.ndarray = self.empty_pointset
         self._marker_points: List[np.ndarray] = None
         self._marker_pids: List[np.ndarray] = None
         self._color_values = None
@@ -74,7 +87,6 @@ class PointCloudManager(SCSingletonConfigurable):
         lgm().log(f"UMAP init, init data shape = {reduced_data.shape}")
         embedding = rm().umap_init(reduced_data, **kwargs)
         self.xyz = self.normalize(embedding)
-        self.init_locator()
         self.initialize_markers()
 
     def normalize(self, point_data: np.ndarray):
@@ -118,18 +130,24 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def _get_gui( self ) -> ipw.DOMWidget:
         self.points = self.getPoints()
-        self.scene = p3js.Scene( children=[ self.points, self.camera ] )
+        self.scene = p3js.Scene( children=[ self.points, self.camera, p3js.AmbientLight(intensity=0.8)  ] )
         self.renderer = p3js.Renderer( scene=self.scene, camera=self.camera, controls=[self.orbit_controls], width=800, height=500 )
-        self.picker = p3js.Picker( controlling=self.points, event='click')
-        self.picker.observe( self.on_pick, names=['point'] )
+        self.picker = p3js.Picker( controlling=self.points, event='mousemove')
+#        self.picker.observe( self.on_pick, names=['point'] )
         self.renderer.controls = self.renderer.controls + [ self.picker ]
         self.control_panel = self.getControlsWidget()
+        self.pick_point = p3js.Mesh( geometry=p3js.SphereGeometry(radius=0.02), material=p3js.MeshLambertMaterial() )
+        self.scene.add( self.pick_point )
+        ipw.jslink( (self.pick_point, 'position'), (self.picker, 'point') )
         return ipw.VBox( [ self.renderer, self.control_panel ]  )
 
     @exception_handled
     def on_pick( self, event: Dict ):
+        from spectraclass.gui.spatial.map import MapManager, mm
         point = list(event["new"])
-        pid = self.get_index_from_point( point )
+        pid: int = self.get_index_from_point( point )
+        pos = mm().mark_point( pid, cid=0 )
+        if pos is not None: self.pick_point.position = point
         lgm().log( f"----------------> on_pick[{pid}]: {point} " )
 
     def gui(self, **kwargs ) -> ipw.DOMWidget:
@@ -138,18 +156,12 @@ class PointCloudManager(SCSingletonConfigurable):
             self._gui = self._get_gui()
         return self._gui
 
-    def init_locator(self):
-        lgm().log(f" update xyz, shape = {self.xyz.shape} ")
-        self.point_locator = self.xyz.sum(axis=1)
-        lgm().log(f" *** init_locator, shape = {self.point_locator.shape} ")
-
-    def get_index_from_point(self, point: List[float] ):
+    def get_index_from_point(self, point: List[float] ) -> int:
         return np.argmin( self.point_locator - sum(point) )
 
     def update_plot(self, **kwargs):
         if 'points' in kwargs:
             self.xyz = self.normalize(kwargs['points'])
-            self.init_locator()
         if self._gui is not None:
             lgm().log( " *** update point cloud data *** " )
             self.scene.remove( self.points )
@@ -178,19 +190,20 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @exception_handled
     def update_marked_points(self, cid: int = -1, **kwargs):
-        from spectraclass.gui.control import UserFeedbackManager, ufm
-        if self._points is None:
-            ufm().show("Can't mark points in PointCloudManager which is not initialized", "red")
-        else:
-            icid = cid if cid >= 0 else lm().current_cid
-            self.initialize_markers()
-            self.clear_points(0)
-            self._marker_pids[icid] = asarray(kwargs.get('pids', lm().getPids(icid)), np.int)
-            self._marker_points[icid] = self._points[self._marker_pids[icid], :]
-            lgm().log(
-                f"PointCloudManager.add_marked_points: cid = {icid}, #marked-points[cid]: [{self._marker_pids[icid].size}]")
-        self.set_base_points_alpha(self.reduced_opacity)
-        self.update_plot()
+        return
+        # from spectraclass.gui.control import UserFeedbackManager, ufm
+        # if self._points is None:
+        #     ufm().show("Can't mark points in PointCloudManager which is not initialized", "red")
+        # else:
+        #     icid = cid if cid >= 0 else lm().current_cid
+        #     self.initialize_markers()
+        #     self.clear_points(0)
+        #     self._marker_pids[icid] = asarray(kwargs.get('pids', lm().getPids(icid)), np.int)
+        #     self._marker_points[icid] = self._points[self._marker_pids[icid], :]
+        #     lgm().log(
+        #         f"PointCloudManager.add_marked_points: cid = {icid}, #marked-points[cid]: [{self._marker_pids[icid].size}]")
+        # self.set_base_points_alpha(self.reduced_opacity)
+        # self.update_plot()
 
     def clear(self):
         self.initialize_markers(True)

@@ -87,6 +87,10 @@ class MapManager(SCSingletonConfigurable):
         lgm().log( f" MapManage.getPointData: shape = {pdata.shape}, dims = {pdata.dims}")
         return pdata[:,self.currentFrame] if current_frame else pdata
 
+    def get_point_coords( self, pid: int ) -> Tuple[float,float]:
+        coords = self.block.pid2coords(pid)
+        return coords['x'], coords['y']
+
     @property
     def spectral_image(self) -> Optional[AxesImage]:
         return self._spectral_image
@@ -367,6 +371,9 @@ class MapManager(SCSingletonConfigurable):
             if not standalone:
                 self.create_selection_panel()
         return self.base.gax.figure.canvas
+
+    def mark_point(self, pid: int, **kwargs ) -> Optional[Tuple[float,float]]:
+        return self.points_selection.mark_point( pid, **kwargs )
 
     def init_hover(self):
         def format_coord(x, y):

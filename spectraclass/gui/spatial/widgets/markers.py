@@ -171,18 +171,25 @@ class MarkerManager( PointsInteractor ):
             lm().deletePid( pid )
             gpm().remove_point( pid )
 
+    def mark_point(self, pid, **kwargs ) -> Optional[Tuple[float,float]]:
+        from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.gui.spatial.map import MapManager, mm
+        if pid >= 0:
+            cid = kwargs.get( 'cid', lm().current_cid )
+            point = kwargs.get('point', mm().get_point_coords( pid ) )
+            m = Marker( "marker", [pid], cid, point=point )
+            self.add(m)
+            return point
+
     @exception_handled
     def on_button_press(self, event: MouseEvent ):
-        from spectraclass.model.labels import LabelsManager, lm
         if (event.xdata != None) and (event.ydata != None) and (event.inaxes == self.ax) and self._enabled:
             if int(event.button) == self.RIGHT_BUTTON:
                 self.delete_marker( event.xdata, event.ydata )
             elif int(event.button) == self.LEFT_BUTTON:
                 pid = self._block.coords2pindex(event.ydata, event.xdata)
                 lgm().log(f"\n on_button_press --> selected pid = {pid}, button = {event.button}")
-                if pid >= 0:
-                    m = Marker( "marker", [pid], lm().current_cid, point=(event.xdata,event.ydata) )
-                    self.add( m )
+                self.mark_point( pid, point=(event.xdata,event.ydata) )
             self.plot()
 
 
