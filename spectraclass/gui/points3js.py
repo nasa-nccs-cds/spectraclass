@@ -126,6 +126,7 @@ class PointCloudManager(SCSingletonConfigurable):
         self.control_panel = self.getControlsWidget()
         return ipw.VBox( [ self.renderer, self.control_panel ]  )
 
+    @exception_handled
     def on_pick( self, event: Dict ):
         point = list(event["new"])
         pid = self.get_index_from_point( point )
