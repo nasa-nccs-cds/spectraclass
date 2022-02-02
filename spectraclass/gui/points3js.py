@@ -6,6 +6,7 @@ from typing import List, Union, Tuple, Optional, Dict, Callable, Iterable
 from matplotlib import cm
 import numpy.ma as ma
 import xarray as xa
+from spectraclass.data.spatial.voxels import Voxelizer
 from matplotlib.colors import Normalize
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import traitlets as tl
@@ -38,14 +39,24 @@ class PointCloudManager(SCSingletonConfigurable):
         self._color_values = None
         self.reduced_opacity = 0.111111
         self.standard_opacity = 0.411111
+        self.scale = 100.0
         self.centroid = (0,0,0)
-        key_light = p3js.DirectionalLight( color='white', position=[5,5,1], intensity=0.4 )
-        self.camera = p3js.PerspectiveCamera( fov=90, aspect=1, position=[3.5,3.5,0], up=[0,0,1], children=[key_light] )
+        key_light = p3js.DirectionalLight( color='white', position=[5*self.scale,0,0], intensity=0.4 )
+        self.camera = p3js.PerspectiveCamera( fov=90, aspect=1, position=[3*self.scale,0,0], up=[0,0,1], children=[key_light] )
         self.camera.lookAt( self.centroid )
         self.orbit_controls = p3js.OrbitControls( controlling=self.camera )
         self.orbit_controls.target = self.centroid
-        self.pick_point = None
+        self.pick_point: int = -1
+        self.voxelizer: Voxelizer = None
         self.initialize_points()
+
+
+        #
+        # # project points into voxel space: [0, k)
+        # voxelspace_points = fractional_points * VOXEL_K
+        #
+        # # convert voxel space to voxel indices (truncate decimals: 0.1 -> 0)
+        # voxel_indices = voxelspace_points.astype(int)
 
     @property
     def xyz(self)-> np.ndarray:
@@ -54,6 +65,8 @@ class PointCloudManager(SCSingletonConfigurable):
     @xyz.setter
     def xyz(self, value: np.ndarray):
         self._xyz = value
+        self._bounds = []
+        self.voxelizer = Voxelizer( value, 0.1*self.scale )
         self.point_locator = value.sum(axis=1)
 
     def initialize_points(self):
@@ -89,7 +102,7 @@ class PointCloudManager(SCSingletonConfigurable):
         self.initialize_markers()
 
     def normalize(self, point_data: np.ndarray):
-        return (point_data - point_data.mean()) / point_data.std()
+        return (point_data - point_data.mean()) * (self.scale / point_data.std())
 
     def getColors( self, **kwargs ):
         from spectraclass.gui.spatial.map import MapManager, mm
@@ -101,15 +114,19 @@ class PointCloudManager(SCSingletonConfigurable):
         lgm().log( f"getColors: norm cdata shape = {cdata.shape}, dims={cdata.dims}")
         mapper = plt.cm.ScalarMappable( norm = norm, cmap="jet" )
         colors = mapper.to_rgba( cdata.values )[:, :-1] * 255
+        if self.pick_point >= 0:
+            colors[ self.pick_point ] = [255.0,255.0,255.0]
         return colors.astype(np.uint8)
 
-    def getPoints( self, **kwargs ) -> p3js.Points:
+    def getGeometry( self, **kwargs ):
         colors = self.getColors( **kwargs )
         lgm().log(f"getColors: xyz shape = {self.xyz.shape}")
         attrs = dict( position = p3js.BufferAttribute( self.xyz, normalized=False ),
-                      color =    p3js.BufferAttribute( list(map(tuple, colors)) ),
-                      pid =      p3js.BufferAttribute( np.arange(self.xyz.shape[0]) ) )
-        points_geometry = p3js.BufferGeometry( attributes=attrs )
+                      color =    p3js.BufferAttribute( list(map(tuple, colors))) )
+        return p3js.BufferGeometry( attributes=attrs )
+
+    def getPoints( self, **kwargs ) -> p3js.Points:
+        points_geometry = self.getGeometry( **kwargs )
         points_material = p3js.PointsMaterial( vertexColors='VertexColors')
         points = p3js.Points( geometry=points_geometry, material=points_material )
         if self.size_control is not None:
@@ -119,7 +136,7 @@ class PointCloudManager(SCSingletonConfigurable):
         return points
 
     def getControlsWidget(self) -> ipw.DOMWidget:
-        self.size_control = ipw.FloatSlider( value=0.02, min=0.0, max=0.05, step=0.0002 )
+        self.size_control = ipw.FloatSlider( value=0.02*self.scale, min=0.0, max=0.05*self.scale, step=0.0002*self.scale )
         ipw.jslink( (self.size_control,'value'), (self.points.material,'size') )
         color = ipw.ColorPicker( value="black" )
         ipw.jslink( (color,'value'), (self.scene,'background') )
@@ -132,37 +149,50 @@ class PointCloudManager(SCSingletonConfigurable):
         self.scene = p3js.Scene( children=[ self.points, self.camera, p3js.AmbientLight(intensity=0.8)  ] )
         self.renderer = p3js.Renderer( scene=self.scene, camera=self.camera, controls=[self.orbit_controls], width=800, height=500 )
         self.picker = p3js.Picker( controlling=self.points, event='click')
+        self.picker.all = False
         self.picker.observe( self.on_pick, names=['point'] )
         self.renderer.controls = self.renderer.controls + [ self.picker ]
         self.control_panel = self.getControlsWidget()
-        self.pick_point = p3js.Mesh( geometry=p3js.SphereGeometry(radius=0.02), material=p3js.MeshLambertMaterial() )
-        self.scene.add( self.pick_point )
-        ipw.jslink( (self.pick_point, 'position'), (self.picker, 'point') )
         return ipw.VBox( [ self.renderer, self.control_panel ]  )
 
     @exception_handled
     def on_pick( self, event: Dict ):
-        lgm().log(f"\n----------------> on_pick: {event['new']}")
-        lgm().log(f" * point={self.picker.point}")
-        lgm().log(f" * indices={self.picker.indices}")
-        lgm().log(f" * picked={self.picker.picked}")
-        lgm().log(f" * distance={self.picker.distance}")
-        lgm().log(f" * uv={self.picker.uv}")
+        from spectraclass.gui.spatial.map import MapManager, mm
+        point = tuple( event["new"] )
+        self.pick_point = self.voxelizer.get_pid( point )
+        pos = mm().mark_point( self.pick_point, cid=0 )
+        lgm().log( f"\n -----> on_pick: pid={self.pick_point}, pos = {pos} [{point}]")
+        self.points.geometry = self.getGeometry()
 
-        # from spectraclass.gui.spatial.map import MapManager, mm
-        # point = list(event["new"])
-        # self.raycaster.setFromCamera( coords2D, self.camera )
-        # intersects = self.raycaster.intersectObject( self.points )
-        # if (intersects.length):
-        #     newColor = p3js.Color("#ffffff")
-        #     index = intersects[0].index
-        #     self.points.geometry.colors[index] = newColor
-        #     self.points.geometry.colorsNeedUpdate = True
-        #
-        # # pid: int = self.get_index_from_point( point )
-        # # pos = mm().mark_point( pid, cid=0 )
-        # # if pos is not None: self.pick_point.position = point
-        # # lgm().log( f"----------------> on_pick[{pid}]: {point} " )
+
+        # result = None
+        # iT = 0
+        # ray = np.array( [ picked['point'] for picked in self.picker.picked ] )
+        # lgm().log(f"on_pick: ray shape = {ray.shape}")
+        # self.voxelizer.pick_point( ray, 0.001 )
+
+        # if result is not None:
+        #     lgm().log( f" >----**>> {result}" )
+        #     point = result['point']
+        #     pid: int = self.get_index_from_point( point )
+        #     pos = mm().mark_point( pid, cid=0 )
+        #     if pos is not None: self.pick_point.position = point
+        #     lgm().log(f"----------------> on_pick[{pid}]: {point} ")
+
+            #
+            # point = list(event["new"])
+            # self.raycaster.setFromCamera( coords2D, self.camera )
+            # intersects = self.raycaster.intersectObject( self.points )
+            # if (intersects.length):
+            #     newColor = p3js.Color("#ffffff")
+            #     index = intersects[0].index
+            #     self.points.geometry.colors[index] = newColor
+            #     self.points.geometry.colorsNeedUpdate = True
+            #
+            # # pid: int = self.get_index_from_point( point )
+            # # pos = mm().mark_point( pid, cid=0 )
+            # # if pos is not None: self.pick_point.position = point
+            # # lgm().log( f"----------------> on_pick[{pid}]: {point} " )
 
     def gui(self, **kwargs ) -> ipw.DOMWidget:
         if self._gui is None:
@@ -171,16 +201,18 @@ class PointCloudManager(SCSingletonConfigurable):
         return self._gui
 
     def get_index_from_point(self, point: List[float] ) -> int:
-        return np.argmin( self.point_locator - sum(point) )
+        spt = sum(point)
+        loc_array: np.ndarray = np.abs( self.point_locator - spt )
+        indx = np.argmin( loc_array )
+        lgm().log( f"get_index_from_point[{indx}]: Loc array range=[{loc_array.min()},{loc_array.max()}], spt={loc_array[indx]}, pos={self.xyz[indx]}")
+        return indx
 
     def update_plot(self, **kwargs):
         if 'points' in kwargs:
             self.xyz = self.normalize(kwargs['points'])
         if self._gui is not None:
             lgm().log( " *** update point cloud data *** " )
-            self.scene.remove( self.points )
-            self.points = self.getPoints( **kwargs )
-            self.scene.add( self.points )
+            self.points.geometry = self.getGeometry()
 
 #            if 'alphas' in kwargs: self._gui.point_set_opacities = kwargs['alphas']
 #            self._gui.update_rendered_image()
