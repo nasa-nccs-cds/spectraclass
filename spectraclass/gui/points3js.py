@@ -42,7 +42,7 @@ class PointCloudManager(SCSingletonConfigurable):
         self.scale = 100.0
         self.centroid = (0,0,0)
         key_light = p3js.DirectionalLight( color='white', position=[5*self.scale,0,0], intensity=0.4 )
-        self.camera = p3js.PerspectiveCamera( fov=90, aspect=1, position=[3*self.scale,0,0], up=[0,0,1], children=[key_light] )
+        self.camera = p3js.PerspectiveCamera( fov=90, aspect=1, position=[3.5*self.scale,0,0], up=[0,0,1], children=[key_light] )
         self.camera.lookAt( self.centroid )
         self.orbit_controls = p3js.OrbitControls( controlling=self.camera )
         self.orbit_controls.target = self.centroid
