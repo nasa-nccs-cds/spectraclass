@@ -24,6 +24,7 @@ def asarray( data: Union[np.ndarray,Iterable], dtype  ) -> np.ndarray:
 class PointCloudManager(SCSingletonConfigurable):
 
     color_map = tl.Unicode("gist_rainbow").tag(config=True)  # "gist_rainbow" "jet"
+    opacity = tl.Float( 'opacity', min=0.0, max=1.0 ).tag(sync=True)
 
     def __init__( self):
         super(PointCloudManager, self).__init__()
@@ -49,7 +50,9 @@ class PointCloudManager(SCSingletonConfigurable):
         self.orbit_controls.target = self.centroid
         self.pick_point: int = -1
         self.marker_points: Dict[int,p3js.Mesh] = {}
+        self.scene_controls = {}
         self.voxelizer: Voxelizer = None
+#        self.observe(self.on_opacity_change, names=["opacity"])
         self.initialize_points()
 
     def addMarker(self, marker: Marker ):
@@ -61,6 +64,11 @@ class PointCloudManager(SCSingletonConfigurable):
                 marker_point.position = tuple( self.xyz[ pid ].tolist() )
                 self.scene.add(marker_point)
                 self.marker_points[pid] = marker_point
+
+    def on_opacity_change( self, *args ):
+        lgm().log( f"on_opacity_change: {self.opacity}")
+#        self.points.material.opacity = self.opacity
+        self.points.material.set('opacity',self.opacity)
 
     def deleteMarker( self, pid: int ):
         marker_point = self.marker_points.pop(pid)
@@ -127,23 +135,22 @@ class PointCloudManager(SCSingletonConfigurable):
         points_geometry = self.getGeometry( **kwargs )
         points_material = p3js.PointsMaterial( vertexColors='VertexColors')
         points = p3js.Points( geometry=points_geometry, material=points_material )
-        if self.size_control is not None:
-            ipw.jslink( (self.size_control, 'value'), ( points_material, 'size' ) )
         if self.picker is not None:
             self.picker.controlling = points
         return points
 
     def getControlsWidget(self) -> ipw.DOMWidget:
-        self.size_control = ipw.FloatSlider( value=0.02*self.scale, min=0.0, max=0.05*self.scale, step=0.0002*self.scale )
-        self.opacity_control = ipw.FloatSlider( value=1.0, min=0.0, max=1.0, step=0.01 )
-        ipw.jslink( (self.size_control,'value'), (self.points.material,'size') )
-        ipw.jslink( (self.opacity_control, 'value'), (self.points.material, 'opacity'))
-        color = ipw.ColorPicker( value="black" )
-        ipw.jslink( (color,'value'), (self.scene,'background') )
-        psw = ipw.HBox( [ ipw.Label('Point size:'), self.size_control ] )
-        pow = ipw.HBox([ipw.Label('Point opacity:'), self.opacity_control ] )
-        bcw = ipw.HBox( [ ipw.Label('Background color:'), color ] )
-        return ipw.VBox( [ psw, pow, bcw ] )
+        self.scene_controls['material.size'] = ipw.FloatSlider(value=0.02 * self.scale, min=0.0, max=0.05 * self.scale, step=0.0002 * self.scale)
+        self.scene_controls['material.opacity'] = ipw.FloatSlider(value=1.0, min=0.0, max=1.0, step=0.01)
+        self.scene_controls['scene.background'] = ipw.ColorPicker( value="black" )
+        self.link_controls()
+        return ipw.VBox( [ ipw.HBox( [ ipw.Label( name.split(".")[1] ), ctrl ] ) for name, ctrl in self.scene_controls.items() ] )
+
+    def link_controls(self):
+        for name, ctrl in self.scene_controls.items():
+            oid, label = name.split(".")
+            object = self.points.material if oid == "material" else self.scene
+            ipw.jslink( (ctrl, 'value'), (object, label) )
 
     def _get_gui( self ) -> ipw.DOMWidget:
         self.points = self.getPoints()
