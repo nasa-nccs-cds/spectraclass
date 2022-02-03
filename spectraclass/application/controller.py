@@ -202,7 +202,7 @@ class SpectraclassController(SCSingletonConfigurable):
         if marker is not None:
             lm().addMarker( marker )
             gpm().plot_graph( marker )
-            if self.pcm_active: pcm().update_marked_points(marker.cid)
+            if self.pcm_active: pcm().addMarker(marker)
 
     def get_marked_pids(self) -> Dict[int,Set[int]]:
         from spectraclass.model.labels import LabelsManager, Action, lm

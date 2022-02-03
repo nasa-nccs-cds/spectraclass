@@ -2,6 +2,7 @@ import ipywidgets as ipw
 import pythreejs as p3js
 import matplotlib.pyplot as plt
 import time, math, os, sys, numpy as np
+from spectraclass.gui.spatial.widgets.markers import Marker
 from typing import List, Union, Tuple, Optional, Dict, Callable, Iterable
 from matplotlib import cm
 import numpy.ma as ma
@@ -47,16 +48,24 @@ class PointCloudManager(SCSingletonConfigurable):
         self.orbit_controls = p3js.OrbitControls( controlling=self.camera )
         self.orbit_controls.target = self.centroid
         self.pick_point: int = -1
+        self.marker_points: Dict[int,p3js.Mesh] = {}
         self.voxelizer: Voxelizer = None
         self.initialize_points()
 
+    def addMarker(self, marker: Marker ):
+        for pid in marker.pids:
+            if pid not in self.marker_points:
+                material = p3js.MeshLambertMaterial( color= lm().colors[ marker.cid ] )
+                geometry = p3js.SphereGeometry( radius= 0.01*self.scale )
+                marker_point = p3js.Mesh( geometry=geometry, material=material )
+                marker_point.position = tuple( self.xyz[ pid ].tolist() )
+                self.scene.add(marker_point)
+                self.marker_points[pid] = marker_point
 
-        #
-        # # project points into voxel space: [0, k)
-        # voxelspace_points = fractional_points * VOXEL_K
-        #
-        # # convert voxel space to voxel indices (truncate decimals: 0.1 -> 0)
-        # voxel_indices = voxelspace_points.astype(int)
+    def deleteMarker( self, pid: int ):
+        marker_point = self.marker_points.pop(pid)
+        if marker_point is not None:
+            self.scene.remove( marker_point )
 
     @property
     def xyz(self)-> np.ndarray:
@@ -71,16 +80,6 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def initialize_points(self):
         self._xyz: np.ndarray = self.empty_pointset
-        self._marker_points: List[np.ndarray] = None
-        self._marker_pids: List[np.ndarray] = None
-        self._color_values = None
-
-    def initialize_markers(self, reset=False):
-        if (self._marker_points is None) or reset:
-            nLabels = lm().nLabels
-            self._marker_points: List[np.ndarray] = [self.empty_pointset for ic in range(nLabels)]
-            self._marker_pids: List[np.ndarray] = [self.empty_pids for ic in range(nLabels)]
-            lgm().log(f"PCM.initialize_markers, sizes = {[m.size for m in self._marker_points]}")
 
     @property
     def empty_pointset(self) -> np.ndarray:
@@ -99,7 +98,6 @@ class PointCloudManager(SCSingletonConfigurable):
         lgm().log(f"UMAP init, init data shape = {reduced_data.shape}")
         embedding = rm().umap_init(reduced_data, **kwargs)
         self.xyz = self.normalize(embedding)
-        self.initialize_markers()
 
     def normalize(self, point_data: np.ndarray):
         return (point_data - point_data.mean()) * (self.scale / point_data.std())
@@ -122,7 +120,8 @@ class PointCloudManager(SCSingletonConfigurable):
         colors = self.getColors( **kwargs )
         lgm().log(f"getColors: xyz shape = {self.xyz.shape}")
         attrs = dict( position = p3js.BufferAttribute( self.xyz, normalized=False ),
-                      color =    p3js.BufferAttribute( list(map(tuple, colors))) )
+                      color =    p3js.BufferAttribute( list(map(tuple, colors))),
+                      alpha =    kwargs.get('alpha',1.0) )
         return p3js.BufferGeometry( attributes=attrs )
 
     def getPoints( self, **kwargs ) -> p3js.Points:
@@ -137,12 +136,15 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def getControlsWidget(self) -> ipw.DOMWidget:
         self.size_control = ipw.FloatSlider( value=0.02*self.scale, min=0.0, max=0.05*self.scale, step=0.0002*self.scale )
+        self.opacity_control = ipw.FloatSlider( value=1.0, min=0.0, max=1.0, step=0.01 )
         ipw.jslink( (self.size_control,'value'), (self.points.material,'size') )
+#        ipw.jslink( (self.opacity_control, 'value'), (self.points.material, 'alpha'))
         color = ipw.ColorPicker( value="black" )
         ipw.jslink( (color,'value'), (self.scene,'background') )
         psw = ipw.HBox( [ ipw.Label('Point size:'), self.size_control ] )
+        pow = ipw.HBox([ipw.Label('Point opacity:'), self.opacity_control ] )
         bcw = ipw.HBox( [ ipw.Label('Background color:'), color ] )
-        return ipw.VBox( [ psw, bcw ] )
+        return ipw.VBox( [ psw, pow, bcw ] )
 
     def _get_gui( self ) -> ipw.DOMWidget:
         self.points = self.getPoints()
@@ -163,36 +165,6 @@ class PointCloudManager(SCSingletonConfigurable):
         pos = mm().mark_point( self.pick_point, cid=0 )
         lgm().log( f"\n -----> on_pick: pid={self.pick_point}, pos = {pos} [{point}]")
         self.points.geometry = self.getGeometry()
-
-
-        # result = None
-        # iT = 0
-        # ray = np.array( [ picked['point'] for picked in self.picker.picked ] )
-        # lgm().log(f"on_pick: ray shape = {ray.shape}")
-        # self.voxelizer.pick_point( ray, 0.001 )
-
-        # if result is not None:
-        #     lgm().log( f" >----**>> {result}" )
-        #     point = result['point']
-        #     pid: int = self.get_index_from_point( point )
-        #     pos = mm().mark_point( pid, cid=0 )
-        #     if pos is not None: self.pick_point.position = point
-        #     lgm().log(f"----------------> on_pick[{pid}]: {point} ")
-
-            #
-            # point = list(event["new"])
-            # self.raycaster.setFromCamera( coords2D, self.camera )
-            # intersects = self.raycaster.intersectObject( self.points )
-            # if (intersects.length):
-            #     newColor = p3js.Color("#ffffff")
-            #     index = intersects[0].index
-            #     self.points.geometry.colors[index] = newColor
-            #     self.points.geometry.colorsNeedUpdate = True
-            #
-            # # pid: int = self.get_index_from_point( point )
-            # # pos = mm().mark_point( pid, cid=0 )
-            # # if pos is not None: self.pick_point.position = point
-            # # lgm().log( f"----------------> on_pick[{pid}]: {point} " )
 
     def gui(self, **kwargs ) -> ipw.DOMWidget:
         if self._gui is None:

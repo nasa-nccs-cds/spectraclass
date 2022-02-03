@@ -373,7 +373,9 @@ class MapManager(SCSingletonConfigurable):
         return self.base.gax.figure.canvas
 
     def mark_point(self, pid: int, **kwargs ) -> Optional[Tuple[float,float]]:
-        return self.points_selection.mark_point( pid, **kwargs )
+        from spectraclass.gui.points3js import PointCloudManager, pcm
+        point = self.points_selection.mark_point( pid, **kwargs )
+        return point
 
     def init_hover(self):
         def format_coord(x, y):

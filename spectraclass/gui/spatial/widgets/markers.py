@@ -166,10 +166,12 @@ class MarkerManager( PointsInteractor ):
     def remove( self, pid: int ):
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.gui.points3js import PointCloudManager, pcm
         marker = self._markers.pop( pid, None )
         if marker is not None:
             lm().deletePid( pid )
             gpm().remove_point( pid )
+            pcm().deleteMarker( pid )
 
     def mark_point(self, pid, **kwargs ) -> Optional[Tuple[float,float]]:
         from spectraclass.model.labels import LabelsManager, lm
