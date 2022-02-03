@@ -120,8 +120,7 @@ class PointCloudManager(SCSingletonConfigurable):
         colors = self.getColors( **kwargs )
         lgm().log(f"getColors: xyz shape = {self.xyz.shape}")
         attrs = dict( position = p3js.BufferAttribute( self.xyz, normalized=False ),
-                      color =    p3js.BufferAttribute( list(map(tuple, colors))),
-                      alpha =    kwargs.get('alpha',1.0) )
+                      color =    p3js.BufferAttribute( list(map(tuple, colors))) )
         return p3js.BufferGeometry( attributes=attrs )
 
     def getPoints( self, **kwargs ) -> p3js.Points:
@@ -138,7 +137,7 @@ class PointCloudManager(SCSingletonConfigurable):
         self.size_control = ipw.FloatSlider( value=0.02*self.scale, min=0.0, max=0.05*self.scale, step=0.0002*self.scale )
         self.opacity_control = ipw.FloatSlider( value=1.0, min=0.0, max=1.0, step=0.01 )
         ipw.jslink( (self.size_control,'value'), (self.points.material,'size') )
-#        ipw.jslink( (self.opacity_control, 'value'), (self.points.material, 'alpha'))
+        ipw.jslink( (self.opacity_control, 'value'), (self.points.material, 'opacity'))
         color = ipw.ColorPicker( value="black" )
         ipw.jslink( (color,'value'), (self.scene,'background') )
         psw = ipw.HBox( [ ipw.Label('Point size:'), self.size_control ] )
