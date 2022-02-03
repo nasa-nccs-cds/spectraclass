@@ -278,15 +278,15 @@ class SpatialDataManager(ModeDataManager):
                         data_vars = dict( raw=raw_data, norm=point_data )
                         block_nsamples[block.block_coords] = point_data.shape[0]
                         reduced_dataArray =  xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
+                        lgm().log(f"Writing output file: '{block_data_file}' with {blocks_point_data.size} samples, mask={coord_data['mask']}")
                         data_vars['reduction'] = reduced_dataArray
                         data_vars['reproduction'] = reproduction
-                        data_vars['mask'] = xa.DataArray( coord_data['mask'], dims=('y','x'), coords={ d: raw_data.coords[d] for d in ['y','x'] } )
+                        data_vars['mask'] = xa.DataArray( coord_data['mask'], dims=['samples'], coords={'samples': np.arange(coord_data['mask'].size)} )
                         result_dataset = xa.Dataset( data_vars )
 #                       self._reduced_raster_file = os.path.join(self.datasetDir, self.dataset + ".tif")
                         lgm().log(f" Writing reduced output to {block_data_file} with {blocks_point_data.size} samples, dset attrs:")
                         for varname, da in result_dataset.data_vars.items():
                             da.attrs['long_name'] = ".".join( [ point_data.attrs['file_name'], varname ] )
-                        lgm().log( f"Writing output file: '{block_data_file}' with {blocks_point_data.size} samples")
                         for vname, v in data_vars.items():
                             lgm().log(f" ---> {vname}: shape={v.shape}, size={v.size}, dims={v.dims}, coords={[':'.join([cid,str(c.shape)]) for (cid,c) in v.coords.items()]}")
                         if os.path.exists( block_data_file ): os.remove( block_data_file )
