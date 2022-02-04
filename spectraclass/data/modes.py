@@ -225,6 +225,8 @@ class ModeDataManager(SCSingletonConfigurable):
                 vnames = dataset.variables.keys()
                 vshapes = [ f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
                 lgm().log(f" ---> Opened Dataset {self.dsid()} from file {dataset.attrs['data_file']}\n\t -> variables: {' '.join(vshapes)}")
+                lgm().log( f" -----> reduction: shape = {dataset['reduction'].shape}, #NULL={np.count_nonzero(np.isnan(dataset['reduction'].values))}")
+                lgm().log( f" -----> point_data: shape = {dataset['norm'].shape}, #NULL={np.count_nonzero(np.isnan(dataset['norm'].values))}")
                 if 'plot-x' not in vnames:
                     raw_data: xa.DataArray = dataset['norm']      # point data ( shape = [ nsamples, nbands ] )
                     model_data: xa.DataArray = dataset['reduction']
