@@ -283,7 +283,7 @@ class SpatialDataManager(ModeDataManager):
                         lgm().log( f" -----> point_data: shape = {point_data.shape}, #NULL={np.count_nonzero(np.isnan(point_data.values))}")
                         data_vars['reduction'] = reduced_dataArray
                         data_vars['reproduction'] = reproduction
-                        data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['x','y'], coords={ d:raw_data.coords[d] for d in ['x','y'] } )
+                        data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y','x'], coords={ d:raw_data.coords[d] for d in ['x','y'] } )
                         result_dataset = xa.Dataset( data_vars )
 #                       self._reduced_raster_file = os.path.join(self.datasetDir, self.dataset + ".tif")
                         lgm().log(f" Writing reduced output to {block_data_file} with {blocks_point_data.size} samples, dset attrs:")
