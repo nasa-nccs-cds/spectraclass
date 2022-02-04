@@ -12,4 +12,3 @@ if numba.config.THREADING_LAYER == "omp":
         # might be a missing symbol due to e.g. tbb libraries missing
         numba.config.THREADING_LAYER = "workqueue"
 
-__version__ = pkg_resources.get_distribution("pynndescent").version
