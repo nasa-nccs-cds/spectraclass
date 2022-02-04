@@ -1,5 +1,5 @@
 import random, numpy as np, torch
-from pynndescent import NNDescent
+from spectraclass.ext.pynndescent import NNDescent
 from spectraclass.data.base import DataManager
 from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
 from torch_geometric.data import Data

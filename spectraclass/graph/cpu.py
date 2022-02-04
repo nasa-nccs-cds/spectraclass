@@ -1,4 +1,4 @@
-from pynndescent import NNDescent
+from spectraclass.ext.pynndescent import NNDescent
 import numpy as np
 from .manager import ActivationFlow, afm
 import xarray as xa

@@ -13,16 +13,16 @@ except ImportError:
 import numpy as np
 import scipy.sparse
 import scipy.sparse.csgraph
-import umap.distances as dist
-import umap.sparse as sparse
+import spectraclass.ext.umap.distances as dist
+import spectraclass.ext.umap.sparse as sparse
 import numba
-from umap.utils import ( tau_rand_int, ts)
+from spectraclass.ext.umap.utils import ( tau_rand_int, ts)
 from .base import UMAP
-from umap.spectral import spectral_layout
-from umap.layouts import ( optimize_layout_generic, optimize_layout_inverse )
-from pynndescent.distances import named_distances as pynn_named_distances
-from pynndescent.sparse import sparse_named_distances as pynn_sparse_named_distances
-from pynndescent import NNDescent
+from spectraclass.ext.umap.spectral import spectral_layout
+from spectraclass.ext.umap.layouts import ( optimize_layout_generic, optimize_layout_inverse )
+from spectraclass.ext.pynndescent.distances import named_distances as pynn_named_distances
+from spectraclass.ext.pynndescent.sparse import sparse_named_distances as pynn_sparse_named_distances
+from spectraclass.ext.pynndescent import NNDescent
 _HAVE_PYNNDESCENT = True
 
 locale.setlocale(locale.LC_NUMERIC, "C")
