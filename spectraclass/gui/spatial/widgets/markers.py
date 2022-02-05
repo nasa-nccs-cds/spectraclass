@@ -171,7 +171,7 @@ class MarkerManager( PointsInteractor ):
         if marker is not None:
             lm().deletePid( pid )
             gpm().remove_point( pid )
-            pcm().deleteMarker( pid )
+            pcm().deleteMarkers( [pid] )
 
     def mark_point(self, pid, **kwargs ) -> Optional[Tuple[float,float]]:
         from spectraclass.model.labels import LabelsManager, lm

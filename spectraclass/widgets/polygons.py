@@ -88,11 +88,15 @@ class PolygonInteractor:
 
     def delete_selection(self):
         from spectraclass.gui.plot import GraphPlotManager, gpm
+        from spectraclass.gui.points3js import PointCloudManager, pcm
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         if self.prec is not None:
             self.polys.remove( self.prec )
             self.prec.poly.remove()
             self.prec.line.remove()
-            gpm().remove_region(self.prec)
+            marker = tm().get_region_marker( self.prec )
+            gpm().remove_marker(marker)
+            pcm().deleteMarkers( marker.pids )
             self.prec = None
             self.canvas.draw_idle()
 

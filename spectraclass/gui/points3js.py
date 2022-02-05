@@ -80,10 +80,11 @@ class PointCloudManager(SCSingletonConfigurable):
         self.points.material.opacity = opacity
         self.points.material.needsUpdate = True
 
-    def deleteMarker( self, pid: int ):
-        marker_point = self.marker_points.pop(pid)
-        if marker_point is not None:
-            self.scene.remove( marker_point )
+    def deleteMarkers( self, pids: List[int] ):
+        for pid in pids:
+            marker_point = self.marker_points.pop(pid)
+            if marker_point is not None:
+                self.scene.remove( marker_point )
 
     @property
     def xyz(self)-> np.ndarray:

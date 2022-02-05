@@ -203,9 +203,7 @@ class mplGraphPlot:
             mm().plot_markers_image( clear_highlights=True )
             self.plot(True)
 
-    def remove_region(self, region: PolyRec ):
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        marker = tm().get_region_marker( region )
+    def remove_region(self, marker: Marker ):
         for pid in marker.pids:
             lrec = self.lrecs.pop( pid, None )
             if lrec is not None:
@@ -291,15 +289,8 @@ class GraphPlotManager(SCSingletonConfigurable):
         if current_graph is not None:
             current_graph.addMarker( marker )
 
-    @exception_handled
-    @log_timing
-    def plot_region( self, region: PolyRec, cid: int ) -> Marker:
-        current_graph: mplGraphPlot = self.current_graph()
-        if current_graph is not None:
-            return current_graph.plot_region( region, cid )
-
-    def remove_region(self, region: PolyRec ):
-        for graph in self._graphs: graph.remove_region( region )
+    def remove_marker(self, marker: Marker):
+        for graph in self._graphs: graph.remove_region( marker )
 
     def remove_point( self, pid: int ):
         for graph in self._graphs: graph.remove_point( pid )
