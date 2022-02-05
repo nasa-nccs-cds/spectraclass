@@ -126,29 +126,6 @@ class mplGraphPlot:
             lgm().log( f" mplGraphPlot init, using cols {table_cols} from {list(project_data.variables.keys())}, ploty shape = {cls._ploty.shape}, rploty shape = {cls._rploty.shape}" )
             cls._mdata: List[np.ndarray] = [ project_data[mdv].values for mdv in table_cols ]
 
-    @exception_handled
-    @log_timing
-    def get_region_marker(self, prec: PolyRec, cid: int ) -> Marker:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        from spectraclass.data.spatial.tile.tile import Block, Tile
-        from shapely.geometry import Polygon
-        block: Block = tm().getBlock()
-        idx2pid: np.ndarray = block.index_array.values.flatten()
-        raster:  xa.DataArray = block.data[0].squeeze()
-        X, Y = raster.x.values, raster.y.values
-        polygon = Polygon(prec.poly.get_xy())
-        MX, MY = np.meshgrid(X, Y)
-        PID: np.ndarray = np.array(range(raster.size))
-        mask: np.ndarray = svect.contains( polygon, MX, MY ).flatten()
-        pids = idx2pid[ PID[mask] ]
-        marker = Marker( "label", pids[ pids > -1 ].tolist(), cid )
-        return marker
-
-    def plot_region(self, prec: PolyRec, cid: int ) -> Marker:
-        marker = self.get_region_marker( prec, cid )
-        self.addMarker( marker )
-        return marker
-
     def clearTransients(self):
         new_lrecs = {}
         for (pid, lrec) in self.lrecs.items():
@@ -227,7 +204,8 @@ class mplGraphPlot:
             self.plot(True)
 
     def remove_region(self, region: PolyRec ):
-        marker = self.get_region_marker( region, 0 )
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        marker = tm().get_region_marker( region )
         for pid in marker.pids:
             lrec = self.lrecs.pop( pid, None )
             if lrec is not None:

@@ -61,8 +61,6 @@ class PolygonInteractor:
             self.creating = True
         return self.prec
 
-
-
     @exception_handled
     def on_draw(self, event):
         for prec in self.polys:
@@ -99,13 +97,13 @@ class PolygonInteractor:
             self.canvas.draw_idle()
 
     def close_poly(self):
-        from spectraclass.gui.plot import GraphPlotManager, gpm
-        from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.application.controller import app
         self.prec.complete()
         self.creating = False
         self.draw()
-        marker = gpm().plot_region( self.prec, self._cid )
-        lm().addMarker( marker )
+        marker = tm().get_region_marker( self.prec )
+        app().add_marker( "map", marker )
         self.prec = None
 
     @exception_handled

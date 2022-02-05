@@ -1,0 +1,1 @@
+Packages in this directory were copied from external sources to avoid having to request their addition to our shared (curated) conda environment.

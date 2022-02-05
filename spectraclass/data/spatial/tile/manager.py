@@ -1,6 +1,7 @@
 from skimage.transform import ProjectiveTransform
 import numpy as np
 import xarray as xa
+import shapely.vectorized as svect
 from typing import List, Union, Tuple, Optional, Dict
 from pyproj import Proj
 from spectraclass.data.base import DataManager, DataType
@@ -9,6 +10,7 @@ import os, math, pickle, time
 import cartopy.crs as ccrs
 from spectraclass.util.logs import lgm, exception_handled
 import traitlets.config as tlc
+from spectraclass.widgets.polygon import PolyRec
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.gui.spatial.widgets.markers import Marker
@@ -125,6 +127,25 @@ class TileManager(SCSingletonConfigurable):
         assert pid >= 0, f"Marker selection error, no points for coord: {[y, x]}"
         ic = cid if (cid >= 0) else lm().current_cid
         return Marker( "marker", [pid], ic, **kwargs )
+
+    @exception_handled
+    @log_timing
+    def get_region_marker(self, prec: PolyRec, cid: int = -1 ) -> Marker:
+        from spectraclass.data.spatial.tile.tile import Block, Tile
+        from spectraclass.model.labels import LabelsManager, lm
+        from shapely.geometry import Polygon
+        if cid == -1: cid = lm().current_cid
+        block: Block = self.getBlock()
+        idx2pid: np.ndarray = block.index_array.values.flatten()
+        raster:  xa.DataArray = block.data[0].squeeze()
+        X, Y = raster.x.values, raster.y.values
+        polygon = Polygon(prec.poly.get_xy())
+        MX, MY = np.meshgrid(X, Y)
+        PID: np.ndarray = np.array(range(raster.size))
+        mask: np.ndarray = svect.contains( polygon, MX, MY ).flatten()
+        pids = idx2pid[ PID[mask] ]
+        marker = Marker( "label", pids[ pids > -1 ].tolist(), cid )
+        return marker
 
     def getTileFileName(self, with_extension = True ) -> str:
         return self.image_name + ".tif" if with_extension else self.image_name

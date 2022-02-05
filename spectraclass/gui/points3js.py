@@ -24,7 +24,7 @@ def asarray( data: Union[np.ndarray,Iterable], dtype  ) -> np.ndarray:
 class PointCloudManager(SCSingletonConfigurable):
 
     color_map = tl.Unicode("gist_rainbow").tag(config=True)  # "gist_rainbow" "jet"
-    opacity = tl.Float( 'opacity', min=0.0, max=1.0 ).tag(sync=True)
+#    opacity = tl.Float( 'opacity', min=0.0, max=1.0 ).tag(sync=True)
 
     def __init__( self):
         super(PointCloudManager, self).__init__()
@@ -41,6 +41,7 @@ class PointCloudManager(SCSingletonConfigurable):
         self._color_values = None
         self.reduced_opacity = 0.111111
         self.standard_opacity = 0.411111
+        self.transient_markers = []
         self.scale = 100.0
         self.centroid = (0,0,0)
         key_light = p3js.DirectionalLight( color='white', position=[5*self.scale,0,0], intensity=0.4 )
@@ -51,24 +52,33 @@ class PointCloudManager(SCSingletonConfigurable):
         self.pick_point: int = -1
         self.marker_points: Dict[int,p3js.Mesh] = {}
         self.scene_controls = {}
+        self.opacity_control = None
         self.voxelizer: Voxelizer = None
-#        self.observe(self.on_opacity_change, names=["opacity"])
         self.initialize_points()
 
+    def clear_transients(self):
+        for pid in self.transient_markers:
+            point = self.marker_points.pop(pid)
+            if point: self.scene.remove( point )
+        self.transient_markers = []
+
     def addMarker(self, marker: Marker ):
+        self.clear_transients()
         for pid in marker.pids:
             if pid not in self.marker_points:
-                material = p3js.MeshLambertMaterial( color= lm().colors[ marker.cid ] )
+                material = p3js.PointsMaterial( color= lm().colors[ marker.cid ] )
                 geometry = p3js.SphereGeometry( radius= 0.01*self.scale )
                 marker_point = p3js.Mesh( geometry=geometry, material=material )
                 marker_point.position = tuple( self.xyz[ pid ].tolist() )
                 self.scene.add(marker_point)
                 self.marker_points[pid] = marker_point
+                if marker.cid == 0: self.transient_markers.append( pid )
 
     def on_opacity_change( self, *args ):
-        lgm().log( f"on_opacity_change: {self.opacity}")
-#        self.points.material.opacity = self.opacity
-        self.points.material.set('opacity',self.opacity)
+        opacity = self.opacity_control.value
+        lgm().log( f"on_opacity_change: {opacity}")
+        self.points.material.opacity = opacity
+        self.points.material.needsUpdate = True
 
     def deleteMarker( self, pid: int ):
         marker_point = self.marker_points.pop(pid)
@@ -133,7 +143,7 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def getPoints( self, **kwargs ) -> p3js.Points:
         points_geometry = self.getGeometry( **kwargs )
-        points_material = p3js.PointsMaterial( vertexColors='VertexColors')
+        points_material = p3js.PointsMaterial( vertexColors='VertexColors', transparent=True )
         points = p3js.Points( geometry=points_geometry, material=points_material )
         if self.picker is not None:
             self.picker.controlling = points
@@ -148,9 +158,9 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def link_controls(self):
         for name, ctrl in self.scene_controls.items():
-            oid, label = name.split(".")
-            object = self.points.material if oid == "material" else self.scene
-            ipw.jslink( (ctrl, 'value'), (object, label) )
+            toks = name.split(".")
+            object = self.points.material if toks[0] == "material" else self.scene
+            ipw.jslink( (ctrl, 'value'), (object, toks[1]) )
 
     def _get_gui( self ) -> ipw.DOMWidget:
         self.points = self.getPoints()
@@ -192,45 +202,7 @@ class PointCloudManager(SCSingletonConfigurable):
             lgm().log( " *** update point cloud data *** " )
             self.points.geometry = self.getGeometry()
 
-#            if 'alphas' in kwargs: self._gui.point_set_opacities = kwargs['alphas']
-#            self._gui.update_rendered_image()
-
-    def on_selection(self, selection_event: Dict):
-        selection = selection_event['pids']
-        self.update_markers(selection)
-        self.update_plot()
-
-    def update_markers(self, pids: List[int] = None, **kwargs):
-        if pids is None:
-            if 'points' in kwargs: self._points = self.normalize(kwargs['points'])
-            self.initialize_markers(True)
-            for marker in lm().markers:
-                self._marker_pids[marker.cid] = np.append(self._marker_pids[marker.cid], marker.pids, 0)
-                self._marker_points[marker.cid] = self._points[self._marker_pids[marker.cid], :]
-        else:
-            self._marker_pids[0] = np.array(pids)
-            self._marker_points[0] = self._points[self._marker_pids[0], :]
-            lgm().log(f"  ***** POINTS- mark_points[0], #pids = {len(pids)}")
-
-    @exception_handled
-    def update_marked_points(self, cid: int = -1, **kwargs):
-        return
-        # from spectraclass.gui.control import UserFeedbackManager, ufm
-        # if self._points is None:
-        #     ufm().show("Can't mark points in PointCloudManager which is not initialized", "red")
-        # else:
-        #     icid = cid if cid >= 0 else lm().current_cid
-        #     self.initialize_markers()
-        #     self.clear_points(0)
-        #     self._marker_pids[icid] = asarray(kwargs.get('pids', lm().getPids(icid)), np.int)
-        #     self._marker_points[icid] = self._points[self._marker_pids[icid], :]
-        #     lgm().log(
-        #         f"PointCloudManager.add_marked_points: cid = {icid}, #marked-points[cid]: [{self._marker_pids[icid].size}]")
-        # self.set_base_points_alpha(self.reduced_opacity)
-        # self.update_plot()
-
     def clear(self):
-        self.initialize_markers(True)
         self.update_plot()
 
     def color_by_value(self, values: np.ndarray = None, **kwargs):
@@ -263,40 +235,6 @@ class PointCloudManager(SCSingletonConfigurable):
         (ave, std) = (self._color_values.mean(), self._color_values.std())
         return (ave - std * SpatialDataManager.colorstretch, ave + std * SpatialDataManager.colorstretch)
 
-    @exception_handled
-    def clear_pids(self, cid: int, pids: np.ndarray, **kwargs):
-        lgm().log(f"PCM.clear_pids: marker_pids = {[p.tolist() for p in self._marker_pids]}")
-        if self._marker_pids is not None:
-            dpts = np.vectorize(lambda x: x in pids)
-            for iC, marker_pids in enumerate(self._marker_pids):
-                if (cid < 0) or (iC == cid):
-                    if len(marker_pids) > 0:
-                        self._marker_pids[iC] = np.delete(self._marker_pids[iC], dpts(marker_pids))
-                        self._marker_points[iC] = self._points[self._marker_pids[iC], :] if len(
-                            self._marker_pids[iC]) > 0 else self.empty_pointset
-                        lgm().log(
-                            f"  --> cid={cid}, # pids cleared = {pids.size}, # remaining markers = {len(self._marker_pids[iC])}")
-                    else:
-                        self._marker_points[iC] = self.empty_pointset
-
-    def clear_points(self, icid: int, **kwargs):
-        if self._marker_pids is not None:
-            pids = kwargs.get('pids', None)
-            if pids is None:
-                lgm().log(f"PCM.clear_points[{icid}]: empty_pointset")
-                self._marker_points[icid] = self.empty_pointset
-                self._marker_pids[icid] = self.empty_pids
-            else:
-                lgm().log(f"PCM.clear_points: cid={icid}, #pids={pids.size}")
-                dpts = np.vectorize(lambda x: x in pids)
-                dmask = dpts(self._marker_pids[icid])
-                #            lgm().log( f"clear_points.Mask: {self._marker_pids[icid]} -> {dmask}" )
-                self._marker_pids[icid] = np.delete(self._marker_pids[icid], dmask)
-                self._marker_points[icid] = self._points[self._marker_pids[icid], :] if len(
-                    self._marker_pids[icid]) > 0 else self.empty_pointset
-
-    #            lgm().log(f"clear_points: reduced marker_pids = {self._marker_pids[icid]} -> points = {self._marker_points[ icid ]}")
-
     def set_base_points_alpha( self, alpha: float ):
         alphas = list( self._gui.point_set_opacities )
         alphas[0] = alpha
@@ -306,7 +244,6 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def refresh(self):
         self.initialize_points()
-        self.initialize_markers( True )
         self.init_data()
         self.update_plot()
 

@@ -50,6 +50,7 @@ class MapManager(SCSingletonConfigurable):
         self.block: Block = None
         self._adding_marker = False
         self.points_selection: MarkerManager = None
+        self.region_selection: PolygonInteractor = None
         self._use_model_data = False
         self._cidpress = -1
         self.cspecs=None
@@ -59,7 +60,6 @@ class MapManager(SCSingletonConfigurable):
         self.model_slider: PageSlider = None
         self._spectral_image: Optional[AxesImage] = None
         self.label_map: Optional[xa.DataArray] = None     # Map of classification labels from ML
-        self.region_selection: PolygonInteractor = None
         self.labels_image: Optional[AxesImage] = None
         self.layers.add( 'basemap', 1.0, True)
         self.layers.add( 'bands', 1.0, True )
@@ -373,7 +373,6 @@ class MapManager(SCSingletonConfigurable):
         return self.base.gax.figure.canvas
 
     def mark_point(self, pid: int, **kwargs ) -> Optional[Tuple[float,float]]:
-        from spectraclass.gui.points3js import PointCloudManager, pcm
         point = self.points_selection.mark_point( pid, **kwargs )
         return point
 
