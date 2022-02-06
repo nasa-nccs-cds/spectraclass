@@ -123,17 +123,17 @@ class PointCloudManager(SCSingletonConfigurable):
     def getGeometry( self, **kwargs ):
         colors = self.getColors( **kwargs )
         lgm().log(f"getColors: xyz shape = {self.xyz.shape}")
-        attrs = dict( position = p3js.BufferAttribute( self.xyz, normalized=False ),
-                      color =    p3js.BufferAttribute( list(map(tuple, colors))) )
-        return p3js.BufferGeometry( attributes=attrs )
+        posbuff = p3js.BufferAttribute( self.xyz, normalized=False )
+        colorbuff = p3js.BufferAttribute( list(map(tuple, colors)))
+        return p3js.BufferGeometry( position = posbuff, color = colorbuff )
 
     def getMarkerGeometry( self ) -> p3js.BufferGeometry:
         markers = dict( sorted( self.marker_points.items() ) )
         colors = lm().get_rgb_colors( np.array( markers.values() ) ).astype(np.uint8)
         positions = self._xyz[ np.array( markers.keys() ) ]
-        attrs = dict( position = p3js.BufferAttribute( positions, normalized=False ),
-                      color =    p3js.BufferAttribute( colors ) )
-        return p3js.BufferGeometry( attributes=attrs )
+        posbuff = p3js.BufferAttribute( positions, normalized=False )
+        colorbuff = p3js.BufferAttribute( colors )
+        return p3js.BufferGeometry( position = posbuff, color = colorbuff )
 
     def initPoints(self, **kwargs):
         points_geometry = self.getGeometry( **kwargs )
