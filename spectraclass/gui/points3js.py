@@ -11,7 +11,7 @@ from spectraclass.data.spatial.voxels import Voxelizer
 from matplotlib.colors import Normalize
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import traitlets as tl
-from spectraclass.model.labels import LabelsManager, lm
+from spectraclass.model.labels import LabelsManager, lm, c2rgb
 from spectraclass.model.base import SCSingletonConfigurable
 
 def pcm() -> "PointCloudManager":
@@ -23,18 +23,18 @@ def asarray( data: Union[np.ndarray,Iterable], dtype  ) -> np.ndarray:
 
 class PointCloudManager(SCSingletonConfigurable):
 
-    color_map = tl.Unicode("gist_rainbow").tag(config=True)  # "gist_rainbow" "jet"
-#    opacity = tl.Float( 'opacity', min=0.0, max=1.0 ).tag(sync=True)
+    color_map = tl.Unicode("gist_rainbow").tag(config=True)
 
     def __init__( self):
         super(PointCloudManager, self).__init__()
         self._gui = None
         self._xyz: np.ndarray = None
         self.points: p3js.Points = None
+        self.marker_points: Dict[int,int] = {}
         self.scene: p3js.Scene = None
         self.renderer: p3js.Renderer = None
         self.raycaster = p3js.Raycaster()
-        self.picker: p3js.Picker = None
+        self.pickers: List[p3js.Picker] = []
         self.control_panel: ipw.DOMWidget = None
         self.size_control: ipw.FloatSlider = None
         self.point_locator: np.ndarray = None
@@ -50,7 +50,6 @@ class PointCloudManager(SCSingletonConfigurable):
         self.orbit_controls = p3js.OrbitControls( controlling=self.camera )
         self.orbit_controls.target = self.centroid
         self.pick_point: int = -1
-        self.marker_points: Dict[int,p3js.Mesh] = {}
         self.scene_controls = {}
         self.opacity_control = None
         self.voxelizer: Voxelizer = None
@@ -58,33 +57,19 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def clear_transients(self):
         for pid in self.transient_markers:
-            point = self.marker_points.pop(pid)
-            if point: self.scene.remove( point )
+            self.marker_points.pop(pid)
         self.transient_markers = []
 
     def addMarker(self, marker: Marker ):
         self.clear_transients()
         for pid in marker.pids:
-            if pid not in self.marker_points:
-                material = p3js.PointsMaterial( color= lm().colors[ marker.cid ] )
-                geometry = p3js.SphereGeometry( radius= 0.01*self.scale )
-                marker_point = p3js.Mesh( geometry=geometry, material=material )
-                marker_point.position = tuple( self.xyz[ pid ].tolist() )
-                self.scene.add(marker_point)
-                self.marker_points[pid] = marker_point
-                if marker.cid == 0: self.transient_markers.append( pid )
-
-    def on_opacity_change( self, *args ):
-        opacity = self.opacity_control.value
-        lgm().log( f"on_opacity_change: {opacity}")
-        self.points.material.opacity = opacity
-        self.points.material.needsUpdate = True
+            self.marker_points[pid] = marker.cid
+            if marker.cid == 0:
+                self.transient_markers.append( pid )
 
     def deleteMarkers( self, pids: List[int] ):
         for pid in pids:
-            marker_point = self.marker_points.pop(pid)
-            if marker_point is not None:
-                self.scene.remove( marker_point )
+            self.marker_points.pop( pid )
 
     @property
     def xyz(self)-> np.ndarray:
@@ -142,35 +127,52 @@ class PointCloudManager(SCSingletonConfigurable):
                       color =    p3js.BufferAttribute( list(map(tuple, colors))) )
         return p3js.BufferGeometry( attributes=attrs )
 
-    def getPoints( self, **kwargs ) -> p3js.Points:
+    def getMarkerGeometry( self ) -> p3js.BufferGeometry:
+        markers = dict( sorted( self.marker_points.items() ) )
+        colors = lm().get_rgb_colors( np.array( markers.values() ) ).astype(np.uint8)
+        positions = self._xyz[ np.array( markers.keys() ) ]
+        attrs = dict( position = p3js.BufferAttribute( positions, normalized=False ),
+                      color =    p3js.BufferAttribute( colors ) )
+        return p3js.BufferGeometry( attributes=attrs )
+
+    def initPoints(self, **kwargs):
         points_geometry = self.getGeometry( **kwargs )
         points_material = p3js.PointsMaterial( vertexColors='VertexColors', transparent=True )
-        points = p3js.Points( geometry=points_geometry, material=points_material )
-        if self.picker is not None:
-            self.picker.controlling = points
-        return points
+        self.points = p3js.Points( geometry=points_geometry, material=points_material )
+        marker_geometry = self.getMarkerGeometry()
+        marker_material = p3js.PointsMaterial( vertexColors='VertexColors', transparent=True )
+        self.marker_points = p3js.Points( geometry=marker_geometry, material=marker_material )
+
+    def control_label(self, name: str ) -> ipw.Label:
+        toks = name.split(".")
+        return ipw.Label( f"{toks[0]} {toks[1]}" )
 
     def getControlsWidget(self) -> ipw.DOMWidget:
-        self.scene_controls['material.size'] = ipw.FloatSlider(value=0.02 * self.scale, min=0.0, max=0.05 * self.scale, step=0.0002 * self.scale)
-        self.scene_controls['material.opacity'] = ipw.FloatSlider(value=1.0, min=0.0, max=1.0, step=0.01)
-        self.scene_controls['scene.background'] = ipw.ColorPicker( value="black" )
+        self.scene_controls['point.material.size'] = ipw.FloatSlider(value=0.02 * self.scale, min=0.0, max=0.05 * self.scale, step=0.0002 * self.scale)
+        self.scene_controls['point.material.opacity'] = ipw.FloatSlider(value=1.0, min=0.0, max=1.0, step=0.01)
+        self.scene_controls['marker.material.size'] = ipw.FloatSlider(value=0.02 * self.scale, min=0.0,                                                                     max=0.05 * self.scale, step=0.0002 * self.scale)
+        self.scene_controls['marker.material.opacity'] = ipw.FloatSlider(value=1.0, min=0.0, max=1.0, step=0.01)
+        self.scene_controls['window.scene.background'] = ipw.ColorPicker( value="black" )
         self.link_controls()
-        return ipw.VBox( [ ipw.HBox( [ ipw.Label( name.split(".")[1] ), ctrl ] ) for name, ctrl in self.scene_controls.items() ] )
+        return ipw.VBox( [ ipw.HBox( [ self.control_label(name), ctrl ] ) for name, ctrl in self.scene_controls.items() ] )
 
     def link_controls(self):
         for name, ctrl in self.scene_controls.items():
             toks = name.split(".")
-            object = self.points.material if toks[0] == "material" else self.scene
-            ipw.jslink( (ctrl, 'value'), (object, toks[1]) )
+            object = self.points.material if toks[1] == "material" else self.scene
+            ipw.jslink( (ctrl, 'value'), (object, toks[2]) )
+
+    def create_picker(self, points: p3js.Points ):
+        picker = p3js.Picker(controlling=points, event='click')
+        picker.observe( self.on_pick, names=['point'] )
+        return picker
 
     def _get_gui( self ) -> ipw.DOMWidget:
-        self.points = self.getPoints()
+        self.initPoints()
         self.scene = p3js.Scene( children=[ self.points, self.camera, p3js.AmbientLight(intensity=0.8)  ] )
         self.renderer = p3js.Renderer( scene=self.scene, camera=self.camera, controls=[self.orbit_controls], width=800, height=500 )
-        self.picker = p3js.Picker( controlling=self.points, event='click')
-        self.picker.all = False
-        self.picker.observe( self.on_pick, names=['point'] )
-        self.renderer.controls = self.renderer.controls + [ self.picker ]
+        self.pickers = [ self.create_picker(points) for points in [ self.points, self.marker_points ] ]
+        self.renderer.controls = self.renderer.controls + self.pickers
         self.control_panel = self.getControlsWidget()
         return ipw.VBox( [ self.renderer, self.control_panel ]  )
 

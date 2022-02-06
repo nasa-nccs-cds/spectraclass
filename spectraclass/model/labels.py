@@ -3,8 +3,8 @@ from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Set
 from spectraclass.data.spatial.tile.tile import Block
 import collections.abc
 from functools import partial
+from matplotlib import colors
 import ipywidgets as ipw
-import matplotlib.colors as mcolors
 from ..graph.manager import ActivationFlow
 import traitlets.config as tlc
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
@@ -13,8 +13,8 @@ from spectraclass.gui.spatial.widgets.markers import Marker
 import xarray as xa
 import numpy as np
 
-def c2rgb( color: Union[str,List] ) -> List:
-    if isinstance(color, str):  return mcolors.to_rgb(color)
+def c2rgb( color: Union[str,List] ) -> Tuple[float,float,float]:
+    if isinstance(color, str):  return colors.to_rgb(color)
     else:                       return color[:3]
 
 def h2c( hexColor: str ) -> List[float]:
@@ -90,6 +90,7 @@ class LabelsManager(SCSingletonConfigurable):
         self.template = None
         self.n_spread_iters = 1
         self.wSelectedClass: ipw.HBox = None
+        self.get_rgb_colors = np.vectorize(self.get_rgb_color)
         self._buttons = []
 
     def clear_pids(self, cid: int, pids: np.ndarray, **kwargs):
@@ -106,6 +107,9 @@ class LabelsManager(SCSingletonConfigurable):
     @property
     def current_color(self) -> str:
         return self._colors[ self._selected_class ]
+
+    def get_rgb_color( self, cid: int ) -> Tuple[float,float,float]:
+        return colors.to_rgb( self._colors[ cid ] )
 
     def set_selected_class(self, iclass, *args ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
