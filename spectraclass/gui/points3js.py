@@ -66,10 +66,12 @@ class PointCloudManager(SCSingletonConfigurable):
             self.marker_points[pid] = marker.cid
             if marker.cid == 0:
                 self.transient_markers.append( pid )
+        self.marker_points.geometry = self.getMarkerGeometry()
 
     def deleteMarkers( self, pids: List[int] ):
         for pid in pids:
             self.marker_points.pop( pid )
+        self.marker_points.geometry = self.getMarkerGeometry()
 
     @property
     def xyz(self)-> np.ndarray:
@@ -120,19 +122,21 @@ class PointCloudManager(SCSingletonConfigurable):
             colors[ self.pick_point ] = [255.0,255.0,255.0]
         return colors.astype(np.uint8)
 
+    def getMarkerGeometry( self ) -> p3js.BufferGeometry:
+        markers = dict( sorted( self.marker_points.items() ) )
+        cids = np.array( list(markers.values()) )
+        lgm().log( f"getMarkerGeometry: markers={markers}, cids={cids}")
+        colors = lm().get_rgb_colors( cids ).astype(np.uint8)
+        positions = self._xyz[ np.array( markers.keys() ) ]
+        posbuff = p3js.BufferAttribute( positions, normalized=False )
+        colorbuff = p3js.BufferAttribute( colors )
+        return p3js.BufferGeometry( position = posbuff, color = colorbuff )
+
     def getGeometry( self, **kwargs ):
         colors = self.getColors( **kwargs )
         lgm().log(f"getColors: xyz shape = {self.xyz.shape}")
         posbuff = p3js.BufferAttribute( self.xyz, normalized=False )
         colorbuff = p3js.BufferAttribute( list(map(tuple, colors)))
-        return p3js.BufferGeometry( position = posbuff, color = colorbuff )
-
-    def getMarkerGeometry( self ) -> p3js.BufferGeometry:
-        markers = dict( sorted( self.marker_points.items() ) )
-        colors = lm().get_rgb_colors( np.array( markers.values() ) ).astype(np.uint8)
-        positions = self._xyz[ np.array( markers.keys() ) ]
-        posbuff = p3js.BufferAttribute( positions, normalized=False )
-        colorbuff = p3js.BufferAttribute( colors )
         return p3js.BufferGeometry( position = posbuff, color = colorbuff )
 
     def initPoints(self, **kwargs):
@@ -143,18 +147,18 @@ class PointCloudManager(SCSingletonConfigurable):
         marker_material = p3js.PointsMaterial( vertexColors='VertexColors', transparent=True )
         self.marker_points = p3js.Points( geometry=marker_geometry, material=marker_material )
 
-    def control_label(self, name: str ) -> ipw.Label:
-        toks = name.split(".")
-        return ipw.Label( f"{toks[0]} {toks[1]}" )
-
     def getControlsWidget(self) -> ipw.DOMWidget:
-        self.scene_controls['point.material.size'] = ipw.FloatSlider(value=0.02 * self.scale, min=0.0, max=0.05 * self.scale, step=0.0002 * self.scale)
-        self.scene_controls['point.material.opacity'] = ipw.FloatSlider(value=1.0, min=0.0, max=1.0, step=0.01)
-        self.scene_controls['marker.material.size'] = ipw.FloatSlider(value=0.02 * self.scale, min=0.0,                                                                     max=0.05 * self.scale, step=0.0002 * self.scale)
-        self.scene_controls['marker.material.opacity'] = ipw.FloatSlider(value=1.0, min=0.0, max=1.0, step=0.01)
+        self.scene_controls['point.material.size']     = ipw.FloatSlider( value=0.015 * self.scale, min=0.0, max=0.05 * self.scale, step=0.0002 * self.scale)
+        self.scene_controls['point.material.opacity']  = ipw.FloatSlider( value=1.0, min=0.0, max=1.0, step=0.01 )
+        self.scene_controls['marker.material.size']    = ipw.FloatSlider( value=0.03 * self.scale, min=0.0, max=0.05 * self.scale, step=0.0002 * self.scale )
+        self.scene_controls['marker.material.opacity'] = ipw.FloatSlider( value=1.0, min=0.0, max=1.0, step=0.01)
         self.scene_controls['window.scene.background'] = ipw.ColorPicker( value="black" )
         self.link_controls()
         return ipw.VBox( [ ipw.HBox( [ self.control_label(name), ctrl ] ) for name, ctrl in self.scene_controls.items() ] )
+
+    def control_label(self, name: str ) -> ipw.Label:
+        toks = name.split(".")
+        return ipw.Label( f"{toks[0]} {toks[1]}" )
 
     def link_controls(self):
         for name, ctrl in self.scene_controls.items():
