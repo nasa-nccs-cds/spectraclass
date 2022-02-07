@@ -90,7 +90,7 @@ class LabelsManager(SCSingletonConfigurable):
         self.template = None
         self.n_spread_iters = 1
         self.wSelectedClass: ipw.HBox = None
-        self.get_rgb_colors = np.vectorize(self.get_rgb_color)
+#        self.get_rgb_colors = np.vectorize(self.get_rgb_color)
         self._buttons = []
 
     def clear_pids(self, cid: int, pids: np.ndarray, **kwargs):
@@ -110,6 +110,9 @@ class LabelsManager(SCSingletonConfigurable):
 
     def get_rgb_color( self, cid: int ) -> Tuple[float,float,float]:
         return colors.to_rgb( self._colors[ cid ] )
+
+    def get_rgb_colors(self, cids: List[int] ) -> np.ndarray:
+        return np.array( [ self.get_rgb_color(cid) for cid in cids ] ).astype(np.uint8)
 
     def set_selected_class(self, iclass, *args ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
