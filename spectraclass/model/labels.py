@@ -112,7 +112,8 @@ class LabelsManager(SCSingletonConfigurable):
         return colors.to_rgb( self._colors[ cid ] )
 
     def get_rgb_colors(self, cids: List[int] ) -> np.ndarray:
-        return np.array( [ self.get_rgb_color(cid) for cid in cids ] ).astype(np.uint8)
+        cdata = np.array( [ self.get_rgb_color(cid) for cid in cids ] ) * 255.0
+        return cdata.astype(np.uint8)
 
     def set_selected_class(self, iclass, *args ):
         from spectraclass.gui.control import UserFeedbackManager, ufm

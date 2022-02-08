@@ -9,7 +9,6 @@ from spectraclass.util.logs import LogManager, lgm, log_timing
 import os, math, pickle, time
 import cartopy.crs as ccrs
 from spectraclass.util.logs import lgm, exception_handled
-import traitlets.config as tlc
 from spectraclass.widgets.polygon import PolyRec
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable
@@ -43,6 +42,11 @@ class TileManager(SCSingletonConfigurable):
         self._tile_metadata = None
         self._tile_size = None
         self._tile_shape = None
+
+    @tl.observe('block_index')
+    def _block_index_changed(self, change):
+        from spectraclass.gui.points3js import PointCloudManager, pcm
+        pcm().init_data()
 
     @property
     def tile(self) -> Tile:
@@ -145,6 +149,7 @@ class TileManager(SCSingletonConfigurable):
         mask: np.ndarray = svect.contains( polygon, MX, MY ).flatten()
         pids = idx2pid[ PID[mask] ]
         marker = Marker( "label", pids[ pids > -1 ].tolist(), cid )
+        lgm().log( f"Poly selection-> Create marker[{marker.size}], cid = {cid}")
         return marker
 
     def getTileFileName(self, with_extension = True ) -> str:

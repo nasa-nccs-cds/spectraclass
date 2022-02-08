@@ -183,7 +183,7 @@ class PointCloudManager(SCSingletonConfigurable):
     @exception_handled
     def _get_gui( self ) -> ipw.DOMWidget:
         self.initPoints()
-        self.scene = p3js.Scene( children=[ self.points,  self.camera, p3js.AmbientLight(intensity=0.8)  ] ) # self.marker_points,
+        self.scene = p3js.Scene( children=[ self.points,  self.camera, p3js.AmbientLight(intensity=0.8)  ] ) # self.marker_spheres,
         self.renderer = p3js.Renderer( scene=self.scene, camera=self.camera, controls=[self.orbit_controls], width=800, height=500 )
         self.pickers = [ self.create_picker(points) for points in [ self.points, self.marker_points ] ]
         self.renderer.controls = self.renderer.controls # + self.pickers

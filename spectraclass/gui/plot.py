@@ -133,9 +133,9 @@ class mplGraphPlot:
             else: new_lrecs[pid] = lrec
         self.lrecs = new_lrecs
 
-    @log_timing
+    @exception_handled
     def addMarker( self, m: Marker ):
-        lgm().log(f"Add Marker[{m.size}]: cid={m.cid}, #pids = {len(m.pids)}")
+        lgm().log(f"mplGraphPlot: Add Marker[{m.size}]: cid={m.cid}")
         if m.size > 0:
             self.clearTransients()
             for pid in m.pids:

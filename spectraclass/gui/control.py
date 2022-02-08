@@ -104,16 +104,6 @@ class ParametersManager(SCSingletonConfigurable):
             widgets.append( dm().modal.getConfigPanel() )
         return  ipw.VBox(widgets)
 
-    def getFloatSlider(self, label: str, range: Tuple[float,float], observer: tlc.Configurable, linked_trait: str ):
-        slider = ipw.FloatSlider( getattr(observer,linked_trait), description=label, min=range[0], max=range[1] )
-        tl.link((slider, "value"), (observer, linked_trait) )
-        return slider
-
-    def getCheckBox(self, label: str, observer: tlc.Configurable, linked_trait: str ):
-        checkbox = ipw.Checkbox( getattr(observer,linked_trait), description=label )
-        tl.link((checkbox, "value"), (observer, linked_trait) )
-        return checkbox
-
 def ufm() -> "UserFeedbackManager":
     return UserFeedbackManager.instance()
 
