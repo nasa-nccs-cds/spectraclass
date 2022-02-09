@@ -31,7 +31,7 @@ class PointCloudManager(SCSingletonConfigurable):
         self._gui = None
         self._xyz: np.ndarray = None
         self.points: p3js.Points = None
-        self.marker_points: p3js.Points = None
+        self.marker_points: Optional[p3js.Points] = None
         self.marker_pids = {}
         self.scene: p3js.Scene = None
         self.renderer: p3js.Renderer = None
@@ -54,7 +54,7 @@ class PointCloudManager(SCSingletonConfigurable):
         self.pick_point: int = -1
         self.marker_spheres: Dict[int, p3js.Mesh] = {}
         self.scene_controls = {}
-        self.marker_material = p3js.PointsMaterial( vertexColors='VertexColors', size=10.0 ) # , transparent=True, opacity=1.0
+        self.marker_material = p3js.PointsMaterial( vertexColors='VertexColors', transparent=True ) # , size=5.0, opacity=1.0 )
         self.opacity_control = None
         self.transient_markers = []
         self.voxelizer: Voxelizer = None
@@ -80,10 +80,12 @@ class PointCloudManager(SCSingletonConfigurable):
         self.update_marker_plot()
 
     def update_marker_plot(self):
-        if self.marker_points is not None:
-            self.scene.remove( [self.marker_points] )
-        self.marker_points = p3js.Points( geometry=self.getMarkerGeometry(), material=self.marker_material )
-        self.scene.add( [self.marker_points] )
+        if self.marker_points is None:
+            self.marker_points = p3js.Points( geometry=self.getMarkerGeometry(), material=self.marker_material )
+            self.scene.add( [self.marker_points] )
+            self.link_controls()
+        else:
+            self.marker_points.geometry = self.getMarkerGeometry()
 
     @property
     def xyz(self)-> np.ndarray:
@@ -163,8 +165,8 @@ class PointCloudManager(SCSingletonConfigurable):
     def getControlsWidget(self) -> ipw.DOMWidget:
         self.scene_controls['point.material.size']     = ipw.FloatSlider( value=0.015 * self.scale, min=0.0, max=0.05 * self.scale, step=0.0002 * self.scale)
         self.scene_controls['point.material.opacity']  = ipw.FloatSlider( value=1.0, min=0.0, max=1.0, step=0.01 )
-#        self.scene_controls['marker.material.size']    = ipw.FloatSlider( value=0.05 * self.scale, min=0.0, max=0.1 * self.scale, step=0.001 * self.scale )
-#        self.scene_controls['marker.material.opacity'] = ipw.FloatSlider( value=1.0, min=0.0, max=1.0, step=0.01 )
+        self.scene_controls['marker.material.size']    = ipw.FloatSlider( value=0.05 * self.scale, min=0.0, max=0.1 * self.scale, step=0.001 * self.scale )
+        self.scene_controls['marker.material.opacity'] = ipw.FloatSlider( value=1.0, min=0.0, max=1.0, step=0.01 )
         self.scene_controls['window.scene.background'] = ipw.ColorPicker( value="black" )
         self.link_controls()
         return ipw.VBox( [ ipw.HBox( [ self.control_label(name), ctrl ] ) for name, ctrl in self.scene_controls.items() ] )
@@ -173,6 +175,11 @@ class PointCloudManager(SCSingletonConfigurable):
         toks = name.split(".")
         return ipw.Label( f"{toks[0]} {toks[2]}" )
 
+    def get_points(self, ptype: str ) -> Optional[p3js.Points]:
+        if ptype == "point": return self.points
+        elif ptype == "marker": return self.marker_points
+        else: raise Exception( f"Unknown point type: {ptype}")
+
     @exception_handled
     def link_controls(self):
         for name, ctrl in self.scene_controls.items():
@@ -180,10 +187,12 @@ class PointCloudManager(SCSingletonConfigurable):
             if toks[1] == "scene":
                 object = self.scene
             elif toks[1] == "material":
-                object = self.points.material if toks[0] == "point" else self.marker_points.material
+                points: Optional[p3js.Points] = self.get_points( toks[0] )
+                object = points.material if points is not None else None
             else:
                 raise Exception( f"Unrecognized control domain: {toks[1]}")
-            ipw.jslink( (ctrl, 'value'), (object, toks[2]) )
+            if object is not None:
+                ipw.jslink( (ctrl, 'value'), (object, toks[2]) )
 
     def _get_gui( self ) -> ipw.DOMWidget:
         self.createPoints()
