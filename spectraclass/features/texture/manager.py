@@ -8,7 +8,7 @@ import traitlets as tl
 def texm(): return TextureManager.instance()
 
 class TextureManager(SCSingletonConfigurable):
-    textures = tl.List( tl.Dict, [] ).tag(config=True,sync=True)
+    textures = tl.List( default_value=[] ).tag(config=True,sync=True)
     required_texspec_attributes = ['type', 'bands']
 
     def __init__(self):

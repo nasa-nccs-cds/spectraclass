@@ -233,7 +233,6 @@ class DataManager(SCSingletonConfigurable):
 
     def loadCurrentProject(self, caller_id: str = "main" ) -> xa.Dataset:
         lgm().log( f" DataManager: loadCurrentProject: {caller_id}" )
-        self.preprocess_data()
         project_data = self._mode_data_manager_.loadCurrentProject()
         assert project_data is not None, "Project initialization failed- check log file for details"
         ns = project_data.variables['samples'].size

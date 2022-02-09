@@ -26,7 +26,7 @@ def tm() -> "TileManager":
 class TileManager(SCSingletonConfigurable):
 
     block_size = tl.Int(250).tag(config=True, sync=True)
-    block_index = tl.List( tl.Int, (0, 0), 2, 2).tag(config=True, sync=True)
+    block_index = tl.List( default_value=[0,0] ).tag(config=True, sync=True)
     mask_class = tl.Int(0).tag(config=True, sync=True)
     image_attrs = {}
     ESPG = 3857
@@ -46,7 +46,7 @@ class TileManager(SCSingletonConfigurable):
     @tl.observe('block_index')
     def _block_index_changed(self, change):
         from spectraclass.gui.points3js import PointCloudManager, pcm
-        pcm().init_data()
+        pcm().refresh()
 
     @property
     def tile(self) -> Tile:

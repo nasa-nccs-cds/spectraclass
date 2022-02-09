@@ -5,7 +5,7 @@ import os, sys
 
 class AvirisDataManager(SpatialDataManager):
     from spectraclass.gui.spatial.application import Spectraclass
-    valid_aviris_bands = tl.List([0,sys.maxsize]).tag(config=True, sync=True)
+    valid_aviris_bands = tl.List( default_value=[ 0,100000] ).tag(config=True, sync=True)
 
     MODE = "aviris"
     METAVARS = []

@@ -23,7 +23,7 @@ class ModeDataManager(SCSingletonConfigurable):
     VALID_BANDS = None
     application: SpectraclassController = None
 
-    image_names = tl.List( tl.Unicode(), ["NONE"] ).tag(config=True ,sync=True)
+    image_names = tl.List( default_value=["NONE"] ).tag(config=True ,sync=True)
     cache_dir = tl.Unicode(os.path.expanduser("~/Development/Cache")).tag(config=True)
     data_dir = tl.Unicode(os.path.expanduser("~/Development/Data")).tag(config=True)
     class_file = tl.Unicode("NONE").tag(config=True, sync=True)

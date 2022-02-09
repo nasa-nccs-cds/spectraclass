@@ -173,8 +173,7 @@ class ReductionManager(SCSingletonConfigurable):
             mapper.init = self.init
             kwargs['nepochs'] = 1
             labels_data: np.ndarray = LabelsManager.instance().getLabelsArray().values
-            range = [ mapper.input_data.min(), mapper.input_data.max() ]
-            mapper.embed( mapper.input_data, labels_data, **kwargs)
+            mapper.embed( mapper.input_data, labels_data, **kwargs )
         return mapper.embedding
 
     def umap_embedding( self, **kwargs ) -> Optional[np.ndarray]:
