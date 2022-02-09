@@ -54,6 +54,7 @@ class PointCloudManager(SCSingletonConfigurable):
         self.pick_point: int = -1
         self.marker_spheres: Dict[int, p3js.Mesh] = {}
         self.scene_controls = {}
+        self.marker_material = p3js.PointsMaterial( vertexColors='VertexColors', size=10.0 ) # , transparent=True, opacity=1.0
         self.opacity_control = None
         self.transient_markers = []
         self.voxelizer: Voxelizer = None
@@ -71,12 +72,18 @@ class PointCloudManager(SCSingletonConfigurable):
             self.marker_pids[pid] = marker.cid
             if marker.cid == 0:
                 self.transient_markers.append( pid )
-        self.marker_points.geometry = self.getMarkerGeometry()
+        self.update_marker_plot()
 
     def deleteMarkers( self, pids: List[int] ):
         for pid in pids:
             self.marker_pids.pop( pid )
-        self.marker_points.geometry = self.getMarkerGeometry()
+        self.update_marker_plot()
+
+    def update_marker_plot(self):
+        if self.marker_points is not None:
+            self.scene.remove( [self.marker_points] )
+        self.marker_points = p3js.Points( geometry=self.getMarkerGeometry(), material=self.marker_material )
+        self.scene.add( [self.marker_points] )
 
     @property
     def xyz(self)-> np.ndarray:
@@ -103,10 +110,13 @@ class PointCloudManager(SCSingletonConfigurable):
     def init_data(self, **kwargs):
         from spectraclass.reduction.embedding import ReductionManager, rm
         from spectraclass.data.base import DataManager, dm
-        reduced_data: xa.DataArray = dm().getModelData()
-        embedding = rm().umap_init(reduced_data, **kwargs)
-        lgm().log(f"UMAP init, reduced_data data shape = {reduced_data.shape}, embedding shape = {embedding.shape}")
-        self.xyz = self.normalize(embedding)
+        project_dataset: Optional[xa.Dataset] = dm().loadCurrentProject("points")
+        if project_dataset is not None:
+            reduced_data: xa.DataArray = project_dataset.reduction
+            reduced_data.attrs['dsid'] = project_dataset.attrs['dsid']
+            lgm().log(f"UMAP init, init data shape = {reduced_data.shape}")
+            embedding = rm().umap_init(reduced_data, **kwargs)
+            self.xyz = self.normalize(embedding)
 
     def normalize(self, point_data: np.ndarray):
         return (point_data - point_data.mean()) * (self.scale / point_data.std())
@@ -140,9 +150,8 @@ class PointCloudManager(SCSingletonConfigurable):
         positions = self._xyz[ np.array( idxs ) ] if len(idxs) else np.empty( shape=[0,3], dtype=np.int )
         lgm().log(f"\n *** getMarkerGeometry: positions shape = {positions.shape}, color shape = {colors.shape}")
         lgm().log(f" ----> positions[0:10] = {positions[0:10]}, colors[0:10] = {colors[0:10]}")
-        posbuff = p3js.BufferAttribute( positions, normalized=False )
-        colorbuff = p3js.BufferAttribute( colors )
-        return p3js.BufferGeometry( position = posbuff, color = colorbuff )
+        attrs = dict( position = p3js.BufferAttribute( positions, normalized=False ),  color =    p3js.BufferAttribute( colors ) )
+        return p3js.BufferGeometry( attributes=attrs )
 
     def createPoints( self, **kwargs ):
         points_geometry = self.getGeometry( **kwargs )
@@ -150,15 +159,12 @@ class PointCloudManager(SCSingletonConfigurable):
         self.points = p3js.Points( geometry=points_geometry, material=points_material )
         if self.picker is not None:
             self.picker.controlling = self.points
-        marker_geometry = self.getMarkerGeometry()
-        marker_material = p3js.PointsMaterial( vertexColors='VertexColors', transparent=True )
-        self.marker_points = p3js.Points( geometry=marker_geometry, material=marker_material )
 
     def getControlsWidget(self) -> ipw.DOMWidget:
         self.scene_controls['point.material.size']     = ipw.FloatSlider( value=0.015 * self.scale, min=0.0, max=0.05 * self.scale, step=0.0002 * self.scale)
         self.scene_controls['point.material.opacity']  = ipw.FloatSlider( value=1.0, min=0.0, max=1.0, step=0.01 )
-        self.scene_controls['marker.material.size']    = ipw.FloatSlider( value=0.05 * self.scale, min=0.0, max=0.1 * self.scale, step=0.001 * self.scale )
-        self.scene_controls['marker.material.opacity'] = ipw.FloatSlider( value=1.0, min=0.0, max=1.0, step=0.01 )
+#        self.scene_controls['marker.material.size']    = ipw.FloatSlider( value=0.05 * self.scale, min=0.0, max=0.1 * self.scale, step=0.001 * self.scale )
+#        self.scene_controls['marker.material.opacity'] = ipw.FloatSlider( value=1.0, min=0.0, max=1.0, step=0.01 )
         self.scene_controls['window.scene.background'] = ipw.ColorPicker( value="black" )
         self.link_controls()
         return ipw.VBox( [ ipw.HBox( [ self.control_label(name), ctrl ] ) for name, ctrl in self.scene_controls.items() ] )
@@ -181,8 +187,9 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def _get_gui( self ) -> ipw.DOMWidget:
         self.createPoints()
-        self.scene = p3js.Scene( children=[ self.points, self.marker_points, self.camera, p3js.AmbientLight(intensity=0.8)  ] )
+        self.scene = p3js.Scene( children=[ self.points, self.camera, p3js.AmbientLight(intensity=0.8)  ] )
         self.renderer = p3js.Renderer( scene=self.scene, camera=self.camera, controls=[self.orbit_controls], width=800, height=500 )
+        self.update_marker_plot()
         self.picker = p3js.Picker( controlling=self.points, event='click')
         self.picker.all = False
         self.picker.observe( self.on_pick, names=['point'] )

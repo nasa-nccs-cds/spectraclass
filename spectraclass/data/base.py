@@ -231,14 +231,15 @@ class DataManager(SCSingletonConfigurable):
     def getInputFileData(self, vname: str = None, **kwargs ) -> np.ndarray:
         return self._mode_data_manager_.getInputFileData( vname, **kwargs )
 
-    def loadCurrentProject(self, caller_id: str = "main" ) -> xa.Dataset:
+    def loadCurrentProject(self, caller_id: str = "main" ) -> Optional[xa.Dataset]:
         lgm().log( f" DataManager: loadCurrentProject: {caller_id}" )
-        project_data = self._mode_data_manager_.loadCurrentProject()
-        assert project_data is not None, "Project initialization failed- check log file for details"
-        ns = project_data.variables['samples'].size
-        lgm().log(f"Loaded project data[{ns}]:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
-        if ns == 0: ufm().show( "This tile contains no data","red")
-        return project_data
+        if self._mode_data_manager_ is not None:
+            project_data = self._mode_data_manager_.loadCurrentProject()
+            assert project_data is not None, "Project initialization failed- check log file for details"
+            ns = project_data.variables['samples'].size
+            lgm().log(f"Loaded project data[{ns}]:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
+            if ns == 0: ufm().show( "This tile contains no data","red")
+            return project_data
 
     def loadProject(self, dsid: str ) -> xa.Dataset:
         self._mode_data_manager_.setDatasetId(dsid)
@@ -259,11 +260,12 @@ class DataManager(SCSingletonConfigurable):
     def valid_bands(self) -> Optional[List]:
         return self._mode_data_manager_.valid_bands()
 
-    def getModelData(self) -> xa.DataArray:
+    def getModelData(self) -> Optional[xa.DataArray]:
         project_dataset: xa.Dataset = self.loadCurrentProject("getModelData")
-        model_data: xa.DataArray = project_dataset['reduction']
-        model_data.attrs['dsid'] = project_dataset.attrs['dsid']
-        return model_data
+        if project_dataset is not None:
+            model_data: xa.DataArray = project_dataset['reduction']
+            model_data.attrs['dsid'] = project_dataset.attrs['dsid']
+            return model_data
 
     def getSpatialDims(self) -> Dict[str,int]:
         project_dataset: xa.Dataset = self.loadCurrentProject("getModelData")
