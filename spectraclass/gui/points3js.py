@@ -1,6 +1,7 @@
 import ipywidgets as ipw
 import pythreejs as p3js
 import matplotlib.pyplot as plt
+from functools import partial
 import time, math, os, sys, numpy as np
 from spectraclass.gui.spatial.widgets.markers import Marker
 from typing import List, Union, Tuple, Optional, Dict, Callable, Iterable
@@ -36,7 +37,8 @@ class PointCloudManager(SCSingletonConfigurable):
         self.scene: p3js.Scene = None
         self.renderer: p3js.Renderer = None
         self.raycaster = p3js.Raycaster()
-        self.picker: p3js.Picker = None
+        self.point_picker: p3js.Picker = None
+        self.marker_picker: p3js.Picker = None
         self.control_panel: ipw.DOMWidget = None
         self.size_control: ipw.FloatSlider = None
         self.point_locator: np.ndarray = None
@@ -85,6 +87,9 @@ class PointCloudManager(SCSingletonConfigurable):
             self.scene.add( [self.marker_points] )
             ipw.jslink((self.scene_controls['marker.material.size'],   'value'),  (self.marker_points.material, 'size') )
             ipw.jslink((self.scene_controls['marker.material.opacity'], 'value'), (self.marker_points.material, 'opacity') )
+            self.marker_picker = p3js.Picker(controlling=self.marker_points, event='click')
+            self.marker_picker.observe( partial( self.on_pick, True ), names=['point'] )
+            self.renderer.controls = self.renderer.controls + [self.marker_picker]
         else:
             self.marker_points.geometry = self.getMarkerGeometry()
 
@@ -160,8 +165,6 @@ class PointCloudManager(SCSingletonConfigurable):
         points_geometry = self.getGeometry( **kwargs )
         points_material = p3js.PointsMaterial( vertexColors='VertexColors', transparent=True )
         self.points = p3js.Points( geometry=points_geometry, material=points_material )
-        if self.picker is not None:
-            self.picker.controlling = self.points
 
     def getControlsWidget(self) -> ipw.DOMWidget:
         self.scene_controls['point.material.size']     = ipw.FloatSlider( value=0.015 * self.scale, min=0.0, max=0.05 * self.scale, step=0.0002 * self.scale)
@@ -182,19 +185,19 @@ class PointCloudManager(SCSingletonConfigurable):
         self.createPoints()
         self.scene = p3js.Scene( children=[ self.points, self.camera, p3js.AmbientLight(intensity=0.8)  ] )
         self.renderer = p3js.Renderer( scene=self.scene, camera=self.camera, controls=[self.orbit_controls], width=800, height=500 )
-        self.picker = p3js.Picker( controlling=self.points, event='click')
-        self.picker.all = False
-        self.picker.observe( self.on_pick, names=['point'] )
-        self.renderer.controls = self.renderer.controls + [ self.picker ]
+        self.point_picker = p3js.Picker(controlling=self.points, event='click')
+        self.point_picker.observe( partial( self.on_pick, False ), names=['point'])
+        self.renderer.controls = self.renderer.controls + [self.point_picker]
         self.control_panel = self.getControlsWidget()
         return ipw.VBox( [ self.renderer, self.control_panel ]  )
 
     @exception_handled
-    def on_pick( self, event: Dict ):
+    def on_pick(self, highlight: bool, event: Dict ):
         from spectraclass.gui.spatial.map import MapManager, mm
         point = tuple( event["new"] )
         self.pick_point = self.voxelizer.get_pid( point )
-        pos = mm().mark_point( self.pick_point, cid=0 )
+        if highlight:   pos = mm().highlight_points( [self.pick_point], [0] )
+        else:           pos = mm().mark_point( self.pick_point, cid=0 )
         lgm().log( f"\n -----> on_pick: pid={self.pick_point}, pos = {pos} [{point}]")
         self.points.geometry = self.getGeometry()
 
