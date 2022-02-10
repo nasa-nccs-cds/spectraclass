@@ -125,12 +125,11 @@ class TileServiceImage(AxesImage):
         [x1, y1], [x2, y2] = self.axes.viewLim.get_points()
         extent_changed = ( self.current_extent != [x1, y1, x2, y2] )
         if (not self.user_is_interacting) and extent_changed:
-            located_images = self.raster_source.fetch_raster( self.projection, extent=[x1, x2, y1, y2], target_resolution=(window_extent.width, window_extent.height))
-            self.cache = located_images
+            self.cache = self.raster_source.fetch_raster( self.projection, extent=[x1, x2, y1, y2], target_resolution=(window_extent.width, window_extent.height))
             self.current_extent = [x1, y1, x2, y2]
 
         for img, extent in self.cache:
-            self.set_array(img)
+            self.set_data(img)
             with self.hold_limits():
                 self.set_extent(extent)
             super().draw(renderer, *args, **kwargs)

@@ -168,7 +168,7 @@ class ReductionManager(SCSingletonConfigurable):
         else:
             lgm().log( f"umap_init: init = {self.init}")
             if self.init == "autoencoder":
-                [( reduction, reproduction, _ )] = self.autoencoder_reduction( point_data.values, None, self.ndim, 50 )
+                [( reduction, reproduction, _ )] = self.autoencoder_reduction( point_data, None, self.ndim, 50 )
                 mapper.init_embedding(reduction)
             mapper.init = self.init
             kwargs['nepochs'] = 1
@@ -182,9 +182,10 @@ class ReductionManager(SCSingletonConfigurable):
         if 'nepochs' not in kwargs.keys():   kwargs['nepochs'] = self.nepochs
         if 'alpha' not in kwargs.keys():   kwargs['alpha'] = self.alpha
         self._state = self.PROCESSED
-        labels_data: xa.DataArray = kwargs.get( 'labels', LabelsManager.instance().getLabelsArray())
+        labels_data: np.ndarray = kwargs.get( 'labels', LabelsManager.instance().getLabelsArray()).values
         lgm().log( f"Executing UMAP embedding with input data shape = {mapper.input_data.shape}, parms: {kwargs}")
-        mapper.embed( mapper.input_data, labels_data.values, **kwargs )
+        labels_data[ labels_data == 0 ] = -1
+        mapper.embed( mapper.input_data, labels_data, **kwargs )
         return mapper.embedding
 
     def xa_umap_embedding( self, **kwargs ) -> Optional[xa.DataArray]:

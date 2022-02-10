@@ -133,6 +133,7 @@ class mplGraphPlot:
             else: new_lrecs[pid] = lrec
         self.lrecs = new_lrecs
 
+    @log_timing
     @exception_handled
     def addMarker( self, m: Marker ):
         lgm().log(f"mplGraphPlot: Add Marker[{m.size}]: cid={m.cid}")
@@ -159,6 +160,7 @@ class mplGraphPlot:
     def cids( self ):
         return  [ lrec.cid for lrec in self.lrecs.values() ]
 
+    @log_timing
     def plot( self, clear_selection = False ):
         self.ax.title.text = self.title
         if clear_selection: self.selected_pid = -1
@@ -167,6 +169,7 @@ class mplGraphPlot:
         self.ax.set_prop_cycle( color=ps['color'], alpha=ps['alpha'], linewidth=ps['lw'] )
         self.update_graph()
 
+    @log_timing
     def update_graph(self, **kwargs ):
         self.clear( False )
         lgm().log( f"Plotting lines, xs = {self.x.shape}, ys = {self.y.shape}, xrange = {[self.x.min(),self.x.max()]}, yrange = {[self.y.min(),self.y.max()]}, args = {kwargs}")
