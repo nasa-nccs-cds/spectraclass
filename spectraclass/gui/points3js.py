@@ -220,6 +220,8 @@ class PointCloudManager(SCSingletonConfigurable):
         if self._gui is not None:
             lgm().log( " *** update point cloud data *** " )
             self.points.geometry = self.getGeometry()
+            if self.marker_points is not None:
+                self.marker_points.geometry = self.getMarkerGeometry()
 
     def clear(self):
         self.update_plot()
