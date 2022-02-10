@@ -1,8 +1,8 @@
 from .base import UMAP
 import numpy as np
 import xarray as xa
+from typing import List, Union, Tuple, Optional, Dict, Callable, Iterable
 import pandas as pd
-1
 import cuml, cudf
 import time
 

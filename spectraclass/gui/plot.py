@@ -174,7 +174,7 @@ class mplGraphPlot:
         self.clear( False )
         lgm().log( f"Plotting lines, xs = {self.x.shape}, ys = {self.y.shape}, xrange = {[self.x.min(),self.x.max()]}, yrange = {[self.y.min(),self.y.max()]}, args = {kwargs}")
         lines: List[Line2D] = self.ax.plot( self.x, self.y, picker=True, pickradius=2, **kwargs )
-        if self.ry.size > 0:
+        if (not self._use_model) and (self.ry.size > 0):
             self.rlines: List[Line2D] = self.ax.plot( self.x, self.ry, color="grey", **kwargs )
         for (line, lrec) in zip(lines, self.lrecs.values()): lrec.line = line
         self.fig.canvas.draw()
