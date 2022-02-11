@@ -351,7 +351,8 @@ class MapManager(SCSingletonConfigurable):
         if self.block is not None:
             update = kwargs.get( 'update', False )
             lgm().log(f"\n -------------------- Loading block: {self.block.block_coords}  -------------------- " )
-            self.base.set_bounds(self.block.xlim, self.block.ylim)
+            if self.base is not None:
+                self.base.set_bounds(self.block.xlim, self.block.ylim)
             self.update_spectral_image()
             if self.points_selection is not None:
                 self.points_selection.set_block(self.block)
