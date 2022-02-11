@@ -219,7 +219,7 @@ class MapManager(SCSingletonConfigurable):
 
     def on_layer_change( self, layer: Layer ):
         for mgr in self.layer_managers( layer.name ):
- #           lgm().log( f" **** layer_change[{layer.name}]: {id(mgr)} -> alpha_change[{layer.visibility}]")
+            lgm().log( f" **** layer_change[{layer.name}]: {id(mgr)} -> alpha_change[{layer.visibility}]")
             mgr.set_alpha( layer.visibility )
         self.update_canvas()
 
@@ -245,7 +245,6 @@ class MapManager(SCSingletonConfigurable):
         return dict( vmin= ave - std * self.colorstretch, vmax= ave + std * self.colorstretch  )
 
     @log_timing
-    @exception_handled
     def update_spectral_image(self):
         if self.base is not None:
             fdata: xa.DataArray = self.frame_data
@@ -257,11 +256,10 @@ class MapManager(SCSingletonConfigurable):
                 else:
                     self._spectral_image.set_data( fdata.values )
                     self._spectral_image.set_norm( Normalize(**drange) )
-                    self._spectral_image.set_alpha( self.layers('bands').visibility )
+                    self.layers('bands').trigger()
                 lgm().log(f"UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
                 self.update_canvas()
 
-    @exception_handled
     @log_timing
     def update_plots(self, **kwargs ):
         from spectraclass.gui.points3js import PointCloudManager, pcm

@@ -7,7 +7,6 @@ import traitlets.config as tlc
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import traitlets as tl
 
-
 class Layer(tlc.Configurable):
     alpha = tl.Float(1.0).tag(config=True, sync=True)
     visible = tl.Bool(True).tag(config=True, sync=True)
@@ -28,6 +27,10 @@ class Layer(tlc.Configurable):
  #       lgm().log( f' ** on_alpha_change[{self.name}]: alpha={self.alpha}, visible={self.visible}, args={args}' )
         if self._notify:
             self.callback( self )
+
+    def trigger( self, eps = 0.001 ):
+        if self.alpha > (1.0 - eps):    self.alpha = self.alpha - eps
+        else:                           self.alpha = self.alpha + eps
 
     @property
     def visibility(self) -> float:
