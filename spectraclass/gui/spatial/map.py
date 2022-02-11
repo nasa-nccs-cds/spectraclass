@@ -231,7 +231,7 @@ class MapManager(SCSingletonConfigurable):
     def _update( self, val ):
         self.currentFrame = int( self.slider.val )
         self.slider.refesh()
-        self.update_spectral_image()
+        self.update_spectral_image( change="alpha" )
 
     def update_image_alpha( self, layer: str, increase: bool, *args, **kwargs ):
         self.layers(layer).increment( increase )
@@ -245,17 +245,26 @@ class MapManager(SCSingletonConfigurable):
         return dict( vmin= ave - std * self.colorstretch, vmax= ave + std * self.colorstretch  )
 
     @exception_handled
-    def update_spectral_image(self):
+    def update_spectral_image(self, **kwargs ):
         if self.base is not None:
-            self.base.set_bounds(self.block.xlim, self.block.ylim)
-            fdata: xa.DataArray = self.frame_data
-            if fdata is not None:
-                drange = self.get_color_bounds(fdata)
-                try: self._spectral_image.remove()
-                except Exception: pass
-                self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=self.layers('bands').visibility, cmap='jet', norm=Normalize(**drange), add_colorbar=False)
-                lgm().log(f"\n CREATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
-                self.update_canvas()
+            if self._spectral_image is None:
+                fdata: xa.DataArray = self.frame_data
+                if fdata is not None:
+                    self.base.set_bounds(self.block.xlim, self.block.ylim)
+                    self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=self.layers('bands').visibility, cmap='jet', norm=Normalize(**drange), add_colorbar=False)
+            else:
+                change = kwargs.get("change", "data ")
+                if change == "alpha":
+                    self._spectral_image.set_alpha( self.layers('bands').visibility )
+                elif change == "data":
+                    fdata: xa.DataArray = self.frame_data
+                    if fdata is not None:
+                        drange = self.get_color_bounds(fdata)
+                        self._spectral_image.set_data( fdata.values )
+                        self._spectral_image.set_norm( Normalize(**drange) )
+                        self._spectral_image.changed()
+            lgm().log(f"\n UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
+            self.update_canvas()
 
     @exception_handled
     @log_timing
