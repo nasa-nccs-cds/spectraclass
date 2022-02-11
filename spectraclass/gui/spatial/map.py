@@ -231,7 +231,7 @@ class MapManager(SCSingletonConfigurable):
     def _update( self, val ):
         self.currentFrame = int( self.slider.val )
         self.slider.refesh()
-        self.update_plots()
+        self.update_spectral_image()
 
     def update_image_alpha( self, layer: str, increase: bool, *args, **kwargs ):
         self.layers(layer).increment( increase )
