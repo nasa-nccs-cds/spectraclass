@@ -257,6 +257,7 @@ class MapManager(SCSingletonConfigurable):
                 lgm().log(f"\n CREATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
                 self.update_canvas()
 
+    @log_timing
     @exception_handled
     def update_plots(self, **kwargs ):
         from spectraclass.gui.points3js import PointCloudManager, pcm
@@ -270,7 +271,7 @@ class MapManager(SCSingletonConfigurable):
             lgm().log(f"\n <------> Loading new image: {os.path.basename(new_image)} <------> \n")
         if self._spectral_image is not None:
             fdata: xa.DataArray = self.frame_data
-            lgm().log(f"update_plots: block data shape = {self.data.shape}" )
+            lgm().log(f"\nMAP: Update_plots: block data shape = {self.data.shape}" )
             if fdata is not None:
                 drange = self.get_color_bounds(fdata)
                 alpha = self.layers('bands').visibility
@@ -286,6 +287,7 @@ class MapManager(SCSingletonConfigurable):
                 lgm().log(f" --> DATA: extent={fs(SpatialDataManager.extent(fdata))}")
                 pcm().update_plot(cdata=fdata, norm=norm)
 
+    @log_timing
     def update_canvas(self):
         self.figure.canvas.draw_idle()
 
@@ -294,6 +296,7 @@ class MapManager(SCSingletonConfigurable):
         use_model = kwargs.get( 'model', self._use_model_data )
         return dm().getModelData().shape[1] if use_model else self.data.shape[0]
 
+    @log_timing
     @property
     def frame_data(self) -> Optional[xa.DataArray]:
         if self.currentFrame >= self.nFrames(): return None

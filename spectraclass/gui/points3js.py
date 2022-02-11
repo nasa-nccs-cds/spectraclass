@@ -214,6 +214,7 @@ class PointCloudManager(SCSingletonConfigurable):
         lgm().log( f"get_index_from_point[{indx}]: Loc array range=[{loc_array.min()},{loc_array.max()}], spt={loc_array[indx]}, pos={self.xyz[indx]}")
         return indx
 
+    @log_timing
     def update_plot(self, **kwargs):
         if 'points' in kwargs:
             self.xyz = self.normalize(kwargs['points'])
