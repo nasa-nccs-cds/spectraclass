@@ -230,8 +230,9 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def _update( self, val ):
         self.currentFrame = int( self.slider.val )
+        lgm().log(f"\n ~~~~~~~~~~~ SLIDER UPDATE: frame = {self.currentFrame}\n")
         self.slider.refesh()
-        self.update_spectral_image( change="alpha" )
+        self.update_spectral_image()
 
     def update_image_alpha( self, layer: str, increase: bool, *args, **kwargs ):
         self.layers(layer).increment( increase )
@@ -245,27 +246,21 @@ class MapManager(SCSingletonConfigurable):
         return dict( vmin= ave - std * self.colorstretch, vmax= ave + std * self.colorstretch  )
 
     @exception_handled
-    def update_spectral_image(self, **kwargs ):
+    def update_spectral_image(self):
         if self.base is not None:
-            if self._spectral_image is None:
-                fdata: xa.DataArray = self.frame_data
-                if fdata is not None:
-                    drange = self.get_color_bounds(fdata)
-                    self.base.set_bounds(self.block.xlim, self.block.ylim)
+            self.base.set_bounds( self.block.xlim, self.block.ylim )
+            fdata: xa.DataArray = self.frame_data
+            if fdata is not None:
+                drange = self.get_color_bounds(fdata)
+                if self._spectral_image is None:
                     self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=self.layers('bands').visibility, cmap='jet', norm=Normalize(**drange), add_colorbar=False)
-            else:
-                change = kwargs.get( "change", "data" )
-                if change == "alpha":
+                else:
                     self._spectral_image.set_alpha( self.layers('bands').visibility )
-                elif change == "data":
-                    fdata: xa.DataArray = self.frame_data
-                    if fdata is not None:
-                        drange = self.get_color_bounds(fdata)
-                        self._spectral_image.set_data( fdata.values )
-                        self._spectral_image.set_norm( Normalize(**drange) )
-                        lgm().log(f"\n UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
-                self._spectral_image.changed()
-            self.update_canvas()
+                    self._spectral_image.set_data( fdata.values )
+                    self._spectral_image.set_norm( Normalize(**drange) )
+                    self._spectral_image.changed()
+                lgm().log(f"\n UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
+                self.update_canvas()
 
     @exception_handled
     @log_timing
@@ -297,7 +292,6 @@ class MapManager(SCSingletonConfigurable):
                 lgm().log(f" --> DATA: extent={fs(SpatialDataManager.extent(fdata))}")
                 pcm().update_plot(cdata=fdata, norm=norm)
 
-    @log_timing
     def update_canvas(self):
         self.figure.canvas.draw_idle()
 
