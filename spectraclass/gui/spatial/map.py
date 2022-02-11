@@ -230,7 +230,6 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def _update( self, val ):
         self.currentFrame = int( self.slider.val )
-        lgm().log(f"\n ~~~~~~~~~~~ SLIDER UPDATE: frame = {self.currentFrame}\n")
         self.slider.refesh()
         self.update_spectral_image()
 
@@ -260,7 +259,7 @@ class MapManager(SCSingletonConfigurable):
                     self._spectral_image.set_data( fdata.values )
                     self._spectral_image.set_norm( Normalize(**drange) )
                     self._spectral_image.changed()
-                lgm().log(f"\n UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
+                lgm().log(f"UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
                 self.update_canvas()
 
     @exception_handled
