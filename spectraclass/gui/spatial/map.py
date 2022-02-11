@@ -254,7 +254,7 @@ class MapManager(SCSingletonConfigurable):
                     self.base.set_bounds(self.block.xlim, self.block.ylim)
                     self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=self.layers('bands').visibility, cmap='jet', norm=Normalize(**drange), add_colorbar=False)
             else:
-                change = kwargs.get("change", "data ")
+                change = kwargs.get( "change", "data" )
                 if change == "alpha":
                     self._spectral_image.set_alpha( self.layers('bands').visibility )
                 elif change == "data":
@@ -263,8 +263,8 @@ class MapManager(SCSingletonConfigurable):
                         drange = self.get_color_bounds(fdata)
                         self._spectral_image.set_data( fdata.values )
                         self._spectral_image.set_norm( Normalize(**drange) )
-                        self._spectral_image.changed()
                         lgm().log(f"\n UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
+                self._spectral_image.changed()
             self.update_canvas()
 
     @exception_handled
