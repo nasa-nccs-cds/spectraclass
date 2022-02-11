@@ -245,14 +245,15 @@ class MapManager(SCSingletonConfigurable):
             ufm().show( msg, "red" ); lgm().log( "\n" +  msg + "\n"  )
         return dict( vmin= ave - std * self.colorstretch, vmax= ave + std * self.colorstretch  )
 
+    @log_timing
     @exception_handled
     def update_spectral_image(self):
         if self.base is not None:
-            self.base.set_bounds( self.block.xlim, self.block.ylim )
             fdata: xa.DataArray = self.frame_data
             if fdata is not None:
                 drange = self.get_color_bounds(fdata)
                 if self._spectral_image is None:
+                    self.base.set_bounds(self.block.xlim, self.block.ylim)
                     self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=self.layers('bands').visibility, cmap='jet', norm=Normalize(**drange), add_colorbar=False)
                 else:
                     self._spectral_image.set_alpha( self.layers('bands').visibility )
@@ -301,7 +302,6 @@ class MapManager(SCSingletonConfigurable):
         return dm().getModelData().shape[1] if use_model else self.data.shape[0]
 
     @property
-    @log_timing
     def frame_data(self) -> Optional[xa.DataArray]:
         if self.currentFrame >= self.nFrames(): return None
         # lgm().log( f" color_pointcloud: currentFrame = {self.currentFrame}, frame data shape = {frame_data.shape}")
@@ -352,6 +352,7 @@ class MapManager(SCSingletonConfigurable):
         if self.block is not None:
             update = kwargs.get( 'update', False )
             lgm().log(f"\n -------------------- Loading block: {self.block.block_coords}  -------------------- " )
+            self.base.set_bounds(self.block.xlim, self.block.ylim)
             self.update_spectral_image()
             if self.points_selection is not None:
                 self.points_selection.set_block(self.block)
