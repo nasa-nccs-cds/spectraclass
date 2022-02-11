@@ -255,10 +255,9 @@ class MapManager(SCSingletonConfigurable):
                     self.base.set_bounds(self.block.xlim, self.block.ylim)
                     self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=self.layers('bands').visibility, cmap='jet', norm=Normalize(**drange), add_colorbar=False)
                 else:
-                    self._spectral_image.set_alpha( self.layers('bands').visibility )
                     self._spectral_image.set_data( fdata.values )
                     self._spectral_image.set_norm( Normalize(**drange) )
-                    self._spectral_image.changed()
+                    self._spectral_image.set_alpha( self.layers('bands').visibility )
                 lgm().log(f"UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
                 self.update_canvas()
 
@@ -303,9 +302,9 @@ class MapManager(SCSingletonConfigurable):
     @property
     def frame_data(self) -> Optional[xa.DataArray]:
         if self.currentFrame >= self.nFrames(): return None
-        # lgm().log( f" color_pointcloud: currentFrame = {self.currentFrame}, frame data shape = {frame_data.shape}")
-        # app().color_pointcloud( frame_data.values.flatten(), **kwargs )
-        return self.data[self.currentFrame]
+        fdata = self.data[self.currentFrame]
+        lgm().log( f" ** frame_data[{self.currentFrame}]: frame data shape = {fdata.shape}")
+        return fdata
 
     @property
     def figure(self) -> Figure:
