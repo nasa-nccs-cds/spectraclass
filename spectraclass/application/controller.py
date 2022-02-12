@@ -116,8 +116,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.plot import GraphPlotManager, gpm
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> UNDO ")
 
-
-    @exception_handled
+    @log_timing
     def classify(self) -> xa.DataArray:
         from spectraclass.learn.manager import ClassificationManager, cm
         from spectraclass.gui.points3js import PointCloudManager, pcm
@@ -129,14 +128,13 @@ class SpectraclassController(SCSingletonConfigurable):
         block = tm().getBlock()
         embedding: xa.DataArray = dm().getModelData()
         classification: xa.DataArray = cm().apply_classification( embedding )
-        if self.pcm_active: pcm().color_by_index( classification.data, lm().colors )
         overlay_image: xa.DataArray = block.points2raster( classification )
         mm().plot_labels_image( overlay_image )
        # spm().plot_overlay_image( mm().image_template.copy( data=labels_image ), mm().overlay_alpha )
         lm().addAction("color", "points")
         return classification
 
-    @exception_handled
+    @log_timing
     def learn(self):
         from spectraclass.learn.manager import ClassificationManager, cm
         from spectraclass.data.base import DataManager, dm
@@ -152,7 +150,7 @@ class SpectraclassController(SCSingletonConfigurable):
         cm().learn_classification( filtered_point_data, filtered_labels )
         ufm().show( "Classification Mapping learned" )
 
-    @exception_handled
+    @log_timing
     def propagate_selection(self, niters=1):
         from spectraclass.gui.points3js import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, Action, lm
@@ -164,7 +162,6 @@ class SpectraclassController(SCSingletonConfigurable):
         lm().log_markers("pre-spread")
         self._flow_class_map: np.ndarray = lm().getLabelsArray().data
         catalog_pids = np.arange(0, self._flow_class_map.shape[0])
-        if self.pcm_active: pcm().clear_bins()
         converged = flow.spread( self._flow_class_map, niters )
 
         if converged is not None:
@@ -176,9 +173,7 @@ class SpectraclassController(SCSingletonConfigurable):
                     if new_indices.size > 0:
                         lgm().log(f" @@@ spread_selection: cid={cid}, label={label}, #new_indices={len(new_indices)}" )
                         lm().mark_points( new_indices, cid, "labels" )
-                        if self.pcm_active: pcm().update_marked_points(cid)
             mm().plot_labels_image( lm().get_label_map() )
- #           gpm().plot_graph()
         lm().log_markers("post-spread")
         return converged
 

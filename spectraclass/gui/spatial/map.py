@@ -36,6 +36,7 @@ def fs(flist):
 
 class MapManager(SCSingletonConfigurable):
     init_band = tl.Int(10).tag(config=True, sync=True)
+#    current_band = tl.Int(10).tag(config=False, sync=True)
 
     RIGHT_BUTTON = 3
     MIDDLE_BUTTON = 2
@@ -51,6 +52,7 @@ class MapManager(SCSingletonConfigurable):
         self._adding_marker = False
         self.points_selection: MarkerManager = None
         self.region_selection: PolygonInteractor = None
+        self._band_selector: ipw.IntSlider = None
         self._use_model_data = False
         self._cidpress = -1
         self.cspecs=None
@@ -76,6 +78,17 @@ class MapManager(SCSingletonConfigurable):
         if self.base is not None:
             self.update_slider_visibility()
             self.update_spectral_image()
+
+    # @property
+    # def band_selector(self):
+    #     if self._band_selector is None:
+    #         self._band_selector = ipw.IntSlider( self.init_band, 0, self.nFrames(), 1 )
+    #         ipw.jslink( (self._band_selector, 'value'), (self.current_band, 'value') )
+    #     return self._band_selector
+    #
+    # def on_current_band_change(self, *args):
+    #     lgm().log( f' ** on_current_band_change[{self.current_band}]: args={args}' )
+    #     self.update_spectral_image()
 
     def getPointData(self, **kwargs ) -> xa.DataArray:
         from spectraclass.data.base import DataManager, dm
