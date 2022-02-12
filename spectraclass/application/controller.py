@@ -124,6 +124,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        ufm().show(" Applying Classification Mapping ")
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> CLASSIFY ")
         block = tm().getBlock()
         embedding: xa.DataArray = dm().getModelData()
@@ -132,6 +133,7 @@ class SpectraclassController(SCSingletonConfigurable):
         mm().plot_labels_image( overlay_image )
        # spm().plot_overlay_image( mm().image_template.copy( data=labels_image ), mm().overlay_alpha )
         lm().addAction("color", "points")
+        ufm().show("Classification Complete")
         return classification
 
     @log_timing
@@ -157,6 +159,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
+        ufm().show("Generalizing markers")
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> SPREAD ")
         flow: ActivationFlow = afm().getActivationFlow()
         lm().log_markers("pre-spread")
@@ -175,6 +178,7 @@ class SpectraclassController(SCSingletonConfigurable):
                         lm().mark_points( new_indices, cid, "labels" )
             mm().plot_labels_image( lm().get_label_map() )
         lm().log_markers("post-spread")
+        ufm().show("Marker generalization complete")
         return converged
 
     @exception_handled
