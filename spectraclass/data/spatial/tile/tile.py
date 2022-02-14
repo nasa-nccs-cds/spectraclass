@@ -123,7 +123,7 @@ class Tile(DataContainer):
     def getBlocks(self, **kwargs ) -> List["Block"]:
         from spectraclass.data.spatial.tile.manager import TileManager
         tm = TileManager.instance()
-        return [ Block( self, ix, iy, **kwargs ) for ix in range(0,tm.block_dims[0]) for iy in range(0,tm.block_dims[1]) ]
+        return [ self.getBlock( ix, iy, **kwargs ) for ix in range(0,tm.block_dims[0]) for iy in range(0,tm.block_dims[1]) ]
 
 class Block(DataContainer):
 
