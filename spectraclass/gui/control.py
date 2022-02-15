@@ -79,7 +79,7 @@ class ParametersManager(SCSingletonConfigurable):
 
     def _createGui( self, **kwargs ) -> ipw.Box:
         wTab = ipw.Tab()
-        tabNames = [  "layers", "selection", "learning"  ]
+        tabNames = [  "layers", "selection", "learning", "threshold"  ]
         children = []
         for iT, title in enumerate( tabNames ):
             wTab.set_title( iT, title )
@@ -97,7 +97,9 @@ class ParametersManager(SCSingletonConfigurable):
         if title == "selection":
             widgets.append(mm().get_selection_panel())
         if title == "learning":
-            widgets.append( cm().gui())
+            widgets.append( cm().gui() )
+        if title == "threshold":
+            widgets.append(mm().get_threshold_panel())
         elif title == "reduction":
             widgets.append( dm().modal.getCreationPanel() )
         elif title == "embedding":

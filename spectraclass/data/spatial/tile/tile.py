@@ -132,6 +132,7 @@ class Block(DataContainer):
         self.tile: Tile = tile
         self.init_task = None
         self.config = kwargs
+        self.tmask = None
         self.block_coords = (ix,iy)
         self.validate_parameters()
         self._index_array: xa.DataArray = None

@@ -36,6 +36,8 @@ def fs(flist):
 
 class MapManager(SCSingletonConfigurable):
     init_band = tl.Int(10).tag(config=True, sync=True)
+    upper_threshold = tl.Float(1.0).tag(config=True, sync=True)
+    lower_threshold = tl.Float(0.0).tag(config=True, sync=True)
 #    current_band = tl.Int(10).tag(config=False, sync=True)
 
     RIGHT_BUTTON = 3
@@ -67,11 +69,30 @@ class MapManager(SCSingletonConfigurable):
         self.layers.add( 'bands', 1.0, True )
         self.layers.add( 'markers', 0.5, True )
         self.layers.add( 'labels', 0.5, False )
+        self.observe(self.on_threshold_change, names=["lower_threshold", "upper_threshold"])
         self.menu_actions = OrderedDict( Layers = [ [ "Increase Labels Alpha", 'Ctrl+>', None, partial( self.update_image_alpha, "labels", True ) ],
                                                     [ "Decrease Labels Alpha", 'Ctrl+<', None, partial( self.update_image_alpha, "labels", False ) ],
                                                     [ "Increase Band Alpha",   'Alt+>',  None, partial( self.update_image_alpha, "bands", True ) ],
                                                     [ "Decrease Band Alpha",   'Alt+<',  None, partial( self.update_image_alpha, "bands", False ) ] ] )
         atexit.register(self.exit)
+
+    @exception_handled
+    def  on_threshold_change( self,  *args  ):
+        fdata: np.ndarray = self.frame_data.values
+        drange = [ np.nanmin(fdata), np.nanmax(fdata) ]
+        lgm().log(f"\n on_threshold_change[ {self.lower_threshold:.2f}, {self.upper_threshold:.2f} ]")
+        mask = None
+        if self.upper_threshold < 1.0:
+            thresh = drange[0] + (drange[1]-drange[0])*self.upper_threshold
+            mask = ( fdata > thresh )
+        if self.lower_threshold > 0.0:
+            thresh = drange[0] + (drange[1]-drange[0])*self.lower_threshold
+            lmask = ( fdata < thresh )
+            mask = (lmask & mask) if (mask is not None) else lmask
+        if mask is not None:
+            self.block.tmask = mask
+            lgm().log(f" ---> nmasked pixels = {np.count_nonzero(mask)} ")
+            self.update_spectral_image()
 
     def use_model_data(self, use: bool ):
         self._use_model_data = use
@@ -111,6 +132,15 @@ class MapManager(SCSingletonConfigurable):
     def get_selection_panel(self):
         self.gui()
         return ipw.Box([self.selection_label, self.selection])
+
+    def get_threshold_panel(self):
+        controls, ivals = [], [1.0,0.0]
+        for iC, name in enumerate(['upper','lower']):
+            label = ipw.Label(value=name, layout=ipw.Layout(width="100px"))
+            slider = ipw.FloatSlider( ivals[iC], description=f'{name} threshold', min=0.0, max=1.0 )
+            tl.link( (slider, "value"), (self, f'{name}_threshold') )
+            controls.append( ipw.HBox([label, slider]) )
+        return ipw.VBox(controls)
 
     def labels_dset(self):
         return xa.Dataset( self.label_map )
@@ -315,6 +345,11 @@ class MapManager(SCSingletonConfigurable):
         if self.currentFrame >= self.nFrames(): return None
         fdata = self.data[self.currentFrame]
         lgm().log( f" ** frame_data[{self.currentFrame}]: frame data shape = {fdata.shape}")
+        if self.block.tmask is not None:
+            mdata = fdata.values.flatten()
+            mdata[self.block.tmask.flatten()] = np.nan
+            fdata = fdata.copy( data=mdata.reshape(fdata.shape) )
+            lgm().log(f" ---> mask {np.count_nonzero(self.block.tmask)} pixels")
         return fdata
 
     @property
