@@ -267,9 +267,9 @@ class MapManager(SCSingletonConfigurable):
                     self.base.set_bounds(self.block.xlim, self.block.ylim)
                     self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=self.layers('bands').visibility, cmap='jet', norm=Normalize(**drange), add_colorbar=False)
                 else:
-                    self._spectral_image.set_data( fdata.values )
                     self._spectral_image.set_norm( Normalize(**drange) )
-                    self.layers('bands').trigger()
+                    self._spectral_image.set_data( fdata.values )
+#                    self.layers('bands').trigger()
                 lgm().log(f"UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
                 self.update_canvas()
 
