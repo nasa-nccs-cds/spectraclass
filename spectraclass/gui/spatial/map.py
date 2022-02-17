@@ -26,7 +26,7 @@ from spectraclass.xext.xgeo import XGeo
 from spectraclass.widgets.slider import PageSlider
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable
-from spectraclass.data.spatial.tile.tile import Block, Tile
+from spectraclass.data.spatial.tile.tile import Block, Tile, ThresholdRecord
 
 def mm(**kwargs) -> "MapManager":
     return MapManager.instance(**kwargs)
@@ -49,8 +49,9 @@ class MapManager(SCSingletonConfigurable):
         super(MapManager, self).__init__()
         self._debug = False
         self.base: TileServiceBasemap = None
-        self.currentFrame = 0
+        self._currentFrame = 0
         self.block: Block = None
+        self.silent_thresholds = False
         self._adding_marker = False
         self.points_selection: MarkerManager = None
         self.region_selection: PolygonInteractor = None
@@ -78,27 +79,27 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def  on_threshold_change( self,  *args  ):
-        fdata: np.ndarray = self.frame_data.values
-        drange = [ np.nanmin(fdata), np.nanmax(fdata) ]
-        lgm().log(f"\n on_threshold_change[ {self.lower_threshold:.2f}, {self.upper_threshold:.2f} ]")
-        mask = None
-        if self.upper_threshold < 1.0:
-            thresh = drange[0] + (drange[1]-drange[0])*self.upper_threshold
-            mask = ( fdata > thresh )
-        if self.lower_threshold > 0.0:
-            thresh = drange[0] + (drange[1]-drange[0])*self.lower_threshold
-            lmask = ( fdata < thresh )
-            mask = (lmask & mask) if (mask is not None) else lmask
-        if mask is not None:
-            self.block.tmask = mask
-            lgm().log(f" ---> nmasked pixels = {np.count_nonzero(mask)} ")
+        if not self.silent_thresholds:
+            initialized = self.block.set_thresholds( self._use_model_data, self.currentFrame, (self.lower_threshold, self.upper_threshold) )
+            if initialized: self.update_threshold_list()
             self.update_spectral_image()
 
+    def update_thresholds( self ):
+        self.silent_thresholds = True
+        lgm().log( f"update_thresholds: currentFrame = {self.currentFrame}")
+        trec = self.block.threshold_record( self._use_model_data, self.currentFrame )
+        self.upper_threshold = trec.thresholds[1]
+        self.lower_threshold = trec.thresholds[0]
+        self.silent_thresholds = False
+
     def use_model_data(self, use: bool ):
-        self._use_model_data = use
-        if self.base is not None:
-            self.update_slider_visibility()
-            self.update_spectral_image()
+        from spectraclass.gui.plot import GraphPlotManager, gpm
+        if use != self._use_model_data:
+            self._use_model_data = use
+            if self.base is not None:
+                self.update_slider_visibility()
+                self.update_spectral_image()
+                gpm().use_model_data(use)
 
     # @property
     # def band_selector(self):
@@ -136,11 +137,34 @@ class MapManager(SCSingletonConfigurable):
     def get_threshold_panel(self):
         controls, ivals = [], [1.0,0.0]
         for iC, name in enumerate(['upper','lower']):
-            label = ipw.Label(value=name, layout=ipw.Layout(width="100px"))
-            slider = ipw.FloatSlider( ivals[iC], description=f'{name} threshold', min=0.0, max=1.0 )
+            slider = ipw.FloatSlider( ivals[iC], description=name, min=0.0, max=1.0 )
             tl.link( (slider, "value"), (self, f'{name}_threshold') )
-            controls.append( ipw.HBox([label, slider]) )
-        return ipw.VBox(controls)
+            controls.append( slider )
+        self.active_thresholds = ipw.Select( options=[], description='Thresholds:', disabled=False )
+        self.active_thresholds.observe( self.on_active_threshold_selection, names=['value'] )
+        clear_button: ipw.Button = ipw.Button(description="Clear", layout=ipw.Layout(flex='1 1 auto'), border='1px solid dimgrey')
+        clear_button.on_click( self.clear_threshold )
+        return ipw.HBox( [ipw.VBox( controls ), ipw.VBox( [ self.active_thresholds, clear_button ] )] )
+
+    def update_threshold_list(self):
+        options, value = self.block.get_mask_list( self.currentFrame )
+        self.active_thresholds.options = options
+        if value is not None:
+            self.active_thresholds.value = value
+
+    def on_active_threshold_selection( self, *args ):
+        active_threshold = self.active_thresholds.value
+        [ ttype, sframe ] = active_threshold.split(":")
+        self.use_model_data( ttype == "model" )
+        self.slider.set_val( int( sframe ) )
+        self.update_thresholds()
+
+    def clear_threshold(self, *args ):
+        trec = self.block.threshold_record( self._use_model_data, self.currentFrame )
+        trec.clear()
+        self.lower_threshold = 0.0
+        self.upper_threshold = 1.0
+        self.update_spectral_image()
 
     def labels_dset(self):
         return xa.Dataset( self.label_map )
@@ -270,11 +294,20 @@ class MapManager(SCSingletonConfigurable):
     def slider(self) -> PageSlider:
         return self.model_slider if self._use_model_data else self.band_slider
 
+    @property
+    def currentFrame(self):
+        return self._currentFrame
+
+    @currentFrame.setter
+    def currentFrame(self, value: int ):
+        self._currentFrame = value
+        self.slider.refesh()
+        self.update_thresholds()
+        self.update_spectral_image()
+
     @exception_handled
     def _update( self, val ):
         self.currentFrame = int( self.slider.val )
-        self.slider.refesh()
-        self.update_spectral_image()
 
     def update_image_alpha( self, layer: str, increase: bool, *args, **kwargs ):
         self.layers(layer).increment( increase )
@@ -327,7 +360,8 @@ class MapManager(SCSingletonConfigurable):
                 plot_name = os.path.basename(dm().dsid())
                 self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
                 self.plot_axes.title.set_fontsize( 8 )
-                self.update_canvas()
+                self.update_thresholds()
+                self.update_spectral_image()
                 lgm().log(f" --> AXIS: xlim={fs(self.plot_axes.get_xlim())}, ylim={fs(self.plot_axes.get_ylim())}")
                 lgm().log(f" --> DATA: extent={fs(SpatialDataManager.extent(fdata))}")
                 pcm().update_plot(cdata=fdata, norm=norm)
@@ -345,11 +379,12 @@ class MapManager(SCSingletonConfigurable):
         if self.currentFrame >= self.nFrames(): return None
         fdata = self.data[self.currentFrame]
         lgm().log( f" ** frame_data[{self.currentFrame}]: frame data shape = {fdata.shape}")
-        if self.block.tmask is not None:
+        tmask = self.block.get_mask()
+        if tmask is not None:
             mdata = fdata.values.flatten()
-            mdata[self.block.tmask.flatten()] = np.nan
+            mdata[tmask.flatten()] = np.nan
             fdata = fdata.copy( data=mdata.reshape(fdata.shape) )
-            lgm().log(f" ---> mask {np.count_nonzero(self.block.tmask)} pixels")
+            lgm().log(f" ---> mask {np.count_nonzero(tmask)} pixels")
         return fdata
 
     @property
@@ -398,7 +433,6 @@ class MapManager(SCSingletonConfigurable):
             lgm().log(f"\n -------------------- Loading block: {self.block.block_coords}  -------------------- " )
             if self.base is not None:
                 self.base.set_bounds(self.block.xlim, self.block.ylim)
-            self.update_spectral_image()
             if self.points_selection is not None:
                 self.points_selection.set_block(self.block)
             self.band_axis = kwargs.pop('band', 0)
@@ -408,7 +442,7 @@ class MapManager(SCSingletonConfigurable):
             self.y_axis = kwargs.pop('y', 1)
             self.y_axis_name = self.data.dims[self.y_axis]
             gpm().refresh()
-            if update: self.update_plots()
+            if update:  self.update_plots()
 
     def gui(self,**kwargs):
         from spectraclass.data.spatial.tile.manager import TileManager, tm

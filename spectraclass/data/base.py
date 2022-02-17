@@ -63,12 +63,10 @@ class DataManager(SCSingletonConfigurable):
         pass
 
     def on_control_change(self, change: Dict ):
-        from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.gui.spatial.map import MapManager, mm
         lgm().log( f"on_control_change: {change}")
         if change.get('name', None) == 'use_model_data':
             use_model_data = bool( change['new'] )
-            gpm().use_model_data( use_model_data )
             mm().use_model_data( use_model_data )
 
     def getClassMap(self)-> Optional[xa.DataArray]:

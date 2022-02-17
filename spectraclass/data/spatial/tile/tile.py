@@ -125,14 +125,58 @@ class Tile(DataContainer):
         tm = TileManager.instance()
         return [ self.getBlock( ix, iy, **kwargs ) for ix in range(0,tm.block_dims[0]) for iy in range(0,tm.block_dims[1]) ]
 
+class ThresholdRecord:
+
+    def __init__(self, fdata: xa.DataArray ):
+        self.tmask: np.ndarray = None
+        self.thresholds: Tuple[float,float] = (0.0,1.0)
+        self.fixed: bool = False
+        self.needs_update = [ False, False ]
+        self.fdata: xa.DataArray = fdata
+        self._drange = None
+
+    @property
+    def drange(self):
+        if self._drange is None:
+            self._drange = [ np.nanmin(self.fdata.values), np.nanmax(self.fdata.values) ]
+            self._drange.append( self.drange[1]-self.drange[0] )
+        return self._drange
+
+    def set_thresholds( self, thresholds: Tuple[float,float] ) -> np.ndarray:
+        self.needs_update = [ self.thresholds[i] != thresholds[i] for i in (0,1) ]
+        self.thresholds = thresholds
+        return self.compute_mask()
+
+    def clear(self):
+        self.tmask = None
+        self.thresholds = (0.0, 1.0)
+
+    def is_empty(self):
+        return (self.tmask is None)
+
+    def compute_mask(self) -> np.ndarray:
+        mask = None
+        if self.needs_update[1]:
+            thresh = self.drange[0] + self.drange[2]*self.thresholds[1]
+            mask = ( self.fdata.values > thresh )
+        if self.needs_update[0]:
+            thresh = self.drange[0] + self.drange[2]*self.thresholds[0]
+            lmask = ( self.fdata.values < thresh )
+            mask = (lmask & mask) if (mask is not None) else lmask
+        if mask is not None:
+            self.tmask = mask
+            self.needs_update = [ False, False ]
+        return mask
+
 class Block(DataContainer):
 
     def __init__(self, tile: Tile, ix: int, iy: int, **kwargs ):
         super(Block, self).__init__( data_projected=True, **kwargs )
         self.tile: Tile = tile
         self.init_task = None
+        self._tmask = None
         self.config = kwargs
-        self.tmask = None
+        self._trecs: Tuple[ Dict[int,ThresholdRecord], Dict[int,ThresholdRecord] ] = ( {}, {} )
         self.block_coords = (ix,iy)
         self.validate_parameters()
         self._index_array: xa.DataArray = None
@@ -142,6 +186,40 @@ class Block(DataContainer):
         self._point_data: Optional[xa.DataArray] = None
         self._point_coords: Dict[str,np.ndarray] = None
         lgm().log(f"CREATE Block: ix={ix}, iy={iy}")
+
+    def set_thresholds(self, bUseModel: bool, iFrame: int, thresholds: Tuple[float,float] ) -> bool:
+        trec: ThresholdRecord = self.threshold_record( bUseModel, iFrame )
+        initialized = trec.is_empty()
+        mask = trec.set_thresholds( thresholds )
+        lgm().log(f" MASK[{iFrame}].set_thresholds---> nmasked pixels = {np.count_nonzero(mask)} ")
+        self._tmask = None
+        return initialized
+
+    def threshold_record(self, model_data: bool, iFrame: int ) -> ThresholdRecord:
+        from spectraclass.data.base import dm
+        trecs: Dict[int,ThresholdRecord] = self._trecs[ int(model_data) ]
+        if iFrame in trecs: return trecs[ iFrame ]
+        fdata: xa.DataArray = self.points2raster( dm().getModelData() ) if model_data else self.data
+        return trecs.setdefault( iFrame,  ThresholdRecord( fdata[iFrame] ) )
+
+    def get_mask_list(self, current_frame = -1 ) -> Tuple[ List[str], str ]:
+        mask_list, types, value = [], ["band", "model" ], None
+        for ttype, trecs in zip(types,self._trecs):
+            for iFrame, trec in trecs.items():
+                if trec.tmask is not None:
+                    mask_name = f"{ttype}:{iFrame}"
+                    mask_list.append( mask_name )
+                    if iFrame == current_frame:
+                        value = mask_name
+        return ( mask_list, value )
+
+    def get_mask(self):
+        if self._tmask is None:
+            for trecs in self._trecs:
+                for iFrame, trec in trecs.items():
+                    if trec.tmask is not None:
+                        self._tmask = trec.tmask if (self._tmask is None) else (self._tmask | trec.tmask)
+        return self._tmask
 
     def classmap(self, default_value: int =0 ) -> xa.DataArray:
         return xa.full_like( self.data[0].squeeze(drop=True), default_value, dtype=np.int )
