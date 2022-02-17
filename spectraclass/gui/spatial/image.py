@@ -98,8 +98,10 @@ class TileServiceImage(AxesImage):
 
     def select_block(self, r: Rectangle ):
         from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.gui.control import ufm
         if r != self._selected_block:
             lgm().log(f"\n  ******** Selected block: {r.block_index}  ******** ")
+            ufm().show(f" Loading Tile {r.block_index}")
             if self._selected_block is not None:
                 self._selected_block.set_linewidth(1)
                 self._selected_block.set_color("yellow")
@@ -108,6 +110,7 @@ class TileServiceImage(AxesImage):
             self._selected_block = r
             self.figure.canvas.draw_idle()
             mm().setBlock( r.block_index, update=True )
+            ufm().show(f" ** Tile Loaded ** ")
 
     def on_pick(self, event: PickEvent =None):
         lgm().log( f" Pick Event: type = {type(event)}" )

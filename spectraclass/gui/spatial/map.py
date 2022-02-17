@@ -34,6 +34,9 @@ def mm(**kwargs) -> "MapManager":
 def fs(flist):
     return [f"{fv:.1f}" for fv in flist]
 
+def svalid( data: np.ndarray):
+    return f"#valid: {np.count_nonzero(~np.isnan(data))}/{data.size}"
+
 class MapManager(SCSingletonConfigurable):
     init_band = tl.Int(10).tag(config=True, sync=True)
     upper_threshold = tl.Float(1.0).tag(config=True, sync=True)
@@ -86,11 +89,11 @@ class MapManager(SCSingletonConfigurable):
 
     def update_thresholds( self ):
         self.silent_thresholds = True
-        lgm().log( f"update_thresholds: currentFrame = {self.currentFrame}")
         trec = self.block.threshold_record( self._use_model_data, self.currentFrame )
         self.upper_threshold = trec.thresholds[1]
         self.lower_threshold = trec.thresholds[0]
         self.silent_thresholds = False
+        lgm().log(f"update_thresholds(frame={self.currentFrame}): [{self.lower_threshold},{self.upper_threshold}]")
 
     def use_model_data(self, use: bool ):
         from spectraclass.gui.plot import GraphPlotManager, gpm
@@ -158,6 +161,7 @@ class MapManager(SCSingletonConfigurable):
         self.use_model_data( ttype == "model" )
         self.slider.set_val( int( sframe ) )
         self.update_thresholds()
+        self.active_thresholds.value = None
 
     def clear_threshold(self, *args ):
         trec = self.block.threshold_record( self._use_model_data, self.currentFrame )
@@ -331,8 +335,10 @@ class MapManager(SCSingletonConfigurable):
                     self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=self.layers('bands').visibility, cmap='jet', norm=Normalize(**drange), add_colorbar=False)
                 else:
                     self._spectral_image.set_norm( Normalize(**drange) )
-                    self._spectral_image.set_data( fdata.values )
-#                    self.layers('bands').trigger()
+                    self._spectral_image.set_data(fdata.values)
+                    with self.base.hold_limits():
+                        self._spectral_image.set_extent( self.block.extent )
+                    self.layers('bands').trigger()
                 lgm().log(f"UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
                 self.update_canvas()
 
@@ -378,13 +384,15 @@ class MapManager(SCSingletonConfigurable):
     def frame_data(self) -> Optional[xa.DataArray]:
         if self.currentFrame >= self.nFrames(): return None
         fdata = self.data[self.currentFrame]
-        lgm().log( f" ** frame_data[{self.currentFrame}]: frame data shape = {fdata.shape}")
+        lgm().log( f"\n ******* frame_data[{self.currentFrame}], shape: {fdata.shape}, {svalid(fdata.values)}")
         tmask = self.block.get_mask()
-        if tmask is not None:
+        if tmask is None:
+            lgm().log(f" ---> NO threshold mask")
+        else:
             mdata = fdata.values.flatten()
             mdata[tmask.flatten()] = np.nan
             fdata = fdata.copy( data=mdata.reshape(fdata.shape) )
-            lgm().log(f" ---> mask {np.count_nonzero(tmask)} pixels")
+            lgm().log(f" ---> threshold mask, {svalid(fdata.values)}")
         return fdata
 
     @property

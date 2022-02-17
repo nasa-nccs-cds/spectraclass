@@ -37,11 +37,14 @@ class TileManager(SCSingletonConfigurable):
         super(TileManager, self).__init__()
         self._tiles: Dict[Tuple,Tile] = {}
         self.cacheTileData = True
-        self.block_shape = [ self.block_size ] * 2
         self._block_dims = None
         self._tile_metadata = None
         self._tile_size = None
         self._tile_shape = None
+
+    @property
+    def block_shape(self):
+        return [self.block_size] * 2
 
     @tl.observe('block_index')
     def _block_index_changed(self, change):
