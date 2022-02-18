@@ -140,7 +140,7 @@ class MapManager(SCSingletonConfigurable):
     def get_threshold_panel(self):
         controls, ivals = [], [1.0,0.0]
         for iC, name in enumerate(['upper','lower']):
-            slider = ipw.FloatSlider( ivals[iC], description=name, min=0.0, max=1.0 )
+            slider = ipw.FloatSlider( ivals[iC], description=name, min=0.0, max=1.0, step=0.025 )
             tl.link( (slider, "value"), (self, f'{name}_threshold') )
             controls.append( slider )
         self.active_thresholds = ipw.Select( options=[], description='Thresholds:', disabled=False )
@@ -324,7 +324,7 @@ class MapManager(SCSingletonConfigurable):
             ufm().show( msg, "red" ); lgm().log( "\n" +  msg + "\n"  )
         return dict( vmin= ave - std * self.colorstretch, vmax= ave + std * self.colorstretch  )
 
-    @log_timing
+    @exception_handled
     def update_spectral_image(self):
         from spectraclass.gui.points3js import PointCloudManager, pcm
         if self.base is not None:
@@ -339,31 +339,33 @@ class MapManager(SCSingletonConfigurable):
                 else:
                     self._spectral_image.set_norm( norm )
                     self._spectral_image.set_data(fdata.values)
-                    with self.base.hold_limits():
-                        self._spectral_image.set_extent( self.block.extent )
                     self._spectral_image.set_alpha(alpha)
-                lgm().log(f"UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
+                with self.base.hold_limits():
+                    self._spectral_image.set_extent(self.block.extent)
+                lgm().log(f"\nUPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
                 self.update_canvas()
                 pcm().update_plot(cdata=fdata, norm=norm)
+            else: lgm().log(f"\nUPDATE spectral_image: fdata is None")
+        else: lgm().log(f"\nUPDATE spectral_image: base is None")
 
-    def reset_block(self):
-        self.block = None
+
+    def reset_plot(self):
+        from spectraclass.data.base import DataManager, dm
         self._spectral_image.remove()
         self._spectral_image = None
-        dm().modal.update_extent()
         plot_name = os.path.basename( dm().dsid() )
         self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame + 1}")
         self.plot_axes.title.set_fontsize(8)
+        self.setBlock()
 
-    @log_timing
-    def update_plots(self, **kwargs ):
-        new_image = kwargs.get( 'new_image', None )
-        if new_image is not None:
-            lgm().log(f"\n <------> Loading new image: {os.path.basename(new_image)} <------> \n")
-            self.reset_block()
-            self.update_thresholds()
-            self.update_spectral_image()
-            lgm().log(f" --> AXIS: xlim={fs(self.plot_axes.get_xlim())}, ylim={fs(self.plot_axes.get_ylim())}")
+    @exception_handled
+    def update_plots(self, new_image=False):
+        from spectraclass.data.base import DataManager, dm
+        if new_image:  dm().modal.update_extent()
+        self.reset_plot()
+        self.update_thresholds()
+        self.update_spectral_image()
+        lgm().log(f" update_plots --> AXIS: xlim={fs(self.plot_axes.get_xlim())}, ylim={fs(self.plot_axes.get_ylim())}")
 
     def update_canvas(self):
         self.figure.canvas.draw_idle()
@@ -447,7 +449,6 @@ class MapManager(SCSingletonConfigurable):
             ufm().show(f" ** Tile Loaded ** ")
 
     def gui(self,**kwargs):
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         if self.base is None:
             self.setBlock()
             self.base = TileServiceBasemap()
