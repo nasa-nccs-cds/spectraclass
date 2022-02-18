@@ -118,12 +118,15 @@ class PointCloudManager(SCSingletonConfigurable):
     def init_data(self, **kwargs):
         from spectraclass.reduction.embedding import ReductionManager, rm
         from spectraclass.data.base import DataManager, dm
+        from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
+        flow: ActivationFlow = afm().getActivationFlow()
         project_dataset: Optional[xa.Dataset] = dm().loadCurrentProject("points")
         if project_dataset is not None:
             reduced_data: xa.DataArray = project_dataset.reduction
             reduced_data.attrs['dsid'] = project_dataset.attrs['dsid']
-            lgm().log(f"UMAP init, init data shape = {reduced_data.shape}")
-            embedding = rm().umap_init(reduced_data, **kwargs)
+            graph = flow.getGraph()
+            lgm().log(f"UMAP init, init data shape = {reduced_data.shape}, graph = {type(graph)}")
+            embedding = rm().umap_init(reduced_data, graph=graph, **kwargs)
             self.xyz = self.normalize(embedding)
 
     def normalize(self, point_data: np.ndarray):
@@ -203,7 +206,7 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def gui(self, **kwargs ) -> ipw.DOMWidget:
         if self._gui is None:
-            self.init_data( **kwargs )
+#            self.init_data( **kwargs )
             self._gui = self._get_gui()
         return self._gui
 
