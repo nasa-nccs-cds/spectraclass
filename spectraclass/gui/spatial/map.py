@@ -95,7 +95,7 @@ class MapManager(SCSingletonConfigurable):
         self.silent_thresholds = False
         lgm().log(f"update_thresholds(frame={self.currentFrame}): [{self.lower_threshold},{self.upper_threshold}]")
 
-    def use_model_data(self, use: bool ):
+    def use_model_data(self, use: bool):
         from spectraclass.gui.plot import GraphPlotManager, gpm
         if use != self._use_model_data:
             self._use_model_data = use

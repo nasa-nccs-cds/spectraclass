@@ -90,13 +90,16 @@ class gpActivationFlow(ActivationFlow):
         converged = True
         t0 = time.time()
         source_pid: int = sample_data[0]
+        offsets = self.get_offset_series()
 
         lgm().log( f" ActivationFlow:  ")
         lgm().log(f" --> I.shape = {self.I.shape}")
+        lgm().log(f" --> D.shape = {self.D.shape}")
+        lgm().log(f" --> offsets.shape = {offsets.shape}")
         lgm().log(f" --> I = {self.I.head(10)}")
         lgm().log(f" --> D = {self.D.head(10)}")
+        lgm().log(f" --> offsets = {offsets.head(10)}")
 
-        offsets   = self.get_offset_series()
         distances = cupy.ravel( cupy.fromDlpack( self.D.to_dlpack() ) )
         indices   = cupy.ravel( cupy.fromDlpack( self.I.to_dlpack() ) )
 
