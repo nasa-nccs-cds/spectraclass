@@ -206,7 +206,7 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def gui(self, **kwargs ) -> ipw.DOMWidget:
         if self._gui is None:
-#            self.init_data( **kwargs )
+            self.init_data( **kwargs )
             self._gui = self._get_gui()
         return self._gui
 
