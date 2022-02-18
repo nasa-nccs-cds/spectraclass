@@ -326,51 +326,44 @@ class MapManager(SCSingletonConfigurable):
 
     @log_timing
     def update_spectral_image(self):
+        from spectraclass.gui.points3js import PointCloudManager, pcm
         if self.base is not None:
             fdata: xa.DataArray = self.frame_data
             if fdata is not None:
                 drange = self.get_color_bounds(fdata)
+                alpha = self.layers('bands').visibility
+                norm = Normalize(**drange)
                 if self._spectral_image is None:
                     self.base.set_bounds(self.block.xlim, self.block.ylim)
-                    self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=self.layers('bands').visibility, cmap='jet', norm=Normalize(**drange), add_colorbar=False)
+                    self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=alpha, cmap='jet', norm=norm, add_colorbar=False)
                 else:
-                    self._spectral_image.set_norm( Normalize(**drange) )
+                    self._spectral_image.set_norm( norm )
                     self._spectral_image.set_data(fdata.values)
                     with self.base.hold_limits():
                         self._spectral_image.set_extent( self.block.extent )
-                    self.layers('bands').trigger()
+                    self._spectral_image.set_alpha(alpha)
                 lgm().log(f"UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
                 self.update_canvas()
+                pcm().update_plot(cdata=fdata, norm=norm)
+
+    def reset_block(self):
+        self.block = None
+        self._spectral_image.remove()
+        self._spectral_image = None
+        dm().modal.update_extent()
+        plot_name = os.path.basename( dm().dsid() )
+        self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame + 1}")
+        self.plot_axes.title.set_fontsize(8)
 
     @log_timing
     def update_plots(self, **kwargs ):
-        from spectraclass.gui.points3js import PointCloudManager, pcm
-        from spectraclass.data.spatial.manager import SpatialDataManager
-        from spectraclass.data.base import DataManager, dm
         new_image = kwargs.get( 'new_image', None )
         if new_image is not None:
-            self.block = None
-            self._spectral_image.remove()
-            dm().modal.update_extent()
             lgm().log(f"\n <------> Loading new image: {os.path.basename(new_image)} <------> \n")
-        if self._spectral_image is not None:
-            fdata: xa.DataArray = self.frame_data
-            lgm().log(f"\nMAP: Update_plots: block data shape = {self.data.shape}" )
-            if fdata is not None:
-                drange = self.get_color_bounds(fdata)
-                alpha = self.layers('bands').visibility
-                norm = Normalize(**drange)
-                self._spectral_image.set_data(fdata.values)
-                self._spectral_image.set_norm(norm)
-                self._spectral_image.set_alpha(alpha)
-                plot_name = os.path.basename(dm().dsid())
-                self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
-                self.plot_axes.title.set_fontsize( 8 )
-                self.update_thresholds()
-                self.update_spectral_image()
-                lgm().log(f" --> AXIS: xlim={fs(self.plot_axes.get_xlim())}, ylim={fs(self.plot_axes.get_ylim())}")
-                lgm().log(f" --> DATA: extent={fs(SpatialDataManager.extent(fdata))}")
-                pcm().update_plot(cdata=fdata, norm=norm)
+            self.reset_block()
+            self.update_thresholds()
+            self.update_spectral_image()
+            lgm().log(f" --> AXIS: xlim={fs(self.plot_axes.get_xlim())}, ylim={fs(self.plot_axes.get_ylim())}")
 
     def update_canvas(self):
         self.figure.canvas.draw_idle()
@@ -451,6 +444,7 @@ class MapManager(SCSingletonConfigurable):
             self.y_axis_name = self.data.dims[self.y_axis]
             gpm().refresh()
             if update:  self.update_plots()
+            ufm().show(f" ** Tile Loaded ** ")
 
     def gui(self,**kwargs):
         from spectraclass.data.spatial.tile.manager import TileManager, tm

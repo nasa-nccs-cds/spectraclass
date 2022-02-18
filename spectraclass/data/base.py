@@ -235,7 +235,7 @@ class DataManager(SCSingletonConfigurable):
             project_data = self._mode_data_manager_.loadCurrentProject()
             assert project_data is not None, "Project initialization failed- check log file for details"
             ns = project_data.variables['samples'].size
-            lgm().log(f"Loaded project data[{ns}]:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
+            lgm().log(f"Loaded current project data[{ns}]:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
             if ns == 0: ufm().show( "This tile contains no data","red")
             return project_data
 

@@ -262,6 +262,7 @@ class ModeDataManager(SCSingletonConfigurable):
             dataset: xa.Dataset = xa.open_dataset( dFile )
             dataset.attrs['data_file'] = dFile
         else:
+            ufm().show( f"This file/tile needs to be preprocesed.", "red" )
             raise Exception( f"BLOCK[{tm().getBlock().block_coords}]: Missing data file: {dFile}" )
         return dataset
 

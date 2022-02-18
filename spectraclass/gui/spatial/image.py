@@ -110,7 +110,6 @@ class TileServiceImage(AxesImage):
             self._selected_block = r
             self.figure.canvas.draw_idle()
             mm().setBlock( r.block_index, update=True )
-            ufm().show(f" ** Tile Loaded ** ")
 
     def on_pick(self, event: PickEvent =None):
         lgm().log( f" Pick Event: type = {type(event)}" )
