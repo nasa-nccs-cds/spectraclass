@@ -63,7 +63,7 @@ class ActivationFlowManager(SCSingletonConfigurable):
         result = None
         if point_data is not None:
             dsid = point_data.attrs.get('dsid','global')
-            print( f"Get Activation flow for dsid {dsid}")
+            print( f"Get Activation flow for dsid {dsid}" )
             self.condition.acquire()
             try:
                 result = self.instances.get( dsid, None )
