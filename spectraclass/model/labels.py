@@ -88,10 +88,17 @@ class LabelsManager(SCSingletonConfigurable):
         self._nodata_value = -1
         self._optype = None
         self.template = None
+        self._classification: np.ndarray = None
         self.n_spread_iters = 1
         self.wSelectedClass: ipw.HBox = None
 #        self.get_rgb_colors = np.vectorize(self.get_rgb_color)
         self._buttons = []
+
+    def set_classification( self, classification: np.ndarray ):
+        self._classification = classification
+
+    def clear_classification( self ):
+        self._classification = None
 
     def clear_pids(self, cid: int, pids: np.ndarray, **kwargs):
         pass
@@ -170,18 +177,19 @@ class LabelsManager(SCSingletonConfigurable):
         self.clearTransientMarkers(marker)
         self._markers.append( marker )
 
+    def popMarker(self, mtype: str = None ) -> Optional[Marker]:
+        for iM in range( len(self._markers)-1, -1, -1 ):
+            if (mtype is None) or (self._markers[iM].type == mtype):
+                return self._markers.pop(iM)
+
     @property
     def markers(self):
         return self._markers
 
     def addAction(self, type: str, source: str, **kwargs ):
-        from spectraclass.gui.control import UserFeedbackManager, ufm
-        ufm().clear()
         new_action = Action(type, source, **kwargs)
         lgm().log(f"ADD ACTION: {new_action}")
-        repeat_color = (type == "color") and self.hasActions and (self.topAction.type == "color")
-        if not repeat_color:
-            self._actions.append( new_action )
+        self._actions.append( new_action )
 
     @property
     def hasActions(self) -> bool:
@@ -253,6 +261,10 @@ class LabelsManager(SCSingletonConfigurable):
     def getLabelsArray(self) -> xa.DataArray:
         self.updateLabels()
         return self._labels_data.copy()
+
+    def getClassificationArray(self) -> xa.DataArray:
+        self.updateLabels()
+        class_array = self._labels_data.copy()
 
     @classmethod
     def getSortedLabels(self, labels_dset: xa.Dataset ) -> Tuple[np.ndarray,np.ndarray]:

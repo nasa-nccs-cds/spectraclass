@@ -96,6 +96,7 @@ class SpectraclassController(SCSingletonConfigurable):
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> CLEAR ")
         lm().clearMarkers()
         gpm().clear()
+        lm().clear_classification()
         if self.pcm_active: pcm().clear()
         mm().plot_labels_image()
 
@@ -112,9 +113,19 @@ class SpectraclassController(SCSingletonConfigurable):
     @exception_handled
     def undo_action(self):
         from spectraclass.gui.points3js import PointCloudManager, pcm
+        from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.gui.plot import GraphPlotManager, gpm
-        lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> UNDO ")
+        action: Optional[Action] = lm().popAction()
+        if action is not None:
+            lgm().log(f"  ----> Controller[{self.__class__.__name__}] -> UNDO: {action} ")
+            if action.type == "spread":
+                marker = lm().popMarker( "labels" )
+                lgm().log(f"undo_action-> pop marker: {marker}")
+                mm().plot_labels_image( lm().get_label_map() )
+            if action.type == "classify":
+                lm().clear_classification()
+                mm().plot_labels_image( lm().get_label_map() )
 
     @log_timing
     def classify(self) -> xa.DataArray:
@@ -132,7 +143,8 @@ class SpectraclassController(SCSingletonConfigurable):
         overlay_image: xa.DataArray = block.points2raster( classification )
         mm().plot_labels_image( overlay_image )
        # spm().plot_overlay_image( mm().image_template.copy( data=labels_image ), mm().overlay_alpha )
-        lm().addAction("color", "points")
+        lm().addAction("classify", "application")
+        lm().set_classification( np.argmax( classification.values, axis=1 ) )
         ufm().show("Classification Complete")
         return classification
 
@@ -176,6 +188,7 @@ class SpectraclassController(SCSingletonConfigurable):
                     if new_indices.size > 0:
                         lgm().log(f" @@@ spread_selection: cid={cid}, label={label}, #new_indices={len(new_indices)}" )
                         lm().mark_points( new_indices, cid, "labels" )
+                        lm().addAction( "spread", "application", cid=cid )
             mm().plot_labels_image( lm().get_label_map() )
         lm().log_markers("post-spread")
         ufm().show("Marker generalization complete")
@@ -186,12 +199,13 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.gui.points3js import PointCloudManager, pcm
+        ufm().show("Coloring by Distance")
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> DISTANCE ")
         seed_points: xa.DataArray = lm().getSeedPointMask()
         flow: ActivationFlow = afm().getActivationFlow()
         if flow.spread( seed_points.data, niters, bidirectional=True ) is not None:
             if self.pcm_active: pcm().color_by_value( flow.get_distances(), distance=True )
-            lm().addAction("color", "points")
+            ufm().show("Done Coloring by Distance")
 
     @exception_handled
     def add_marker(self, source: str, marker: Marker):

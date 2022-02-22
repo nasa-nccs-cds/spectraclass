@@ -250,8 +250,8 @@ class MapManager(SCSingletonConfigurable):
         self.model_slider = PageSlider( self.slider_axes(True), self.nFrames(model=True) )
         self.model_slider_cid = self.model_slider.on_changed(self._update)
 
-    def one_hot_to_index(self, class_data: xa.DataArray) -> xa.DataArray:
-        return class_data.argmax( axis=0, skipna=True, keep_attrs=True ).squeeze()
+    def one_hot_to_index(self, class_data: xa.DataArray, axis=0) -> xa.DataArray:
+        return class_data.argmax( axis=axis, skipna=True, keep_attrs=True ).squeeze()
 
     @exception_handled
     def plot_labels_image(self, classification: xa.DataArray = None ):
@@ -275,10 +275,11 @@ class MapManager(SCSingletonConfigurable):
             self.update_canvas()
 
     def layer_managers( self, name: str ) -> List:
+        from spectraclass.gui.points3js import PointCloudManager, pcm
         if name == "basemap":  mgrs = [self.base]
         elif name   == "labels":  mgrs = [ self.labels_image ]
         elif name == "bands":   mgrs = [ self.spectral_image ]
-        elif name == "markers": mgrs = [ self.points_selection, self.region_selection ]
+        elif name == "markers": mgrs = [ self.points_selection, self.region_selection, pcm() ]
         else: raise Exception( f"Unknown Layer: {name}")
         return mgrs
 

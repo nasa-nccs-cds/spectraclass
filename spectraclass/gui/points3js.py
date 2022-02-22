@@ -62,6 +62,9 @@ class PointCloudManager(SCSingletonConfigurable):
         self.voxelizer: Voxelizer = None
         self.initialize_points()
 
+    def set_alpha(self, opacity: float ):
+        self.scene_controls[ 'marker.material.opacity' ] = opacity
+
     def clear_transients(self):
         for pid in self.transient_markers:
             self.marker_pids.pop(pid)
@@ -222,7 +225,7 @@ class PointCloudManager(SCSingletonConfigurable):
             self.xyz = self.normalize(kwargs['points'])
         if self._gui is not None:
             lgm().log( " *** update point cloud data *** " )
-            self.points.geometry = self.getGeometry()
+            self.points.geometry = self.getGeometry( **kwargs )
             if self.marker_points is not None:
                 self.marker_points.geometry = self.getMarkerGeometry()
 
@@ -230,41 +233,22 @@ class PointCloudManager(SCSingletonConfigurable):
         self.update_plot()
 
     def color_by_value(self, values: np.ndarray = None, **kwargs):
-        is_distance = kwargs.get('distance', False)
+        #        is_distance = kwargs.get('distance', False)
         if values is not None:
-            lgm().log(f" $$$color_by_value[distance:{is_distance}]: data shape = {values.shape} ")
+            lgm().log(f" $$$color_by_value: data shape = {values.shape} ")
             self._color_values = ma.masked_invalid(values)
         if self._color_values is not None:
             colors = self._color_values.filled(-1)
-            (vmin, vmax), npb = ((0.0,
-                                  self._color_values.max()) if is_distance else self.get_color_bounds()), self._n_point_bins
+            #            (vmin, vmax) = ((0.0, self._color_values.max()) if is_distance else self.get_color_bounds())
+            (vmin, vmax, vave, vstd) = self.get_color_bounds()
             lgm().log(
-                f" $$$color_by_value(shape:{colors.shape}) (vmin, vmax, npb) = {(vmin, vmax, npb)}, points (max, min, shape) = {(self._points.max(), self._points.min(), self._points.shape)}")
-            pts: np.ndarray = ma.masked_invalid(self._points).filled(-1)
-            lspace: np.ndarray = np.linspace(vmin, vmax, npb + 1)
-            for iC in range(0, npb):
-                if iC == 0:
-                    mask = colors <= lspace[iC + 1]
-                elif (iC == npb - 1):
-                    mask = (colors > lspace[iC]) & (colors < sys.float_info.max)
-                else:
-                    mask = (colors > lspace[iC]) & (colors <= lspace[iC + 1])
-#                self._binned_points[iC] = pts[mask]
-            #                lgm().log(f" $$$COLOR: BIN-{iC}, [ {lspace[iC]} -> {lspace[iC+1]} ], nvals = {self._binned_points[iC].shape[0]}, #mask-points = {np.count_nonzero(mask)}" )
-            self.set_base_points_alpha(self.reduced_opacity)
-            self.update_plot(**kwargs)
+                f" $$$color_by_value(shape:{colors.shape}) (vmin, vmax) = {(vmin, vmax)}  (vave, vstd) = {(vave, vstd)}")
+            self.update_plot(norm=Normalize(vmin, vmax), cdata=colors, **kwargs)
 
     def get_color_bounds(self):
         from spectraclass.data.spatial.manager import SpatialDataManager
         (ave, std) = (self._color_values.mean(), self._color_values.std())
-        return (ave - std * SpatialDataManager.colorstretch, ave + std * SpatialDataManager.colorstretch)
-
-    def set_base_points_alpha( self, alpha: float ):
-        alphas = list( self._gui.point_set_opacities )
-        alphas[0] = alpha
-        self._gui.point_set_opacities = alphas
-        lgm().log(f"Set point set opacities: {self._gui.point_set_opacities}")
-        self.update_plot( alphas = alphas )
+        return (ave - std * SpatialDataManager.colorstretch, ave + std * SpatialDataManager.colorstretch, ave, std)
 
     def refresh(self):
         self.init_data()

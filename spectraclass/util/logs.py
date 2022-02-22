@@ -1,12 +1,10 @@
 import numpy as np
 from typing import List, Optional, Dict, Type
-import os
+import os, datetime
 from enum import Enum
 from functools import wraps
 from time import time
-from inspect import isclass
-from pkgutil import iter_modules
-from pathlib import Path
+from datetime import datetime
 from spectraclass.model.base import SCSingletonConfigurable
 import threading, time, logging, sys, traceback
 
@@ -59,9 +57,13 @@ class LogManager(SCSingletonConfigurable):
         self._log_file = open( log_file, 'w' )
         print( f"Opening log file:  '{log_file}'" )
 
+    @property
+    def ctime(self):
+        return datetime.now().strftime("%H:%M:%S")
+
     def log( self,  msg, **kwargs ):
         if kwargs.get( 'print', False ): print( msg, flush=True )
-        self._log_file.write( msg + "\n" )
+        self._log_file.write( f"[{self.ctime}] {msg}\n" )
         self._log_file.flush()
 
     def fatal(self, msg: str, status: int = 1 ):
