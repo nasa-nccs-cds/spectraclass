@@ -57,9 +57,9 @@ class ActivationFlowManager(SCSingletonConfigurable):
         self.instances = {}
 
     def getActivationFlow( self, reset = False ) -> Optional["ActivationFlow"]:
-        from spectraclass.data.base import DataManager
+        from spectraclass.data.base import DataManager, dm
         if reset: self.reset()
-        point_data: xa.DataArray = DataManager.instance().getModelData()
+        point_data: xa.DataArray = dm().getModelData()
         result = None
         if point_data is not None:
             dsid = point_data.attrs.get('dsid','global')

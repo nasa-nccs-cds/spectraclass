@@ -24,6 +24,7 @@ class ModeDataManager(SCSingletonConfigurable):
     application: SpectraclassController = None
 
     image_names = tl.List( default_value=["NONE"] ).tag(config=True ,sync=True)
+    dset_name = tl.Unicode("").tag(config=True)
     cache_dir = tl.Unicode(os.path.expanduser("~/Development/Cache")).tag(config=True)
     data_dir = tl.Unicode(os.path.expanduser("~/Development/Data")).tag(config=True)
     class_file = tl.Unicode("NONE").tag(config=True, sync=True)
@@ -213,6 +214,10 @@ class ModeDataManager(SCSingletonConfigurable):
     def getInputFileData( self, vname: str = None, **kwargs ) -> np.ndarray:
         raise NotImplementedError()
 
+    def getSpectralDataKey(self, keys: List ):
+        for sdkey in [ 'norm', 'embedding', 'spectra' ]:
+            if sdkey in keys: return sdkey
+
     @exception_handled
     def loadDataset(self, **kwargs) -> Optional[xa.Dataset]:
         if self.dsid() not in self.datasets:
@@ -222,15 +227,18 @@ class ModeDataManager(SCSingletonConfigurable):
                 lgm().log(f"Warning: Attempt to Load empty dataset {self.dataFile( **kwargs )}", print=True)
                 return None
             else:
+                sdkey = self.getSpectralDataKey( list(dataset.keys()) )
+                raw_data: xa.DataArray = dataset[ sdkey ]
                 vnames = dataset.variables.keys()
                 vshapes = [ f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
                 lgm().log(f" ---> Opened Dataset {self.dsid()} from file {dataset.attrs['data_file']}\n\t -> variables: {' '.join(vshapes)}")
                 lgm().log( f" -----> reduction: shape = {dataset['reduction'].shape}, #NULL={np.count_nonzero(np.isnan(dataset['reduction'].values))}")
-                lgm().log( f" -----> point_data: shape = {dataset['norm'].shape}, #NULL={np.count_nonzero(np.isnan(dataset['norm'].values))}")
+                lgm().log( f" -----> point_data: shape = {raw_data.shape}, #NULL={np.count_nonzero(np.isnan(raw_data.values))}")
                 if 'plot-x' not in vnames:
-                    raw_data: xa.DataArray = dataset['norm']      # point data ( shape = [ nsamples, nbands ] )
+                    raw_data: xa.DataArray = raw_data      # point data ( shape = [ nsamples, nbands ] )
                     model_data: xa.DataArray = dataset['reduction']
                     dataset['plot-y'] = raw_data
+                    dataset['spectra'] = raw_data
                     dataset['plot-x'] = np.arange(0,raw_data.shape[1])
                     dataset['plot-mx'] = np.arange(0, model_data.shape[1])
                 dataset.attrs['dsid'] = self.dsid()
@@ -247,9 +255,7 @@ class ModeDataManager(SCSingletonConfigurable):
         return f"files/spectraclass/datasets/{self.MODE}/{dm().name}/{self.dsid(**kwargs)}.tif"
 
     def dataFile( self, **kwargs ):
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        block = kwargs.get('block', tm().getBlock( **kwargs ) )
-        return os.path.join( self.datasetDir, block.file_name + f"-m{self.model_dims}.nc" )
+        raise NotImplementedError( "Attempt to call virtual method")
 
     def hasBlockData(self) -> bool:
         return os.path.isfile( self.dataFile() )

@@ -60,7 +60,6 @@ class PointCloudManager(SCSingletonConfigurable):
         self.opacity_control = None
         self.transient_markers = []
         self.voxelizer: Voxelizer = None
-        self.initialize_points()
 
     def set_alpha(self, opacity: float ):
         self.scene_controls[ 'marker.material.opacity' ] = opacity
@@ -98,6 +97,7 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @property
     def xyz(self)-> np.ndarray:
+        if self._xyz is None: self.init_data()
         return self._xyz
 
     @xyz.setter
@@ -120,17 +120,14 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def init_data(self, **kwargs):
         from spectraclass.reduction.embedding import ReductionManager, rm
-        from spectraclass.data.base import DataManager, dm
+        from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
         flow: ActivationFlow = afm().getActivationFlow()
-        project_dataset: Optional[xa.Dataset] = dm().loadCurrentProject("points")
-        if project_dataset is not None:
-            reduced_data: xa.DataArray = project_dataset.reduction
-            reduced_data.attrs['dsid'] = project_dataset.attrs['dsid']
-            graph = flow.getGraph()
-            lgm().log(f"UMAP init, init data shape = {reduced_data.shape}, graph = {type(graph)}")
-            embedding = rm().umap_init(reduced_data, graph=graph, **kwargs)
-            self.xyz = self.normalize(embedding)
+        if flow is None: return False
+        graph = flow.getGraph()
+        embedding = rm().umap_init( mm().model_data, graph=graph, **kwargs )
+        self.xyz = self.normalize(embedding)
+        return True
 
     def normalize(self, point_data: np.ndarray):
         return (point_data - point_data.mean()) * (self.scale / point_data.std())
@@ -161,7 +158,7 @@ class PointCloudManager(SCSingletonConfigurable):
         markers = dict( sorted( self.marker_pids.items() ) )
         colors = lm().get_rgb_colors( list(markers.values()) )
         idxs = list(markers.keys())
-        positions = self._xyz[ np.array( idxs ) ] if len(idxs) else np.empty( shape=[0,3], dtype=np.int )
+        positions = self.xyz[ np.array( idxs ) ] if len(idxs) else np.empty( shape=[0,3], dtype=np.int )
         lgm().log(f"\n *** getMarkerGeometry: positions shape = {positions.shape}, color shape = {colors.shape}")
         lgm().log(f" ----> positions[0:10] = {positions[0:10]}, colors[0:10] = {colors[0:10]}")
         attrs = dict( position = p3js.BufferAttribute( positions, normalized=False ),  color =    p3js.BufferAttribute( colors ) )
@@ -222,7 +219,7 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def update_plot(self, **kwargs):
         if 'points' in kwargs:
-            self.xyz = self.normalize(kwargs['points'])
+            self.xyz = self.normalize( kwargs['points'] )
         if self._gui is not None:
             lgm().log( " *** update point cloud data *** " )
             self.points.geometry = self.getGeometry( **kwargs )
@@ -250,8 +247,11 @@ class PointCloudManager(SCSingletonConfigurable):
         (ave, std) = (self._color_values.mean(), self._color_values.std())
         return (ave - std * SpatialDataManager.colorstretch, ave + std * SpatialDataManager.colorstretch, ave, std)
 
+    def reset(self):
+        self._xyz = None
+
     def refresh(self):
-        self.init_data()
-        self.update_plot()
+        if self.init_data():
+            self.update_plot()
 
 

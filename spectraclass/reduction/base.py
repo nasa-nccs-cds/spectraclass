@@ -268,9 +268,19 @@ class UMAP(BaseEstimator):
         self.a = a
         self.b = b
 
-        self.input_data: np.ndarray = None
+        self._input_data: np.ndarray = None
         self.scoord: xa.DataArray = None
 
+    @property
+    def input_data(self) -> np.ndarray:
+        from spectraclass.gui.spatial.map import MapManager, mm
+#        from spectraclass.data.spatial.tile.manager import TileManager, tm
+#        result, mask = mm().block.raster2points( mm().threshold_mask )
+        return self._input_data
+
+    @input_data.setter
+    def input_data(self, value):
+        self._input_data = value
 
     def getNNGraph( self ):
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm

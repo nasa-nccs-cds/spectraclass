@@ -300,6 +300,11 @@ class SpatialDataManager(ModeDataManager):
                 tm().saveMetadata( block_nsamples )
         return block_nsamples
 
+    def dataFile( self, **kwargs ):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        block = kwargs.get('block', tm().getBlock( **kwargs ) )
+        return os.path.join( self.datasetDir, block.file_name + f"-m{self.model_dims}.nc" )
+
     def getFilePath(self) -> str:
         base_dir = dm().modal.data_dir
         base_file = dm().modal.image_name

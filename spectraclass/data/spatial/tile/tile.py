@@ -128,12 +128,16 @@ class Tile(DataContainer):
 class ThresholdRecord:
 
     def __init__(self, fdata: xa.DataArray ):
-        self.tmask: np.ndarray = None
+        self._tmask: xa.DataArray = None
         self.thresholds: Tuple[float,float] = (0.0,1.0)
         self.fixed: bool = False
         self.needs_update = [ False, False ]
         self.fdata: xa.DataArray = fdata
         self._drange = None
+
+    @property
+    def tmask(self) -> Optional[xa.DataArray]:
+        return self._tmask
 
     @property
     def drange(self):
@@ -148,11 +152,11 @@ class ThresholdRecord:
         return self.compute_mask()
 
     def clear(self):
-        self.tmask = None
+        self._tmask = None
         self.thresholds = (0.0, 1.0)
 
     def is_empty(self):
-        return (self.tmask is None)
+        return (self._tmask is None)
 
     def compute_mask(self) -> np.ndarray:
         mask = None
@@ -164,7 +168,7 @@ class ThresholdRecord:
             lmask = ( self.fdata.values < thresh )
             mask = (lmask & mask) if (mask is not None) else lmask
         if mask is not None:
-            self.tmask = mask
+            self._tmask = self.fdata.copy( data=mask )
             self.needs_update = [ False, False ]
         return mask
 
@@ -174,7 +178,7 @@ class Block(DataContainer):
         super(Block, self).__init__( data_projected=True, **kwargs )
         self.tile: Tile = tile
         self.init_task = None
-        self._tmask = None
+        self._tmask: xa.DataArray = None
         self.config = kwargs
         self._trecs: Tuple[ Dict[int,ThresholdRecord], Dict[int,ThresholdRecord] ] = ( {}, {} )
         self.block_coords = (ix,iy)
@@ -213,13 +217,17 @@ class Block(DataContainer):
                         value = mask_name
         return ( mask_list, value )
 
-    def get_mask(self):
+    def get_mask(self) -> xa.DataArray:
         if self._tmask is None:
             for trecs in self._trecs:
                 for iFrame, trec in trecs.items():
                     if trec.tmask is not None:
                         self._tmask = trec.tmask if (self._tmask is None) else (self._tmask | trec.tmask)
         return self._tmask
+
+    def get_points_mask(self) -> xa.DataArray:
+        (ptmask, rmask) = self.raster2points( self.get_mask() )
+        return ptmask
 
     def classmap(self, default_value: int =0 ) -> xa.DataArray:
         return xa.full_like( self.data[0].squeeze(drop=True), default_value, dtype=np.int )
@@ -309,8 +317,8 @@ class Block(DataContainer):
 
     def getPointData( self ) -> Tuple[xa.DataArray,Dict]:
         if self._point_data is None:
-            result, mask =  self.raster2points( self.data )
-            self._point_coords: Dict[str,np.ndarray] = dict( y=self.data.y.values, x=self.data.x.values, mask=mask )
+            result, pmask =  self.raster2points( self.data )
+            self._point_coords: Dict[str,np.ndarray] = dict( y=self.data.y.values, x=self.data.x.values, mask=pmask )
             self._point_data = result.assign_coords( samples = np.arange( 0, result.shape[0] ) )
             self._samples_axis = self._point_data.coords['samples']
             self._point_data.attrs['type'] = 'block'
@@ -394,19 +402,20 @@ class Block(DataContainer):
         lgm().log( f"Generated Raster data, shape={raster_data.shape}, dims={dims}, with mask shape={self.mask.shape}" )
         return xa.DataArray( raster_data, coords, dims, points_data.name, points_data.attrs )
 
-    @classmethod
-    def raster2points( cls, base_raster: xa.DataArray ) -> Tuple[xa.DataArray,np.ndarray]:   #  base_raster dims: [ band, y, x ]
+    def raster2points( self, base_raster: xa.DataArray ) -> Tuple[ Optional[xa.DataArray], Optional[np.ndarray] ]:   #  base_raster dims: [ band, y, x ]
         t0 = time.time()
+        if base_raster is None: return (None, None)
         point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
         if '_FillValue' in point_data.attrs:
             nodata = point_data.attrs['_FillValue']
             point_data = point_data if np.isnan( nodata ) else point_data.where( point_data != nodata, np.nan )
-        mask: np.ndarray = ~np.isnan(point_data.values).any(axis=1)
-        filtered_point_data: xa.DataArray = point_data[ mask, : ]
+        pmask: np.ndarray = ~np.isnan(point_data.values) if (self._point_coords is None) else self.mask
+        if pmask.ndim == 2: pmask = pmask.any(axis=1)
+        filtered_point_data: xa.DataArray = point_data[ pmask, : ] if ( point_data.ndim == 2 ) else point_data[ pmask ]
         filtered_point_data.attrs['dsid'] = base_raster.name
         lgm().log( f"raster2points -> [{base_raster.name}]: filtered_point_data shape = {filtered_point_data.shape}" )
-        lgm().log( f" --> mask shape = {mask.shape}, mask #valid = {np.count_nonzero(mask)}/{mask.size}, completed in {time.time()-t0} sec" )
-        return filtered_point_data, mask
+        lgm().log( f" --> mask shape = {pmask.shape}, mask #valid = {np.count_nonzero(pmask)}/{pmask.size}, completed in {time.time()-t0} sec" )
+        return filtered_point_data, pmask
 
     def coords2pindex( self, cy, cx ) -> int:
         try:

@@ -13,29 +13,31 @@ class UnstructuredDataManager(ModeDataManager):
 
     def __init__(self):
         super(UnstructuredDataManager, self).__init__()
-        self._dsid = self.INPUTS['embedding']
         self._cached_data = {}
+
+    def dataFile( self, **kwargs ):
+        return os.path.join(self.datasetDir, self.dsid() + ".nc")
 
     @exception_handled
     def prepare_inputs(self, **kwargs ) -> Dict[Tuple,int]:
         self.update_gui_parameters()
         self.set_progress(0.02)
-        output_file = os.path.join(self.datasetDir, self.dsid() + ".nc")
+        output_file = self.dataFile( **kwargs )
         assert (self.INPUTS is not None), f"INPUTS undefined for mode {self.mode}"
 
-        np_embedding: np.ndarray = self.getInputFileData( )
-        if np_embedding is not None:
-            dims = np_embedding.shape
+        np_spectra: np.ndarray = self.getInputFileData( )
+        if np_spectra is not None:
+            dims = np_spectra.shape
             mdata_vars = list(self.INPUTS['directory'])
             xcoords = OrderedDict(samples=np.arange(dims[0]), bands=np.arange(dims[1]))
             xdims = OrderedDict({dims[0]: 'samples', dims[1]: 'bands'})
-            data_vars = dict( embedding=xa.DataArray(np_embedding, dims=xcoords.keys(), coords=xcoords, name=self.INPUTS['embedding']) )
+            data_vars = dict( spectra=xa.DataArray(np_spectra, dims=xcoords.keys(), coords=xcoords, name=self.INPUTS['spectra']) )
             data_vars.update({vid: self.getXarray(vid, xcoords, self.subsample, xdims) for vid in mdata_vars})
             pspec = self.INPUTS['plot']
             data_vars.update(  {f'plot-{vid}': self.getXarray(pspec[vid], xcoords, self.subsample, xdims, norm=pspec.get('norm','spectral')) for vid in ['x', 'y'] } )
             self.set_progress(0.1)
             if self.reduce_method and (self.reduce_method.lower() != "none"):
-                input_data = data_vars['embedding']
+                input_data = data_vars['spectra']
                 ( reduced_spectra, reproduced_spectra, usable_input_data ) = rm().reduce(input_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity)[0]
                 coords = dict(samples=xcoords['samples'], model=np.arange(self.model_dims))
                 data_vars['reduction'] = xa.DataArray(reduced_spectra, dims=['samples', 'model'], coords=coords)
@@ -53,12 +55,11 @@ class UnstructuredDataManager(ModeDataManager):
         else:
             print( "DATA PRE-PROCESSING FAILED!  See log file for more info.")
 
-
     @exception_handled
     def getInputFileData( self, vname: str = None, **kwargs ) -> np.ndarray:
-        if vname is None: vname = self.INPUTS['embedding']
+        if vname is None: vname = f"{self.INPUTS['spectra']}"
         if 'subsample' in kwargs: self.subsample = kwargs.get('subsample')
-        input_file_path = os.path.expanduser( os.path.join(self.data_dir, self.mode, f"{vname}.pkl"))
+        input_file_path = os.path.expanduser( os.path.join(self.data_dir, self.mode, f"{self.dset_name}{vname}.pkl"))
         if os.path.isfile(input_file_path):
             input_data = self._cached_data.get( input_file_path, None )
             if input_data is None:
@@ -77,5 +78,5 @@ class UnstructuredDataManager(ModeDataManager):
             lgm().log( f"Error, the input path '{input_file_path}' is not a file.", print=True )
 
     def dsid(self, **kwargs) -> str:
-        return self._dsid
+        return f"{self.dset_name}{self.INPUTS['spectra']}"
 
