@@ -13,6 +13,7 @@ except ImportError:
 import numpy as np
 import scipy.sparse
 import scipy.sparse.csgraph
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import spectraclass.ext.umap.distances as dist
 import spectraclass.ext.umap.sparse as sparse
 import numba
@@ -466,10 +467,9 @@ def fuzzy_simplicial_set(
         knn_dists, float(n_neighbors), local_connectivity=float(local_connectivity),
     )
 
-    rows, cols, vals = compute_membership_strengths(
-        knn_indices, knn_dists, sigmas, rhos
-    )
+    rows, cols, vals = compute_membership_strengths( knn_indices, knn_dists, sigmas, rhos )
 
+    lgm().log( f"  EMBED: (vshape, (rmax, cmax)) = ({vals.shape}, ({rows.max()}, {cols.max()})), X shape = ({X.shape[0]}, {X.shape[0]})")
     result = scipy.sparse.coo_matrix(
         (vals, (rows, cols)), shape=(X.shape[0], X.shape[0])
     )

@@ -160,7 +160,7 @@ class ReductionManager(SCSingletonConfigurable):
         self._state = self.NEW_DATA
         self._dsid = point_data.attrs['dsid']
         LabelsManager.instance()._init_labels_data(point_data)
-        mapper: UMAP = self.getUMapper(self._dsid, self.ndim)
+        mapper: UMAP = self.getUMapper( self._dsid, self.ndim, True )
         mapper.scoord = point_data.coords['samples']
         mapper.input_data = point_data.values
         if point_data.shape[1] <= self.ndim:
@@ -173,6 +173,7 @@ class ReductionManager(SCSingletonConfigurable):
             mapper.init = self.init
             kwargs['nepochs'] = 1
             labels_data: np.ndarray = LabelsManager.instance().getLabelsArray().values
+            lgm().log(f"INIT UMAP embedding with input data shape = {mapper.input_data.shape}, labels_data shape = {labels_data.shape}, parms: {kwargs}")
             mapper.embed( mapper.input_data, labels_data, **kwargs )
         return mapper.embedding
 
@@ -198,11 +199,11 @@ class ReductionManager(SCSingletonConfigurable):
         ax_model = np.arange( embedding.shape[1] )
         return xa.DataArray( embedding, dims=['samples','model'], coords=dict( samples=ax_samples, model=ax_model ) )
 
-    def getUMapper(self, dsid: str, ndim: int ):
+    def getUMapper(self, dsid: str, ndim: int, refresh=False ):
         mid = f"{ndim}-{dsid}"
         nneighbors = ActivationFlowManager.instance().nneighbors
         mapper = self._mapper.get( mid )
-        if ( mapper is None ):
+        if refresh or ( mapper is None ):
             from .base import UMAP
             kwargs = dict( n_neighbors=nneighbors, init=self.init, target_weight=self.target_weight, n_components=ndim, **self.conf )
             mapper = UMAP.instance( **kwargs )

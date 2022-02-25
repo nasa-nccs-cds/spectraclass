@@ -124,8 +124,8 @@ class PointCloudManager(SCSingletonConfigurable):
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
         flow: ActivationFlow = afm().getActivationFlow()
         if flow is None: return False
-        graph = flow.getGraph()
-        embedding = rm().umap_init( mm().model_data, graph=graph, **kwargs )
+        graph = flow.getGraph( mm().model_data )
+        embedding = rm().umap_init( mm().model_data, nngraph=graph, **kwargs )
         self.xyz = self.normalize(embedding)
         return True
 
@@ -148,7 +148,7 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def getGeometry( self, **kwargs ):
         colors = self.getColors( **kwargs )
-        lgm().log(f"\n *** getGeometry: xyz shape = {self.xyz.shape}, color shape = {colors.shape}")
+        lgm().log(f" *** getGeometry: xyz shape = {self.xyz.shape}, color shape = {colors.shape}")
         attrs = dict( position = p3js.BufferAttribute( self.xyz, normalized=False ),
                       color =    p3js.BufferAttribute( list(map(tuple, colors))) )
         return p3js.BufferGeometry( attributes=attrs )

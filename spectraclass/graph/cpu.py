@@ -86,7 +86,10 @@ class cpActivationFlow(ActivationFlow):
         else:
             lgm().log("No data available for this block")
 
-    def getGraph(self):
+    def getGraph(self, nodes = None ):
+        if nodes is not None:
+            self.setNodeData( nodes )
+            self._knn_graph = None
         if self._knn_graph is None:
             n_trees =  5 + int(round((self.nodes.shape[0]) ** 0.5 / 20.0))
             n_iters =  max(5, 2 * int(round(np.log2(self.nodes.shape[0]))))

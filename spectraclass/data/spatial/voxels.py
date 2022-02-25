@@ -16,7 +16,7 @@ class Voxelizer:
         self.compute_bounds( points )
         self.compute_voxel_indices( points )
         self.vrange = ( self.vids.min(), self.vids.max() )
-        lgm().log( f"\ncompute vindices[{self.vids.shape}]--> bounds: {[self.vids.min(), self.vids.max()]}")
+        lgm().log( f" ** compute vindices[{self.vids.shape}]--> bounds: {[self.vids.min(), self.vids.max()]}")
 
     def compute_bounds(self, points: np.ndarray ):
         bnds = []

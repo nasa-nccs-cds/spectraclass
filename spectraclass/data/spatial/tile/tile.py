@@ -222,7 +222,10 @@ class Block(DataContainer):
             for trecs in self._trecs:
                 for iFrame, trec in trecs.items():
                     if trec.tmask is not None:
+                        lgm().log( f"    T>> Merging Frame-{iFrame} Threshold Mask, shape = {trec.tmask.shape}, #masked = {np.count_nonzero(trec.tmask.values)}")
                         self._tmask = trec.tmask if (self._tmask is None) else (self._tmask | trec.tmask)
+        if self._tmask is not None:
+            lgm().log( f" TTTTTTT>> Get Threshold Mask, shape = {self._tmask.shape}, #masked = {np.count_nonzero(self._tmask.values)}")
         return self._tmask
 
     def get_points_mask(self) -> xa.DataArray:

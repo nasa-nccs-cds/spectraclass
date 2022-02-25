@@ -61,10 +61,13 @@ class gpActivationFlow(ActivationFlow):
             else:
                 lgm().log( "No data available for this block")
 
-    def getGraph(self) -> csr_matrix:
-        return self.getConnectionMatrix()
+    def getGraph(self, nodes=None) -> csr_matrix:
+        return self.getConnectionMatrix(nodes)
 
-    def getConnectionMatrix(self) -> csr_matrix:
+    def getConnectionMatrix(self, nodes=None) -> csr_matrix:
+        if nodes is not None:
+            self.setNodeData( nodes )
+            self._knn_graph = None
         if self._knn_graph is None:
             distances = cupy.ravel(cupy.fromDlpack( self.D.to_dlpack()) )
             indices = cupy.ravel(cupy.fromDlpack( self.I.to_dlpack()) )

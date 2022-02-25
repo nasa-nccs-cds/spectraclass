@@ -82,9 +82,11 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def  on_threshold_change( self,  *args  ):
+        from spectraclass.gui.points3js import PointCloudManager, pcm
         if not self.silent_thresholds:
             initialized = self.block.set_thresholds( self._use_model_data, self.currentFrame, (self.lower_threshold, self.upper_threshold) )
             if initialized: self.update_threshold_list()
+            pcm().reset()
             self.update_spectral_image()
 
     def update_thresholds( self ):
@@ -348,11 +350,11 @@ class MapManager(SCSingletonConfigurable):
                     self._spectral_image.set_alpha(alpha)
                 with self.base.hold_limits():
                     self._spectral_image.set_extent(self.block.extent)
-                lgm().log(f"\nUPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
+                lgm().log(f"UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
                 self.update_canvas()
                 pcm().update_plot(cdata=fdata, norm=norm)
-            else: lgm().log(f"\nUPDATE spectral_image: fdata is None")
-        else: lgm().log(f"\nUPDATE spectral_image: base is None")
+            else: lgm().log(f"UPDATE spectral_image: fdata is None")
+        else: lgm().log(f"UPDATE spectral_image: base is None")
 
 
     def reset_plot(self):
@@ -388,14 +390,14 @@ class MapManager(SCSingletonConfigurable):
         tmask: xa.DataArray = self.block.get_points_mask()
         lgm().log(f" *** MAP: model_data[{model_data.dims}], shape= {model_data.shape}")
         if tmask is None: return model_data
-        lgm().log(f" ---> mask[{tmask.dims}], shape= {tmask.shape}, ")
-        return model_data[ tmask.values ]
+        lgm().log(f" ---> mask[{tmask.dims}], shape={tmask.shape}, nmasked={np.count_nonzero(tmask.values)}")
+        return model_data[ ~tmask.values ]
 
     @property
     def frame_data(self) -> Optional[xa.DataArray]:
         if self.currentFrame >= self.nFrames(): return None
         fdata = self.data[self.currentFrame]
-        lgm().log( f"\n ******* frame_data[{self.currentFrame}], shape: {fdata.shape}, {svalid(fdata.values)}")
+        lgm().log( f" ******* frame_data[{self.currentFrame}], shape: {fdata.shape}, {svalid(fdata.values)}")
         tmask: xa.DataArray = self.block.get_mask()
         if tmask is None:
             lgm().log(f" ---> NO threshold mask")

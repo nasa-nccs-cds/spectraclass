@@ -25,7 +25,7 @@ class ActivationFlow():
     def spread( self, sample_data: np.ndarray, nIter: int = 1, **kwargs ) -> Optional[bool]:
         raise NotImplementedError()
 
-    def getGraph(self):
+    def getGraph(self, nodes=None):
         raise NotImplementedError()
 
     def getEdgeIndex(self) -> Tuple[np.ndarray,np.ndarray]:
