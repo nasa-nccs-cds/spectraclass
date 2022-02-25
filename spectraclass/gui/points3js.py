@@ -122,12 +122,14 @@ class PointCloudManager(SCSingletonConfigurable):
         from spectraclass.reduction.embedding import ReductionManager, rm
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
-        flow: ActivationFlow = afm().getActivationFlow()
-        if flow is None: return False
-        graph = flow.getGraph( mm().model_data )
-        embedding = rm().umap_init( mm().model_data, nngraph=graph, **kwargs )
-        self.xyz = self.normalize(embedding)
-        return True
+        model_data = mm().model_data
+        if (model_data is not None) and (model_data.shape[0] > 1):
+            flow: ActivationFlow = afm().getActivationFlow()
+            if flow is None: return False
+            graph = flow.getGraph( model_data )
+            embedding = rm().umap_init( model_data, nngraph=graph, **kwargs )
+            self.xyz = self.normalize(embedding)
+            return True
 
     def normalize(self, point_data: np.ndarray):
         return (point_data - point_data.mean()) * (self.scale / point_data.std())
@@ -146,12 +148,14 @@ class PointCloudManager(SCSingletonConfigurable):
             colors[ self.pick_point ] = [255.0,255.0,255.0]
         return colors.astype(np.uint8)
 
-    def getGeometry( self, **kwargs ):
-        colors = self.getColors( **kwargs )
-        lgm().log(f" *** getGeometry: xyz shape = {self.xyz.shape}, color shape = {colors.shape}")
-        attrs = dict( position = p3js.BufferAttribute( self.xyz, normalized=False ),
-                      color =    p3js.BufferAttribute( list(map(tuple, colors))) )
-        return p3js.BufferGeometry( attributes=attrs )
+    def getGeometry( self, **kwargs ) -> Optional[p3js.BufferGeometry]:
+        geometry_data = self.xyz
+        if geometry_data is not None:
+            colors = self.getColors(**kwargs)
+            lgm().log(f" *** getGeometry: xyz shape = {geometry_data.shape}, color shape = {colors.shape}")
+            attrs = dict( position = p3js.BufferAttribute( geometry_data, normalized=False ),
+                          color =    p3js.BufferAttribute( list(map(tuple, colors))) )
+            return p3js.BufferGeometry( attributes=attrs )
 
     @exception_handled
     def getMarkerGeometry( self ) -> p3js.BufferGeometry:
@@ -222,9 +226,11 @@ class PointCloudManager(SCSingletonConfigurable):
             self.xyz = self.normalize( kwargs['points'] )
         if self._gui is not None:
             lgm().log( " *** update point cloud data *** " )
-            self.points.geometry = self.getGeometry( **kwargs )
-            if self.marker_points is not None:
-                self.marker_points.geometry = self.getMarkerGeometry()
+            geometry =  self.getGeometry( **kwargs )
+            if geometry is not None:
+                self.points.geometry = geometry
+                if self.marker_points is not None:
+                    self.marker_points.geometry = self.getMarkerGeometry()
 
     def clear(self):
         self.update_plot()

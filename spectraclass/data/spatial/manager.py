@@ -137,15 +137,6 @@ class SpatialDataManager(ModeDataManager):
         from spectraclass.features.texture.manager import texm
         return texm().addTextureBands( base_raster )
 
-    @classmethod
-    def get_color_bounds( cls, raster: xa.DataArray ):
-        ave = raster.mean(skipna=True).values
-        std = raster.std(skipna=True).values
-        if std == 0.0:
-            msg =  "This block does not appear to contain any data.  Suggest trying a different tile/block."
-            ufm().show( msg, "red" ); lgm().log( "\n" +  msg + "\n"  )
-        return dict( vmin= ave - std * cls.colorstretch, vmax= ave + std * cls.colorstretch  )
-
 #     @classmethod
 #     def plotRaster(cls, raster: xa.DataArray, **kwargs ):
 #         from matplotlib.colorbar import Colorbar

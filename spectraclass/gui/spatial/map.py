@@ -158,7 +158,6 @@ class MapManager(SCSingletonConfigurable):
             self.active_thresholds.value = value
 
     def on_active_threshold_selection( self, *args ):
-        from spectraclass.gui.points3js import PointCloudManager, pcm
         active_threshold = self.active_thresholds.value
         if active_threshold is not None:
             [ ttype, sframe ] = active_threshold.split(":")
@@ -166,7 +165,6 @@ class MapManager(SCSingletonConfigurable):
             self.slider.set_val( int( sframe ) )
             self.update_thresholds()
             self.active_thresholds.value = None
-            pcm().reset()
 
     def clear_threshold(self, *args ):
         from spectraclass.gui.points3js import PointCloudManager, pcm
@@ -188,7 +186,7 @@ class MapManager(SCSingletonConfigurable):
         self.label_map.name = f"{self.block.data.name}_labels"
         self.label_map.attrs[ 'long_name' ] =  "labels"
         self.cspecs = lm().get_labels_colormap()
-        lgm().log( f"\nInit label map, value range = [{self.label_map.values.min()} {self.label_map.values.max()}]\n")
+        lgm().log( f"Init label map, value range = [{self.label_map.values.min()} {self.label_map.values.max()}]")
         self.labels_image = self.label_map.plot.imshow( ax=self.base.gax, alpha=self.layers('labels').visibility,
                                                         cmap=self.cspecs['cmap'], add_colorbar=False, norm=self.cspecs['norm'] )
 
@@ -384,9 +382,10 @@ class MapManager(SCSingletonConfigurable):
         return dm().getModelData().shape[1] if use_model else self.data.shape[0]
 
     @property
-    def model_data(self) -> xa.DataArray:
+    def model_data(self) -> Optional[xa.DataArray]:
         from spectraclass.data.base import DataManager, dm
         model_data: xa.DataArray = dm().getModelData()
+        if model_data is None: return None
         tmask: xa.DataArray = self.block.get_points_mask()
         lgm().log(f" *** MAP: model_data[{model_data.dims}], shape= {model_data.shape}")
         if tmask is None: return model_data
@@ -455,7 +454,7 @@ class MapManager(SCSingletonConfigurable):
         self.block: Block = tm().getBlock( index=block_index )
         if self.block is not None:
             update = kwargs.get( 'update', False )
-            lgm().log(f"\n -------------------- Loading block: {self.block.block_coords}  -------------------- " )
+            lgm().log(f" -------------------- Loading block: {self.block.block_coords}  -------------------- " )
             if self.base is not None:
                 self.base.set_bounds(self.block.xlim, self.block.ylim)
             if self.points_selection is not None:
