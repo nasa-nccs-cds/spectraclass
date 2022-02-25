@@ -262,10 +262,6 @@ class LabelsManager(SCSingletonConfigurable):
         self.updateLabels()
         return self._labels_data.copy()
 
-    def getClassificationArray(self) -> xa.DataArray:
-        self.updateLabels()
-        class_array = self._labels_data.copy()
-
     @classmethod
     def getSortedLabels(self, labels_dset: xa.Dataset ) -> Tuple[np.ndarray,np.ndarray]:
         labels: np.ndarray = labels_dset['C'].values

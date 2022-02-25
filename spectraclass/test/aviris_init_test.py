@@ -10,5 +10,6 @@ dm.proc_type = "cpu"
 TileManager.block_size = 256
 ModeDataManager.model_dims = 24
 TileManager.block_index = [1,1]
-
 dm.loadCurrentProject()
+
+cdata = dm.getSpectralData( current_frame=True )

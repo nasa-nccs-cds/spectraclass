@@ -15,6 +15,10 @@ class UnstructuredDataManager(ModeDataManager):
         super(UnstructuredDataManager, self).__init__()
         self._cached_data = {}
 
+    def getModelData( self, **kwargs ) -> Optional[xa.DataArray]:
+        from spectraclass.data.base import DataManager, dm
+        return dm().getModelData()
+
     def dataFile( self, **kwargs ):
         return os.path.join(self.datasetDir, self.dsid() + ".nc")
 
@@ -32,9 +36,9 @@ class UnstructuredDataManager(ModeDataManager):
             xcoords = OrderedDict(samples=np.arange(dims[0]), bands=np.arange(dims[1]))
             xdims = OrderedDict({dims[0]: 'samples', dims[1]: 'bands'})
             data_vars = dict( spectra=xa.DataArray(np_spectra, dims=xcoords.keys(), coords=xcoords, name=self.INPUTS['spectra']) )
-            data_vars.update({vid: self.getXarray(vid, xcoords, self.subsample, xdims) for vid in mdata_vars})
+            data_vars.update({vid: self.getXarray(vid, xcoords, xdims) for vid in mdata_vars})
             pspec = self.INPUTS['plot']
-            data_vars.update(  {f'plot-{vid}': self.getXarray(pspec[vid], xcoords, self.subsample, xdims, norm=pspec.get('norm','spectral')) for vid in ['x', 'y'] } )
+            data_vars.update(  {f'plot-{vid}': self.getXarray(pspec[vid], xcoords, xdims, norm=pspec.get('norm','spectral')) for vid in ['x', 'y'] } )
             self.set_progress(0.1)
             if self.reduce_method and (self.reduce_method.lower() != "none"):
                 input_data = data_vars['spectra']

@@ -120,9 +120,9 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def init_data(self, **kwargs):
         from spectraclass.reduction.embedding import ReductionManager, rm
-        from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.data.base import dm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
-        model_data = mm().model_data
+        model_data = dm().getModelData()
         if (model_data is not None) and (model_data.shape[0] > 1):
             flow: ActivationFlow = afm().getActivationFlow()
             if flow is None: return False
@@ -135,9 +135,10 @@ class PointCloudManager(SCSingletonConfigurable):
         return (point_data - point_data.mean()) * (self.scale / point_data.std())
 
     def getColors( self, **kwargs ):
+        from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.spatial.map import MapManager, mm
         norm: Normalize = kwargs.get('norm')
-        cdata  = mm().getPointData( current_frame=True )
+        cdata: Optional[xa.DataArray] = dm().getSpectralData( current_frame=True )
         if norm is None:
             vr = mm().get_color_bounds( cdata )
             norm = Normalize( vr['vmin'], vr['vmax'] )

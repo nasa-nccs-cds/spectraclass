@@ -31,6 +31,19 @@ class SpatialDataManager(ModeDataManager):
         self.tiles: TileManager = tm()
         self._tile_selection_basemap: TileServiceBasemap = None
 
+    def getSpectralData( self, **kwargs ) -> Optional[xa.DataArray]:
+        from spectraclass.gui.spatial.map import MapManager, mm
+        return mm().getPointData( **kwargs )
+
+    def getModelData( self, raw_model_data: xa.DataArray, **kwargs) -> Optional[xa.DataArray]:
+        from spectraclass.gui.spatial.map import MapManager, mm
+        lgm().log(f" *** MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape}")
+        tmask: xa.DataArray = mm().getThresholdMask()
+        if tmask is not None:
+            lgm().log( f" ---> mask[{tmask.dims}], shape={tmask.shape}, nmasked={np.count_nonzero(tmask.values)}")
+            raw_model_data = raw_model_data[~tmask.values]
+        return raw_model_data
+
     @classmethod
     def extent(cls, image_data: xa.DataArray ) -> List[float]: # left, right, bottom, top
         xc, yc = image_data.coords[image_data.dims[-1]].values, image_data.coords[image_data.dims[-2]].values
@@ -70,20 +83,12 @@ class SpatialDataManager(ModeDataManager):
             return xa.DataArray( reduced_spectra, dims=['samples', 'band'], coords=coords )
         return data
 
-    def setDatasetId(self, dsid: str):
-        from spectraclass.data.spatial.tile.manager import tm
-        toks = dsid.split("_b-")
-        block_toks = toks[1].split("-")
-        tm().block_shape = [ int(block_toks[0]), int(block_toks[1]) ]
-        tm().block_index = [ int(block_toks[2]), int(block_toks[3]) ]
-        lgm().log( f"Setting block index to {tm().block_index}, shape = {tm().block_shape}")
-
     def dsid(self, **kwargs) -> str:
         from spectraclass.data.spatial.tile.manager import tm
         block = kwargs.get( 'block', tm().getBlock() )
         reduction_method = f"raw" if self.reduce_method.lower() == "none" else f"{self.reduce_method}-{self.model_dims}"
         file_name_base = "-".join( [block.file_name, reduction_method] )
-        return f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
+        return f"{file_name_base}-ss{self.subsample_index}" if self.subsample_index > 1 else file_name_base
 
     @classmethod
     def getRGB(cls, raster_data: xa.DataArray ) -> xa.DataArray:
@@ -192,7 +197,7 @@ class SpatialDataManager(ModeDataManager):
         img = ax.imshow( raster, zorder=2, **defaults )
         return img
 
-    def getXarray(self, id: str, xcoords: Dict, subsample: int, xdims: OrderedDict, **kwargs) -> xa.DataArray:
+    def getXarray(self, id: str, xcoords: Dict, xdims: OrderedDict, **kwargs) -> xa.DataArray:
         np_data: np.ndarray = SpatialDataManager.instance().getInputFileData(id)
         dims, coords = [], {}
         for iS in np_data.shape:
@@ -204,7 +209,7 @@ class SpatialDataManager(ModeDataManager):
 
     def reduced_dataset_name(self, dsid: str ):
         file_name_base = f"{dsid}-raw" if self.reduce_method.lower() == "none" else f"{dsid}-{self.reduce_method}-{self.model_dims}"
-        return f"{file_name_base}-ss{self.subsample}" if self.subsample > 1 else file_name_base
+        return f"{file_name_base}-ss{self.subsample_index}" if self.subsample_index > 1 else file_name_base
 
     def empty_array(self, dims ):
         coords = { d: np.empty([1]) for d in dims }

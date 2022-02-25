@@ -54,6 +54,7 @@ class DataManager(SCSingletonConfigurable):
         self.config_files = []
         self.name = None
         self._mode_data_manager_: ModeDataManager = None
+        self._project_data: xa.Dataset = None
         super(DataManager, self).__init__()
         self._wGui = None
         self._lock = threading.Lock()
@@ -61,6 +62,9 @@ class DataManager(SCSingletonConfigurable):
 
     def _contingent_configuration_(self):
         pass
+
+    def clear_project_cache(self):
+        self._project_data = None
 
     def on_control_change(self, change: Dict ):
         from spectraclass.gui.spatial.map import MapManager, mm
@@ -216,7 +220,8 @@ class DataManager(SCSingletonConfigurable):
         from spectraclass.application.controller import SpectraclassController
         if self._wGui is None:
             SpectraclassController.set_spectraclass_theme()
-            self._wGui = ip.HBox( [self._mode_data_manager_.gui(), dm().control_panel() ] )
+            mode_gui = self._mode_data_manager_.gui()
+            self._wGui = ip.HBox( [ mode_gui, dm().control_panel() ] )
         return self._wGui
 
     def control_panel(self) -> ip.VBox:
@@ -232,15 +237,15 @@ class DataManager(SCSingletonConfigurable):
     def loadCurrentProject(self, caller_id: str = "main" ) -> Optional[xa.Dataset]:
         lgm().log( f" DataManager: loadCurrentProject: {caller_id}" )
         if self._mode_data_manager_ is not None:
-            project_data = self._mode_data_manager_.loadCurrentProject()
-            assert project_data is not None, "Project initialization failed- check log file for details"
-            ns = project_data.variables['samples'].size
-            lgm().log(f"Loaded current project data[{ns}]:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
-            if ns == 0: ufm().show( "This tile contains no data","red")
-            return project_data
+            if self._project_data is None:
+                self._project_data = self._mode_data_manager_.loadCurrentProject()
+                assert self._project_data is not None, "Project initialization failed- check log file for details"
+                ns = self._project_data.variables['samples'].size
+                lgm().log(f"Loaded current project data[{ns}]:  {[f'{k}:{v.shape}' for (k,v) in self._project_data.variables.items()]}")
+                if ns == 0: ufm().show( "This tile contains no data","red")
+            return self._project_data
 
     def loadProject(self, dsid: str ) -> xa.Dataset:
-        self._mode_data_manager_.setDatasetId(dsid)
         project_data = self._mode_data_manager_.loadCurrentProject()
         if project_data is not None:
             ns = project_data.variables['samples'].size
@@ -248,17 +253,24 @@ class DataManager(SCSingletonConfigurable):
             if ns == 0: ufm().show("This tile contains no data", "red")
         return project_data
 
+    @exception_handled
     def prepare_inputs( self, **kwargs ) -> Dict[Tuple,int]:
-        try:
-            return self._mode_data_manager_.prepare_inputs( **kwargs )
-        except Exception as err:
-            lgm().exception( f"Error in prepare_inputs: {err}")
-            return {}
+        return self._mode_data_manager_.prepare_inputs( **kwargs )
+
+    @exception_handled
+    def getSpectralData( self, **kwargs ) -> Optional[xa.DataArray]:
+        return self._mode_data_manager_.getSpectralData( **kwargs )
+
+    @exception_handled
+    def getModelData(self, **kwargs) -> Optional[xa.DataArray]:
+        raw_model_data = self.getRawModelData()
+        if raw_model_data is not None:
+            return self._mode_data_manager_.getModelData( raw_model_data, **kwargs )
 
     def valid_bands(self) -> Optional[List]:
         return self._mode_data_manager_.valid_bands()
 
-    def getModelData(self) -> Optional[xa.DataArray]:
+    def getRawModelData(self) -> Optional[xa.DataArray]:
         project_dataset: xa.Dataset = self.loadCurrentProject("getModelData")
         if project_dataset is not None:
             model_data: xa.DataArray = project_dataset['reduction']

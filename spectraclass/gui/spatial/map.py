@@ -381,16 +381,9 @@ class MapManager(SCSingletonConfigurable):
         use_model = kwargs.get( 'model', self._use_model_data )
         return dm().getModelData().shape[1] if use_model else self.data.shape[0]
 
-    @property
-    def model_data(self) -> Optional[xa.DataArray]:
-        from spectraclass.data.base import DataManager, dm
-        model_data: xa.DataArray = dm().getModelData()
-        if model_data is None: return None
-        tmask: xa.DataArray = self.block.get_points_mask()
-        lgm().log(f" *** MAP: model_data[{model_data.dims}], shape= {model_data.shape}")
-        if tmask is None: return model_data
-        lgm().log(f" ---> mask[{tmask.dims}], shape={tmask.shape}, nmasked={np.count_nonzero(tmask.values)}")
-        return model_data[ ~tmask.values ]
+    def getThresholdMask(self) -> Optional[xa.DataArray]:
+        if self.block is not None:
+            return self.block.get_points_mask()
 
     @property
     def frame_data(self) -> Optional[xa.DataArray]:

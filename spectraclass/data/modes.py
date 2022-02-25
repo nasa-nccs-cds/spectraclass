@@ -30,7 +30,7 @@ class ModeDataManager(SCSingletonConfigurable):
     class_file = tl.Unicode("NONE").tag(config=True, sync=True)
 
     model_dims = tl.Int(32).tag(config=True, sync=True)
-    subsample = tl.Int(1).tag(config=True, sync=True)
+    subsample_index = tl.Int(1).tag(config=True, sync=True)
     reduce_method = tl.Unicode("Autoencoder").tag(config=True, sync=True)
     reduce_nepochs = tl.Int(5).tag(config=True, sync=True)
     reduce_sparsity = tl.Float( 0.0 ).tag(config=True,sync=True)
@@ -62,8 +62,10 @@ class ModeDataManager(SCSingletonConfigurable):
         return self._file_selector
 
     def on_image_change( self, event: Dict ):
+        from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.spatial.map import MapManager, mm
         self._image_name = self.file_selector.value
+        dm().clear_project_cache()
         mm().update_plots(True)
 
     def set_image_name(self, image_name: str ):
@@ -95,7 +97,7 @@ class ModeDataManager(SCSingletonConfigurable):
         raise NotImplementedError()
 
     @classmethod
-    def getXarray(cls, id: str, xcoords: Dict, subsample: int, xdims: OrderedDict, **kwargs) -> xa.DataArray:
+    def getXarray(cls, id: str, xcoords: Dict, xdims: OrderedDict, **kwargs) -> xa.DataArray:
         from .base import DataManager
         np_data: np.ndarray = DataManager.instance().getInputFileData(id)
         dims, coords = [], {}
@@ -113,7 +115,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def update_gui_parameters(self):
         if self._model_dims_selector is not None:
             self.model_dims = self._model_dims_selector.value
-            self.subsample = self._subsample_selector.value
+            self.subsample_index = self._subsample_selector.value
 
     def setDatasetId(self,str):
         raise NotImplementedError()
@@ -147,14 +149,13 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def getSelectionPanel(self) -> ip.HBox:
         from spectraclass.data.base import DataManager, dm
-        # self._dataset_prefix, dsets = self.getDatasetList()
-        # self._dset_selection: ip.Select = ip.Select(options=dsets, description='Datasets:', disabled=False, layout=ip.Layout(width="900px"))
-        # if len(dsets) > 0: self._dset_selection.value = dm().dsid()[ len(self._dataset_prefix): ]
-        # load: ip.Button = ip.Button(description="Load", border='1px solid dimgrey')
-        # load.on_click(self.select_dataset)
-        # filePanel: ip.HBox = ip.HBox([self._dset_selection, load], layout=ip.Layout(width="100%", height="100%"), border='2px solid firebrick')
-        # return filePanel
-        return ip.HBox([])
+        self._dataset_prefix, dsets = self.getDatasetList()
+        self._dset_selection: ip.Select = ip.Select(options=dsets, description='Datasets:', disabled=False, layout=ip.Layout(width="900px"))
+        if len(dsets) > 0: self._dset_selection.value = dm().dsid()[ len(self._dataset_prefix): ]
+        load: ip.Button = ip.Button(description="Load", border='1px solid dimgrey')
+        load.on_click(self.select_dataset)
+        filePanel: ip.HBox = ip.HBox([self._dset_selection, load], layout=ip.Layout(width="100%", height="100%"), border='2px solid firebrick')
+        return filePanel
 
     def getConfigPanel(self):
         from spectraclass.reduction.embedding import ReductionManager
@@ -193,7 +194,7 @@ class ModeDataManager(SCSingletonConfigurable):
 
         self._subsample_selector: ip.SelectionSlider = ip.SelectionSlider(options=range(1, 101),
                                                                           description='Subsample:',
-                                                                          value=self.subsample,
+                                                                          value=self.subsample_index,
                                                                           layout=ip.Layout(width="auto"),
                                                                           continuous_update=True,
                                                                           orientation='horizontal', readout=True,
@@ -208,15 +209,25 @@ class ModeDataManager(SCSingletonConfigurable):
         return creationPanel
 
     def gui( self, **kwargs ):
-        pass
-#       return self.getSelectionPanel()
+        return self.getSelectionPanel()
 
     def getInputFileData( self, vname: str = None, **kwargs ) -> np.ndarray:
         raise NotImplementedError()
 
+    def getSpectralData( self, **kwargs ) -> Optional[xa.DataArray]:
+        raise NotImplementedError()
+
+    def getModelData(self, raw_model_data: xa.DataArray, **kwargs) -> Optional[xa.DataArray]:
+        return raw_model_data
+
     def getSpectralDataKey(self, keys: List ):
         for sdkey in [ 'norm', 'embedding', 'spectra' ]:
             if sdkey in keys: return sdkey
+
+    def subsample( self, variable: xa.DataArray, **kwargs ):
+        result = variable if self.subsample_index == 1 else variable[::self.subsample_index,:]
+        result.attrs.update( kwargs )
+        return result
 
     @exception_handled
     def loadDataset(self, **kwargs) -> Optional[xa.Dataset]:
@@ -228,22 +239,23 @@ class ModeDataManager(SCSingletonConfigurable):
                 return None
             else:
                 sdkey = self.getSpectralDataKey( list(dataset.keys()) )
-                raw_data: xa.DataArray = dataset[ sdkey ]
+                raw_data: xa.DataArray = self.subsample( dataset[ sdkey ], dsid = self.dsid() )
+                model_data: xa.DataArray = self.subsample( dataset[ 'reduction' ], dsid = self.dsid() )
                 vnames = dataset.variables.keys()
+                dvars, attrs = {}, dataset.attrs.copy()
                 vshapes = [ f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
                 lgm().log(f" ---> Opened Dataset {self.dsid()} from file {dataset.attrs['data_file']}\n\t -> variables: {' '.join(vshapes)}")
-                lgm().log( f" -----> reduction: shape = {dataset['reduction'].shape}, #NULL={np.count_nonzero(np.isnan(dataset['reduction'].values))}")
+                lgm().log( f" -----> reduction: shape = {model_data.shape}, #NULL={np.count_nonzero(np.isnan(model_data.values))}")
                 lgm().log( f" -----> point_data: shape = {raw_data.shape}, #NULL={np.count_nonzero(np.isnan(raw_data.values))}")
-                if 'plot-x' not in vnames:
-                    raw_data: xa.DataArray = raw_data      # point data ( shape = [ nsamples, nbands ] )
-                    model_data: xa.DataArray = dataset['reduction']
-                    dataset['plot-y'] = raw_data
-                    dataset['spectra'] = raw_data
-                    dataset['plot-x'] = np.arange(0,raw_data.shape[1])
-                    dataset['plot-mx'] = np.arange(0, model_data.shape[1])
-                dataset.attrs['dsid'] = self.dsid()
-                dataset.attrs['type'] = 'spectra'
-                self.datasets[ self.dsid() ] = dataset
+                dvars['plot-y'] = raw_data
+                dvars['plot-x'] = np.arange(0,raw_data.shape[1])
+                dvars['plot-mx'] = np.arange(0, model_data.shape[1])
+                dvars['spectra'] = raw_data
+                dvars['reduction'] = model_data
+                dvars['reproduction'] = self.subsample(dataset['reproduction'], dsid=self.dsid())
+                attrs['dsid'] = self.dsid()
+                attrs['type'] = 'spectra'
+                self.datasets[ self.dsid() ] = xa.Dataset( data_vars=dvars, attrs=attrs )
         return self.datasets[ self.dsid() ]
 
     def blockFilePath( self, **kwargs ) -> str:
