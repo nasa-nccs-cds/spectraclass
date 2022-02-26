@@ -245,7 +245,7 @@ class DataManager(SCSingletonConfigurable):
                 if ns == 0: ufm().show( "This tile contains no data","red")
             return self._project_data
 
-    def loadProject(self, dsid: str ) -> xa.Dataset:
+    def loadProject(self, dsid: str ) -> Optional[xa.Dataset]:
         project_data = self._mode_data_manager_.loadCurrentProject()
         if project_data is not None:
             ns = project_data.variables['samples'].size

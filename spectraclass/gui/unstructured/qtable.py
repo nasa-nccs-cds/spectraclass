@@ -6,7 +6,7 @@ import xarray as xa
 import numpy as np
 import pandas as pd
 import ipywidgets as ipw
-from widgets.widgets import ToggleButton
+from spectraclass.widgets.buttons import ToggleButton
 from spectraclass.data.base import dm
 import traitlets as tl
 from spectraclass.model.labels import LabelsManager

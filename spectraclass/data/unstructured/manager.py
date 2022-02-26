@@ -15,9 +15,10 @@ class UnstructuredDataManager(ModeDataManager):
         super(UnstructuredDataManager, self).__init__()
         self._cached_data = {}
 
-    def getModelData( self, **kwargs ) -> Optional[xa.DataArray]:
+    def getSpectralData( self, **kwargs ) -> Optional[xa.DataArray]:
         from spectraclass.data.base import DataManager, dm
-        return dm().getModelData()
+        dset: Optional[xa.Dataset] = dm().loadCurrentProject( "UnstructuredDataManager" )
+        if dset is not None: return dset["spectra"]
 
     def dataFile( self, **kwargs ):
         return os.path.join(self.datasetDir, self.dsid() + ".nc")

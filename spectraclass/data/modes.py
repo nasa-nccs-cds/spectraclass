@@ -273,7 +273,6 @@ class ModeDataManager(SCSingletonConfigurable):
         return os.path.isfile( self.dataFile() )
 
     def loadDataFile( self, **kwargs ) -> Optional[xa.Dataset]:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         dFile = self.dataFile( **kwargs )
         if os.path.isfile( dFile ):
             lgm().log( f"loadDataFile: {dFile}" )
@@ -281,7 +280,7 @@ class ModeDataManager(SCSingletonConfigurable):
             dataset.attrs['data_file'] = dFile
         else:
             ufm().show( f"This file/tile needs to be preprocesed.", "red" )
-            raise Exception( f"BLOCK[{tm().getBlock().block_coords}]: Missing data file: {dFile}" )
+            raise Exception( f"Missing data file: {dFile}" )
         return dataset
 
     def filterCommonPrefix(self, paths: List[str])-> Tuple[str,List[str]]:

@@ -3,7 +3,7 @@ from functools import partial
 import numpy as np
 import pandas as pd
 import ipywidgets as ipw
-from widgets.widgets import ToggleButton
+from spectraclass.widgets.buttons import ToggleButton
 from spectraclass.data.base import dm
 from spectraclass.model.labels import LabelsManager
 from spectraclass.model.base import SCSingletonConfigurable

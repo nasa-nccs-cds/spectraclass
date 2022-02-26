@@ -12,6 +12,10 @@ Conda CPU Environment Setup
     > mamba install -c conda-forge nb_conda_kernels nodejs jupyterlab jupyterlab_server ipywidgets ipympl matplotlib mplcursors pythreejs numpy xarray rasterio scipy scikit-learn dask netcdf4 scikit-image numba gdal owslib rioxarray cartopy shapely bottleneck geopandas keras tensorflow
     > mamba install pytorch -c pytorch
 
+The x-ray application requires the following additional packages:
+
+    > mamba install -c conda-forge jupyter_bokeh
+
 Installation
 ------------
 
