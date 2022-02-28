@@ -25,6 +25,7 @@ class UnstructuredDataManager(ModeDataManager):
 
     @exception_handled
     def prepare_inputs(self, **kwargs ) -> Dict[Tuple,int]:
+        from spectraclass.data.base import DataManager, dm
         self.update_gui_parameters()
         self.set_progress(0.02)
         output_file = self.dataFile( **kwargs )
@@ -37,9 +38,9 @@ class UnstructuredDataManager(ModeDataManager):
             xcoords = OrderedDict(samples=np.arange(dims[0]), bands=np.arange(dims[1]))
             xdims = OrderedDict({dims[0]: 'samples', dims[1]: 'bands'})
             data_vars = dict( spectra=xa.DataArray(np_spectra, dims=xcoords.keys(), coords=xcoords, name=self.INPUTS['spectra']) )
-            data_vars.update({vid: self.getXarray(vid, xcoords, xdims) for vid in mdata_vars})
+            data_vars.update({vid: dm().getXarray(vid, xcoords, xdims) for vid in mdata_vars})
             pspec = self.INPUTS['plot']
-            data_vars.update(  {f'plot-{vid}': self.getXarray(pspec[vid], xcoords, xdims, norm=pspec.get('norm','spectral')) for vid in ['x', 'y'] } )
+            data_vars.update(  {f'plot-{vid}': dm().getXarray(pspec[vid], xcoords, xdims, norm=pspec.get('norm','spectral')) for vid in ['x', 'y'] } )
             self.set_progress(0.1)
             if self.reduce_method and (self.reduce_method.lower() != "none"):
                 input_data = data_vars['spectra']
@@ -56,6 +57,7 @@ class UnstructuredDataManager(ModeDataManager):
             result_dataset.to_netcdf(output_file, format='NETCDF4', engine='netcdf4')
             self.updateDatasetList()
             self.set_progress(1.0)
+            print("DATA PRE-PROCESSING COMPLETED.")
             return {}
         else:
             print( "DATA PRE-PROCESSING FAILED!  See log file for more info.")
@@ -63,7 +65,7 @@ class UnstructuredDataManager(ModeDataManager):
     @exception_handled
     def getInputFileData( self, vname: str = None, **kwargs ) -> np.ndarray:
         if vname is None: vname = f"{self.INPUTS['spectra']}"
-        if 'subsample' in kwargs: self.subsample = kwargs.get('subsample')
+        if 'subsample' in kwargs: self.subsample_index = kwargs.get('subsample')
         input_file_path = os.path.expanduser( os.path.join(self.data_dir, self.mode, f"{self.dset_name}{vname}.pkl"))
         if os.path.isfile(input_file_path):
             input_data = self._cached_data.get( input_file_path, None )
@@ -71,10 +73,10 @@ class UnstructuredDataManager(ModeDataManager):
                 with open(input_file_path, 'rb') as f:
                     result = pickle.load(f)
                     if isinstance(result, np.ndarray):
-                        skip_subsample =  (( result.shape[0] == self.model_dims ) and result.ndim == 1) or (self.subsample == 1)
-                        input_data =  result if skip_subsample else result[::self.subsample ]
+                        skip_subsample =  (( result.shape[0] == self.model_dims ) and result.ndim == 1) or (self.subsample_index == 1)
+                        input_data =  result if skip_subsample else result[::self.subsample_index ]
                     elif isinstance(result, list):
-                        subsampled = [result[i] for i in range(0, len(result), self.subsample )]
+                        subsampled = [result[i] for i in range(0, len(result), self.subsample_index )]
                         input_data = np.vstack(subsampled) if isinstance(result[0], np.ndarray) else np.array(subsampled)
                 lgm().log(  f"Reading unstructured {vname} data from file {input_file_path}, shape = {input_data.shape}", print=True )
                 self._cached_data[input_file_path] = input_data

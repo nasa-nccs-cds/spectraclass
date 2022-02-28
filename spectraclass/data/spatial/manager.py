@@ -197,16 +197,6 @@ class SpatialDataManager(ModeDataManager):
         img = ax.imshow( raster, zorder=2, **defaults )
         return img
 
-    def getXarray(self, id: str, xcoords: Dict, xdims: OrderedDict, **kwargs) -> xa.DataArray:
-        np_data: np.ndarray = SpatialDataManager.instance().getInputFileData(id)
-        dims, coords = [], {}
-        for iS in np_data.shape:
-            coord_name = xdims[iS]
-            dims.append(coord_name)
-            coords[coord_name] = xcoords[coord_name]
-        attrs = {**kwargs, 'name': id}
-        return xa.DataArray(np_data, dims=dims, coords=coords, name=id, attrs=attrs)
-
     def reduced_dataset_name(self, dsid: str ):
         file_name_base = f"{dsid}-raw" if self.reduce_method.lower() == "none" else f"{dsid}-{self.reduce_method}-{self.model_dims}"
         return f"{file_name_base}-ss{self.subsample_index}" if self.subsample_index > 1 else file_name_base

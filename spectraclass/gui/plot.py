@@ -86,7 +86,6 @@ class mplGraphPlot:
         self.clear()
 
     def init_figure(self, **kwargs):
-
         if self.fig is None:
             if not self.standalone: plt.ioff()
             self.fig: plt.Figure = plt.figure( self.index, figsize = (6, 4) )

@@ -96,18 +96,6 @@ class ModeDataManager(SCSingletonConfigurable):
     def getClassMap(self) -> Optional[xa.DataArray]:
         raise NotImplementedError()
 
-    @classmethod
-    def getXarray(cls, id: str, xcoords: Dict, xdims: OrderedDict, **kwargs) -> xa.DataArray:
-        from .base import DataManager
-        np_data: np.ndarray = DataManager.instance().getInputFileData(id)
-        dims, coords = [], {}
-        for iS in np_data.shape:
-            coord_name = xdims[iS]
-            dims.append(coord_name)
-            coords[coord_name] = xcoords[coord_name]
-        attrs = {**kwargs, 'name': id}
-        return xa.DataArray(np_data, dims=dims, coords=coords, name=id, attrs=attrs)
-
     def set_progress(self, pval: float):
         if self._progress is not None:
             self._progress.value = pval

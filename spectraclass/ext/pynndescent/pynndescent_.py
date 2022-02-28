@@ -870,8 +870,6 @@ class NNDescent(object):
 
             if verbose:
                 print(ts(), "NN descent for", str(n_iters), "iterations")
-                stack = '\n'.join(traceback.format_stack())
-                lgm().log( f"  -----------> NN descent:\n{stack}")
 
             self._neighbor_graph = nn_descent(
                 self._raw_data,

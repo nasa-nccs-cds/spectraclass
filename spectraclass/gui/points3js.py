@@ -124,6 +124,7 @@ class PointCloudManager(SCSingletonConfigurable):
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
         refresh = kwargs.get( 'refresh', False )
         model_data = dm().getModelData()
+
         if (model_data is not None) and (model_data.shape[0] > 1):
             flow: ActivationFlow = afm().getActivationFlow()
             if flow is None: return False

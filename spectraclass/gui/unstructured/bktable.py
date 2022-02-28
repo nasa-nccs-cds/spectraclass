@@ -10,7 +10,7 @@ from spectraclass.model.base import SCSingletonConfigurable
 from jupyter_bokeh.widgets import BokehModel
 import math, xarray as xa
 from bokeh.models import ColumnDataSource, DataTable, TableColumn
-from typing import List, Union, Dict, Callable, Set, Any
+from typing import List, Union, Dict, Callable, Set, Any, Sequence
 
 
 class bkSpreadsheet:
@@ -28,11 +28,12 @@ class bkSpreadsheet:
             self._dataFrame = data.to_pandas()
         else:
             raise TypeError( f"Unsupported data class supplied to bkSpreadsheet: {data.__class__}" )
-        self._source: ColumnDataSource = ColumnDataSource(self._dataFrame)
-        self._source.selected.on_change("indices", self._exec_selection_callback )
+        self._source: ColumnDataSource = ColumnDataSource( self._dataFrame )
+        self._source.selected.on_change( "indices", self._exec_selection_callback )
         self._columns = [TableColumn(field=cid, title=cid, sortable=True) for cid in self._dataFrame.columns]
         self._selection = np.full( [ self._dataFrame.shape[0] ], False, np.bool )
         self.current_page = kwargs.get('init_page', 0)
+        lgm().log( f" Creating DataTable from dframe[{self._dataFrame.shape}], cols = {self._dataFrame.columns} " )
         self._table = DataTable( source=self._source, columns=self._columns, width=600, height=300, selectable="checkbox", index_position=None )
 
     @property
@@ -148,7 +149,7 @@ class bkSpreadsheet:
     def set_col_data(self, colname: str, value: Any ):
         self._source.data[colname].fill( value )
 
-    def get_col_data(self, colname: str ) -> List:
+    def get_col_data(self, colname: str ) -> Sequence:
         return self._source.data[colname]
 
     def from_df(self, pdf: pd.DataFrame ):
@@ -191,13 +192,17 @@ class TableManager(SCSingletonConfigurable):
         self.mark_on_selection = False
         self.ignorable_actions = ["page"]
 
+    @exception_handled
     def init(self, **kwargs):
         catalog: Dict[str,np.ndarray] = kwargs.get( 'catalog', None )
         project_data: xa.Dataset = dm().loadCurrentProject("table")
-        lgm().log( f"TABLE catalog init: project_data={list(project_data.keys())}, COLS={dm().modal.METAVARS}")
+        lgm().log( f"bkTABLE catalog init: project_data={list(project_data.keys())}, COLS={dm().modal.METAVARS}")
+        for tcol in dm().modal.METAVARS:
+            lgm().log(f"   **-> {tcol}{project_data[tcol].dims}: {project_data[tcol].shape} {project_data[tcol].dtype}")
+            project_data[tcol].load()
         if catalog is None:  catalog = { tcol: project_data[tcol].values for tcol in dm().modal.METAVARS }
         nrows = catalog[ dm().modal.METAVARS[0] ].shape[0]
-        lgm().log( f"Catalog: nrows = {nrows}, entries: {[ f'{k}:{v.shape}' for (k,v) in catalog.items() ]}" )
+        lgm().log( f"bkCatalog: nrows = {nrows}, entries: {[ f'{k}:{v.shape}' for (k,v) in catalog.items() ]}" )
         self._dataFrame: pd.DataFrame = pd.DataFrame( catalog, dtype='U', index=pd.Int64Index( range(nrows), name="index" ) )
         self._cols = list(catalog.keys())
         self._dataFrame.insert(len(self._cols), "cid", 0, True)
@@ -261,7 +266,6 @@ class TableManager(SCSingletonConfigurable):
         gpm().plot_graph( marker )
         pcm().addMarker(marker)
 
-    @exception_handled
     def _createTable( self, tab_index: int ) -> bkSpreadsheet:
         assert self._dataFrame is not None, " TableManager has not been initialized "
         if tab_index == 0:
@@ -352,6 +356,7 @@ class TableManager(SCSingletonConfigurable):
             self.selected_table.clear_filter()
             self._wFilter.value = ""
 
+    @exception_handled
     def _createTableTabs(self) -> ipw.Tab:
         wTab = ipw.Tab()
         self._tables.append( self._createTable( 0 ) )
@@ -375,7 +380,7 @@ class TableManager(SCSingletonConfigurable):
         if self._wGui is None:
             self.init( **kwargs )
             self._wGui = self._createGui()
-            self._wGui.layout = ipw.Layout(width='auto', flex='1 0 500px')
+#            self._wGui.layout = ipw.Layout(width='auto', flex='1 0 500px')
         return self._wGui
 
 #        self._broadcast_selection_events = True

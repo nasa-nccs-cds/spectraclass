@@ -63,6 +63,20 @@ class DataManager(SCSingletonConfigurable):
     def _contingent_configuration_(self):
         pass
 
+    def getXarray( self, id: str, xcoords: Dict, xdims: Dict, **kwargs ) -> xa.DataArray:
+        np_data: np.ndarray = self.getInputFileData( id )
+        dims, coords = [], {}
+        for iD, iS in enumerate( np_data.shape ):
+            dim = xdims.get(iS,f"dim{iD}")
+            dims.append( dim )
+            if dim in xcoords:
+                coords[dim] = xcoords[dim]
+            else:
+                xdims[iS] = dim
+                xcoords[dim] = np.arange(iS)
+        lgm().log(f"Creating Xarray[{id}], shape={np_data.shape}, dims={dims}, dtype={np_data.dtype}")
+        return xa.DataArray( np_data, dims=dims, coords=coords, name=id, attrs={**kwargs, 'name': id} )
+
     def clear_project_cache(self):
         self._project_data = None
 
