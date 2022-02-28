@@ -95,7 +95,7 @@ class cpActivationFlow(ActivationFlow):
             n_iters =  max(5, 2 * int(round(np.log2(self.nodes.shape[0]))))
             kwargs = dict( n_trees=n_trees, n_iters=n_iters, n_neighbors=self.nneighbors, max_candidates=60, verbose=True, metric = self.metric )
             if self.metric == "minkowski": kwargs['metric_kwds'] = dict( p=self.p )
-            lgm().log(f"Computing NN-Graph with parms= {kwargs}, nodes shape = {self.nodes.shape}, #NULL={np.count_nonzero(np.isnan(self.nodes.values))}")
+            lgm().log(f"Computing NN-Graph[{id(self)}] with parms= {kwargs}, nodes shape = {self.nodes.shape}, #NULL={np.count_nonzero(np.isnan(self.nodes.values))}")
             self._knn_graph = NNDescent( self.nodes.values, **kwargs )
         return self._knn_graph
 

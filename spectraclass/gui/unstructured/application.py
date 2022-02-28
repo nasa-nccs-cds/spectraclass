@@ -9,20 +9,26 @@ class Spectraclass(SpectraclassController):
     def __init__(self):
         super(Spectraclass, self).__init__()
         self.set_parent_instances()
+        self._gui = None
 
     def process_menubar_action(self, mname, dname, op, b ):
         print(f" process_menubar_action.on_value_change: {mname}.{dname} -> {op}")
 
     def gui( self, **kwargs ):
+        if self._gui is None:
+            self.create_gui( **kwargs )
+        return self._gui
+
+    def create_gui(self, **kwargs):
         from bokeh.io import output_notebook
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.gui.points3js import PointCloudManager, pcm
         from spectraclass.gui.unstructured.table import tm
         from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
         from spectraclass.data.base import DataManager, dm
+        lgm().log( f"Creating the Spectraclass[{id(self)}] gui")
         output_notebook()
         embed: bool = kwargs.pop('embed',False)
-
         self.set_spectraclass_theme()
         css_border = '1px solid blue'
         collapsibles = ipw.Accordion( children = [ dm().gui(), pcm().gui() ], layout=ipw.Layout(width='100%'))
@@ -30,9 +36,8 @@ class Spectraclass(SpectraclassController):
         collapsibles.selected_index = 1
         plot = ipw.VBox([ ufm().gui(), collapsibles ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
         control = ipw.VBox([am().gui(), tm().gui(), gpm().gui()], layout=ipw.Layout(flex='0 0 700px'), border=css_border)
-        gui = ipw.HBox( [control, plot ], layout=ipw.Layout( width='100%' ) )
+        self._gui = ipw.HBox( [control, plot ], layout=ipw.Layout( width='100%' ) )
         if embed: self.embed()
-        return gui
 
     def mark(self):
         super(Spectraclass, self).mark()

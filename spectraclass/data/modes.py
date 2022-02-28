@@ -225,9 +225,10 @@ class ModeDataManager(SCSingletonConfigurable):
             if sdkey in keys: return sdkey
 
     def subsample( self, variable: xa.DataArray, **kwargs ):
-        result = variable if self.subsample_index == 1 else variable[::self.subsample_index,:]
-        result.attrs.update( kwargs )
-        return result
+        if variable.dims[0] == 'samples' and self.subsample_index > 1:
+            variable = variable[::self.subsample_index] if (variable.ndim == 1) else variable[::self.subsample_index,:]
+        variable.attrs.update( kwargs )
+        return variable
 
     @exception_handled
     def loadDataset(self, **kwargs) -> Optional[xa.Dataset]:
@@ -240,19 +241,17 @@ class ModeDataManager(SCSingletonConfigurable):
             else:
                 sdkey = self.getSpectralDataKey( list(dataset.keys()) )
                 raw_data: xa.DataArray = self.subsample( dataset[ sdkey ], dsid = self.dsid() )
-                model_data: xa.DataArray = self.subsample( dataset[ 'reduction' ], dsid = self.dsid() )
                 vnames = dataset.variables.keys()
-                dvars, attrs = {}, dataset.attrs.copy()
+                dvars = { vname: self.subsample( dataset[vname], dsid = self.dsid() ) for vname in vnames }
+                attrs = dataset.attrs.copy()
                 vshapes = [ f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
                 lgm().log(f" ---> Opened Dataset {self.dsid()} from file {dataset.attrs['data_file']}\n\t -> variables: {' '.join(vshapes)}")
-                lgm().log( f" -----> reduction: shape = {model_data.shape}, #NULL={np.count_nonzero(np.isnan(model_data.values))}")
+                lgm().log( f" -----> reduction: shape = {dvars['reduction'].shape}, #NULL={np.count_nonzero(np.isnan(dvars['reduction'].values))}")
                 lgm().log( f" -----> point_data: shape = {raw_data.shape}, #NULL={np.count_nonzero(np.isnan(raw_data.values))}")
                 dvars['plot-y'] = raw_data
-                dvars['plot-x'] = np.arange(0,raw_data.shape[1])
-                dvars['plot-mx'] = np.arange(0, model_data.shape[1])
+                dvars['plot-x'] = np.arange( 0, raw_data.shape[1] )
+                dvars['plot-mx'] = np.arange( 0, dvars['reduction'].shape[1] )
                 dvars['spectra'] = raw_data
-                dvars['reduction'] = model_data
-                dvars['reproduction'] = self.subsample(dataset['reproduction'], dsid=self.dsid())
                 attrs['dsid'] = self.dsid()
                 attrs['type'] = 'spectra'
                 self.datasets[ self.dsid() ] = xa.Dataset( data_vars=dvars, attrs=attrs )

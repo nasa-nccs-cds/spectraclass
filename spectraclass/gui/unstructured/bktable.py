@@ -20,7 +20,7 @@ class bkSpreadsheet:
         self._current_page = None
         self._dataFrame: pd.DataFrame = None
         self._filteredData: pd.DataFrame = None
-        self._source: ColumnDataSource = None
+        self._selection_callback = None
         if isinstance( data, pd.DataFrame ):
             self._dataFrame = data
         elif isinstance( data, xa.DataArray ):
@@ -28,10 +28,12 @@ class bkSpreadsheet:
             self._dataFrame = data.to_pandas()
         else:
             raise TypeError( f"Unsupported data class supplied to bkSpreadsheet: {data.__class__}" )
+        self._source: ColumnDataSource = ColumnDataSource(self._dataFrame)
+        self._source.selected.on_change("indices", self._exec_selection_callback )
         self._columns = [TableColumn(field=cid, title=cid, sortable=True) for cid in self._dataFrame.columns]
         self._selection = np.full( [ self._dataFrame.shape[0] ], False, np.bool )
         self.current_page = kwargs.get('init_page', 0)
-        self._table = DataTable( source=self._source, columns=self._columns, width=400, height=280, selectable="checkbox", index_position=None )
+        self._table = DataTable( source=self._source, columns=self._columns, width=600, height=300, selectable="checkbox", index_position=None )
 
     @property
     def table_data(self) -> pd.DataFrame:
@@ -127,13 +129,14 @@ class bkSpreadsheet:
         if len( old ): self._selection[ old_pids ] = False
         if len( new ): self._selection[ new_pids ] = True
 
-    def selection_callback( self, callback: Callable[[np.ndarray,np.ndarray],None] ):
-        self._source.selected.on_change("indices", partial( self._exec_selection_callback, callback ) )
+    def set_selection_callback(self, callback: Callable[[np.ndarray, np.ndarray], None]):
+        self._selection_callback = callback
 
-    def _exec_selection_callback(self, callback: Callable[[np.ndarray,np.ndarray],None], attr, old, new ):
-        old_ids, new_ids = np.array( old ), np.array( new )
-        lgm().log( f"\n-----------> exec_selection_callback: old = {old}, new = {new}, old_ids ={old_ids}, new_ids ={new_ids}\n" )
-        callback( self.idxs2pids( old_ids ), self.idxs2pids( new_ids ) )
+    def _exec_selection_callback(self, attr, old, new ):
+        if self._selection_callback is not None:
+            old_ids, new_ids = np.array( old ), np.array( new )
+            lgm().log( f"\n-----------> exec_selection_callback: old = {old}, new = {new}, old_ids ={old_ids}, new_ids ={new_ids}\n" )
+            self._selection_callback( self.idxs2pids( old_ids ), self.idxs2pids( new_ids ) )
 
     def set_selection(self, pids: np.ndarray, refresh: bool ):
         idxs: List[int] = self.pids2idxs( pids ).tolist()
@@ -191,13 +194,14 @@ class TableManager(SCSingletonConfigurable):
     def init(self, **kwargs):
         catalog: Dict[str,np.ndarray] = kwargs.get( 'catalog', None )
         project_data: xa.Dataset = dm().loadCurrentProject("table")
+        lgm().log( f"TABLE catalog init: project_data={list(project_data.keys())}, COLS={dm().modal.METAVARS}")
         if catalog is None:  catalog = { tcol: project_data[tcol].values for tcol in dm().modal.METAVARS }
         nrows = catalog[ dm().modal.METAVARS[0] ].shape[0]
         lgm().log( f"Catalog: nrows = {nrows}, entries: {[ f'{k}:{v.shape}' for (k,v) in catalog.items() ]}" )
         self._dataFrame: pd.DataFrame = pd.DataFrame( catalog, dtype='U', index=pd.Int64Index( range(nrows), name="index" ) )
         self._cols = list(catalog.keys())
         self._dataFrame.insert(len(self._cols), "cid", 0, True)
-        lgm().log(f"\nDataFrame: cols = {self._dataFrame.columns}, catalog cols = {self._cols}\n" )
+        lgm().log(f"  DataFrame[{nrows}]: cols = {self._dataFrame.columns}, catalog cols = {self._cols}, shape = {self._dataFrame.shape}" )
 
     def edit_table(self, cid: int, pids: np.ndarray, column: str, value: Any ):
          table: bkSpreadsheet = self._tables[cid]
@@ -235,6 +239,7 @@ class TableManager(SCSingletonConfigurable):
                     table.from_df(df)
                     lgm().log(f"  TABLE[{cid}] update: {current_pids} -> {updated_pids}" )
 
+    @exception_handled
     def _handle_table_selection(self, old: np.ndarray, new: np.ndarray ):
         lgm().log(f"  **TABLE-> new selection event, indices:  {old} -> {new}")
         self.broadcast_selection_event( new )
@@ -246,11 +251,17 @@ class TableManager(SCSingletonConfigurable):
         return False
 
     def broadcast_selection_event(self, pids: np.ndarray ):
+        from spectraclass.gui.spatial.widgets.markers import Marker
+        from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.plot import gpm
+        from spectraclass.gui.points3js import PointCloudManager, pcm
         item_str = "" if pids.size > 8 else f",  pids={pids}"
         lgm().log(f" **TABLE-> gui.selection_changed, nitems={pids.size}{item_str}")
-        gpm().plot_graph(pids)
+        marker = Marker( "marker", pids, lm().current_cid )
+        gpm().plot_graph( marker )
+        pcm().addMarker(marker)
 
+    @exception_handled
     def _createTable( self, tab_index: int ) -> bkSpreadsheet:
         assert self._dataFrame is not None, " TableManager has not been initialized "
         if tab_index == 0:
@@ -259,7 +270,7 @@ class TableManager(SCSingletonConfigurable):
             empty_catalog = {col: np.empty( [0], 'U' ) for col in self._cols}
             dFrame: pd.DataFrame = pd.DataFrame(empty_catalog, dtype='U' )
             bkTable = bkSpreadsheet( dFrame )
-        bkTable.selection_callback(self._handle_table_selection)
+        bkTable.set_selection_callback(self._handle_table_selection)
         return bkTable
 
     def _createGui( self ) -> ipw.VBox:

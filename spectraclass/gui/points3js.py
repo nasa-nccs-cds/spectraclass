@@ -122,11 +122,13 @@ class PointCloudManager(SCSingletonConfigurable):
         from spectraclass.reduction.embedding import ReductionManager, rm
         from spectraclass.data.base import dm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
+        refresh = kwargs.get( 'refresh', False )
         model_data = dm().getModelData()
         if (model_data is not None) and (model_data.shape[0] > 1):
             flow: ActivationFlow = afm().getActivationFlow()
             if flow is None: return False
-            graph = flow.getGraph( model_data )
+            node_data = model_data if refresh else None
+            graph = flow.getGraph( nodes=node_data )
             embedding = rm().umap_init( model_data, nngraph=graph, **kwargs )
             self.xyz = self.normalize(embedding)
             return True
@@ -211,6 +213,7 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def gui(self, **kwargs ) -> ipw.DOMWidget:
         if self._gui is None:
+            lgm().log(f"Creating the PCM[{id(self)}] gui")
             self.init_data( **kwargs )
             self._gui = self._get_gui()
         return self._gui
@@ -258,7 +261,7 @@ class PointCloudManager(SCSingletonConfigurable):
         self._xyz = None
 
     def refresh(self):
-        if self.init_data():
+        if self.init_data( refresh=True ):
             self.update_plot()
 
 

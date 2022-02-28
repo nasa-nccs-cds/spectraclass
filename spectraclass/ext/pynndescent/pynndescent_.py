@@ -1,7 +1,7 @@
 # Author: Leland McInnes <leland.mcinnes@gmail.com>
 #
 # License: BSD 2 clause
-
+import traceback
 from warnings import warn
 
 import numba
@@ -10,9 +10,8 @@ from sklearn.utils import check_random_state, check_array
 from sklearn.preprocessing import normalize
 from sklearn.base import BaseEstimator, TransformerMixin
 from scipy.sparse import csr_matrix, coo_matrix, isspmatrix_csr, vstack as sparse_vstack
-
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import heapq
-
 import spectraclass.ext.pynndescent.sparse as sparse
 import spectraclass.ext.pynndescent.sparse_nndescent as sparse_nnd
 import spectraclass.ext.pynndescent.distances as pynnd_dist
@@ -871,6 +870,8 @@ class NNDescent(object):
 
             if verbose:
                 print(ts(), "NN descent for", str(n_iters), "iterations")
+                stack = '\n'.join(traceback.format_stack())
+                lgm().log( f"  -----------> NN descent:\n{stack}")
 
             self._neighbor_graph = nn_descent(
                 self._raw_data,

@@ -246,8 +246,9 @@ class MapManager(SCSingletonConfigurable):
     def selectionMode(self) -> str:
         return self.selection.value
 
-    def set_region_class(self, cid: int ):
-        self.region_selection.set_class( cid )
+    def set_region_class( self, cid: int ):
+        if self.region_selection is not None:
+            self.region_selection.set_class( cid )
 
     def create_sliders(self):
         self.band_slider = PageSlider( self.slider_axes(False), self.nFrames(model=False) )
@@ -260,7 +261,6 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def plot_labels_image(self, classification: xa.DataArray = None ):
-
         if classification is None:
             if self._classification_data is not None:
                 self._classification_data = xa.zeros_like( self._classification_data )

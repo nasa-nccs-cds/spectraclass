@@ -23,6 +23,7 @@ except ImportError:
 
 import numpy as np
 import scipy.sparse
+from spectraclass.util.logs import LogManager, lgm
 from scipy.sparse import tril as sparse_tril, triu as sparse_triu
 import scipy.sparse.csgraph
 import numba
@@ -560,6 +561,7 @@ def fuzzy_simplicial_set(
         1-simplex between the ith and jth sample points.
     """
     if knn_indices is None or knn_dists is None:
+        lgm().log("fuzzy simplical set -> nearest_neighbors")
         knn_indices, knn_dists, _ = nearest_neighbors(
             X,
             n_neighbors,
@@ -1200,6 +1202,7 @@ def simplicial_set_embedding(
             print(ts() + " Computing embedding densities")
 
         # Compute graph in embedding
+        lgm().log("simplical set embeddiong -> nearest_neighbors")
         (knn_indices, knn_dists, rp_forest,) = nearest_neighbors(
             embedding,
             densmap_kwds["n_neighbors"],
@@ -2509,6 +2512,7 @@ class UMAP(BaseEstimator):
             else:
                 nn_metric = self._input_distance_func
             if self.knn_dists is None:
+                lgm().log("fit1 -> nearest_neighbors")
                 (
                     self._knn_indices,
                     self._knn_dists,
@@ -3239,6 +3243,7 @@ class UMAP(BaseEstimator):
                 elif not self._sparse_data and self.metric in pynn_named_distances:
                     nn_metric = self.metric
                 else:
+                    lgm().log("update -> nearest_neighbors")
                     nn_metric = self._input_distance_func
 
                 (
