@@ -232,7 +232,7 @@ class LabelsManager(SCSingletonConfigurable):
         from ..graph.manager import ActivationFlowManager
         from spectraclass.data.base import DataManager
         if self._flow is None:
-            project_data: xa.Dataset = DataManager.instance().loadCurrentProject("labels")
+            project_data: Dict[str,Union[xa.DataArray,List,Dict]] = DataManager.instance().loadCurrentProject("labels")
             point_data: xa.DataArray = project_data["plot-y"]
             self._init_labels_data( point_data )
             self._flow = ActivationFlowManager.instance().getActivationFlow()
@@ -329,9 +329,9 @@ class LabelsManager(SCSingletonConfigurable):
         return pids
 
     def getLabelMap( self, update_directory_table = False ) -> Dict[int,Set[int]]:
-        from spectraclass.gui.unstructured.table import tm
+        from spectraclass.gui.unstructured.table import tbm
         label_map = {}
-        if update_directory_table: tm().clear_table(0)
+        if update_directory_table: tbm().clear_table(0)
         for m in self.markers:
             pids = label_map.get( m.cid, set() )
             label_map[m.cid] = pids.union( set(m.pids) )
@@ -341,7 +341,7 @@ class LabelsManager(SCSingletonConfigurable):
                     if len( common_items ):
                         label_map[cid] = lmap.difference(common_items)
             if update_directory_table:
-                tm().edit_table( 0, m.pids, "cid", m.cid )
+                tbm().edit_table( 0, m.pids, "cid", m.cid )
         return label_map
 
     def get_label_data( self ) -> Dict[int,Set[int]]:

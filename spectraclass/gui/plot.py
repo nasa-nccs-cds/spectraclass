@@ -6,7 +6,7 @@ from collections import OrderedDict
 import xarray as xa
 import numpy as np
 import shapely.vectorized as svect
-from spectraclass.data.base import DataManager
+from spectraclass.data.base import DataManager, dm
 from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import matplotlib.pyplot as plt
@@ -115,15 +115,18 @@ class mplGraphPlot:
     @classmethod
     def init_data(cls, **kwargs ):
         if cls._x is None:
-            project_data: xa.Dataset = DataManager.instance().loadCurrentProject("graph")
+            project_data: Dict[str,Union[xa.DataArray,List,Dict]]  = dm().loadCurrentProject("graph")
             cls._x: np.ndarray = project_data["plot-x"].values
             cls._mx: np.ndarray = project_data["plot-mx"].values
             cls._ploty: np.ndarray = project_data["plot-y"].values
             cls._rploty: np.ndarray = project_data["reproduction"].values
             cls._mploty: np.ndarray = project_data["reduction"].values
             table_cols = DataManager.instance().table_cols
-            lgm().log( f" mplGraphPlot init, using cols {table_cols} from {list(project_data.variables.keys())}, ploty shape = {cls._ploty.shape}, rploty shape = {cls._rploty.shape}" )
-            cls._mdata: List[np.ndarray] = [ project_data[mdv].values for mdv in table_cols ]
+            cls._mdata: List[np.ndarray] = [ cls.get_col_values(project_data[mdv]) for mdv in table_cols ]
+
+    @classmethod
+    def get_col_values(cls, data: Union[xa.DataArray,List] ):
+        return np.array( data ) if isinstance(data, list) else data.values
 
     def clearTransients(self):
         new_lrecs = {}

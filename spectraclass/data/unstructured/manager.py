@@ -17,7 +17,7 @@ class UnstructuredDataManager(ModeDataManager):
 
     def getSpectralData( self, **kwargs ) -> Optional[xa.DataArray]:
         from spectraclass.data.base import DataManager, dm
-        dset: Optional[xa.Dataset] = dm().loadCurrentProject( "UnstructuredDataManager" )
+        dset: Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ] = dm().loadCurrentProject( "UnstructuredDataManager" )
         if dset is not None: return dset["spectra"]
 
     def dataFile( self, **kwargs ):
@@ -78,7 +78,7 @@ class UnstructuredDataManager(ModeDataManager):
                     elif isinstance(result, list):
                         subsampled = [result[i] for i in range(0, len(result), self.subsample_index )]
                         input_data = np.vstack(subsampled) if isinstance(result[0], np.ndarray) else np.array(subsampled)
-                lgm().log(  f"Reading unstructured {vname} data from file {input_file_path}, shape = {input_data.shape}", print=True )
+                lgm().log(  f"Reading unstructured {vname} data from file {input_file_path}, shape = {input_data.shape}, dtype = {input_data.dtype}, strides = {input_data.strides}", print=True )
                 self._cached_data[input_file_path] = input_data
             return input_data
         else:

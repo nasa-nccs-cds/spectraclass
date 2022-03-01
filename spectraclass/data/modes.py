@@ -1,7 +1,8 @@
 import numpy as np
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict, Tuple, Union
 import ipywidgets as ipw
 import os, glob, sys
+import netCDF4 as nc
 import ipywidgets as ip
 from collections import OrderedDict
 from pathlib import Path
@@ -40,6 +41,7 @@ class ModeDataManager(SCSingletonConfigurable):
         assert self.MODE, f"Attempt to instantiate intermediate SingletonConfigurable class: {self.__class__}"
         self.datasets = {}
         self._model_dims_selector: ip.SelectionSlider = None
+        self._samples_axis = None
         self._subsample_selector: ip.SelectionSlider = None
         self._progress: ip.FloatProgress = None
         self._dset_selection: ip.Select = None
@@ -109,6 +111,9 @@ class ModeDataManager(SCSingletonConfigurable):
         raise NotImplementedError()
 
     def dsid(self, **kwargs) -> str:
+        raise NotImplementedError()
+
+    def set_dsid(self, dsid: str ) -> str:
         raise NotImplementedError()
 
     def prepare_inputs(self, **kwargs ) -> Dict[Tuple,int]:
@@ -208,41 +213,45 @@ class ModeDataManager(SCSingletonConfigurable):
     def getModelData(self, raw_model_data: xa.DataArray, **kwargs) -> Optional[xa.DataArray]:
         return raw_model_data
 
-    def getSpectralDataKey(self, keys: List ):
-        for sdkey in [ 'norm', 'embedding', 'spectra' ]:
-            if sdkey in keys: return sdkey
-
-    def subsample( self, variable: xa.DataArray, **kwargs ):
-        if variable.dims[0] == 'samples' and self.subsample_index > 1:
-            variable = variable[::self.subsample_index] if (variable.ndim == 1) else variable[::self.subsample_index,:]
-        variable.attrs.update( kwargs )
-        return variable
+    def dset_subsample(self, xdataset, **kwargs) -> Dict[str,Union[xa.DataArray,List]]:
+        vnames = xdataset.variables.keys()
+        dvars = {}
+        for vname in vnames:
+            result = variable = xdataset[vname]
+            if variable.dims[0] == 'samples' and self.subsample_index > 1:
+                if str(variable.dtype) in ["string","object"]:
+                    result = variable.values.tolist()
+                    result = result[::self.subsample_index]
+                else:
+                    result = variable[::self.subsample_index] if (variable.ndim == 1) else variable[ ::self.subsample_index, :]
+                    result.attrs.update(kwargs)
+            dvars[vname] = result
+            if vname in [ 'norm', 'embedding' ]:
+                dvars['spectra'] = result
+                dvars['plot-y'] = result
+        return dvars
 
     @exception_handled
-    def loadDataset(self, **kwargs) -> Optional[xa.Dataset]:
+    def loadDataset(self, **kwargs) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
         if self.dsid() not in self.datasets:
             lgm().log(f"Load dataset {self.dsid()}, current datasets = {self.datasets.keys()}")
-            dataset: xa.Dataset = self.loadDataFile(**kwargs)
-            if len(dataset.variables.keys()) == 0:
+            xdataset: xa.Dataset = self.loadDataFile(**kwargs)
+            if len(xdataset.variables.keys()) == 0:
                 lgm().log(f"Warning: Attempt to Load empty dataset {self.dataFile( **kwargs )}", print=True)
                 return None
             else:
-                sdkey = self.getSpectralDataKey( list(dataset.keys()) )
-                raw_data: xa.DataArray = self.subsample( dataset[ sdkey ], dsid = self.dsid() )
-                vnames = dataset.variables.keys()
-                dvars = { vname: self.subsample( dataset[vname], dsid = self.dsid() ) for vname in vnames }
-                attrs = dataset.attrs.copy()
-                vshapes = [ f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
-                lgm().log(f" ---> Opened Dataset {self.dsid()} from file {dataset.attrs['data_file']}\n\t -> variables: {' '.join(vshapes)}")
+                dvars: Dict[str,Union[xa.DataArray,List,Dict]] = self.dset_subsample( xdataset, dsid=self.dsid(), **kwargs )
+                attrs = xdataset.attrs.copy()
+                raw_data = dvars['samples']
+                lgm().log(f" ---> Opened Dataset {self.dsid()} from file {xdataset.attrs['data_file']}")
                 lgm().log( f" -----> reduction: shape = {dvars['reduction'].shape}, #NULL={np.count_nonzero(np.isnan(dvars['reduction'].values))}")
                 lgm().log( f" -----> point_data: shape = {raw_data.shape}, #NULL={np.count_nonzero(np.isnan(raw_data.values))}")
-                dvars['plot-y'] = raw_data
-                dvars['plot-x'] = np.arange( 0, raw_data.shape[1] )
-                dvars['plot-mx'] = np.arange( 0, dvars['reduction'].shape[1] )
-                dvars['spectra'] = raw_data
+                dvars['plot-x'] = raw_data
+                dvars['plot-mx'] = dvars['model']
                 attrs['dsid'] = self.dsid()
                 attrs['type'] = 'spectra'
-                self.datasets[ self.dsid() ] = xa.Dataset( data_vars=dvars, attrs=attrs )
+                dvars['attrs'] = attrs
+                self.datasets[ self.dsid() ] = dvars
         return self.datasets[ self.dsid() ]
 
     def blockFilePath( self, **kwargs ) -> str:
@@ -263,7 +272,7 @@ class ModeDataManager(SCSingletonConfigurable):
         dFile = self.dataFile( **kwargs )
         if os.path.isfile( dFile ):
             lgm().log( f"loadDataFile: {dFile}" )
-            dataset: xa.Dataset = xa.open_dataset( dFile )
+            dataset: xa.Dataset = xa.open_dataset( dFile, concat_characters=True )
             dataset.attrs['data_file'] = dFile
         else:
             ufm().show( f"This file/tile needs to be preprocesed.", "red" )
@@ -286,7 +295,7 @@ class ModeDataManager(SCSingletonConfigurable):
         filenames = [Path(f).stem for f in files]
         return self.filterCommonPrefix( filenames )
 
-    def loadCurrentProject(self) -> xa.Dataset:
+    def loadCurrentProject(self) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
         return self.loadDataset( )
 
     @property

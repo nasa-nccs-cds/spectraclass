@@ -193,14 +193,22 @@ class TableManager(SCSingletonConfigurable):
         self.ignorable_actions = ["page"]
 
     @exception_handled
+    def load_col(self, name: str, data: Union[xa.DataArray,List] ):
+        lgm().log( f"Loading data variable: {name}")
+        if isinstance(data, list):
+            return np.array( data )
+        else:
+            return data.values
+        # if (str(data.dtype) == "string"):
+        #     return data.values.tolist()
+        # else: return data.values
+
+    @exception_handled
     def init(self, **kwargs):
         catalog: Dict[str,np.ndarray] = kwargs.get( 'catalog', None )
-        project_data: xa.Dataset = dm().loadCurrentProject("table")
+        project_data: Dict[str,Union[xa.DataArray,List,Dict]]  = dm().loadCurrentProject("table")
         lgm().log( f"bkTABLE catalog init: project_data={list(project_data.keys())}, COLS={dm().modal.METAVARS}")
-        for tcol in dm().modal.METAVARS:
-            lgm().log(f"   **-> {tcol}{project_data[tcol].dims}: {project_data[tcol].shape} {project_data[tcol].dtype}")
-            project_data[tcol].load()
-        if catalog is None:  catalog = { tcol: project_data[tcol].values for tcol in dm().modal.METAVARS }
+        if catalog is None:  catalog = { tcol: self.load_col(tcol,project_data[tcol]) for tcol in dm().modal.METAVARS }
         nrows = catalog[ dm().modal.METAVARS[0] ].shape[0]
         lgm().log( f"bkCatalog: nrows = {nrows}, entries: {[ f'{k}:{v.shape}' for (k,v) in catalog.items() ]}" )
         self._dataFrame: pd.DataFrame = pd.DataFrame( catalog, dtype='U', index=pd.Int64Index( range(nrows), name="index" ) )
@@ -210,7 +218,7 @@ class TableManager(SCSingletonConfigurable):
 
     def edit_table(self, cid: int, pids: np.ndarray, column: str, value: Any ):
          table: bkSpreadsheet = self._tables[cid]
-         for pid in pids.tolist():
+         for pid in pids:
             table.patch_data_element( column, pid, value )
 
     def  clear_table(self,cid: int):

@@ -23,7 +23,7 @@ class Spectraclass(SpectraclassController):
         from bokeh.io import output_notebook
         from spectraclass.gui.plot import GraphPlotManager, gpm
         from spectraclass.gui.points3js import PointCloudManager, pcm
-        from spectraclass.gui.unstructured.table import tm
+        from spectraclass.gui.unstructured.table import tbm
         from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
         from spectraclass.data.base import DataManager, dm
         lgm().log( f"Creating the Spectraclass[{id(self)}] gui")
@@ -35,33 +35,32 @@ class Spectraclass(SpectraclassController):
         for iT, title in enumerate(['data', 'embedding']): collapsibles.set_title(iT, title)
         collapsibles.selected_index = 1
         plot = ipw.VBox([ ufm().gui(), collapsibles ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
-        control = ipw.VBox([am().gui(), tm().gui(), gpm().gui()], layout=ipw.Layout(flex='0 0 700px'), border=css_border)
+        control = ipw.VBox([am().gui(), tbm().gui(), gpm().gui()], layout=ipw.Layout(flex='0 0 700px'), border=css_border)
         self._gui = ipw.HBox( [control, plot ], layout=ipw.Layout( width='100%' ) )
         if embed: self.embed()
 
     def mark(self):
         super(Spectraclass, self).mark()
     #    lgm().log(f"      *UNSTRUCTURED CONTROLLER -> MARK ")
-        from spectraclass.gui.unstructured.table import tm
-        tm().mark_points()
+        from spectraclass.gui.unstructured.table import tbm
+        tbm().mark_points()
 
     def clear(self):
-        from spectraclass.gui.unstructured.table import tm
         super(Spectraclass, self).clear()
         lgm().log( f"      *UNSTRUCTURED CONTROLLER -> CLEAR ")
 
     def undo_action(self):
-        from spectraclass.gui.unstructured.table import tm
+        from spectraclass.gui.unstructured.table import tbm
         super(Spectraclass, self).undo_action()
         lgm().log(f"      *UNSTRUCTURED CONTROLLER -> UNDO ")
 
     def propagate_selection(self, niters=1):
-        from spectraclass.gui.unstructured.table import tm
+        from spectraclass.gui.unstructured.table import tbm
         super(Spectraclass, self).propagate_selection()
         lgm().log(f"      *UNSTRUCTURED CONTROLLER -> SPREAD ")
 
     def add_marker(self, source: str, marker: Marker):
-        from spectraclass.gui.unstructured.table import tm
+        from spectraclass.gui.unstructured.table import tbm
         super(Spectraclass, self).add_marker( source, marker )
         lgm().log(f"      *UNSTRUCTURED CONTROLLER -> ADD_MARKER ")
 

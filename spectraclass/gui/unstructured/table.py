@@ -1,6 +1,6 @@
 table_type = "bokeh"
 
-def tm():
+def tbm():
     if table_type == "bokeh":
         from .bktable import TableManager
         return TableManager.instance()

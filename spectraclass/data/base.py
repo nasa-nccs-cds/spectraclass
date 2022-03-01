@@ -74,8 +74,9 @@ class DataManager(SCSingletonConfigurable):
             else:
                 xdims[iS] = dim
                 xcoords[dim] = np.arange(iS)
-        lgm().log(f"Creating Xarray[{id}], shape={np_data.shape}, dims={dims}, dtype={np_data.dtype}")
-        return xa.DataArray( np_data, dims=dims, coords=coords, name=id, attrs={**kwargs, 'name': id} )
+        result =  xa.DataArray( np_data, dims=dims, coords=coords, name=id, attrs={**kwargs, 'name': id} )
+        lgm().log(f"Creating Xarray[{id}], shape={result.shape}, dims={dims}, dtype={result.dtype}, data strides={np_data.strides}")
+        return result
 
     def clear_project_cache(self):
         self._project_data = None
@@ -222,6 +223,9 @@ class DataManager(SCSingletonConfigurable):
     def dsid(self, **kwargs ) -> str:
         return self._mode_data_manager_.dsid( **kwargs )
 
+    def set_dsid(self, dsid: str ) -> str:
+        return self._mode_data_manager_.set_dsid( dsid )
+
     @property
     def project_name(self) -> str:
         return ".".join( [ self.name, self.mode ] )
@@ -248,22 +252,21 @@ class DataManager(SCSingletonConfigurable):
     def getInputFileData(self, vname: str = None, **kwargs ) -> np.ndarray:
         return self._mode_data_manager_.getInputFileData( vname, **kwargs )
 
-    def loadCurrentProject(self, caller_id: str = "main" ) -> Optional[xa.Dataset]:
+    def loadCurrentProject(self, caller_id: str = "main" ) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
         lgm().log( f" DataManager: loadCurrentProject: {caller_id}" )
         if self._mode_data_manager_ is not None:
             if self._project_data is None:
                 self._project_data = self._mode_data_manager_.loadCurrentProject()
                 assert self._project_data is not None, "Project initialization failed- check log file for details"
-                ns = self._project_data.variables['samples'].size
-                lgm().log(f"Loaded current project data[{ns}]:  {[f'{k}:{v.shape}' for (k,v) in self._project_data.variables.items()]}")
+                ns = self._project_data['samples'].size
                 if ns == 0: ufm().show( "This tile contains no data","red")
             return self._project_data
 
-    def loadProject(self, dsid: str ) -> Optional[xa.Dataset]:
-        project_data = self._mode_data_manager_.loadCurrentProject()
+    def loadProject(self, dsid: str = None ) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
+        if dsid is not None: self.set_dsid( dsid )
+        project_data: Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ] = self._mode_data_manager_.loadCurrentProject()
         if project_data is not None:
-            ns = project_data.variables['samples'].size
-            lgm().log(f"Loaded project data[{ns}]:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
+            ns = project_data['samples'].size
             if ns == 0: ufm().show("This tile contains no data", "red")
         return project_data
 
@@ -285,14 +288,15 @@ class DataManager(SCSingletonConfigurable):
         return self._mode_data_manager_.valid_bands()
 
     def getRawModelData(self) -> Optional[xa.DataArray]:
-        project_dataset: xa.Dataset = self.loadCurrentProject("getModelData")
+        project_dataset: Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ] = self.loadCurrentProject("getModelData")
         if project_dataset is not None:
             model_data: xa.DataArray = project_dataset['reduction']
-            model_data.attrs['dsid'] = project_dataset.attrs['dsid']
+            attrs = project_dataset['attrs']
+            model_data.attrs['dsid'] = attrs['dsid']
             return model_data
 
     def getSpatialDims(self) -> Dict[str,int]:
-        project_dataset: xa.Dataset = self.loadCurrentProject("getModelData")
+        project_dataset: Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ] = self.loadCurrentProject("getModelData")
         raw_data: xa.DataArray = project_dataset['raw']
         return dict( ny = raw_data.shape[1], nx = raw_data.shape[2] )
 
