@@ -218,7 +218,7 @@ class ModeDataManager(SCSingletonConfigurable):
         dvars = {}
         for vname in vnames:
             result = variable = xdataset[vname]
-            if variable.dims[0] == 'samples' and self.subsample_index > 1:
+            if (self.subsample_index > 1) and (len(variable.dims) >= 1) and (variable.dims[0] == 'samples'):
                 if str(variable.dtype) in ["string","object"]:
                     result = variable.values.tolist()
                     result = result[::self.subsample_index]
@@ -246,7 +246,7 @@ class ModeDataManager(SCSingletonConfigurable):
                 lgm().log(f" ---> Opened Dataset {self.dsid()} from file {xdataset.attrs['data_file']}")
                 lgm().log( f" -----> reduction: shape = {dvars['reduction'].shape}, #NULL={np.count_nonzero(np.isnan(dvars['reduction'].values))}")
                 lgm().log( f" -----> point_data: shape = {raw_data.shape}, #NULL={np.count_nonzero(np.isnan(raw_data.values))}")
-                dvars['plot-x'] = raw_data
+                dvars['plot-x'] = dvars['band']
                 dvars['plot-mx'] = dvars['model']
                 attrs['dsid'] = self.dsid()
                 attrs['type'] = 'spectra'
