@@ -1,9 +1,13 @@
 import xarray as xa
+import pandas as pd
 import time, traceback, abc
+from functools import partial
+from jupyter_bokeh.widgets import BokehModel
 import numpy as np
 import scipy, sklearn
 from tensorflow.keras.models import Model
-from typing import List, Tuple, Optional, Dict
+from typing import List, Tuple, Optional, Dict, Union
+from bokeh.models import ColumnDataSource, DataTable, TableColumn, Selection
 from ..model.labels import LabelsManager
 import traitlets as tl
 import traitlets.config as tlc
@@ -15,6 +19,54 @@ from .base import LearningModel, KerasModelWrapper
 
 def cm():
     return ClassificationManager.instance()
+
+class TestModelTable:
+
+    def __init__(self):
+        self._dataFrame = pd.DataFrame( [ '1', '2', '3' ], columns=["models"] )
+        self._source: ColumnDataSource = ColumnDataSource( self._dataFrame )
+        self._columns = [ TableColumn(field=cid, title=cid) for cid in self._dataFrame.columns ]
+        self._table = DataTable( source=self._source, columns=self._columns, width=500, height=500, selectable="checkbox" )
+
+    def selected_row( self ):
+        return self._dataFrame["models"].dataarray[ self.selection ]
+
+    @property
+    def selection( self ) -> List[int]:
+        return self._source.selected.indices
+
+    @exception_handled
+    def gui(self) -> ipw.DOMWidget:
+        return ipw.HBox( [ BokehModel(self._table) ] )
+
+class ModelTable:
+
+    def __init__(self, data: Union[pd.DataFrame,List[str]], **kwargs ):
+        self._dataFrame: pd.DataFrame = None
+        if isinstance( data, pd.DataFrame ):
+            self._dataFrame = data
+        elif isinstance( data, List ):
+            lgm().log( f"Creating DataFrame from list: {data}")
+            self._dataFrame = pd.DataFrame( data, columns=["models"] )
+        else:
+            raise TypeError( f"Unsupported data class supplied to ModelTable: {data.__class__}" )
+        self._source: ColumnDataSource = ColumnDataSource( self._dataFrame )
+        self._columns = [ TableColumn(field=cid, title=cid) for cid in self._dataFrame.columns ]
+        self._table = DataTable( source=self._source, columns=self._columns ) # , width=500, height=500, selectable="checkbox" )
+
+    def to_df( self ) -> pd.DataFrame:
+        return self._source.to_df()
+
+    def selected_row( self ):
+        return self._dataFrame["models"].dataarray[ self.selection ]
+
+    @property
+    def selection( self ) -> List[int]:
+        return self._source.selected.indices
+
+    @exception_handled
+    def gui(self) -> ipw.DOMWidget:
+        return BokehModel(self._table) # ipw.HBox( [ BokehModel(self._table) ] )
 
 class Cluster:
 
@@ -68,13 +120,14 @@ class Cluster:
         return self.metrics["icor"]
 
 class ClassificationManager(SCSingletonConfigurable):
-    mid = tl.Unicode("").tag(config=True, sync=True)
+    mid = tl.Unicode("mlp").tag(config=True, sync=True)
 
     def __init__(self,  **kwargs ):
         super(ClassificationManager, self).__init__(**kwargs)
         self._models: Dict[str,LearningModel] = {}
         self.import_models()
         self.selection = self.selection_label = None
+        self.model_table: ModelTable = None
 
     @property
     def mids(self) -> List[str]:
@@ -113,6 +166,33 @@ class ClassificationManager(SCSingletonConfigurable):
     def addNNModel(self, mid: str, model: Model, **kwargs):
         self._models[ mid ] = KerasModelWrapper(mid, model, **kwargs)
 
+    def get_control_button(self, task: str ) -> ipw.Button:
+        button = ipw.Button(description=task, border='1px solid gray')
+        button.layout = ipw.Layout(width='auto', flex="1 0 auto")
+        button.on_click( partial(self.on_control_click, task) )
+        return button
+
+    @exception_handled
+    def create_persistence_gui(self) -> ipw.DOMWidget:
+        title = ipw.Label(value="Persisted Models")
+        self.model_table = ModelTable( self.model.list_models() )
+        controls = [ self.get_control_button(task) for task in [ "save", "load", "delete" ] ]
+        mlist = self.model_table.gui() # ] ) # , ipw.HBox( controls ) ] ) # , layout = ipw.Layout( width="500px", height="500px", border= '2px solid firebrick' )  )
+        gui = ipw.VBox([ title, mlist, ipw.HBox( controls ) ] )  # , layout = ipw.Layout( width="500px", height="500px", border= '2px solid firebrick' )  )
+        return gui
+
+    @exception_handled
+    def on_control_click( self, task, button: ipw.Button = None ):
+        if   ( task == "save" ):
+            self.save_model( )
+        elif ( task == "load" ):
+            selected_model = self.model_table.selected_row()
+            lgm().log( f"Selected model: {selected_model}")
+            cm().load_model( selected_model )
+        elif ( task == "delete" ):
+            model_index = self.model_table.selection
+            lgm().log(f"Selected index: {model_index}")
+
     def gui(self):
         if self.selection is None: self.create_selection_panel()
         return ipw.HBox( [self.selection_label, self.selection] )
@@ -124,6 +204,12 @@ class ClassificationManager(SCSingletonConfigurable):
     def model(self) -> "LearningModel":
         model: LearningModel = self._models[ self.mid ]
         return model
+
+    def save_model( self, **kwargs ):
+        self.model.save( **kwargs )
+
+    def load_model( self, model_name, **kwargs ):
+        self.model.load( model_name, **kwargs )
 
     @exception_handled
     def learn_classification( self, filtered_point_data: np.ndarray, filtered_labels: np.ndarray, **kwargs  ):

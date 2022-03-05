@@ -1,6 +1,7 @@
 from spectraclass.data.base import DataManager
 from spectraclass.data.base import ModeDataManager
 from spectraclass.model.labels import LabelsManager, lm
+from spectraclass.learn.manager import ClassificationManager, cm
 
 dm: DataManager = DataManager.initialize( "demo4", 'tess' )
 dm.modal.cache_dir = "/Volumes/Shared/Cache"
@@ -14,4 +15,5 @@ classes = [ ('Class-1', "cyan"),
             ('Class-4', "blue")]
 
 dm.loadCurrentProject()
-labels_data = lm().getLabelsArray()
+lm().setLabels( classes )
+cm().create_persistence_gui()

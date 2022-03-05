@@ -1,6 +1,5 @@
 from __future__ import annotations
 from typing import List, Union, Tuple, Optional, Dict, Callable
-from functools import partial
 from collections import OrderedDict
 import ipywidgets as ipw
 import traitlets.config as tlc

@@ -76,9 +76,10 @@ class ParametersManager(SCSingletonConfigurable):
             self._wGui = self._createGui( **kwargs )
         return self._wGui
 
+    @exception_handled
     def _createGui( self, **kwargs ) -> ipw.Box:
         wTab = ipw.Tab()
-        tabNames = [  "layers", "selection", "learning", "threshold"  ]
+        tabNames = [  "layers", "selection", "learning", "threshold", "persist"  ]
         children = []
         for iT, title in enumerate( tabNames ):
             wTab.set_title( iT, title )
@@ -90,20 +91,14 @@ class ParametersManager(SCSingletonConfigurable):
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.learn.manager import ClassificationManager, cm
-        widgets = []
-        if title == "layers":
-            widgets.append( mm().layers.gui() )
-        if title == "selection":
-            widgets.append(mm().get_selection_panel())
-        if title == "learning":
-            widgets.append( cm().gui() )
-        if title == "threshold":
-            widgets.append(mm().get_threshold_panel())
-        elif title == "reduction":
-            widgets.append( dm().modal.getCreationPanel() )
-        elif title == "embedding":
-            widgets.append( dm().modal.getConfigPanel() )
-        return  ipw.VBox(widgets)
+        if title   == "layers":     return  mm().layers.gui()
+        elif title == "persist":    return  cm().create_persistence_gui()
+        elif title == "selection":  return  mm().get_selection_panel()
+        elif title == "learning":   return  cm().gui()
+        elif title == "threshold":  return  mm().get_threshold_panel()
+        elif title == "reduction":  return  dm().modal.getCreationPanel()
+        elif title == "embedding":  return  dm().modal.getConfigPanel()
+        else: return ipw.VBox([])
 
 def ufm() -> "UserFeedbackManager":
     return UserFeedbackManager.instance()

@@ -168,6 +168,9 @@ class bkSpreadsheet:
     def get_selection( self ) -> np.ndarray:
         return self.idxs2pids(self._source.selected.indices)
 
+    def selected_row( self ) -> np.ndarray:
+        return self._dataFrame[ self._source.selected ]
+
     def gui(self) -> BokehModel:
         return BokehModel(self._table)
 

@@ -246,7 +246,7 @@ class ModeDataManager(SCSingletonConfigurable):
                 lgm().log(f" ---> Opened Dataset {self.dsid()} from file {xdataset.attrs['data_file']}")
                 lgm().log( f" -----> reduction: shape = {dvars['reduction'].shape}, #NULL={np.count_nonzero(np.isnan(dvars['reduction'].values))}")
                 lgm().log( f" -----> point_data: shape = {raw_data.shape}, #NULL={np.count_nonzero(np.isnan(raw_data.values))}")
-                dvars['plot-x'] = dvars['band']
+                dvars['plot-x'] = dvars['bands'] if ('bands'in dvars) else dvars['band']
                 dvars['plot-mx'] = dvars['model']
                 attrs['dsid'] = self.dsid()
                 attrs['type'] = 'spectra'

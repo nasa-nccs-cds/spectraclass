@@ -2,7 +2,8 @@ import xarray as xa
 import time, traceback, abc
 from sklearn.model_selection import train_test_split
 import numpy as np
-import scipy, sklearn
+import os
+from datetime import datetime
 from tensorflow.keras.models import Model
 from typing import List, Tuple, Optional, Dict
 from ..model.labels import LabelsManager
@@ -12,7 +13,6 @@ import ipywidgets as ipw
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from tensorflow.keras.utils import to_categorical
-import tensorflow as tf
 from tensorflow.keras import datasets, layers, models
 
 class LearningModel:
@@ -22,6 +22,22 @@ class LearningModel:
         self._score: Optional[np.ndarray] = None
         self.config = kwargs
         self._keys = []
+
+    @property
+    def model_dir(self):
+        from spectraclass.data.base import dm
+        from spectraclass.data.spatial.tile.manager import tm
+        mdir = os.path.join( dm().cache_dir, "models", tm().tileName() )
+        os.makedirs( mdir, 0o777, exist_ok=True)
+        return mdir
+
+    @property
+    def model_file(self):
+        ts = datetime.now().strftime("%Y.%j_%H.%M.%S")
+        return os.path.join( self.model_dir, ts )
+
+    def list_models(self) -> List[str]:
+        return os.listdir( self.model_dir )
 
     def setKeys(self, keys: List[str] ):
         self._keys = keys
@@ -68,6 +84,11 @@ class LearningModel:
     def predict( self, data: np.ndarray, **kwargs ):
         raise Exception( "abstract method LearningModel.predict called")
 
+    def save( self, **kwargs ):
+        raise Exception( "abstract method LearningModel.predict called")
+
+    def load( self, name, **kwargs ):
+        raise Exception( "abstract method LearningModel.predict called")
 
 class KerasModelWrapper(LearningModel):
 
@@ -80,6 +101,14 @@ class KerasModelWrapper(LearningModel):
 
     def predict( self, data: np.ndarray, **kwargs ) -> np.ndarray:
         return self._model.predict( data, **kwargs )
+
+    def save( self, **kwargs ) -> str:
+        lgm().log( f'KerasModelWrapper: save weights -> {self.model_file}' )
+        return self._model.save_weights( self.model_file, **kwargs )
+
+    def load( self, model_name: str, **kwargs ):
+        file_path = os.path.join( self.model_dir, model_name )
+        return self._model.load_weights( file_path, **kwargs )
 
     def fit(self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
         nepochs = kwargs.pop( 'nepochs', 25 )
