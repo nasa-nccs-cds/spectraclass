@@ -3,23 +3,23 @@ from functools import partial
 import numpy as np
 import pandas as pd
 import ipywidgets as ipw
+import ipysheet as ips
 from spectraclass.widgets.buttons import ToggleButton
 from spectraclass.data.base import dm
 from spectraclass.model.labels import LabelsManager
 from spectraclass.model.base import SCSingletonConfigurable
-from jupyter_bokeh.widgets import BokehModel
 import math, xarray as xa
-from bokeh.models import ColumnDataSource, DataTable, TableColumn
 from typing import List, Union, Dict, Callable, Set, Any, Sequence
 
 
-class bkSpreadsheet:
+class ipSpreadsheet:
 
     def __init__(self, data: Union[pd.DataFrame,xa.DataArray], **kwargs ):
         self._current_page_data: pd.DataFrame = None
         self._current_page = None
         self._dataFrame: pd.DataFrame = None
         self._filteredData: pd.DataFrame = None
+        self._selection = {}
         self._selection_callback = None
         if isinstance( data, pd.DataFrame ):
             self._dataFrame = data
@@ -28,13 +28,10 @@ class bkSpreadsheet:
             self._dataFrame = data.to_pandas()
         else:
             raise TypeError( f"Unsupported data class supplied to bkSpreadsheet: {data.__class__}" )
-        self._source: ColumnDataSource = ColumnDataSource( self._dataFrame )
-        self._source.selected.on_change( "indices", self._exec_selection_callback )
-        self._columns = [TableColumn(field=cid, title=cid, sortable=True) for cid in self._dataFrame.columns]
-        self._selection = np.full( [ self._dataFrame.shape[0] ], False, np.bool )
+#        self._source.selected.on_change( "indices", self._exec_selection_callback )
         self.current_page = kwargs.get('init_page', 0)
-        lgm().log( f" Creating DataTable from dframe[{self._dataFrame.shape}], cols = {self._dataFrame.columns} " )
-        self._table = DataTable( source=self._source, columns=self._columns, width=600, height=300, selectable="checkbox", index_position=None )
+        lgm().log( f" Creating ips.Sheet from dframe[{self._dataFrame.shape}], cols = {self._dataFrame.columns} " )
+        self._table: ips.Sheet = ips.from_dataframe( self._dataFrame )
 
     @property
     def table_data(self) -> pd.DataFrame:
@@ -67,17 +64,12 @@ class bkSpreadsheet:
 
     def refresh_page_data(self):
         self._current_page_data = self.table_data.iloc[ self.page_start:self.page_end ]
-        if self._source is None:
-            self._source = ColumnDataSource( self._current_page_data )
-            self._source.selected.on_change("indices", self._process_selection_change )
-        self._source.data = self._current_page_data
         self.refresh_selection()
 
     @exception_handled
     def refresh_selection(self):
         selection_indices: np.ndarray = self.pids2idxs( np.nonzero( self._selection )[0] )
         lgm().log(f" update_selection[{self._current_page}] -> selection_indices = {selection_indices.tolist()}")
-        self._source.selected.indices = selection_indices.tolist()
 
     def idxs2pids(self, idxs: Union[List,np.ndarray]) -> np.ndarray:
         if len(idxs) == 0:
@@ -122,7 +114,7 @@ class bkSpreadsheet:
         return self._current_page_data
 
     def to_df( self ) -> pd.DataFrame:
-        return self._source.to_df()
+        return self._dataFrame
 
     def _process_selection_change(self, attr: str, old: List[int], new: List[int] ):
         old_pids: np.ndarray = self.idxs2pids( np.array(old) )
@@ -171,8 +163,8 @@ class bkSpreadsheet:
     def selected_row( self ) -> np.ndarray:
         return self._dataFrame[ self._source.selected ]
 
-    def gui(self) -> BokehModel:
-        return BokehModel(self._table)
+    def gui(self) -> ips.Sheet:
+        return self._table
 
 class TableManager(SCSingletonConfigurable):
     rows_per_page = 100
@@ -181,7 +173,7 @@ class TableManager(SCSingletonConfigurable):
         super(TableManager, self).__init__()
         self._wGui: ipw.VBox = None
         self._dataFrame: pd.DataFrame = None
-        self._tables: List[bkSpreadsheet] = []
+        self._tables: List[ipSpreadsheet] = []
         self._cols: List[str] = None
         self._wTablesWidget: ipw.Tab = None
         self._wPages: ipw.Dropdown = None
@@ -220,12 +212,12 @@ class TableManager(SCSingletonConfigurable):
         lgm().log(f"  DataFrame[{nrows}]: cols = {self._dataFrame.columns}, catalog cols = {self._cols}, shape = {self._dataFrame.shape}" )
 
     def edit_table(self, cid: int, pids: np.ndarray, column: str, value: Any ):
-         table: bkSpreadsheet = self._tables[cid]
+         table: ipSpreadsheet = self._tables[cid]
          for pid in pids:
             table.patch_data_element( column, pid, value )
 
     def  clear_table(self,cid: int):
-        table: bkSpreadsheet = self._tables[cid]
+        table: ipSpreadsheet = self._tables[cid]
         table.set_col_data( "cid", 0 )
 
     @property
@@ -233,7 +225,7 @@ class TableManager(SCSingletonConfigurable):
         return int( self._wTablesWidget.selected_index )
 
     @property
-    def selected_table(self) -> bkSpreadsheet:
+    def selected_table(self) -> ipSpreadsheet:
         return self._tables[ self.selected_table_index ]
 
     def mark_points(self):
@@ -277,15 +269,15 @@ class TableManager(SCSingletonConfigurable):
         gpm().plot_graph( marker )
         pcm().addMarker(marker)
 
-    def _createTable( self, tab_index: int ) -> bkSpreadsheet:
+    def _createTable( self, tab_index: int ) -> ipSpreadsheet:
         assert self._dataFrame is not None, " TableManager has not been initialized "
         lgm().log( f"Create Spreadsheet Table[{tab_index}]")
         if tab_index == 0:
-            bkTable = bkSpreadsheet( self._dataFrame ) # , sequential=True )
+            bkTable = ipSpreadsheet( self._dataFrame ) # , sequential=True )
         else:
             empty_catalog = {col: np.empty( [0], 'U' ) for col in self._cols}
             dFrame: pd.DataFrame = pd.DataFrame(empty_catalog, dtype='U' )
-            bkTable = bkSpreadsheet( dFrame )
+            bkTable = ipSpreadsheet( dFrame )
         bkTable.set_selection_callback(self._handle_table_selection)
         return bkTable
 
