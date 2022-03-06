@@ -21,7 +21,8 @@ class UnstructuredDataManager(ModeDataManager):
         if dset is not None: return dset["spectra"]
 
     def dataFile( self, **kwargs ):
-        return os.path.join(self.datasetDir, self.dsid() + ".nc")
+        ncfilename = f"{self.dset_name}{self.INPUTS['spectra']}.nc"
+        return os.path.join( self.datasetDir, ncfilename )
 
     @exception_handled
     def prepare_inputs(self, **kwargs ) -> Dict[Tuple,int]:
