@@ -20,25 +20,6 @@ from .base import LearningModel, KerasModelWrapper
 def cm():
     return ClassificationManager.instance()
 
-class TestModelTable:
-
-    def __init__(self):
-        self._dataFrame = pd.DataFrame( [ '1', '2', '3' ], columns=["models"] )
-        self._source: ColumnDataSource = ColumnDataSource( self._dataFrame )
-        self._columns = [ TableColumn(field=cid, title=cid) for cid in self._dataFrame.columns ]
-        self._table = DataTable( source=self._source, columns=self._columns, width=500, height=500, selectable="checkbox" )
-
-    def selected_row( self ):
-        return self._dataFrame["models"].dataarray[ self.selection ]
-
-    @property
-    def selection( self ) -> List[int]:
-        return self._source.selected.indices
-
-    @exception_handled
-    def gui(self) -> ipw.DOMWidget:
-        return ipw.HBox( [ BokehModel(self._table) ] )
-
 class ModelTable:
 
     def __init__(self, data: Union[pd.DataFrame,List[str]], **kwargs ):
@@ -57,8 +38,12 @@ class ModelTable:
     def to_df( self ) -> pd.DataFrame:
         return self._source.to_df()
 
+    def delete(self, model_index ):
+        lgm().log( f" ModelTable delete index: {model_index}" )
+
     def selected_row( self ):
-        return self._dataFrame["models"].dataarray[ self.selection ]
+        column: pd.Series = self._dataFrame["models"]
+        return column.values[ self.selection ]
 
     @property
     def selection( self ) -> List[int]:
@@ -187,11 +172,12 @@ class ClassificationManager(SCSingletonConfigurable):
             self.save_model( )
         elif ( task == "load" ):
             selected_model = self.model_table.selected_row()
-            lgm().log( f"Selected model: {selected_model}")
+            lgm().log( f"MODEL TABLE <LOAD>: Selected model: {selected_model}")
             cm().load_model( selected_model )
         elif ( task == "delete" ):
             model_index = self.model_table.selection
-            lgm().log(f"Selected index: {model_index}")
+            lgm().log(f"MODEL TABLE <DEL>: Selected index: {model_index}")
+            self.model_table.delete( model_index )
 
     def gui(self):
         if self.selection is None: self.create_selection_panel()
