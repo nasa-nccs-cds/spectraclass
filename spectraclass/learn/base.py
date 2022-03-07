@@ -85,10 +85,10 @@ class LearningModel:
         raise Exception( "abstract method LearningModel.predict called")
 
     def save( self, **kwargs ):
-        raise Exception( "abstract method LearningModel.predict called")
+        raise Exception( "abstract method LearningModel.save called")
 
     def load( self, name, **kwargs ):
-        raise Exception( "abstract method LearningModel.predict called")
+        raise Exception( "abstract method LearningModel.load called")
 
 class KerasModelWrapper(LearningModel):
 

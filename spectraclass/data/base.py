@@ -218,7 +218,7 @@ class DataManager(SCSingletonConfigurable):
 
     @property
     def cache_dir(self) -> str:
-        return os.path.join( self.modal.cache_dir, self.name, self.modal.MODE )
+        return os.path.join( self.modal.cache_dir, "spectraclass", self.modal.MODE, self.name )
 
     def dsid(self, **kwargs ) -> str:
         return self._mode_data_manager_.dsid( **kwargs )
