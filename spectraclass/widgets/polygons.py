@@ -105,6 +105,7 @@ class PolygonInteractor:
         from spectraclass.application.controller import app
         self.prec.complete()
         self.creating = False
+        lgm().log( f"POLY->close: points = {self.prec.poly.get_xy().tolist()}")
         self.draw()
         marker = tm().get_region_marker( self.prec )
         app().add_marker( "map", marker )
@@ -113,6 +114,8 @@ class PolygonInteractor:
     @exception_handled
     def on_button_press(self, event: MouseEvent ):
         if event.inaxes is None: return
+        x, y = event.xdata, event.ydata
+        lgm().log( f"POLYINTER: button {event.button} press: enabled={self.enabled}, creating={self.creating}, point={[x,y]}")
         if event.button == 1:
             if self.enabled:
                 if self.prec is None:

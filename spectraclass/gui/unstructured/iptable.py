@@ -157,11 +157,11 @@ class ipSpreadsheet:
             if self._filteredData is not None:
                 self._filteredData.at[pid, colname] = value
 
-    def get_selection( self ) -> np.ndarray:
-        return self.idxs2pids(self._source.selected.indices)
+    def get_selection( self ) -> int:
+        return 0 # self.idxs2pids( self._table.)
 
     def selected_row( self ) -> np.ndarray:
-        return self._dataFrame[ self._source.selected ]
+        return self._dataFrame[ self.get_selection ]
 
     def gui(self) -> ips.Sheet:
         return self._table

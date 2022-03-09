@@ -9,7 +9,7 @@ Conda CPU Environment Setup
     > conda create -n spectraclass python=3.7
     > conda activate spectraclass
     > conda install -c conda-forge mamba
-    > mamba install -c conda-forge pythreejs nb_conda_kernels nodejs jupyterlab jupyterlab_server ipywidgets ipympl matplotlib mplcursors pythreejs numpy xarray rasterio scipy scikit-learn dask netcdf4 scikit-image numba gdal owslib rioxarray cartopy shapely bottleneck geopandas keras tensorflow
+    > mamba install -c conda-forge pythreejs ipysheet nb_conda_kernels nodejs jupyterlab jupyterlab_server ipywidgets ipympl matplotlib mplcursors pythreejs numpy xarray rasterio scipy scikit-learn dask netcdf4 scikit-image numba gdal owslib rioxarray cartopy shapely bottleneck geopandas keras tensorflow
     > mamba install pytorch -c pytorch
 
 The x-ray application requires the following additional packages:

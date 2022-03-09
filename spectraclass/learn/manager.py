@@ -1,6 +1,6 @@
 import xarray as xa
 import pandas as pd
-import time, traceback, abc
+import time, traceback, shutil
 from functools import partial
 from jupyter_bokeh.widgets import BokehModel
 import numpy as np
@@ -8,7 +8,6 @@ import scipy, sklearn
 from tensorflow.keras.models import Model
 from typing import List, Tuple, Optional, Dict, Union
 from bokeh.models import ColumnDataSource, DataTable, TableColumn, Selection
-from ..model.labels import LabelsManager
 import traitlets as tl
 import traitlets.config as tlc
 import ipywidgets as ipw
@@ -22,24 +21,42 @@ def cm():
 
 class ModelTable:
 
-    def __init__(self, data: Union[pd.DataFrame,List[str]], **kwargs ):
+    def __init__(self, models: Dict[str,str], **kwargs ):
         self._dataFrame: pd.DataFrame = None
-        if isinstance( data, pd.DataFrame ):
-            self._dataFrame = data
-        elif isinstance( data, List ):
-            lgm().log( f"Creating DataFrame from list: {data}")
-            self._dataFrame = pd.DataFrame( data, columns=["models"] )
-        else:
-            raise TypeError( f"Unsupported data class supplied to ModelTable: {data.__class__}" )
+        self._models = models
+        lgm().log( f"Creating DataFrame from list: {models}")
+        self._dataFrame = pd.DataFrame( list(self._models.keys()), columns=["models"] )
         self._source: ColumnDataSource = ColumnDataSource( self._dataFrame )
         self._columns = [ TableColumn(field=cid, title=cid) for cid in self._dataFrame.columns ]
-        self._table = DataTable( source=self._source, columns=self._columns ) # , width=500, height=500, selectable="checkbox" )
+        self._table = DataTable( source=self._source, columns=self._columns, width=200, height=200, selectable="checkbox" )
 
     def to_df( self ) -> pd.DataFrame:
-        return self._source.to_df()
+        return self._dataFrame
 
-    def delete(self, model_index ):
-        lgm().log( f" ModelTable delete index: {model_index}" )
+    def refresh(self):
+        self._source = ColumnDataSource(self._dataFrame)
+        self._table.source = self._source
+
+    def add(self, model_name: str ):
+        self._dataFrame = self._dataFrame.append( pd.DataFrame( [model_name], columns=["models"] ), ignore_index=True )
+        self.refresh()
+
+    @property
+    def index(self) -> List[int]:
+        return self._dataFrame.index.tolist()
+
+    @exception_handled
+    def delete_model_file(self, model_name: str ):
+        mdir: str = self._models[ model_name ]
+        lgm().log( f" Deleting model dir '{mdir}' ")
+        shutil.rmtree( mdir )
+
+    def delete(self, row: int ):
+        idx: int = self.index[row]
+        column: pd.Series = self._dataFrame["models"]
+        self.delete_model_file( column.values[ row ] )
+        self._dataFrame = self._dataFrame.drop( index=idx )
+        self.refresh()
 
     def selected_row( self ):
         column: pd.Series = self._dataFrame["models"]
@@ -51,7 +68,7 @@ class ModelTable:
 
     @exception_handled
     def gui(self) -> ipw.DOMWidget:
-        return BokehModel(self._table) # ipw.HBox( [ BokehModel(self._table) ] )
+        return BokehModel( self._table )
 
 class Cluster:
 
@@ -159,7 +176,7 @@ class ClassificationManager(SCSingletonConfigurable):
 
     @exception_handled
     def create_persistence_gui(self) -> ipw.DOMWidget:
-        title = ipw.Label(value="Persisted Models")
+        title = ipw.Label( value="Persisted Models" )
         self.model_table = ModelTable( self.model.list_models() )
         controls = [ self.get_control_button(task) for task in [ "save", "load", "delete" ] ]
         mlist = self.model_table.gui() # ] ) # , ipw.HBox( controls ) ] ) # , layout = ipw.Layout( width="500px", height="500px", border= '2px solid firebrick' )  )
@@ -169,15 +186,19 @@ class ClassificationManager(SCSingletonConfigurable):
     @exception_handled
     def on_control_click( self, task, button: ipw.Button = None ):
         if   ( task == "save" ):
-            self.save_model( )
+            model_name = self.save_model( )
+            self.model_table.add( model_name )
         elif ( task == "load" ):
             selected_model = self.model_table.selected_row()
-            lgm().log( f"MODEL TABLE <LOAD>: Selected model: {selected_model}")
-            cm().load_model( selected_model )
+            if len( selected_model ):
+                lgm().log( f"MODEL TABLE <LOAD>: Selected model: {selected_model[0]}")
+                ufm().show( f"Loading model {selected_model[0]}")
+                cm().load_model( selected_model[0] )
         elif ( task == "delete" ):
             model_index = self.model_table.selection
-            lgm().log(f"MODEL TABLE <DEL>: Selected index: {model_index}")
-            self.model_table.delete( model_index )
+            if len( model_index ):
+                lgm().log(f"MODEL TABLE <DEL>: Selected index: {model_index[0]}")
+                self.model_table.delete( model_index[0] )
 
     def gui(self):
         if self.selection is None: self.create_selection_panel()
@@ -191,8 +212,8 @@ class ClassificationManager(SCSingletonConfigurable):
         model: LearningModel = self._models[ self.mid ]
         return model
 
-    def save_model( self, **kwargs ):
-        self.model.save( **kwargs )
+    def save_model( self, **kwargs ) -> str:
+        return self.model.save( **kwargs )
 
     def load_model( self, model_name, **kwargs ):
         self.model.load( model_name, **kwargs )

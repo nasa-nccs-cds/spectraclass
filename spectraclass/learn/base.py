@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import os
 from datetime import datetime
+import tensorflow as tf
 from tensorflow.keras.models import Model
 from typing import List, Tuple, Optional, Dict
 from ..model.labels import LabelsManager
@@ -18,6 +19,7 @@ from tensorflow.keras import datasets, layers, models
 class LearningModel:
 
     def __init__(self, name: str,  **kwargs ):
+        self.save_format = kwargs.get( 'save_format', 'tf')  # save_format in [ 'h5', 'tf ]
         self.mid =  name
         self._score: Optional[np.ndarray] = None
         self.config = kwargs
@@ -33,11 +35,15 @@ class LearningModel:
 
     @property
     def model_file(self):
-        ts = datetime.now().strftime("%Y.%j_%H.%M.%S")
-        return os.path.join( self.model_dir, ts )
+        mname = datetime.now().strftime(f"%Y.%j_%H.%M.%S.{self.save_format}")
+        return os.path.join( self.model_dir, mname )
 
-    def list_models(self) -> List[str]:
-        return os.listdir( self.model_dir )
+    def list_models(self) -> Dict[str,str]:
+        models = {}
+        for mfile in os.listdir(self.model_dir):
+            if mfile.endswith(self.save_format):
+                models[ os.path.splitext(mfile)[0] ] = os.path.join( self.model_dir, mfile)
+        return models
 
     def setKeys(self, keys: List[str] ):
         self._keys = keys
@@ -103,12 +109,18 @@ class KerasModelWrapper(LearningModel):
         return self._model.predict( data, **kwargs )
 
     def save( self, **kwargs ) -> str:
-        lgm().log( f'KerasModelWrapper: save weights -> {self.model_file}' )
-        return self._model.save_weights( self.model_file, **kwargs )
+        mfile = self.model_file
+        lgm().log( f'KerasModelWrapper: save weights -> {mfile}' )
+        if self.save_format=="h5": self._model.save( mfile, save_format="h5", **kwargs )
+        else:                      tf.keras.experimental.export_saved_model( self._model, mfile )
+        return os.path.splitext( os.path.basename(mfile) )[0]
 
+    @exception_handled
     def load( self, model_name: str, **kwargs ):
-        file_path = os.path.join( self.model_dir, model_name )
-        return self._model.load_weights( file_path, **kwargs )
+        file_path = os.path.join( self.model_dir, f"{model_name}.{self.save_format}" )
+        lgm().log( f'KerasModelWrapper: loading model -> {file_path}' )
+        if self.save_format=="h5":  self._model.load( file_path, **kwargs )
+        else:                       self._model = tf.keras.experimental.load_from_saved_model( file_path )
 
     def fit(self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
         nepochs = kwargs.pop( 'nepochs', 25 )

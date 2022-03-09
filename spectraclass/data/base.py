@@ -4,6 +4,7 @@ import numpy as np
 import ipywidgets as ipw
 from typing import List, Union, Tuple, Optional, Dict, Type
 import os, warnings
+import tensorflow as tf
 from enum import Enum
 import ipywidgets as ip
 from spectraclass.gui.control import UserFeedbackManager, ufm
@@ -97,6 +98,7 @@ class DataManager(SCSingletonConfigurable):
 
     @classmethod
     def initialize(cls, name: str, mode: str ):
+        tf.enable_eager_execution()
         lgm().init_logging(name, mode)
         dataManager = cls.instance()
         dataManager._configure_( name, mode )

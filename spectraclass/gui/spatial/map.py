@@ -271,20 +271,20 @@ class MapManager(SCSingletonConfigurable):
 
         if self._classification_data is not None:
             vrange = [ self._classification_data.values.min(), self._classification_data.values.max() ]
-            lgm().log( f"\n plot labels image, shape = {self._classification_data.shape}, vrange = {vrange}\n" )
+            lgm().log( f"  plot labels image, shape = {self._classification_data.shape}, vrange = {vrange}  " )
             try: self.labels_image.remove()
             except Exception: pass
-            self.labels_image = self._classification_data.plot.imshow(ax=self.base.gax, alpha=0.5, cmap=self.cspecs['cmap'],
+            self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=0.5, cmap=self.cspecs['cmap'],
                                                            add_colorbar=False, norm=self.cspecs['norm'])
             self.layers.set_visibility( "labels", 0.5, True, notify=False )
             self.update_canvas()
 
     def layer_managers( self, name: str ) -> List:
         from spectraclass.gui.points3js import PointCloudManager, pcm
-        if name == "basemap":  mgrs = [self.base]
-        elif name   == "labels":  mgrs = [ self.labels_image ]
-        elif name == "bands":   mgrs = [ self.spectral_image ]
-        elif name == "markers": mgrs = [ self.points_selection, self.region_selection, pcm() ]
+        if   name == "basemap":   mgrs = [ self.base ]
+        elif name == "labels":    mgrs = [ self.labels_image ]
+        elif name == "bands":     mgrs = [ self.spectral_image ]
+        elif name == "markers":   mgrs = [ self.points_selection, self.region_selection, pcm() ]
         else: raise Exception( f"Unknown Layer: {name}")
         return mgrs
 

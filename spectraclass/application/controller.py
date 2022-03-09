@@ -142,7 +142,6 @@ class SpectraclassController(SCSingletonConfigurable):
         classification: xa.DataArray = cm().apply_classification( embedding )
         overlay_image: xa.DataArray = block.points2raster( classification )
         mm().plot_labels_image( overlay_image )
-       # spm().plot_overlay_image( mm().image_template.copy( data=labels_image ), mm().overlay_alpha )
         lm().addAction("classify", "application")
         lm().set_classification( np.argmax( classification.values, axis=1 ) )
         ufm().show("Classification Complete")

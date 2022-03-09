@@ -79,7 +79,7 @@ class ParametersManager(SCSingletonConfigurable):
     @exception_handled
     def _createGui( self, **kwargs ) -> ipw.Box:
         wTab = ipw.Tab()
-        tabNames = [  "layers", "selection", "learning", "threshold", "persist"  ]
+        tabNames = [  "layers", "selection", "learning", "threshold", "persist" ]
         children = []
         for iT, title in enumerate( tabNames ):
             wTab.set_title( iT, title )

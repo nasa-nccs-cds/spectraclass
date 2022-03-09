@@ -12,7 +12,6 @@ import math, xarray as xa
 from bokeh.models import ColumnDataSource, DataTable, TableColumn
 from typing import List, Union, Dict, Callable, Set, Any, Sequence
 
-
 class bkSpreadsheet:
 
     def __init__(self, data: Union[pd.DataFrame,xa.DataArray], **kwargs ):
@@ -33,7 +32,7 @@ class bkSpreadsheet:
         self._columns = [TableColumn(field=cid, title=cid, sortable=True) for cid in self._dataFrame.columns]
         self._selection = np.full( [ self._dataFrame.shape[0] ], False, np.bool )
         self.current_page = kwargs.get('init_page', 0)
-        lgm().log( f" Creating bokeh DataTable from dframe[{self._dataFrame.shape}], cols = {self._dataFrame.columns} " )
+        lgm().log( f" Creating bokeh Spreadsheet from dframe[{self._dataFrame.shape}], cols = {self._dataFrame.columns} " )
         self._table = DataTable( source=self._source, columns=self._columns, width=600, height=300, selectable="checkbox", index_position=None )
 
     @property
