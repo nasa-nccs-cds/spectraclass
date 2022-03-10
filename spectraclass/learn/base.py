@@ -111,8 +111,9 @@ class KerasModelWrapper(LearningModel):
     def save( self, **kwargs ) -> str:
         mfile = self.model_file
         lgm().log( f'KerasModelWrapper: save weights -> {mfile}' )
-        if self.save_format=="h5": self._model.save( mfile, save_format="h5", **kwargs )
-        else:                      tf.keras.experimental.export_saved_model( self._model, mfile )
+        # if self.save_format=="h5": self._model.save( mfile, save_format="h5", **kwargs )
+        # else:                      tf.keras.experimental.export_saved_model( self._model, mfile )
+        self._model.save( mfile, save_format=self.save_format, **kwargs )
         return os.path.splitext( os.path.basename(mfile) )[0]
 
     @exception_handled

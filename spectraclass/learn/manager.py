@@ -24,11 +24,13 @@ class ModelTable:
     def __init__(self, models: Dict[str,str], **kwargs ):
         self._dataFrame: pd.DataFrame = None
         self._models = models
-        lgm().log( f"Creating DataFrame from list: {models}")
-        self._dataFrame = pd.DataFrame( list(self._models.keys()), columns=["models"] )
+        cdata = dict( models=list(models.keys()) )
+        cnames = list( cdata.keys() )
+        self._dataFrame = pd.DataFrame( cdata, columns=cnames )
+        lgm().log(f"Creating ModelTable from DataFrame: {self._dataFrame}")
         self._source: ColumnDataSource = ColumnDataSource( self._dataFrame )
-        self._columns = [ TableColumn(field=cid, title=cid) for cid in self._dataFrame.columns ]
-        self._table = DataTable( source=self._source, columns=self._columns, width=200, height=200, selectable="checkbox" )
+        self._columns = [ TableColumn(field=cid, title=cid, width=250) for cid in cnames ]
+        self._table = DataTable( source=self._source, columns=self._columns, width=300, height=200, selectable="checkbox" )
 
     def to_df( self ) -> pd.DataFrame:
         return self._dataFrame
@@ -180,7 +182,7 @@ class ClassificationManager(SCSingletonConfigurable):
         self.model_table = ModelTable( self.model.list_models() )
         controls = [ self.get_control_button(task) for task in [ "save", "load", "delete" ] ]
         mlist = self.model_table.gui() # ] ) # , ipw.HBox( controls ) ] ) # , layout = ipw.Layout( width="500px", height="500px", border= '2px solid firebrick' )  )
-        gui = ipw.VBox([ title, mlist, ipw.HBox( controls ) ] )  # , layout = ipw.Layout( width="500px", height="500px", border= '2px solid firebrick' )  )
+        gui = ipw.VBox( [ title, mlist, ipw.HBox( controls ) ] )  # , layout = ipw.Layout( width="500px", height="500px", border= '2px solid firebrick' )  )
         return gui
 
     @exception_handled
