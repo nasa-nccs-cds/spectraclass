@@ -180,7 +180,7 @@ class ClassificationManager(SCSingletonConfigurable):
         self.model_table = ModelTable( self.model.list_models() )
         controls = [ self.get_control_button(task) for task in [ "save", "load", "delete" ] ]
         mlist = self.model_table.gui() # ] ) # , ipw.HBox( controls ) ] ) # , layout = ipw.Layout( width="500px", height="500px", border= '2px solid firebrick' )  )
-        gui = ipw.VBox([ title, mlist, ipw.HBox( controls ) ] )  # , layout = ipw.Layout( width="500px", height="500px", border= '2px solid firebrick' )  )
+        gui = ipw.VBox([ title, ipw.HBox( [mlist], layout = ipw.Layout( width="500px", height="500px", border= '2px solid firebrick' )   ), ipw.HBox( controls ) ] )  # , layout = ipw.Layout( width="500px", height="500px", border= '2px solid firebrick' )  )
         return gui
 
     @exception_handled

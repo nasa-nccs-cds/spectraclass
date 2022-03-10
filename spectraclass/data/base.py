@@ -98,7 +98,7 @@ class DataManager(SCSingletonConfigurable):
 
     @classmethod
     def initialize(cls, name: str, mode: str ):
-        tf.enable_eager_execution()
+#        tf.enable_eager_execution()
         lgm().init_logging(name, mode)
         dataManager = cls.instance()
         dataManager._configure_( name, mode )
