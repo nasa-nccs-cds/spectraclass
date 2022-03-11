@@ -1,4 +1,4 @@
-table_type = "bokeh"
+table_type = "ipysheet"
 from spectraclass.util.logs import LogManager, lgm
 
 def tbm():
@@ -6,7 +6,7 @@ def tbm():
     if table_type == "bokeh":
         from .bktable import TableManager
         return TableManager.instance()
-    if table_type == "ipsheet":
+    if table_type == "ipysheet":
         from .iptable import TableManager
         return TableManager.instance()
     if table_type == "qgrid":

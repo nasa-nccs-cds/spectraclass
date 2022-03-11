@@ -1,14 +1,12 @@
 import xarray as xa
 import pandas as pd
 import time, traceback, shutil
-from bokeh.layouts import widgetbox
+import ipysheet as ips
 from functools import partial
-# from jupyter_bokeh.widgets import BokehModel
 import numpy as np
 import scipy, sklearn
 from tensorflow.keras.models import Model
 from typing import List, Tuple, Optional, Dict, Union
-from bokeh.models import ColumnDataSource, DataTable, TableColumn, Selection
 import traitlets as tl
 import traitlets.config as tlc
 import ipywidgets as ipw
@@ -23,22 +21,38 @@ def cm():
 class ModelTable:
 
     def __init__(self, models: Dict[str,str], **kwargs ):
-        self._dataFrame: pd.DataFrame = None
         self._models = models
-        cdata = dict( models=list(models.keys()) )
-        cnames = list( cdata.keys() )
-        self._dataFrame = pd.DataFrame( cdata, columns=cnames )
+        self._cdata = dict( models=list(models.keys()) )
+        self._cnames = list( self._cdata.keys() )
+        self._dataFrame = pd.DataFrame( self._cdata, columns=self._cnames )
         lgm().log(f"Creating ModelTable from DataFrame: {self._dataFrame}")
-        self._source: ColumnDataSource = ColumnDataSource( self._dataFrame )
-        self._columns = [ TableColumn(field=cid, title=cid, width=250) for cid in cnames ]
-        self._table = DataTable( source=self._source, columns=self._columns, width=300, height=200, selectable="checkbox" )
+        self._table: ips.Sheet = ips.Sheet( rows=self._dataFrame.shape[0], columns=len(self._cnames)+1,
+                                         cells=self.get_table_cells(), row_headers=False, column_headers=[""]+self._cnames )
 
     def to_df( self ) -> pd.DataFrame:
         return self._dataFrame
 
+    def get_table_cells(self):
+        nrows = self._dataFrame.shape[0]
+        self._selections = [ False ] * nrows
+        cells = [ ips.Cell(  value=self._selections, row_start=0, row_end=nrows-1, column_start=0, column_end=0,
+                             type='checkbox', squeeze_row=False, squeeze_column=True ) ]
+        for idx, c in enumerate(self._cnames):
+            cells.append( ips.Cell(
+                value=self._dataFrame[c].values.tolist(),
+                row_start=0,
+                row_end=nrows-1,
+                column_start=idx+1,
+                column_end=idx+1,
+                type='text',
+                read_only = (idx==0),
+                squeeze_row=False,
+                squeeze_column=True
+            ))
+        return cells
+
     def refresh(self):
-        self._source = ColumnDataSource(self._dataFrame)
-        self._table.source = self._source
+        self._table.cells = self.get_table_cells()
 
     def add(self, model_name: str ):
         self._dataFrame = self._dataFrame.append( pd.DataFrame( [model_name], columns=["models"] ), ignore_index=True )
@@ -67,12 +81,11 @@ class ModelTable:
 
     @property
     def selection( self ) -> List[int]:
-        return self._source.selected.indices
+        return []
 
     @exception_handled
     def gui(self) -> ipw.DOMWidget:
-        mtable = widgetbox( self._table )
-        return ipw.HBox( [mtable], layout = ipw.Layout( width="300px", height="300px", border= '2px solid firebrick' ) )
+        return ipw.HBox( [ self._table ], layout = ipw.Layout( width="300px", height="300px", border= '2px solid firebrick' ) )
 
 class Cluster:
 
