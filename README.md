@@ -6,10 +6,10 @@ Jupyterlab workbench supporting visual exploration and classification of high di
 Conda CPU Environment Setup
 ---------------
 
-    > conda create -n spectraclass python=3.8
+    > conda create -n spectraclass python=3.9
     > conda activate spectraclass
     > conda install -c conda-forge mamba
-    > mamba install -c conda-forge pyepsg bokeh pytorch jupyter_bokeh pythreejs nb_conda_kernels nodejs jupyterlab jupyterlab_server ipywidgets ipympl matplotlib mplcursors pythreejs numpy xarray rasterio scipy scikit-learn dask netcdf4 scikit-image numba gdal owslib rioxarray cartopy shapely bottleneck geopandas keras tensorflow
+    > mamba install -c conda-forge pyepsg bokeh pytorch pythreejs nb_conda_kernels nodejs jupyterlab jupyterlab_server ipywidgets ipympl matplotlib mplcursors pythreejs numpy xarray rasterio scipy scikit-learn dask netcdf4 scikit-image numba gdal owslib rioxarray cartopy shapely bottleneck geopandas keras tensorflow
 
 The x-ray application requires the following additional packages:
 

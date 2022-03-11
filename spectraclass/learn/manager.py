@@ -1,8 +1,9 @@
 import xarray as xa
 import pandas as pd
 import time, traceback, shutil
+from bokeh.layouts import widgetbox
 from functools import partial
-from jupyter_bokeh.widgets import BokehModel
+# from jupyter_bokeh.widgets import BokehModel
 import numpy as np
 import scipy, sklearn
 from tensorflow.keras.models import Model
@@ -70,7 +71,7 @@ class ModelTable:
 
     @exception_handled
     def gui(self) -> ipw.DOMWidget:
-        mtable = BokehModel( self._table )
+        mtable = widgetbox( self._table )
         return ipw.HBox( [mtable], layout = ipw.Layout( width="300px", height="300px", border= '2px solid firebrick' ) )
 
 class Cluster:
