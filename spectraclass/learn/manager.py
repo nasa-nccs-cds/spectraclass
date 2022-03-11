@@ -70,7 +70,8 @@ class ModelTable:
 
     @exception_handled
     def gui(self) -> ipw.DOMWidget:
-        return BokehModel( self._table )
+        mtable = BokehModel( self._table )
+        return ipw.HBox( [mtable], layout = ipw.Layout( width="300px", height="300px", border= '2px solid firebrick' ) )
 
 class Cluster:
 
@@ -181,8 +182,8 @@ class ClassificationManager(SCSingletonConfigurable):
         title = ipw.Label( value="Persisted Models" )
         self.model_table = ModelTable( self.model.list_models() )
         controls = [ self.get_control_button(task) for task in [ "save", "load", "delete" ] ]
-        mlist = self.model_table.gui() # ] ) # , ipw.HBox( controls ) ] ) # , layout = ipw.Layout( width="500px", height="500px", border= '2px solid firebrick' )  )
-        gui = ipw.VBox( [ title, mlist, ipw.HBox( controls ) ] )  # , layout = ipw.Layout( width="500px", height="500px", border= '2px solid firebrick' )  )
+        mtable = self.model_table.gui() # ] ) # , ipw.HBox( controls ) ] ) # , layout = ipw.Layout( width="500px", height="500px", border= '2px solid firebrick' )  )
+        gui = ipw.VBox( [ title, mtable, ipw.HBox( controls ) ]  )
         return gui
 
     @exception_handled
