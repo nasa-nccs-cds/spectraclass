@@ -32,24 +32,21 @@ class ModelTable:
     def to_df( self ) -> pd.DataFrame:
         return self._dataFrame
 
+    def cell(self, data: List, col: int, type: str, **kwargs ):
+        cell = ips.Cell( value=data, row_start=0, row_end=len(data)-1, column_start=col, column_end=col, type=type,
+                         read_only=kwargs.get('read_only',False), squeeze_row=False, squeeze_column=True )
+        observer = kwargs.get( 'observer', None )
+        if observer is not None: cell.observe( observer, 'value' )
+        return cell
+
     def get_table_cells(self):
-        nrows = self._dataFrame.shape[0]
-        self._selections = [ False ] * nrows
-        cells = [ ips.Cell(  value=self._selections, row_start=0, row_end=nrows-1, column_start=0, column_end=0,
-                             type='checkbox', squeeze_row=False, squeeze_column=True ) ]
-        for idx, c in enumerate(self._cnames):
-            cells.append( ips.Cell(
-                value=self._dataFrame[c].values.tolist(),
-                row_start=0,
-                row_end=nrows-1,
-                column_start=idx+1,
-                column_end=idx+1,
-                type='text',
-                read_only = (idx==0),
-                squeeze_row=False,
-                squeeze_column=True
-            ))
+        self._selections = [ False ] * self._dataFrame.shape[0]
+        cells = [ self.cell( self._dataFrame[c].values.tolist(), idx+1, 'text', read_only=(idx==0) ) for idx, c in enumerate(self._cnames) ]
+        cells.append( self.cell( self._selections, 0, 'checkbox', observer=self.on_selection_change )  )
         return cells
+
+    def on_selection_change(self, change: Dict ):
+        lgm().log( f"ModelTable: selection change: {change}" )
 
     def refresh(self):
         self._table.cells = self.get_table_cells()
