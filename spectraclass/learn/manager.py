@@ -24,6 +24,9 @@ class ModelTable:
         self._models = models
         self._cdata = dict( models=list(models.keys()) )
         self._cnames = list( self._cdata.keys() )
+        self._mulitselect = kwargs.get( 'mulitselect', False )
+        self._callbacks_active = True
+        self._selections_cell = None
         self._dataFrame = pd.DataFrame( self._cdata, columns=self._cnames )
         lgm().log(f"Creating ModelTable from DataFrame: {self._dataFrame}")
         self._table: ips.Sheet = ips.Sheet( rows=self._dataFrame.shape[0], columns=len(self._cnames)+1,
@@ -40,13 +43,25 @@ class ModelTable:
         return cell
 
     def get_table_cells(self):
-        self._selections = [ False ] * self._dataFrame.shape[0]
+        selections_init = [ False ] * self._dataFrame.shape[0]
         cells = [ self.cell( self._dataFrame[c].values.tolist(), idx+1, 'text', read_only=(idx==0) ) for idx, c in enumerate(self._cnames) ]
-        cells.append( self.cell( self._selections, 0, 'checkbox', observer=self.on_selection_change )  )
+        self._selections_cell = self.cell( selections_init, 0, 'checkbox', observer=self.on_selection_change )
+        cells.append( self._selections_cell )
         return cells
 
+    @exception_handled
     def on_selection_change(self, change: Dict ):
-        lgm().log( f"ModelTable: selection change: {change}" )
+        if self._callbacks_active:
+            if not self._mulitselect:
+                oldv, newv = np.array( change['old'] ), np.array( change['new'] )
+                change_indices = np.where( ~( oldv == newv ) )[0]
+                change_value = newv[ change_indices[0] ]
+                if change_value:
+                    self._callbacks_active = False
+                    selections = [False] * self._dataFrame.shape[0]
+                    selections[ change_indices[0] ] = True
+                    self._selections_cell.value = selections
+                    self._callbacks_active = True
 
     def refresh(self):
         self._table.cells = self.get_table_cells()
