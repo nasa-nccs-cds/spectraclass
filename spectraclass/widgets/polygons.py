@@ -146,6 +146,7 @@ class PolygonInteractor:
     @exception_handled
     def on_mouse_move(self, event):
         if event.inaxes is None: return
+        lgm().log(f"POLYEDIT-> MOUSE-MOVE: {self.editing} {self.creating} {[event.xdata, event.ydata]}")
         if (self.editing or self.creating):
             self.prec.drag_vertex( event )
             self.draw()

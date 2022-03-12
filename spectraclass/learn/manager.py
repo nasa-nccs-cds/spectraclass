@@ -43,6 +43,8 @@ class ModelTable:
         return cell
 
     def get_table_cells(self):
+        lgm().log( f"Refreshing table, data = {self._dataFrame}")
+        if self._dataFrame.shape[0] == 0: return []
         selections_init = [ False ] * self._dataFrame.shape[0]
         cells = [ self.cell( self._dataFrame[c].values.tolist(), idx+1, 'text', read_only=(idx==0) ) for idx, c in enumerate(self._cnames) ]
         self._selections_cell = self.cell( selections_init, 0, 'checkbox', observer=self.on_selection_change )
@@ -50,7 +52,7 @@ class ModelTable:
         return cells
 
     @exception_handled
-    def on_selection_change(self, change: Dict ):
+    def on_selection_change( self, change: Dict ):
         if self._callbacks_active:
             if not self._mulitselect:
                 oldv, newv = np.array( change['old'] ), np.array( change['new'] )
@@ -62,6 +64,7 @@ class ModelTable:
                     selections[ change_indices[0] ] = True
                     self._selections_cell.value = selections
                     self._callbacks_active = True
+                lgm().log( f"ModelTable: selection: {self.selection}" )
 
     def refresh(self):
         self._table.cells = self.get_table_cells()
@@ -81,6 +84,7 @@ class ModelTable:
         shutil.rmtree( mdir )
 
     def delete(self, row: int ):
+        lgm().log(f" Deleting row '{row}', dataFrame index = {self.index} ")
         idx: int = self.index[row]
         column: pd.Series = self._dataFrame["models"]
         self.delete_model_file( column.values[ row ] )
@@ -93,7 +97,7 @@ class ModelTable:
 
     @property
     def selection( self ) -> List[int]:
-        return []
+        return np.where( self._selections_cell.value )[0].tolist()
 
     @exception_handled
     def gui(self) -> ipw.DOMWidget:

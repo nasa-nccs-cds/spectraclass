@@ -19,7 +19,6 @@ from tensorflow.keras import datasets, layers, models
 class LearningModel:
 
     def __init__(self, name: str,  **kwargs ):
-        self.save_format = kwargs.get( 'save_format', 'tf')  # save_format in [ 'h5', 'tf ]
         self.mid =  name
         self._score: Optional[np.ndarray] = None
         self.config = kwargs
@@ -35,13 +34,13 @@ class LearningModel:
 
     @property
     def model_file(self):
-        mname = datetime.now().strftime(f"%Y.%j_%H.%M.%S.{self.save_format}")
+        mname = datetime.now().strftime(f"%Y.%j_%H.%M.%S.tf")
         return os.path.join( self.model_dir, mname )
 
     def list_models(self) -> Dict[str,str]:
         models = {}
         for mfile in os.listdir(self.model_dir):
-            if mfile.endswith(self.save_format):
+            if mfile.endswith('.tf'):
                 models[ os.path.splitext(mfile)[0] ] = os.path.join( self.model_dir, mfile)
         return models
 
@@ -111,17 +110,14 @@ class KerasModelWrapper(LearningModel):
     def save( self, **kwargs ) -> str:
         mfile = self.model_file
         lgm().log( f'KerasModelWrapper: save weights -> {mfile}' )
-        # if self.save_format=="h5": self._model.save( mfile, save_format="h5", **kwargs )
-        # else:                      tf.keras.experimental.export_saved_model( self._model, mfile )
-        self._model.save( mfile, save_format=self.save_format, **kwargs )
+        self._model.save( mfile, save_format="tf", **kwargs )
         return os.path.splitext( os.path.basename(mfile) )[0]
 
     @exception_handled
     def load( self, model_name: str, **kwargs ):
-        file_path = os.path.join( self.model_dir, f"{model_name}.{self.save_format}" )
+        file_path = os.path.join( self.model_dir, f"{model_name}.tf" )
         lgm().log( f'KerasModelWrapper: loading model -> {file_path}' )
-        if self.save_format=="h5":  self._model.load( file_path, **kwargs )
-        else:                       self._model = tf.keras.experimental.load_from_saved_model( file_path )
+        self._model = models.load_model( file_path, **kwargs )
 
     def fit(self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
         nepochs = kwargs.pop( 'nepochs', 25 )
