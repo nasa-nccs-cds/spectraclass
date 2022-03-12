@@ -24,6 +24,7 @@ class PolygonInteractor:
         self.canvas = ax.figure.canvas
         self.canvas.mpl_connect('key_press_event', self.on_key_press)
         self.canvas.mpl_connect('draw_event', self.on_draw)
+        self.canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
         self.poly_index = 0
         self.cids = []
 
@@ -33,10 +34,9 @@ class PolygonInteractor:
 
     def update_callbacks(self):
         if self.enabled:
-            self.cids.append(self.canvas.mpl_connect('button_press_event', self.on_button_press))
-            self.cids.append(self.canvas.mpl_connect('button_release_event', self.on_button_release))
-            self.cids.append(self.canvas.mpl_connect('key_press_event', self.on_key_press))
-            self.cids.append(self.canvas.mpl_connect('motion_notify_event', self.on_mouse_move))
+            self.cids.append(self.canvas.mpl_connect( 'button_press_event', self.on_button_press ) )
+            self.cids.append(self.canvas.mpl_connect( 'button_release_event', self.on_button_release ) )
+            self.cids.append(self.canvas.mpl_connect( 'key_press_event', self.on_key_press ) )
         else:
             for cid in self.cids:  self.canvas.mpl_disconnect(cid)
             self.cids = []
@@ -63,6 +63,7 @@ class PolygonInteractor:
 
     @exception_handled
     def on_draw(self, event):
+        lgm().log( "POLY->on_draw")  # lgm().log( f"POLY->close: points = {self.prec.poly.get_xy().tolist()}")
         for prec in self.polys:
             self.ax.draw_artist(prec.poly)
             self.ax.draw_artist(prec.line)
@@ -145,11 +146,11 @@ class PolygonInteractor:
 
     @exception_handled
     def on_mouse_move(self, event):
-        if event.inaxes is None: return
-        lgm().log(f"POLYEDIT-> MOUSE-MOVE: {self.editing} {self.creating} {[event.xdata, event.ydata]}")
-        if (self.editing or self.creating):
-            self.prec.drag_vertex( event )
-            self.draw()
+        lgm().log(f"POLYEDIT-> MOUSE-MOVE: {self.enabled} {event.inaxes is not None} {self.editing} {self.creating} {[event.xdata, event.ydata]}")
+        if self.enabled and (event.inaxes is not None):
+            if (self.editing or self.creating):
+                self.prec.drag_vertex( event )
+                self.draw()
 
     @exception_handled
     def draw(self):

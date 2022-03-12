@@ -59,12 +59,14 @@ class PolyRec:
 
     def insert_point(self, event ):
         x, y = event.xdata, event.ydata
-        self.poly.xy = np.row_stack( [ self.poly.xy, np.array( [x, y] ) ] )
+        self.poly.set_xy( np.row_stack( [ self.poly.xy, np.array( [x, y] ) ] ) )
         lgm().log(f"POLY: insert point={[x, y]}, points = {self.poly.xy.tolist()}")
+        self.poly.pchanged()
+         # () #.draw()
         self.draw()
 
     def complete( self ):
-        self.poly.xy[-1] = self.poly.xy[0]
+        self.poly.xy = np.row_stack( [ self.poly.xy, self.poly.xy[0] ] )
         self.line.set_visible(False)
         self.poly.set_closed(True)
         self.ax.draw_artist(self.poly)
