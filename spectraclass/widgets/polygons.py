@@ -24,7 +24,9 @@ class PolygonInteractor:
         self.canvas = ax.figure.canvas
         self.canvas.mpl_connect('key_press_event', self.on_key_press)
         self.canvas.mpl_connect('draw_event', self.on_draw)
-        self.canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
+        self.canvas.mpl_connect('motion_notify_event', self.on_mouse_move )
+        self.canvas.mpl_connect('button_press_event', self.on_button_press)
+        self.canvas.mpl_connect('button_release_event', self.on_button_release)
         self.poly_index = 0
         self.cids = []
 
@@ -32,20 +34,10 @@ class PolygonInteractor:
         for poly in self.polys:
             poly.set_alpha( alpha )
 
-    def update_callbacks(self):
-        if self.enabled:
-            self.cids.append(self.canvas.mpl_connect( 'button_press_event', self.on_button_press ) )
-            self.cids.append(self.canvas.mpl_connect( 'button_release_event', self.on_button_release ) )
-            self.cids.append(self.canvas.mpl_connect( 'key_press_event', self.on_key_press ) )
-        else:
-            for cid in self.cids:  self.canvas.mpl_disconnect(cid)
-            self.cids = []
-
     @exception_handled
     def set_enabled(self, enabled: bool ):
         if enabled != self.enabled:
             self.enabled = enabled
-            self.update_callbacks()
 
     def set_class(self, cid: int ):
         from spectraclass.model.labels import LabelsManager, lm
@@ -114,34 +106,36 @@ class PolygonInteractor:
 
     @exception_handled
     def on_button_press(self, event: MouseEvent ):
-        if event.inaxes is None: return
-        x, y = event.xdata, event.ydata
-        lgm().log( f"POLYINTER: button {event.button} press: enabled={self.enabled}, creating={self.creating}, point={[x,y]}")
-        if event.button == 1:
-            if self.enabled:
-                if self.prec is None:
-                    self.add_poly( event )
-                else:
-                    if self.creating:
-                        self.prec.insert_point( event )
+        if self.enabled and (event.inaxes is not None):
+            x, y = event.xdata, event.ydata
+            lgm().log( f"POLYINTER: button {event.button} press: enabled={self.enabled}, creating={self.creating}, point={[x,y]}")
+            lgm().log(f"  ***-> CALLBACKS: {self.canvas.callbacks.callbacks['motion_notify_event']}")
+            if event.button == 1:
+                if self.enabled:
+                    if self.prec is None:
+                        self.add_poly( event )
                     else:
-                        self.editing = self.prec.vertex_selected( event )
-        elif event.button == 3:
-            if self.creating:
-                self.prec.insert_point( event )
-                self.close_poly()
-            else:
-                self.select_poly( event )
+                        if self.creating:
+                            self.prec.insert_point( event )
+                        else:
+                            self.editing = self.prec.vertex_selected( event )
+            elif event.button == 3:
+                if self.creating:
+                    self.prec.insert_point( event )
+                    self.close_poly()
+                else:
+                    self.select_poly( event )
 
     @exception_handled
     def on_button_release(self, event):
-        if self.prec is not None:
-            self.prec.clear_vertex_selection()
-            self.editing = False
+        if self.enabled and (event.inaxes is not None):
+            if self.prec is not None:
+                self.prec.clear_vertex_selection()
+                self.editing = False
 
     @exception_handled
     def on_key_press(self, event: KeyEvent ):
-        if event.inaxes:
+        if self.enabled and (event.inaxes is not None):
             if event.key == 'backspace':  self.delete_selection()
 
     @exception_handled

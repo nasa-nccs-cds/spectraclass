@@ -229,25 +229,25 @@ class mplGraphPlot:
     @property
     def x(self) -> np.ndarray:
         xv = self._mx if self._use_model else self._x
+        lgm().log(f"Graph: plot pids: {self.pids}, xdata shape = {xv.shape}")
         if xv.ndim == 1:   return  xv
         else:              return  xv[ self.pids ]
 
     @property
     def y( self ) -> np.ndarray :
         ydata = self._mploty[self.pids] if self._use_model else self._ploty[self.pids]
-        return ydata.transpose()
+        lgm().log( f"Graph: mplot pids: {self.pids}, ydata shape = {ydata.shape}" )
+        return self.normalize( ydata ).transpose()
 
     @property
     def ry( self ) ->  np.ndarray:
         ydata = self._rploty[ self.tpids ]
-        return ydata.transpose()
+        lgm().log( f"Graph: rplot pids: {self.tpids}, ydata shape = {ydata.shape}" )
+        return self.normalize( ydata ).transpose()
 
-    @property
-    def yrange(self):
-        ydata: np.ndarray = self._mploty[self.pids] if self._use_model else self._ploty[self.pids]
-        ymean: np.ndarray = ydata.mean( axis=1 )
-        ys = ydata / ymean.reshape( ymean.shape[0], 1 )
-        return ( ys.min(), ys.max() )
+    def normalize(self, data: np.ndarray ) -> np.ndarray:
+        mean, std = data.mean( axis=1, keepdims=True ), data.std( axis=1, keepdims=True )
+        return ( data - mean) / std
 
     @property
     def title(self ) -> str:

@@ -149,7 +149,7 @@ class PointCloudManager(SCSingletonConfigurable):
         mapper = plt.cm.ScalarMappable( norm = norm, cmap="jet" )
         colors = mapper.to_rgba( cdata.values )[:, :-1] * 255
         if self.pick_point >= 0:
-            colors[ self.pick_point ] = [255.0,255.0,255.0]
+            colors[ self.pick_point ] = [255,255,255,255]
         return colors.astype(np.uint8)
 
     def getGeometry( self, **kwargs ) -> Optional[p3js.BufferGeometry]:
@@ -207,9 +207,11 @@ class PointCloudManager(SCSingletonConfigurable):
         from spectraclass.gui.spatial.map import MapManager, mm
         point = tuple( event["new"] )
         self.pick_point = self.voxelizer.get_pid( point )
-        if highlight:   pos = mm().highlight_points( [self.pick_point], [0] )
-        else:           pos = mm().mark_point( self.pick_point, cid=0 )
-        lgm().log( f"\n -----> on_pick: pid={self.pick_point}, pos = {pos} [{point}]")
+        lgm().log(f" *** PCM.on_pick: pid={self.pick_point}, [{point}]")
+        if mm().initialized():
+            if highlight:   pos = mm().highlight_points( [self.pick_point], [0] )
+            else:           pos = mm().mark_point( self.pick_point, cid=0 )
+            lgm().log( f"       -----> pos = {pos}")
         self.points.geometry = self.getGeometry()
 
     def gui(self, **kwargs ) -> ipw.DOMWidget:

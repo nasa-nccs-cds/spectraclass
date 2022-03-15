@@ -6,6 +6,7 @@ import xarray as xa
 from spectraclass.util.logs import LogManager, lgm
 from spectraclass.data.spatial.tile.manager import TileManager
 from matplotlib.font_manager import FontProperties
+from matplotlib.backend_bases import FigureCanvasBase
 from spectraclass.gui.spatial.source import WMTSRasterSource
 from spectraclass.gui.spatial.image import TileServiceImage
 from typing import List, Optional, Dict, Tuple
@@ -19,7 +20,7 @@ from spectraclass.data.spatial.tile.manager import TileManager, tm
 
 class TileServiceBasemap(SCSingletonConfigurable):
 
-    def __init__(self, **kwargs ):
+    def __init__( self, **kwargs ):
         super(TileServiceBasemap, self).__init__()
         self.tile_server_url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/WMTS'
         self.crs: str = TileManager.crs
@@ -44,18 +45,10 @@ class TileServiceBasemap(SCSingletonConfigurable):
         parallel = kwargs.pop('parallel', True)
         use_slider = kwargs.pop( 'slider', True )
         self.figure: Figure = plt.figure( fig_index, figsize=fig_size )
+        self.figure.canvas.mpl_connect('motion_notify_event', self.on_move)
         self.figure.suptitle( title, color="yellow" )
         if not standalone: plt.ion()
 
-        bounds = [0.01, 0.07, 0.98, 0.93] if use_slider else [0.01, 0.01, 0.98, 0.98]
-        self.gax: Axes = self.figure.add_axes( bounds, **kwargs )  # [left, bottom, width, height] # , projection=self.crs
-        self.gax.xaxis.set_visible( False ); self.gax.yaxis.set_visible( False )
-        self.gax.title.set_color("orange")
-        if use_basemap:
-            self.set_basemap( xlim, ylim, parallel=parallel, **kwargs)
-        else:
-            self.gax.set_xbound( xlim[0], xlim[1] )
-            self.gax.set_ybound( ylim[0], ylim[1] )
         if use_slider:
             self.bsax: Axes  = self.figure.add_axes( [0.01, 0.01, 0.98, 0.05])  # [left, bottom, width, height]
             self.msax: Axes  = self.figure.add_axes( [0.01, 0.01, 0.98, 0.05]) # [left, bottom, width, height]
@@ -63,7 +56,25 @@ class TileServiceBasemap(SCSingletonConfigurable):
             self.bsax.set_visible( True  )
         self.figure.canvas.toolbar_visible = True
         self.figure.canvas.header_visible = False
+
+        bounds = [0.01, 0.07, 0.98, 0.93] if use_slider else [0.01, 0.01, 0.98, 0.98]
+        self.gax: Axes = self.figure.add_axes( bounds, **kwargs )  # [left, bottom, width, height] # , projection=self.crs
+        self.gax.figure.canvas.callbacks.connect( 'motion_notify_event', self.on_move )
+        self.gax.xaxis.set_visible( False ); self.gax.yaxis.set_visible( False )
+        self.gax.title.set_color("orange")
+
+        if use_basemap:
+            self.set_basemap( xlim, ylim, parallel=parallel, **kwargs )
+        else:
+            self.gax.set_xbound( xlim[0], xlim[1] )
+            self.gax.set_ybound( ylim[0], ylim[1] )
+
+        self.gax.figure.canvas.callbacks.connect( 'motion_notify_event', self.on_move )
         return standalone
+
+    @exception_handled
+    def on_move( self, event ):
+        lgm().log( f'\nTileServiceBasemap[{event.inaxes}].on_move: [{event.xdata} {event.ydata}]' )
 
     def update(self):
         self.figure.canvas.draw_idle()

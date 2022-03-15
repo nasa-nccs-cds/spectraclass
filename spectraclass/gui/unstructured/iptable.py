@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import ipywidgets as ipw
 import ipysheet as ips
+import shutil
 from spectraclass.widgets.buttons import ToggleButton
 from spectraclass.data.base import dm
 from spectraclass.model.labels import LabelsManager
@@ -11,8 +12,87 @@ from spectraclass.model.base import SCSingletonConfigurable
 import math, xarray as xa
 from typing import List, Union, Dict, Callable, Set, Any, Sequence
 
-
 class ipSpreadsheet:
+
+    def __init__(self, dataFrame: pd.DataFrame, **kwargs ):
+        self._dataFrame = dataFrame
+        self._cnames = self._dataFrame.columns.tolist()
+        self._callbacks_active = True
+        self._selection_callback = None
+        self._selections_cell = None
+        lgm().log(f"Creating ModelTable from DataFrame: {self._dataFrame}")
+        self._table: ips.Sheet = ips.Sheet( rows=self._dataFrame.shape[0], columns=len(self._cnames)+1,
+                                         cells=self.get_table_cells(), row_headers=False, column_headers=[""]+self._cnames )
+
+    def set_selection_callback(self, callback: Callable[[np.ndarray, np.ndarray], None]):
+        self._selection_callback = callback
+
+    @property
+    def table_data(self) -> pd.DataFrame:
+        return self._dataFrame if self._filteredData is None else self._filteredData.filter( items=self._dataFrame.columns )
+
+    def clear_filter(self):
+        self._filteredData = None
+        self.refresh_page_data()
+
+    def set_filter_data(self, filter_data: pd.DataFrame):
+        self._current_page = 0
+        self._filteredData = filter_data
+        self.refresh_page_data()
+
+    def to_df( self ) -> pd.DataFrame:
+        return self._dataFrame
+
+    def cell(self, data: List, col: int, type: str, **kwargs ):
+        cell = ips.Cell( value=data, row_start=0, row_end=len(data)-1, column_start=col, column_end=col, type=type,
+                         read_only=kwargs.get('read_only',False), squeeze_row=False, squeeze_column=True )
+        observer = kwargs.get( 'observer', None )
+        if observer is not None: cell.observe( observer, 'value' )
+        return cell
+
+    def get_table_cells(self):
+        if self._dataFrame.shape[0] == 0: return []
+        selections_init = [ False ] * self._dataFrame.shape[0]
+        cells = [ self.cell( self._dataFrame[c].values.tolist(), idx+1, 'text', read_only=(idx==0) ) for idx, c in enumerate(self._cnames) ]
+        self._selections_cell = self.cell( selections_init, 0, 'checkbox', observer=self.on_selection_change )
+        cells.append( self._selections_cell )
+        return cells
+
+    @exception_handled
+    def on_selection_change( self, change: Dict ):
+        if self._callbacks_active:
+            self._selection_callback( np.array( change['old'] ), np.array( change['new'] ) )
+
+    def refresh(self):
+        self._table.cells = self.get_table_cells()
+
+    def add(self, model_name: str ):
+        self._dataFrame = self._dataFrame.append( pd.DataFrame( [model_name], columns=["models"] ), ignore_index=True )
+        self.refresh()
+
+    @property
+    def index(self) -> List[int]:
+        return self._dataFrame.index.tolist()
+
+    def delete(self, row: int ):
+        lgm().log(f" Deleting row '{row}', dataFrame index = {self.index} ")
+        idx: int = self.index[row]
+        self._dataFrame = self._dataFrame.drop( index=idx )
+        self.refresh()
+
+    def selected_row( self ):
+        column: pd.Series = self._dataFrame["models"]
+        return column.values[ self.selection ]
+
+    @property
+    def selection( self ) -> List[int]:
+        return np.where( self._selections_cell.value )[0].tolist()
+
+    @exception_handled
+    def gui(self) -> ipw.DOMWidget:
+        return self._table
+
+class ipSpreadsheet1:
 
     def __init__(self, data: Union[pd.DataFrame,xa.DataArray], **kwargs ):
         self._current_page_data: pd.DataFrame = None
@@ -31,20 +111,10 @@ class ipSpreadsheet:
 #        self._source.selected.on_change( "indices", self._exec_selection_callback )
         self.current_page = kwargs.get('init_page', 0)
         lgm().log( f" Creating ips.Sheet from dframe[{self._dataFrame.shape}], cols = {self._dataFrame.columns} " )
-        self._table: ips.Sheet = ips.from_dataframe( self._dataFrame )
+        if self._dataFrame.shape[0] > 0:  self._table: ips.Sheet = ips.from_dataframe( self._dataFrame )
+        else:                             self._table: ips.Sheet = ips.Sheet( column_headers=self._dataFrame.columns.tolist() )
 
-    @property
-    def table_data(self) -> pd.DataFrame:
-        return self._dataFrame if self._filteredData is None else self._filteredData.filter( items=self._dataFrame.columns )
 
-    def clear_filter(self):
-        self._filteredData = None
-        self.refresh_page_data()
-
-    def set_filter_data(self, filter_data: pd.DataFrame):
-        self._current_page = 0
-        self._filteredData = filter_data
-        self.refresh_page_data()
 
     def pids(self) -> np.ndarray:
         return self.table_data.index.to_numpy()
@@ -247,10 +317,15 @@ class TableManager(SCSingletonConfigurable):
                     table.from_df(df)
                     lgm().log(f"  TABLE[{cid}] update: {current_pids} -> {updated_pids}" )
 
+    @property
+    def index(self) -> np.ndarray:
+        return self._dataFrame.index.to_numpy()
+
     @exception_handled
     def _handle_table_selection(self, old: np.ndarray, new: np.ndarray ):
-        lgm().log(f"  **TABLE-> new selection event, indices:  {old} -> {new}")
-        self.broadcast_selection_event( new )
+        pids = self.index[new]
+        lgm().log(f"  **TABLE-> new selection event, pids:  {pids}")
+        self.broadcast_selection_event( pids )
 
     def is_block_selection( self, old: List[int], new: List[int] ) -> bool:
         lgm().log(   f"   **TABLE->  is_block_selection: old = {old}, new = {new}"  )
@@ -273,18 +348,18 @@ class TableManager(SCSingletonConfigurable):
         assert self._dataFrame is not None, " TableManager has not been initialized "
         lgm().log( f"Create Spreadsheet Table[{tab_index}]")
         if tab_index == 0:
-            bkTable = ipSpreadsheet( self._dataFrame ) # , sequential=True )
+            ipTable = ipSpreadsheet( self._dataFrame ) # , sequential=True )
         else:
             empty_catalog = {col: np.empty( [0], 'U' ) for col in self._cols}
             dFrame: pd.DataFrame = pd.DataFrame(empty_catalog, dtype='U' )
-            bkTable = ipSpreadsheet( dFrame )
-        bkTable.set_selection_callback(self._handle_table_selection)
-        return bkTable
+            ipTable = ipSpreadsheet( dFrame )
+        ipTable.set_selection_callback(self._handle_table_selection)
+        return ipTable
 
     def _createGui( self ) -> ipw.VBox:
         self._wTablesWidget = self._createTableTabs()
         wSelectionPanel = self._createSelectionPanel()
-        return ipw.VBox([wSelectionPanel, self._wTablesWidget])
+        return ipw.VBox([wSelectionPanel, self._wTablesWidget], layout = ipw.Layout( height="500px", width="100%", border= '2px solid firebrick') )
 
     def _createSelectionPanel( self ) -> ipw.HBox:
         self._wFilter = ipw.Text(value='', placeholder='Filter rows', description='Filter:', disabled=False, continuous_update = False, tooltip="Filter selected column by regex")

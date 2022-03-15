@@ -288,6 +288,9 @@ class MapManager(SCSingletonConfigurable):
         else: raise Exception( f"Unknown Layer: {name}")
         return mgrs
 
+    def initialized(self) -> bool:
+        return self.points_selection is not None
+
     def highlight_points(self, pids: List[int], cids: List[int] ):
         self.points_selection.highlight_points( pids, cids )
 

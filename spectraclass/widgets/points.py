@@ -15,12 +15,11 @@ class PointsInteractor:
         self._enabled = False
         self.axis_to_data = ax.transAxes + ax.transData.inverted()
         self.data_to_axis = self.axis_to_data.inverted()
+        self.canvas.mpl_connect('button_press_event', self.on_button_press)
 
     def set_enabled(self, enable: bool ):
         self._enabled = enable
         lgm().log(f"PointsInteractor.set_enabled: {enable}")
-        if enable:  self.enable_callbacks()
-        else:       self.disable_callbacks()
 
     def set_alpha(self, alpha: float ):
         self.points.set_alpha( alpha )
@@ -34,14 +33,6 @@ class PointsInteractor:
         self.highlights.set_edgecolor( "black" )
         self._cidkey, self._cidmouse = -1, -1
         self.plot()
-
-    def enable_callbacks(self):
-        self._cidkey = self.canvas.mpl_connect( 'key_press_event', self.on_key_press )
-        self._cidmouse = self.canvas.mpl_connect('button_press_event', self.on_button_press)
-
-    def disable_callbacks(self):
-        for cid in [ self._cidkey, self._cidmouse ]:
-            self.canvas.mpl_disconnect( cid )
 
     def highlight_points(self, pids: List[int], cids: List[int] ):
         self._highlight_points = zip(pids, cids)
@@ -57,9 +48,6 @@ class PointsInteractor:
     def get_highlight_points( self ) -> Tuple[ List[float], List[float], List[int] ]:
         lgm().log( f"Attempt to call unimplemented method PointsInteractor.get_highlight_points")
         return [], [], []
-
-    def on_key_press(self, event: KeyEvent ):
-        lgm().log( f"Attempt to call unimplemented method PointsInteractor.on_key_press")
 
     def on_button_press(self, event: MouseEvent):
         lgm().log( f"Attempt to call unimplemented method PointsInteractor.on_button_press")
