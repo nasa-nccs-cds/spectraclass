@@ -24,6 +24,10 @@ class UnstructuredDataManager(ModeDataManager):
         ncfilename = f"{self.dset_name}{self.INPUTS['spectra']}.nc"
         return os.path.join( self.datasetDir, ncfilename )
 
+    def normalize(self, data: np.ndarray, axis: int ):
+        mean, std = data.mean( axis=axis, keepdims=True ), data.std( axis=axis, keepdims=True )
+        return ( data - mean ) / (2*std)
+
     @exception_handled
     def prepare_inputs(self, **kwargs ) -> Dict[Tuple,int]:
         from spectraclass.data.base import DataManager, dm
@@ -44,7 +48,7 @@ class UnstructuredDataManager(ModeDataManager):
             data_vars.update(  {f'plot-{vid}': dm().getXarray(pspec[vid], xcoords, xdims, norm=pspec.get('norm','spectral')) for vid in ['x', 'y'] } )
             self.set_progress(0.1)
             if self.reduce_method and (self.reduce_method.lower() != "none"):
-                input_data = data_vars['spectra']
+                input_data = self.normalize( data_vars['spectra'], 0 )
                 ( reduced_spectra, reproduced_spectra, usable_input_data ) = rm().reduce(input_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity)[0]
                 coords = dict(samples=xcoords['samples'], model=np.arange(self.model_dims))
                 data_vars['reduction'] = xa.DataArray(reduced_spectra, dims=['samples', 'model'], coords=coords)
