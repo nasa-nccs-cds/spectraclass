@@ -24,9 +24,10 @@ class UnstructuredDataManager(ModeDataManager):
         ncfilename = f"{self.dset_name}{self.INPUTS['spectra']}.nc"
         return os.path.join( self.datasetDir, ncfilename )
 
-    def normalize(self, data: np.ndarray, axis: int ):
-        mean, std = data.mean( axis=axis, keepdims=True ), data.std( axis=axis, keepdims=True )
-        return ( data - mean ) / (2*std)
+    def normalize( self, data: xa.DataArray, dim: int = 1 ) -> xa.DataArray:
+        dave, dmag = data.values.mean( dim, keepdims=True ), data.values.std( dim, keepdims=True )
+        normed_data = (data.values - dave) / (2*dmag)
+        return data.copy( data=normed_data )
 
     @exception_handled
     def prepare_inputs(self, **kwargs ) -> Dict[Tuple,int]:
@@ -58,6 +59,7 @@ class UnstructuredDataManager(ModeDataManager):
             result_dataset = xa.Dataset(data_vars, coords=xcoords, attrs={'type': 'spectra'})
             result_dataset.attrs["colnames"] = mdata_vars
             if os.path.exists(output_file): os.remove(output_file)
+            os.makedirs( os.path.dirname( output_file ) , exist_ok=True )
             lgm().log( f"Writing output to {output_file}", print=True )
             result_dataset.to_netcdf(output_file, format='NETCDF4', engine='netcdf4')
             self.updateDatasetList()
@@ -83,7 +85,7 @@ class UnstructuredDataManager(ModeDataManager):
                     elif isinstance(result, list):
                         subsampled = [result[i] for i in range(0, len(result), self.subsample_index )]
                         input_data = np.vstack(subsampled) if isinstance(result[0], np.ndarray) else np.array(subsampled)
-                lgm().log(  f"Reading unstructured {vname} data from file {input_file_path}, shape = {input_data.shape}, dtype = {input_data.dtype}, strides = {input_data.strides}", print=True )
+                lgm().log(  f"Reading unstructured {vname} data from file {input_file_path}, shape = {input_data.shape}, subsample = {self.subsample_index}, dtype = {input_data.dtype}, strides = {input_data.strides}", print=True )
                 self._cached_data[input_file_path] = input_data
             return input_data
         else:
