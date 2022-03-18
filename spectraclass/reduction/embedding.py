@@ -131,10 +131,12 @@ class ReductionManager(SCSingletonConfigurable):
     def autoencoder_reduction(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], model_dims: int, epochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
         ispecs: List[np.ndarray] = [train_input.data.max(0), train_input.data.min(0), train_input.data.mean(0), train_input.data.std(0)]
         lgm().log(f" autoencoder_reduction: train_input shape = {train_input.shape} ")
-        lgm().log(f"   ----> max = {ispecs[0][:64].tolist()} ")
-        lgm().log(f"   ----> min = {ispecs[1][:64].tolist()} ")
-        lgm().log(f"   ----> ave = {ispecs[2][:64].tolist()} ")
-        lgm().log(f"   ----> std = {ispecs[3][:64].tolist()} ")
+        lgm().log(f"   ----> max = { ispecs[0][:64].tolist() } ")
+        lgm().log(f"   ----> min = { ispecs[1][:64].tolist() } ")
+        lgm().log(f"   ----> ave = { ispecs[2][:64].tolist() } ")
+        lgm().log(f"   ----> std = { ispecs[3][:64].tolist() } ")
+
+#        lgm().log(f"   ----> #NaN[axis=0] = { nan_counts[:200] }" )
         results = []
         if test_inputs is None: test_inputs = [ train_input ]
         for iT, test_input in enumerate(test_inputs):
@@ -145,12 +147,11 @@ class ReductionManager(SCSingletonConfigurable):
                 reproduced_data: np.ndarray = autoencoder.predict( test_input.data )
                 reproduction: xa.DataArray = test_input.copy( data=reproduced_data )
                 results.append( (encoded_data, reproduction, test_input ) )
-                print(".")
                 if iT == 0:
                     lgm().log(f" Autoencoder_reduction with sparsity={sparsity}, result: shape = {encoded_data.shape}")
                     lgm().log(f" ----> encoder_input: shape = {test_input.shape}, val[5][5] = {test_input.data[:5][:5]} ")
                     lgm().log(f" ----> reproduction: shape = {reproduced_data.shape}, val[5][5] = {reproduced_data[:5][:5]} ")
-                    lgm().log(f" ----> encoding: shape = {encoded_data.shape}, val[5][5]108 = {encoded_data[:5][:5]}, std = {encoded_data.std(0)} ")
+                    lgm().log(f" ----> encoding: shape = {encoded_data.shape}, val[5][5] = {encoded_data[:5][:5]}, std = {encoded_data.std(0)} ")
             except Exception as err:
                 lgm().exception( f"Unable to process test input[{iT}], input shape = {test_input.shape}, error = {err}" )
         return results

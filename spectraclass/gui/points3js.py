@@ -71,7 +71,7 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def addMarker(self, marker: Marker ):
         self.clear_transients()
-        lgm().log(f"\n PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}")
+        lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}")
         for pid in marker.pids:
             self.marker_pids[pid] = marker.cid
             if marker.cid == 0:

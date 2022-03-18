@@ -15,30 +15,42 @@ from typing import List, Union, Dict, Callable, Set, Any, Sequence
 class ipSpreadsheet:
 
     def __init__(self, dataFrame: pd.DataFrame, **kwargs ):
-        self._dataFrame = dataFrame
+        self._dataFrame: pd.DataFrame = dataFrame
+        self._filteredData = None
+        self.current_page_data = None
+        self._current_page = 0
         self._cnames = self._dataFrame.columns.tolist()
         self._callbacks_active = True
         self._selection_callback = None
         self._selections_cell = None
         lgm().log(f"Creating ModelTable from DataFrame: {self._dataFrame}")
-        self._table: ips.Sheet = ips.Sheet( rows=self._dataFrame.shape[0], columns=len(self._cnames)+1,
-                                         cells=self.get_table_cells(), row_headers=False, column_headers=[""]+self._cnames )
+        tshape = ( TableManager.rows_per_page, len(self._cnames)+1 )
+        self._table: ips.Sheet = ips.Sheet( rows=tshape[0], columns=tshape[1], row_headers=False, column_headers=[""]+self._cnames )
+        self.refresh()
 
     def set_selection_callback(self, callback: Callable[[np.ndarray, np.ndarray], None]):
         self._selection_callback = callback
 
     @property
     def table_data(self) -> pd.DataFrame:
-        return self._dataFrame if self._filteredData is None else self._filteredData.filter( items=self._dataFrame.columns )
+        return self._dataFrame if self._filteredData is None else self._filteredData.filter(items=self._dataFrame.columns)
 
     def clear_filter(self):
         self._filteredData = None
-        self.refresh_page_data()
+        self.refresh()
 
     def set_filter_data(self, filter_data: pd.DataFrame):
         self._current_page = 0
         self._filteredData = filter_data
-        self.refresh_page_data()
+        self.refresh()
+
+    @property
+    def page_start(self) -> int:
+        return self._current_page * TableManager.rows_per_page
+
+    @property
+    def page_end(self) -> int:
+        return self.page_start + TableManager.rows_per_page
 
     def to_df( self ) -> pd.DataFrame:
         return self._dataFrame
@@ -52,8 +64,9 @@ class ipSpreadsheet:
 
     def get_table_cells(self):
         if self._dataFrame.shape[0] == 0: return []
-        selections_init = [ False ] * self._dataFrame.shape[0]
-        cells = [ self.cell( self._dataFrame[c].values.tolist(), idx+1, 'text', read_only=(idx==0) ) for idx, c in enumerate(self._cnames) ]
+        self.current_page_data: pd.DataFrame = self.table_data.iloc[self.page_start:self.page_end]
+        selections_init = [ False ] * self.current_page_data.shape[0]
+        cells = [ self.cell( self.current_page_data[c].values.tolist(), idx+1, 'text', read_only=(idx==0) ) for idx, c in enumerate(self._cnames) ]
         self._selections_cell = self.cell( selections_init, 0, 'checkbox', observer=self.on_selection_change )
         cells.append( self._selections_cell )
         return cells
@@ -71,11 +84,11 @@ class ipSpreadsheet:
         self.refresh()
 
     @property
-    def index(self) -> List[int]:
-        return self._dataFrame.index.tolist()
+    def index(self) -> np.ndarray:
+        return self.current_page_data.index
 
     def delete(self, row: int ):
-        lgm().log(f" Deleting row '{row}', dataFrame index = {self.index} ")
+        lgm().log(f" Deleting row '{row}', dataFrame index = {self.index.tolist()} ")
         idx: int = self.index[row]
         self._dataFrame = self._dataFrame.drop( index=idx )
         self.refresh()
@@ -319,9 +332,9 @@ class TableManager(SCSingletonConfigurable):
 
     @property
     def index(self) -> np.ndarray:
-        return self._dataFrame.index.to_numpy()
+        return self.selected_table.index
 
-    @exception_handled
+    @log_timing
     def _handle_table_selection(self, old: np.ndarray, new: np.ndarray ):
         pids = self.index[new]
         lgm().log(f"  **TABLE-> new selection event, pids:  {pids}")
@@ -333,6 +346,7 @@ class TableManager(SCSingletonConfigurable):
         if (len(old) >  1) and (new[-1] == old[-1]) and ( len(new) == (new[-2]-new[-1]+1)): return True
         return False
 
+    @exception_handled
     def broadcast_selection_event(self, pids: np.ndarray ):
         from spectraclass.gui.spatial.widgets.markers import Marker
         from spectraclass.model.labels import LabelsManager, lm

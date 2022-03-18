@@ -24,10 +24,11 @@ class UnstructuredDataManager(ModeDataManager):
         ncfilename = f"{self.dset_name}{self.INPUTS['spectra']}.nc"
         return os.path.join( self.datasetDir, ncfilename )
 
-    def normalize( self, data: xa.DataArray, dim: int = 1 ) -> xa.DataArray:
-        dave, dmag = data.values.mean( dim, keepdims=True ), data.values.std( dim, keepdims=True )
-        normed_data = (data.values - dave) / (2*dmag)
-        return data.copy( data=normed_data )
+    def normfilter(self, spectral_data: np.ndarray) -> np.ndarray:
+        if self.is_float_array( spectral_data ) and (spectral_data.ndim == 2):
+            dave, dmag = spectral_data.mean(1, keepdims=True), (spectral_data.std(1, keepdims=True) + 1.0e-8)
+            spectral_data = (spectral_data - dave) / (2 * dmag)
+        return spectral_data
 
     @exception_handled
     def prepare_inputs(self, **kwargs ) -> Dict[Tuple,int]:
@@ -49,7 +50,7 @@ class UnstructuredDataManager(ModeDataManager):
             data_vars.update(  {f'plot-{vid}': dm().getXarray(pspec[vid], xcoords, xdims, norm=pspec.get('norm','spectral')) for vid in ['x', 'y'] } )
             self.set_progress(0.1)
             if self.reduce_method and (self.reduce_method.lower() != "none"):
-                input_data = self.normalize( data_vars['spectra'], 0 )
+                input_data = data_vars['spectra']
                 ( reduced_spectra, reproduced_spectra, usable_input_data ) = rm().reduce(input_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity)[0]
                 coords = dict(samples=xcoords['samples'], model=np.arange(self.model_dims))
                 data_vars['reduction'] = xa.DataArray(reduced_spectra, dims=['samples', 'model'], coords=coords)
@@ -69,6 +70,9 @@ class UnstructuredDataManager(ModeDataManager):
         else:
             print( "DATA PRE-PROCESSING FAILED!  See log file for more info.")
 
+    def is_float_array(self, data: np.ndarray) -> bool:
+        return  str(data.dtype) in ['float32','float64']
+
     @exception_handled
     def getInputFileData( self, vname: str = None, **kwargs ) -> np.ndarray:
         if vname is None: vname = f"{self.INPUTS['spectra']}"
@@ -81,11 +85,13 @@ class UnstructuredDataManager(ModeDataManager):
                     result = pickle.load(f)
                     if isinstance(result, np.ndarray):
                         skip_subsample =  (( result.shape[0] == self.model_dims ) and result.ndim == 1) or (self.subsample_index == 1)
-                        input_data =  result if skip_subsample else result[::self.subsample_index ]
+                        raw_data =  result if skip_subsample else result[::self.subsample_index ]
                     elif isinstance(result, list):
                         subsampled = [result[i] for i in range(0, len(result), self.subsample_index )]
-                        input_data = np.vstack(subsampled) if isinstance(result[0], np.ndarray) else np.array(subsampled)
-                lgm().log(  f"Reading unstructured {vname} data from file {input_file_path}, shape = {input_data.shape}, subsample = {self.subsample_index}, dtype = {input_data.dtype}, strides = {input_data.strides}", print=True )
+                        raw_data = np.vstack(subsampled) if isinstance(result[0], np.ndarray) else np.array(subsampled)
+                lgm().log(  f"Reading unstructured {vname} data from file {input_file_path}, raw shape = {raw_data.shape}, subsample = {self.subsample_index}, ctype = {type(raw_data)}, dtype = {raw_data.dtype}", print=True )
+                input_data = self.normfilter(raw_data)
+                lgm().log( f"  --> filtered data shape ={input_data.shape}" )
                 self._cached_data[input_file_path] = input_data
             return input_data
         else:
