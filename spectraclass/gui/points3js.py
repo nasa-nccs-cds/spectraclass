@@ -205,6 +205,7 @@ class PointCloudManager(SCSingletonConfigurable):
     @exception_handled
     def on_pick(self, highlight: bool, event: Dict ):
         from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.gui.unstructured.table import tbm
         point = tuple( event["new"] )
         self.pick_point = self.voxelizer.get_pid( point )
         lgm().log(f" *** PCM.on_pick: pid={self.pick_point}, [{point}]")
@@ -212,6 +213,8 @@ class PointCloudManager(SCSingletonConfigurable):
             if highlight:   pos = mm().highlight_points( [self.pick_point], [0] )
             else:           pos = mm().mark_point( self.pick_point, cid=0 )
             lgm().log( f"       -----> pos = {pos}")
+        if tbm().active:
+            tbm().mark_point( self.pick_point, 0, point )
         self.points.geometry = self.getGeometry()
 
     def gui(self, **kwargs ) -> ipw.DOMWidget:
