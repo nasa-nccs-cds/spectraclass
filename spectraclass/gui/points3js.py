@@ -69,6 +69,17 @@ class PointCloudManager(SCSingletonConfigurable):
             self.marker_pids.pop(pid)
         self.transient_markers = []
 
+    def update_marked_points( self, selection: np.ndarray, index: np.ndarray, cid: int ):
+        for id in range( index.shape[0] ):
+            pid = index[id]
+            if selection[id]:
+                self.marker_pids[pid] = cid
+                if cid == 0: self.transient_markers.append( pid )
+            else:
+                if self.marker_pids.pop( pid, -1 ) == 0:
+                    self.transient_markers.pop(pid)
+        self.update_marker_plot()
+
     def addMarker(self, marker: Marker ):
         self.clear_transients()
         lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}")

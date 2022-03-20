@@ -408,27 +408,19 @@ class TableManager(SCSingletonConfigurable):
 
     @exception_handled
     def _handle_table_selection(self, selection: np.ndarray ):
-        pids = self.index[ selection ]
-        lgm().log(f"  **TABLE-> new selection event, pids:  {pids}")
-        self.broadcast_selection_event( pids )
+        from spectraclass.gui.spatial.widgets.markers import Marker
+        from spectraclass.gui.plot import gpm
+        from spectraclass.gui.points3js import PointCloudManager, pcm
+        cid = self.selected_table_index
+        pids = self.index[selection]
+        gpm().plot_graph( Marker( "marker", pids,  cid ) )
+        pcm().update_marked_points( selection, self.index, cid )
 
     def is_block_selection( self, old: List[int], new: List[int] ) -> bool:
         lgm().log(   f"   **TABLE->  is_block_selection: old = {old}, new = {new}"  )
         if (len(old) == 1) and (new[-1] == old[ 0]) and ( len(new) == (new[-2]-new[-1]+1)): return True
         if (len(old) >  1) and (new[-1] == old[-1]) and ( len(new) == (new[-2]-new[-1]+1)): return True
         return False
-
-    @exception_handled
-    def broadcast_selection_event(self, pids: np.ndarray ):
-        from spectraclass.gui.spatial.widgets.markers import Marker
-        from spectraclass.model.labels import LabelsManager, lm
-        from spectraclass.gui.plot import gpm
-        from spectraclass.gui.points3js import PointCloudManager, pcm
-        item_str = "" if pids.size > 8 else f",  pids={pids}"
-        lgm().log(f" **TABLE-> gui.selection_changed, nitems={pids.size}{item_str}")
-        marker = Marker( "marker", pids, lm().current_cid )
-        gpm().plot_graph( marker )
-        pcm().addMarker(marker)
 
     def _createTable( self, tab_index: int ) -> ipSpreadsheet:
         assert self._dataFrame is not None, " TableManager has not been initialized "
@@ -510,10 +502,6 @@ class TableManager(SCSingletonConfigurable):
             else: raise Exception( f"Unrecognized match option: {match}")
             self.selected_table.set_filter_data( df[mask] )
         self._update_page_widget()
-
-    def _clear_selection(self):
-        self._current_selection = None
-        self._wFilter.value = ""
 
     def _process_filter_options(self, name: str, state: str):
         self._match_options[ name ] = state
