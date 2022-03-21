@@ -75,16 +75,26 @@ class PointCloudManager(SCSingletonConfigurable):
         lgm().log(f" *** PCM.mark_point: pid={pid}, cid={cid}")
         self.marker_pids[pid] = cid
         if cid == 0: self.transient_markers.append(pid)
+        return pid
 
     @exception_handled
-    def unmark_point( self, pid: int ):
-        if self.marker_pids.pop(pid, -1) == 0:
-            self.transient_markers.remove(pid)
+    def unmark_point( self, pid: int ) -> int:
+        marked_pid = self.marker_pids.pop(pid, -1)
+        if (marked_pid == 0) and (marked_pid in self.transient_markers):
+            self.transient_markers.remove( marked_pid )
+        return marked_pid
 
     def update_marked_points( self, page_selection: np.ndarray, index: np.ndarray, cid: int ):
+        add_pids, remove_ids = [], []
         for id in range( index.shape[0] ):
-            if page_selection[id]:  self.mark_point( index[id], cid )
-            else:                   self.unmark_point( index[id] )
+            if page_selection[id]:
+                add_pids.append(   self.mark_point( index[id], cid ) )
+            else:
+                rpid = self.unmark_point( index[id] )
+                if rpid >= 0: remove_ids.append( rpid )
+        if len( add_pids ):
+            lm().addMarker( Marker( "marker", add_pids, cid ) )
+        lm().deletePids( remove_ids )
         self.update_marker_plot()
 
     def addMarker(self, marker: Marker ):
@@ -183,8 +193,8 @@ class PointCloudManager(SCSingletonConfigurable):
         colors = lm().get_rgb_colors( list(markers.values()) )
         idxs = list(markers.keys())
         positions = self.xyz[ np.array( idxs ) ] if len(idxs) else np.empty( shape=[0,3], dtype=np.int )
-        lgm().log(f"\n *** getMarkerGeometry: positions shape = {positions.shape}, color shape = {colors.shape}")
-        lgm().log(f" ----> positions[0:10] = {positions[0:10]}, colors[0:10] = {colors[0:10]}")
+        lgm().log(f"*** getMarkerGeometry: positions shape = {positions.shape}, color shape = {colors.shape}")
+        lgm().log(f"   ----> positions[0:10] = {positions[0:10]}, colors[0:10] = {colors[0:10]}")
         attrs = dict( position = p3js.BufferAttribute( positions, normalized=False ),  color =    p3js.BufferAttribute( colors ) )
         return p3js.BufferGeometry( attributes=attrs )
 
@@ -223,16 +233,18 @@ class PointCloudManager(SCSingletonConfigurable):
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.gui.unstructured.table import tbm
         point = tuple( event["new"] )
-        self.pick_point = self.voxelizer.get_pid( point )
-        lgm().log(f" *** PCM.on_pick: pid={self.pick_point}, [{point}]")
-        if mm().initialized():
-            if highlight:   pos = mm().highlight_points( [self.pick_point], [0] )
-            else:           pos = mm().mark_point( self.pick_point, cid=0 )
-            lgm().log( f"       -----> pos = {pos}")
-        if tbm().active:
-            tbm().mark_point( self.pick_point, 0, point )
-        self.mark_point( self.pick_point, 0 )
-        self.points.geometry = self.getGeometry()
+        ppid = self.voxelizer.get_pid( point )
+        if ppid >= 0:
+            self.pick_point = ppid
+            lgm().log(f" *** PCM.on_pick: pid={self.pick_point}, [{point}]")
+            if mm().initialized():
+                if highlight:   pos = mm().highlight_points( [self.pick_point], [0] )
+                else:           pos = mm().mark_point( self.pick_point, cid=0 )
+                lgm().log( f"       -----> pos = {pos}")
+            if tbm().active:
+                tbm().mark_point( self.pick_point, 0, point )
+            self.mark_point( self.pick_point, 0 )
+            self.points.geometry = self.getGeometry()
 
     def gui(self, **kwargs ) -> ipw.DOMWidget:
         if self._gui is None:

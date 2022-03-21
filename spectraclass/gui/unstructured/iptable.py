@@ -14,8 +14,7 @@ from typing import List, Union, Dict, Callable, Set, Any, Sequence
 
 class ipSpreadsheet:
 
-    def __init__(self, dataFrame: pd.DataFrame, manager: "TableManager", **kwargs ):
-        self._dataFrame: pd.DataFrame = dataFrame
+    def __init__(self, manager: "TableManager", **kwargs ):
         self.manager: TableManager = manager
         self._filteredData = None
         self.current_page_data: pd.DataFrame = None
@@ -29,8 +28,16 @@ class ipSpreadsheet:
         self._table: ips.Sheet = ips.Sheet( rows=tshape[0], columns=tshape[1], row_headers=False, column_headers=[""]+self._cnames )
         self.refresh()
 
+    @property
+    def _dataFrame(self) -> pd.DataFrame:
+        return self.manager._dataFrame
+
     def set_selection_callback(self, callback: Callable[[np.ndarray], None]):
         self._selection_callback = callback
+
+    def insert_rows( self, row: pd.DataFrame ):
+        self._dataFrame.append(row)
+        self.refresh()
 
     @property
     def current_page(self) -> int:
@@ -363,22 +370,22 @@ class TableManager(SCSingletonConfigurable):
             lgm().log("NULL Marker: point select is probably out of bounds.")
         else:
             self.selection[pid] = True
-            table: ipSpreadsheet = self._tables[cid]
+            table: ipSpreadsheet = self._tables[0]
             self._wPages.index = int( table.select_row( pid ) )
  #           app().add_marker( "map", marker )
 
     def edit_table(self, cid: int, pids: np.ndarray, column: str, value: Any ):
-         table: ipSpreadsheet = self._tables[cid]
+         table: ipSpreadsheet = self._tables[0]
          for pid in pids:
             table.patch_data_element( column, pid, value )
 
     def  clear_table(self,cid: int):
-        table: ipSpreadsheet = self._tables[cid]
+        table: ipSpreadsheet = self._tables[0]
         table.set_col_data( "cid", 0 )
 
     @property
     def selected_table_index(self) -> int:
-        return int( self._wTablesWidget.selected_index )
+        return 0 # int( self._wTablesWidget.selected_index )
 
     @property
     def selected_table(self) -> ipSpreadsheet:
@@ -405,17 +412,34 @@ class TableManager(SCSingletonConfigurable):
 
     @property
     def index(self) -> np.ndarray:
-        return self.selected_table.index
+        return self.table.index
 
     @exception_handled
-    def _handle_table_selection(self, selection: np.ndarray ):
+    def on_table_selection(self, selection: np.ndarray):
         from spectraclass.gui.spatial.widgets.markers import Marker
         from spectraclass.gui.plot import gpm
+        from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.points3js import PointCloudManager, pcm
-        cid = self.selected_table_index
+        cid = lm().current_cid
         pids = self.index[selection]
         gpm().plot_graph( Marker( "marker", pids,  cid ) )
         pcm().update_marked_points( selection, self.index, cid )
+        self.set_cid( pids, cid )
+        self.table.refresh()
+
+    @property
+    def table(self) -> ipSpreadsheet:
+        return self._tables[0]
+
+    @exception_handled
+    def set_cid(self, pids: np.ndarray , cid: int ):
+        self._dataFrame.loc[ pids.tolist(), 'cid' ] = cid
+
+
+        # if (self.selected_table_index == 0) and (cid > 0):
+        #     table: ipSpreadsheet = self._tables[cid]
+        #     table.insert_rows( self._tables[0].current_page_data.iloc[ selection ] )
+        #     table.refresh()
 
     def is_block_selection( self, old: List[int], new: List[int] ) -> bool:
         lgm().log(   f"   **TABLE->  is_block_selection: old = {old}, new = {new}"  )
@@ -423,16 +447,11 @@ class TableManager(SCSingletonConfigurable):
         if (len(old) >  1) and (new[-1] == old[-1]) and ( len(new) == (new[-2]-new[-1]+1)): return True
         return False
 
-    def _createTable( self, tab_index: int ) -> ipSpreadsheet:
+    def _createTable( self, cid: int ) -> ipSpreadsheet:
         assert self._dataFrame is not None, " TableManager has not been initialized "
-        lgm().log( f"Create Spreadsheet Table[{tab_index}]")
-        if tab_index == 0:
-            ipTable = ipSpreadsheet( self._dataFrame, self )
-        else:
-            empty_catalog = {col: np.empty( [0], 'U' ) for col in self._cols}
-            dFrame: pd.DataFrame = pd.DataFrame(empty_catalog, dtype='U' )
-            ipTable = ipSpreadsheet( dFrame, self )
-        ipTable.set_selection_callback( self._handle_table_selection )
+        lgm().log( f"Create Spreadsheet Table, cid = {cid}")
+        ipTable = ipSpreadsheet( self )
+        ipTable.set_selection_callback(self.on_table_selection)
         return ipTable
 
     def _createGui( self ) -> ipw.VBox:
@@ -501,6 +520,7 @@ class TableManager(SCSingletonConfigurable):
             elif match == "contains":    mask = np_coldata.str.contains(  match_str )
             elif match == "regex":       mask = np_coldata.str.match( r'{}'.format(match_str) )
             else: raise Exception( f"Unrecognized match option: {match}")
+            lgm().log( f" FILTER: options={self._match_options}, {match_str=}, result mask = {mask}")
             self.selected_table.set_filter_data( df[mask] )
         self._update_page_widget()
 
@@ -515,9 +535,9 @@ class TableManager(SCSingletonConfigurable):
         wTab = ipw.Tab()
         self._tables.append( self._createTable( 0 ) )
         wTab.set_title( 0, 'Catalog')
-        for iC, ctitle in enumerate( LabelsManager.instance().labels[1:], 1 ):
-            self._tables.append(  self._createTable( iC ) )
-            wTab.set_title( iC, ctitle )
+        # for iC, ctitle in enumerate( LabelsManager.instance().labels[1:], 1 ):
+        #     self._tables.append(  self._createTable( iC ) )
+        #     wTab.set_title( iC, ctitle )
         wTab.children = [ t.gui() for t in self._tables ]
         return wTab
 

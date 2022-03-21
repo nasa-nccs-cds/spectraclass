@@ -280,14 +280,18 @@ class LabelsManager(SCSingletonConfigurable):
     def refresh(self):
         self.clearMarkers()
 
+    def deletePids(self, pids: List[int] ):
+        for pid in pids: self.deletePid( pid )
+
     def deletePid(self, pid: int ):
-        empty_markers = []
-        for marker in self._markers:
-            marker.deletePid(pid)
-            if marker.empty: empty_markers.append( marker )
-        for m in empty_markers:
-            lgm().log( f"LM: Removing marker: {m}")
-            self._markers.remove( m )
+        if pid >= 0 :
+            empty_markers = []
+            for marker in self._markers:
+                marker.deletePid(pid)
+                if marker.empty: empty_markers.append( marker )
+            for m in empty_markers:
+                lgm().log( f"LM: Removing marker: {m}")
+                self._markers.remove( m )
 
 
     # def clearMarkerConflicts(self, m: Marker):
