@@ -45,9 +45,10 @@ class ipSpreadsheet:
         self._current_page = self.get_page_index( pid )
         row = pid - self.current_page * TableManager.rows_per_page
         lgm().log(f" %%%% select_row: {pid=} page={self.current_page} {row=}")
+        self.refresh()
         if self._selection_callback:
             self._selection_callback( self.selection )
-        self.refresh()
+        return self._current_page
 
     @current_page.setter
     def current_page(self, page_index: int ):
@@ -363,7 +364,7 @@ class TableManager(SCSingletonConfigurable):
         else:
             self.selection[pid] = True
             table: ipSpreadsheet = self._tables[cid]
-            table.select_row( pid )
+            self._wPages.index = int( table.select_row( pid ) )
  #           app().add_marker( "map", marker )
 
     def edit_table(self, cid: int, pids: np.ndarray, column: str, value: Any ):

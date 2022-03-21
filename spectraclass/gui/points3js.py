@@ -64,29 +64,34 @@ class PointCloudManager(SCSingletonConfigurable):
     def set_alpha(self, opacity: float ):
         self.scene_controls[ 'marker.material.opacity' ] = opacity
 
+    @exception_handled
     def clear_transients(self):
         for pid in self.transient_markers:
             self.marker_pids.pop(pid)
         self.transient_markers = []
 
-    def update_marked_points( self, selection: np.ndarray, index: np.ndarray, cid: int ):
+    @exception_handled
+    def mark_point( self, pid: int, cid: int ):
+        lgm().log(f" *** PCM.mark_point: pid={pid}, cid={cid}")
+        self.marker_pids[pid] = cid
+        if cid == 0: self.transient_markers.append(pid)
+
+    @exception_handled
+    def unmark_point( self, pid: int ):
+        if self.marker_pids.pop(pid, -1) == 0:
+            self.transient_markers.remove(pid)
+
+    def update_marked_points( self, page_selection: np.ndarray, index: np.ndarray, cid: int ):
         for id in range( index.shape[0] ):
-            pid = index[id]
-            if selection[id]:
-                self.marker_pids[pid] = cid
-                if cid == 0: self.transient_markers.append( pid )
-            else:
-                if self.marker_pids.pop( pid, -1 ) == 0:
-                    self.transient_markers.pop(pid)
+            if page_selection[id]:  self.mark_point( index[id], cid )
+            else:                   self.unmark_point( index[id] )
         self.update_marker_plot()
 
     def addMarker(self, marker: Marker ):
         self.clear_transients()
         lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}")
         for pid in marker.pids:
-            self.marker_pids[pid] = marker.cid
-            if marker.cid == 0:
-                self.transient_markers.append( pid )
+            self.mark_point( pid, marker.cid )
         self.update_marker_plot()
 
     def deleteMarkers( self, pids: List[int] ):
@@ -226,6 +231,7 @@ class PointCloudManager(SCSingletonConfigurable):
             lgm().log( f"       -----> pos = {pos}")
         if tbm().active:
             tbm().mark_point( self.pick_point, 0, point )
+        self.mark_point( self.pick_point, 0 )
         self.points.geometry = self.getGeometry()
 
     def gui(self, **kwargs ) -> ipw.DOMWidget:
