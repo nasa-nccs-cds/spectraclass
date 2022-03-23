@@ -88,8 +88,9 @@ class PolygonInteractor:
             self.prec.poly.remove()
             self.prec.line.remove()
             marker = tm().get_region_marker( self.prec )
-            gpm().remove_marker(marker)
-            pcm().deleteMarkers( marker.pids )
+            if marker is not None:
+                gpm().remove_marker(marker)
+                pcm().deleteMarkers( marker.pids )
             self.prec = None
             self.canvas.draw_idle()
 

@@ -52,7 +52,7 @@ class PointsInteractor:
     def on_button_press(self, event: MouseEvent):
         lgm().log( f"Attempt to call unimplemented method PointsInteractor.on_button_press")
 
-    @exception_handled
+    @log_timing
     def plot( self, **kwargs ):
         ycoords, xcoords, colors = self.get_points()
         if len(ycoords) > 0:

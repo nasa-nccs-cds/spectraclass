@@ -133,6 +133,9 @@ class mplGraphPlot:
         for (pid, lrec) in self.lrecs.items():
             if lrec.cid == 0: lrec.clear()
             else: new_lrecs[pid] = lrec
+        for rline in self.rlines:
+            rline.remove()
+        self.rlines = []
         self.lrecs = new_lrecs
 
     @log_timing
@@ -141,9 +144,34 @@ class mplGraphPlot:
         lgm().log(f"mplGraphPlot: Add Marker[{m.size}]: cid={m.cid}")
         if m.size > 0:
             self.clearTransients()
-            for pid in m.pids:
-                self.lrecs[pid] = LineRec( None, pid, m.cid )
-            self.plot()
+            if len(m.pids) == 1:    self.plot_line( m.pids[0], m.cid )
+            else:                   self.plot_lines( m.pids, m.cid )
+
+    @log_timing
+    def plot_line(self, pid: int, cid: int ):
+        from spectraclass.model.labels import LabelsManager, lm
+        selected: bool = (self.selected_pid >= 0)
+        selection = (pid == self.selected_pid)
+        alpha = (1.0 if selection else 0.2) if selected else 1.0
+        color = lm().graph_colors[cid]
+        lw = 2.0 if selection else 1.0
+        lrec = LineRec(None, pid, cid)
+        self.lrecs[pid] = lrec
+        lines = self.ax.plot( self.lx(lrec.pid), self.ly(lrec.pid), picker=True, pickradius=2, color=color, alpha=alpha, linewidth=lw )
+        lrec.line = lines[0]
+        if (not self._use_model) and (self.ry.size > 0):
+            self.rlines.extend( self.ax.plot( self.lx(lrec.pid), self.lry(lrec.pid), color="grey" ) )
+        self.ax.figure.canvas.draw_idle()
+
+    @log_timing
+    def plot_lines(self, pids: List[int], cid: int ):
+        from spectraclass.model.labels import LabelsManager, lm
+        color = lm().graph_colors[cid]
+        lrecs = [ LineRec(None, pid, cid) for pid in pids ]
+        for lrec in lrecs: self.lrecs[lrec.pid] = lrec
+        lines = self.ax.plot( self.lx(pids), self.ly(pids), picker=True, pickradius=2, color=color, alpha=1.0, linewidth=1.0 )
+        for (lrec,line) in zip(lrecs,lines): lrec.line = line
+        self.ax.figure.canvas.draw_idle()
 
     @exception_handled
     def get_plotspecs(self):
@@ -167,8 +195,11 @@ class mplGraphPlot:
         self.ax.title.text = self.title
         if clear_selection: self.selected_pid = -1
         ps = self.get_plotspecs()
-       # lgm().log( f"set_prop_cycle: color={ps['color']}, alpha={ps['alpha']}, linewidth={ps['lw']}")
-        self.ax.set_prop_cycle( color=ps['color'], alpha=ps['alpha'], linewidth=ps['lw'] )
+        try:
+            self.ax.set_prop_cycle( color=ps['color'], alpha=ps['alpha'], linewidth=ps['lw'] )
+        except Exception as err:
+            lgm().log(f"set_prop_cycle: color={ps['color']}, alpha={ps['alpha']}, linewidth={ps['lw']}")
+            lgm().log( f"## Error setting property cycle: {err}")
         self.update_graph()
 
     @log_timing
@@ -226,6 +257,19 @@ class mplGraphPlot:
     def nlines(self) -> int:
         return len( self.lrecs.keys() )
 
+    def lx(self, pids: Union[int,List[int]] ) -> np.ndarray:
+        xv = self._mx if self._use_model else self._x
+        if xv.ndim == 1:   return  xv
+        else:              return  xv[pids].squeeze()
+
+    def ly(self, pids: Union[int,List[int]] ) -> np.ndarray:
+        ydata = self._mploty[pids] if self._use_model else self._ploty[pids]
+        return self.normalize( ydata ).squeeze().transpose()
+
+    def lry(self, pid ) -> np.ndarray:
+        ydata = self._rploty[ pid ]
+        return self.normalize( ydata ).squeeze()
+
     @property
     def x(self) -> np.ndarray:
         xv = self._mx if self._use_model else self._x
@@ -243,7 +287,8 @@ class mplGraphPlot:
         return self.normalize( ydata ).transpose()
 
     def normalize(self, data: np.ndarray ) -> np.ndarray:
-        mean, std = data.mean( axis=1, keepdims=True ), data.std( axis=1, keepdims=True )
+        axis = 1 if (data.ndim > 1) else 0
+        mean, std = data.mean( axis=axis, keepdims=True ), data.std( axis=axis, keepdims=True )
         return ( data - mean) / std
 
     @property

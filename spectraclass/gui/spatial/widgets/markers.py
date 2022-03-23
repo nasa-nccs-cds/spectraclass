@@ -173,6 +173,7 @@ class MarkerManager( PointsInteractor ):
             gpm().remove_point( pid )
             pcm().deleteMarkers( [pid] )
 
+    @log_timing
     def mark_point(self, pid, **kwargs ) -> Optional[Tuple[float,float]]:
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.map import MapManager, mm
@@ -190,7 +191,7 @@ class MarkerManager( PointsInteractor ):
                 self.delete_marker( event.xdata, event.ydata )
             elif int(event.button) == self.LEFT_BUTTON:
                 pid = self._block.coords2pindex(event.ydata, event.xdata)
-                lgm().log(f"\n on_button_press --> selected pid = {pid}, button = {event.button}")
+                lgm().log(f"on_button_press --> selected pid = {pid}, button = {event.button}")
                 self.mark_point( pid, point=(event.xdata,event.ydata) )
             self.plot()
 

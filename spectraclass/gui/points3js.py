@@ -67,12 +67,12 @@ class PointCloudManager(SCSingletonConfigurable):
     @exception_handled
     def clear_transients(self):
         for pid in self.transient_markers:
-            self.marker_pids.pop(pid)
+            if pid in self.marker_pids:
+                self.marker_pids.pop(pid)
         self.transient_markers = []
 
     @exception_handled
     def mark_point( self, pid: int, cid: int ):
-        lgm().log(f" *** PCM.mark_point: pid={pid}, cid={cid}")
         self.marker_pids[pid] = cid
         if cid == 0: self.transient_markers.append(pid)
         return pid
@@ -99,7 +99,7 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def addMarker(self, marker: Marker ):
         self.clear_transients()
-        lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}")
+        lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}, pids[10]={marker.pids[:10]}")
         for pid in marker.pids:
             self.mark_point( pid, marker.cid )
         self.update_marker_plot()
@@ -175,7 +175,7 @@ class PointCloudManager(SCSingletonConfigurable):
         mapper = plt.cm.ScalarMappable( norm = norm, cmap="jet" )
         colors = mapper.to_rgba( cdata.values )[:, :-1] * 255
         if self.pick_point >= 0:
-            colors[ self.pick_point ] = [255,255,255,255]
+            colors[ self.pick_point ] = [255] * colors.shape[1]
         return colors.astype(np.uint8)
 
     def getGeometry( self, **kwargs ) -> Optional[p3js.BufferGeometry]:
@@ -194,7 +194,6 @@ class PointCloudManager(SCSingletonConfigurable):
         idxs = list(markers.keys())
         positions = self.xyz[ np.array( idxs ) ] if len(idxs) else np.empty( shape=[0,3], dtype=np.int )
         lgm().log(f"*** getMarkerGeometry: positions shape = {positions.shape}, color shape = {colors.shape}")
-        lgm().log(f"   ----> positions[0:10] = {positions[0:10]}, colors[0:10] = {colors[0:10]}")
         attrs = dict( position = p3js.BufferAttribute( positions, normalized=False ),  color =    p3js.BufferAttribute( colors ) )
         return p3js.BufferGeometry( attributes=attrs )
 

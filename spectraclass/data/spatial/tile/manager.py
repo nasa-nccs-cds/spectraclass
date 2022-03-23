@@ -146,13 +146,17 @@ class TileManager(SCSingletonConfigurable):
         idx2pid: np.ndarray = block.index_array.values.flatten()
         raster:  xa.DataArray = block.data[0].squeeze()
         X, Y = raster.x.values, raster.y.values
-        polygon = Polygon(prec.poly.get_xy())
-        MX, MY = np.meshgrid(X, Y)
-        PID: np.ndarray = np.array(range(raster.size))
-        mask: np.ndarray = svect.contains( polygon, MX, MY ).flatten()
-        pids = idx2pid[ PID[mask] ]
-        marker = Marker( "label", pids[ pids > -1 ].tolist(), cid )
-        lgm().log( f"Poly selection-> Create marker[{marker.size}], cid = {cid}")
+        try:
+            polygon = Polygon(prec.poly.get_xy())
+            MX, MY = np.meshgrid(X, Y)
+            PID: np.ndarray = np.array(range(raster.size))
+            mask: np.ndarray = svect.contains( polygon, MX, MY ).flatten()
+            pids = idx2pid[ PID[mask] ]
+            marker = Marker( "label", pids[ pids > -1 ].tolist(), cid )
+            lgm().log( f"Poly selection-> Create marker[{marker.size}], cid = {cid}")
+        except Exception as err:
+            lgm().log( f"Error getting region marker, returning empty marker: {err}")
+            marker = Marker( "label", [], cid )
         return marker
 
     def getTileFileName(self, with_extension = True ) -> str:
