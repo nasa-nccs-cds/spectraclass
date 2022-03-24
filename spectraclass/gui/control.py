@@ -35,6 +35,8 @@ class ActionsManager(SCSingletonConfigurable):
             app().mark()
         elif task == "propagate":
             app().propagate_selection()
+        elif task == "cluster":
+            app().cluster()
         elif task == "clear":
             app().clear()
         elif task == "undo":
@@ -50,7 +52,7 @@ class ActionsManager(SCSingletonConfigurable):
 
     def _createGui( self, **kwargs ) -> ipw.Box:
         from spectraclass.model.labels import LabelsManager
-        for task in [ "embed", "distance", "propagate", "learn", "apply", "undo", "clear"]:
+        for task in [ "embed", "distance", 'cluster', "propagate", "learn", "apply", "undo", "clear"]:
             button = ipw.Button( description=task, border= '1px solid gray' )
             button.layout = ipw.Layout( width='auto', flex="1 0 auto" )
             button.on_click( partial( self.on_button_click, task ) )
@@ -79,7 +81,7 @@ class ParametersManager(SCSingletonConfigurable):
     @exception_handled
     def _createGui( self, **kwargs ) -> ipw.Box:
         wTab = ipw.Tab()
-        tabNames = [  "layers", "selection", "learning", "threshold", "persist" ]
+        tabNames = [  "layers", "selection", "learning", "threshold", "persist", "cluster" ]
         children = []
         for iT, title in enumerate( tabNames ):
             wTab.set_title( iT, title )
@@ -90,11 +92,13 @@ class ParametersManager(SCSingletonConfigurable):
     def createPanel(self, title: str ):
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.data.base import DataManager, dm
+        from spectraclass.learn.cluster import clm
         from spectraclass.learn.manager import ClassificationManager, cm
         if title   == "layers":     return  mm().layers.gui()
         elif title == "persist":    return  cm().create_persistence_gui()
         elif title == "selection":  return  mm().get_selection_panel()
         elif title == "learning":   return  cm().gui()
+        elif title == "cluster":    return  clm().gui()
         elif title == "threshold":  return  mm().get_threshold_panel()
         elif title == "reduction":  return  dm().modal.getCreationPanel()
         elif title == "embedding":  return  dm().modal.getConfigPanel()

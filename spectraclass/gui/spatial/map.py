@@ -69,10 +69,12 @@ class MapManager(SCSingletonConfigurable):
         self._spectral_image: Optional[AxesImage] = None
         self.label_map: Optional[xa.DataArray] = None     # Map of classification labels from ML
         self.labels_image: Optional[AxesImage] = None
+        self.clusters_image: Optional[AxesImage] = None
         self.layers.add( 'basemap', 1.0, True)
         self.layers.add( 'bands', 1.0, True )
         self.layers.add( 'markers', 0.5, True )
         self.layers.add( 'labels', 0.5, False )
+        self.layers.add( 'clusters', 0.5, False )
         self.observe(self.on_threshold_change, names=["lower_threshold", "upper_threshold"])
         self.menu_actions = OrderedDict( Layers = [ [ "Increase Labels Alpha", 'Ctrl+>', None, partial( self.update_image_alpha, "labels", True ) ],
                                                     [ "Decrease Labels Alpha", 'Ctrl+<', None, partial( self.update_image_alpha, "labels", False ) ],
@@ -179,16 +181,15 @@ class MapManager(SCSingletonConfigurable):
         return xa.Dataset( self.label_map )
 
     def initLabels(self):
-        nodata_value = -2
-        template = self.block.data[0].squeeze( drop=True )
-        self.label_map: xa.DataArray = xa.full_like( template, 0, dtype=np.dtype(np.int32) ) # .where( template.notnull(), nodata_value )
+        self.template = xa.full_like( self.block.data[0].squeeze( drop=True ), 0, dtype=np.dtype(np.int32) ) # .where( template.notnull(), nodata_value )
+        self.label_map: xa.DataArray = self.template
 #        self.label_map.attrs['_FillValue'] = nodata_value
         self.label_map.name = f"{self.block.data.name}_labels"
         self.label_map.attrs[ 'long_name' ] =  "labels"
         self.cspecs = lm().get_labels_colormap()
-        lgm().log( f"Init label map, value range = [{self.label_map.values.min()} {self.label_map.values.max()}]")
-        self.labels_image = self.label_map.plot.imshow( ax=self.base.gax, alpha=self.layers('labels').visibility,
+        self.labels_image = self.template.plot.imshow( ax=self.base.gax, alpha=self.layers('labels').visibility,
                                                         cmap=self.cspecs['cmap'], add_colorbar=False, norm=self.cspecs['norm'] )
+        self.init_cluster_image()
 
     def clearLabels( self):
         if self.block is not None:
@@ -196,6 +197,9 @@ class MapManager(SCSingletonConfigurable):
              self.points_selection.plot()
              if self.labels_image is not None:
                 self.labels_image.set_alpha(0.0)
+
+    def init_cluster_image(self):
+         self.clusters_image = self.template.plot.imshow( ax=self.base.gax, alpha=self.layers('clusters').visibility, add_colorbar=False )
 
     @property
     def toolbarMode(self) -> str:
@@ -276,13 +280,24 @@ class MapManager(SCSingletonConfigurable):
             except Exception: pass
             self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=0.5, cmap=self.cspecs['cmap'],
                                                            add_colorbar=False, norm=self.cspecs['norm'])
-            self.layers.set_visibility( "labels", 0.5, True, notify=False )
+            self.layers.set_visibility( "labels", 1.0, True, notify=False )
             self.update_canvas()
+
+    @exception_handled
+    def plot_cluster_image(self, clusters: xa.DataArray = None ):
+        lgm().log( f"  plot clusters image, shape = {clusters.shape}" )
+        try: self.clusters_image.remove()
+        except Exception: pass
+        self.clusters_image = clusters.plot.imshow( ax=self.base.gax, add_colorbar=False )
+        self.layers.set_visibility( "clusters", 1.0, True, notify=False )
+        self.update_canvas()
 
     def layer_managers( self, name: str ) -> List:
         from spectraclass.gui.points3js import PointCloudManager, pcm
+        from spectraclass.learn.cluster import  clm
         if   name == "basemap":   mgrs = [ self.base ]
         elif name == "labels":    mgrs = [ self.labels_image ]
+        elif name == "clusters":  mgrs = [ self.clusters_image ]
         elif name == "bands":     mgrs = [ self.spectral_image ]
         elif name == "markers":   mgrs = [ self.points_selection, self.region_selection, pcm() ]
         else: raise Exception( f"Unknown Layer: {name}")

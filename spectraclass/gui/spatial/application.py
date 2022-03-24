@@ -41,6 +41,7 @@ class Spectraclass(SpectraclassController):
         lgm().log( f"Spatial Spectraclass -> clear ")
         from spectraclass.gui.spatial.map import MapManager, mm
         mm().clearLabels()
+        mm().init_cluster_image()
 
     def undo_action(self):
         lgm().log(f"Spatial Spectraclass -> undo_action ")
