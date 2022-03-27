@@ -102,6 +102,10 @@ class ClusterManager(SCSingletonConfigurable):
     def get_points(self, cid: int ) -> np.ndarray:    #    TODO: complete this
         class_points = np.array([])
         classes: List[int] = self._markers.get( cid, [] )
+        for iclass in classes:
+            mask = ( self._cluster_points.values.squeeze() == iclass )
+            pids = self._cluster_points.samples[mask]
+            class_points = np.concatenate( (class_points, pids), axis=0 )
         return class_points
 
     def mark_cluster( self, pid: int, cid: int ) -> xa.DataArray:
