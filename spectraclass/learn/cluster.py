@@ -3,12 +3,15 @@ from sklearn import cluster
 from sklearn.base import ClusterMixin
 from joblib import cpu_count
 import time, traceback, shutil
+from matplotlib.colors import LinearSegmentedColormap, ListedColormap, hsv_to_rgb
+from matplotlib.backend_bases import PickEvent, MouseEvent
 import xarray as xa
 import ipywidgets as ipw
 from functools import partial
 import numpy as np
 from typing import List, Tuple, Optional, Dict, Union
 import traitlets as tl
+from spectraclass.data.spatial.tile.tile import Block, Tile
 import traitlets.config as tlc
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
@@ -26,7 +29,9 @@ class ClusterManager(SCSingletonConfigurable):
         super(ClusterManager, self).__init__(**kwargs)
         self._ncluster_options = range( 2, 20 )
         self._mid_options = [ "kmeans" ]
-        self.labels_raster: xa.DataArray = None
+        self._colors = None
+        self._markers = {}
+        self._cluster_points: xa.DataArray = None
         self._models: Dict[str,ClusterMixin] = {}
         self._model_selector = ipw.Select( options=self.mids, description='Methods:', value=self.modelid, disabled=False,
                                           layout=ipw.Layout(width="500px"))
@@ -37,13 +42,23 @@ class ClusterManager(SCSingletonConfigurable):
     def update_model(self):
         self._models[ self.mid ] = self.create_model( self.mid )
 
+    def update_colors(self, ncolors: int):
+        hsv = np.full( [ncolors,3], 1.0 )
+        hsv[:,0] = np.linspace( 0.0, 1.0, ncolors+1 )[:ncolors]
+        hsv[:,1] = np.array( [ 1.0-0.5*(i%2) for i in range(ncolors) ] )
+        self._colors = hsv_to_rgb(hsv)
+        lgm().log( f"UPDATE COLORS[{ncolors}], colormap shape = {self._colors.shape}")
+
     @property
     def mids(self) -> List[str]:
         return self._mid_options
 
     def create_model(self, mid: str ) -> ClusterMixin:
+        nclusters = self._ncluster_selector.value
+        self.update_colors( nclusters )
+        lgm().log( f"Creating {mid} model with {nclusters} clusters")
         if mid == "kmeans":
-            params = dict( n_clusters= self._ncluster_selector.value,
+            params = dict( n_clusters= nclusters,
                            random_state= self.random_state,
                            batch_size= 256 * cpu_count() )
             return cluster.MiniBatchKMeans( **params )
@@ -59,16 +74,44 @@ class ClusterManager(SCSingletonConfigurable):
     def model(self) -> ClusterMixin:
         return self._models[ self.mid ]
 
-    def cluster(self, data: xa.DataArray ):
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
+    def get_colormap(self):
+        return LinearSegmentedColormap.from_list( 'clusters', self._colors, N=len(self._colors) )
+
+    def run_cluster_model( self, data: xa.DataArray ):
         lgm().log( f"Creating clusters from input data shape = {data.shape}")
-        block = tm().getBlock()
         samples = data.dims[0]
-        cluster_labels = np.expand_dims( self.model.fit_predict( data.values ), axis=1 )
-        xa_cluster_samples = xa.DataArray( cluster_labels, dims=[samples,'clusters'], name=f"{block.data.name}_clusters",
+        cluster_data = np.expand_dims( self.model.fit_predict( data.values ), axis=1 )
+        self._cluster_points = xa.DataArray( cluster_data, dims=[samples,'clusters'],  name="clusters",
                                            coords={samples:data.coords[samples],'clusters':[0]}, attrs=data.attrs )
-        self.labels_raster = block.points2raster( xa_cluster_samples ).squeeze()
-        return self.labels_raster
+
+    def cluster(self, data: xa.DataArray ) -> xa.DataArray:
+        self.run_cluster_model( data )
+        return self.get_cluster_map()
+
+    def get_cluster_map(self) -> xa.DataArray:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        block = tm().getBlock()
+        cluster_raster: xa.DataArray = block.points2raster( self._cluster_points ).squeeze()
+        cluster_raster.attrs['cmap'] = self.get_colormap()
+        return cluster_raster
+
+    def get_cluster(self, pid: int ) -> int:
+        clusters = self._cluster_points.values.squeeze()
+        return clusters[pid]
+
+    def get_points(self, cid: int ) -> np.ndarray:    #    TODO: complete this
+        class_points = np.array([])
+        classes: List[int] = self._markers.get( cid, [] )
+        return class_points
+
+    def mark_cluster( self, pid: int, cid: int ) -> xa.DataArray:
+        from spectraclass.model.labels import LabelsManager, lm
+        iClass = self.get_cluster( pid )
+        lgm().log( f"Mark cluster, pid={pid}, iClass={iClass}, cid={cid}")
+        ufm().show( f"Label cluster, cluster[{iClass}] -> class[{cid}]" )
+        self._colors[ iClass ] = lm().get_rgb_color(cid)
+        self._markers.setdefault( cid, [] ).append( iClass )
+        return self.get_cluster_map()
 
         # nodata_value = -2
         # template = self.block.data[0].squeeze(drop=True)
@@ -88,3 +131,32 @@ class ClusterManager(SCSingletonConfigurable):
         selectors = [ self._model_selector,self._ncluster_selector ]
         for selector in selectors: selector.observe( self.on_parameter_change, names=['value'] )
         return ipw.HBox(selectors, layout=ipw.Layout(width="600px", height="300px", border='2px solid firebrick'))
+
+class ClusterSelector:
+    LEFT_BUTTON = 1
+
+    def __init__(self, ax, block: Block ):
+        self.ax = ax
+        self.enabled = False
+        self.block: Block = block
+        self.canvas = ax.figure.canvas
+        self.canvas.mpl_connect('button_press_event', self.on_button_press)
+
+    def set_enabled(self, enable: bool ):
+        lgm().log( f"ClusterSelector: set enabled = {enable}")
+        self.enabled = enable
+
+    @exception_handled
+    def on_button_press(self, event: MouseEvent ):
+        from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.model.labels import LabelsManager, lm
+        lgm().log(f"ClusterSelector: on_button_press: enabled={self.enabled}")
+        if (event.xdata != None) and (event.ydata != None) and (event.inaxes == self.ax) and self.enabled:
+            if int(event.button) == self.LEFT_BUTTON:
+                pid = self.block.coords2pindex(event.ydata, event.xdata)
+                if pid >= 0:
+                    cid = lm().current_cid
+                    cluster_map: xa.DataArray = clm().mark_cluster( pid, cid )
+                    mm().plot_cluster_image( cluster_map )
+                    lm().mark_points( clm().get_points(cid), cid, "labels")
+                    lm().addAction( "cluster", "application", cid=cid )

@@ -23,6 +23,7 @@ from spectraclass.gui.spatial.widgets.layers import LayersManager, Layer
 from spectraclass.model.labels import LabelsManager, lm
 from matplotlib.image import AxesImage
 from spectraclass.xext.xgeo import XGeo
+from spectraclass.learn.cluster import ClusterSelector
 from spectraclass.widgets.slider import PageSlider
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable
@@ -57,6 +58,7 @@ class MapManager(SCSingletonConfigurable):
         self.silent_thresholds = False
         self._adding_marker = False
         self.points_selection: MarkerManager = None
+        self.cluster_selection: ClusterSelector = None
         self.region_selection: PolygonInteractor = None
         self._band_selector: ipw.IntSlider = None
         self._use_model_data = False
@@ -211,12 +213,13 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def create_selection_panel(self):
-        self.selection_label = ipw.Label(value='Selection Operation:')
-        self.select_modes = [ 'explore', 'select point', 'select region' ]
+        self.selection_label = ipw.Label( value='Selection Operation:' )
+        self.select_modes = [ 'explore', 'select point', 'select region', 'select cluster' ]
         self.selection = ipw.RadioButtons(  options=self.select_modes, disabled=False, layout={'width': 'max-content'} )
         self.selection.observe( self.set_selection_mode, "value" )
         self.points_selection.set_enabled( False )
         self.region_selection.set_enabled( False )
+        self.cluster_selection.set_enabled(False)
 
     @exception_handled
     def set_selection_mode( self, event: Dict ):
@@ -224,6 +227,7 @@ class MapManager(SCSingletonConfigurable):
         self.set_navigation_enabled(       smode == self.select_modes[0] )
         self.points_selection.set_enabled( smode == self.select_modes[1] )
         self.region_selection.set_enabled( smode == self.select_modes[2] )
+        self.cluster_selection.set_enabled(smode == self.select_modes[3] )
 
     def set_navigation_enabled(self, enabled: bool ):
         from matplotlib.backend_bases import NavigationToolbar2, _Mode
@@ -288,7 +292,7 @@ class MapManager(SCSingletonConfigurable):
         lgm().log( f"  plot clusters image, shape = {clusters.shape}" )
         try: self.clusters_image.remove()
         except Exception: pass
-        self.clusters_image = clusters.plot.imshow( ax=self.base.gax, add_colorbar=False )
+        self.clusters_image = clusters.plot.imshow( ax=self.base.gax, cmap=clusters.cmap, add_colorbar=False )
         self.layers.set_visibility( "clusters", 1.0, True, notify=False )
         self.update_canvas()
 
@@ -299,7 +303,7 @@ class MapManager(SCSingletonConfigurable):
         elif name == "labels":    mgrs = [ self.labels_image ]
         elif name == "clusters":  mgrs = [ self.clusters_image ]
         elif name == "bands":     mgrs = [ self.spectral_image ]
-        elif name == "markers":   mgrs = [ self.points_selection, self.region_selection, pcm() ]
+        elif name == "markers":   mgrs = [ self.points_selection, self.region_selection, self.cluster_selection, pcm() ]
         else: raise Exception( f"Unknown Layer: {name}")
         return mgrs
 
@@ -489,6 +493,7 @@ class MapManager(SCSingletonConfigurable):
             self.init_map()
             self.region_selection = PolygonInteractor( self.base.gax )
             self.points_selection = MarkerManager( self.base.gax, self.block )
+            self.cluster_selection = ClusterSelector(self.base.gax, self.block)
             self.init_hover()
             if not standalone:
                 self.create_selection_panel()

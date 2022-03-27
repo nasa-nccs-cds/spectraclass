@@ -1149,10 +1149,11 @@ class cpUMAP(UMAP):
         else:
             if isinstance(self.init, np.ndarray):
                 init = check_array(self.init, dtype=np.float32, accept_sparse=False)
-                print(f"Running umap[{self.n_components}] with init array, input shape = {self._raw_data.shape}")
+                lgm().log(f"Running umap[{self.n_components}] with init array, input shape = {self._raw_data.shape}")
             else:
                 init = self.init
-                print(f"Running umap[{self.n_components}] with init {init}, input shape = {self._raw_data.shape}")
+                lgm().log(f"Running umap[{self.n_components}] with init {init}, input shape = {self._raw_data.shape}")
+#                lgm().trace( "COMPUTING UMAP" )
 
         self._initial_alpha = self.learning_rate
         self._validate_parameters()

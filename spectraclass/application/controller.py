@@ -152,11 +152,12 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.learn.cluster import clm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.model.labels import LabelsManager, Action, lm
         ufm().show(f"Creating clusters using {clm().mid}... ")
         embedding: xa.DataArray = dm().getModelData()
         cluster_image: xa.DataArray = clm().cluster( embedding )
         mm().plot_cluster_image( cluster_image )
-        ufm().show("Clustering completed")
+        ufm().show(f"Clustering completed")
 
     @log_timing
     def learn(self):

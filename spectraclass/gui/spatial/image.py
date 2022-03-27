@@ -66,6 +66,7 @@ class TileServiceImage(AxesImage):
         for r in self._blocks: r.remove()
         self._blocks = []
 
+    @exception_handled
     def add_block_selection(self):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         mdata = tm().tile_metadata

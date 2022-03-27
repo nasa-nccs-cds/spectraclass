@@ -295,7 +295,8 @@ class PointCloudManager(SCSingletonConfigurable):
         self._xyz = None
 
     def refresh(self):
-        if self.init_data( refresh=True ):
-            self.update_plot()
+        if self._gui is not None:
+            if self.init_data( refresh=True ):
+                self.update_plot()
 
 
