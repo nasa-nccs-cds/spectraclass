@@ -361,9 +361,10 @@ class LabelsManager(SCSingletonConfigurable):
         block = kwargs.get( 'block', tm().getBlock() )
         mtype = kwargs.get( 'type' )
         cmap: xa.DataArray = block.classmap()
+        lgm().log( f" GENERATE LABEL MAP: {len(lm().markers)} markers")
         for marker in lm().markers:
             if (mtype is None) or (marker.type == mtype):
-                lgm().log( f"\nSetting {len(marker.pids)} labels for cid = {marker.cid}")
+                lgm().log( f" Setting {len(marker.pids)} labels for cid = {marker.cid}" )
                 for pid in marker.pids:
                     idx = block.pid2indices(pid)
                     cmap[ idx['iy'], idx['ix'] ] = marker.cid
@@ -419,22 +420,23 @@ class LabelsManager(SCSingletonConfigurable):
             return seed_points
 
     @exception_handled
-    def mark_points( self, point_ids: np.ndarray, cid: int, type: str = "markers" ):
+    def mark_points( self, point_ids: np.ndarray, cid: int, type: str = "markers" ) -> Optional[Marker]:
         from spectraclass.gui.control import UserFeedbackManager, ufm
         from spectraclass.gui.spatial.widgets.markers import Marker
         icid: int = cid if cid > -1 else self.current_cid
         if point_ids is None:
             if self.currentMarker is None:
+                lgm().log( f" LM: mark_points -> NO POINTS SELECTED")
                 ufm().show("Must select point(s) to mark.", "red")
-                return
+                return None
             self.currentMarker.cid = icid
             point_ids = self.currentMarker.pids
-        else:
-            lgm().log( f" LM: mark_points -> npts = {point_ids.size}, id range = {[point_ids.min(), point_ids.max()]}")
 
+        lgm().log( f" LM: mark_points -> npts = {point_ids.size}, id range = {[point_ids.min(), point_ids.max()]}")
         new_pids: np.ndarray = self.getNewPids( point_ids, icid )
-        self.addMarker( Marker( type, new_pids, cid ) )
-        return self.current_cid
+        marker = Marker( type, new_pids, cid )
+        self.addMarker( marker )
+        return marker
 
     def getNewPids(self, point_ids: np.ndarray, cid: int ) -> np.ndarray:
         current_pids: np.ndarray = np.array( self.getPids( cid ) )

@@ -72,6 +72,9 @@ class LayersManager(object):
     def set_visibility(self, lname: str, alpha: float, enabled: bool, **kwargs ):
         self._layers[lname].update( alpha, enabled, **kwargs )
 
+    def alpha(self, lname: str) -> float:
+        return self._layers[lname].visibility
+
     def add( self, name: str, alpha: float, visible: bool ):
         self._layers[name] = Layer(name, alpha, visible, self.callback)
 

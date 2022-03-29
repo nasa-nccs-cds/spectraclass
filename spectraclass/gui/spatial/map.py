@@ -3,6 +3,7 @@ import numpy as np
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import logging, os
 from matplotlib.backend_bases import MouseEvent, KeyEvent
+from spectraclass.gui.spatial.widgets.markers import Marker
 from matplotlib.colors import Normalize
 from matplotlib.figure import Figure
 from matplotlib.backend_bases import NavigationToolbar2, _Mode
@@ -282,9 +283,8 @@ class MapManager(SCSingletonConfigurable):
             lgm().log( f"  plot labels image, shape = {self._classification_data.shape}, vrange = {vrange}  " )
             try: self.labels_image.remove()
             except Exception: pass
-            self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=0.5, cmap=self.cspecs['cmap'],
+            self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=self.layers.alpha("labels"), cmap=self.cspecs['cmap'],
                                                            add_colorbar=False, norm=self.cspecs['norm'])
-            self.layers.set_visibility( "labels", 1.0, True, notify=False )
             self.update_canvas()
 
     @exception_handled
@@ -318,7 +318,7 @@ class MapManager(SCSingletonConfigurable):
 
     def on_layer_change( self, layer: Layer ):
         for mgr in self.layer_managers( layer.name ):
-            lgm().log( f" **** layer_change[{layer.name}]: {id(mgr)} -> alpha_change[{layer.visibility}]")
+   #         lgm().log( f" **** layer_change[{layer.name}]: {id(mgr)} -> alpha_change[{layer.visibility}]")
             mgr.set_alpha( layer.visibility )
         self.update_canvas()
 

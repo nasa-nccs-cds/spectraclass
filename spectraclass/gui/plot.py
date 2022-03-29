@@ -141,7 +141,7 @@ class mplGraphPlot:
     @log_timing
     @exception_handled
     def addMarker( self, m: Marker ):
-        lgm().log(f"mplGraphPlot: Add Marker[{m.size}]: cid={m.cid}")
+        lgm().log(f"mplGraphPlot: Add Marker[{m.size}]: cid={m.cid}, pids[:10]={m.pids[:10]}")
         if m.size > 0:
             self.clearTransients()
             if len(m.pids) == 1:    self.plot_line( m.pids[0], m.cid )

@@ -25,11 +25,13 @@ class ClusterManager(SCSingletonConfigurable):
     nclusters = tl.Int(5).tag(config=True, sync=True)
     random_state = tl.Int(0).tag(config=True, sync=True)
 
-    def __init__(self,  **kwargs ):
+    def __init__(self, **kwargs ):
         super(ClusterManager, self).__init__(**kwargs)
         self._ncluster_options = range( 2, 20 )
         self._mid_options = [ "kmeans" ]
-        self._colors = None
+        self._cluster_colors: np.ndarray = None
+        self._cluster_raster: xa.DataArray = None
+        self._marked_colors: Dict[int,Tuple[float,float,float]] = {}
         self._markers = {}
         self._cluster_points: xa.DataArray = None
         self._models: Dict[str,ClusterMixin] = {}
@@ -45,9 +47,10 @@ class ClusterManager(SCSingletonConfigurable):
     def update_colors(self, ncolors: int):
         hsv = np.full( [ncolors,3], 1.0 )
         hsv[:,0] = np.linspace( 0.0, 1.0, ncolors+1 )[:ncolors]
-        hsv[:,1] = np.array( [ 1.0-0.5*(i%2) for i in range(ncolors) ] )
-        self._colors = hsv_to_rgb(hsv)
-        lgm().log( f"UPDATE COLORS[{ncolors}], colormap shape = {self._colors.shape}")
+#        hsv[:,1] = np.array( [ 1.0-0.5*(i%2) for i in range(ncolors) ] )
+        hsv[:, 1] = np.full( [ncolors], 0.5 )
+        self._cluster_colors = hsv_to_rgb(hsv)
+        lgm().log( f"UPDATE COLORS[{ncolors}], colormap shape = {self._cluster_colors.shape}")
 
     @property
     def mids(self) -> List[str]:
@@ -74,8 +77,19 @@ class ClusterManager(SCSingletonConfigurable):
     def model(self) -> ClusterMixin:
         return self._models[ self.mid ]
 
-    def get_colormap(self):
-        return LinearSegmentedColormap.from_list( 'clusters', self._colors, N=len(self._colors) )
+    def get_colormap( self, layer: bool ):
+        return self.get_layer_colormap() if layer else self.get_cluster_colormap()
+
+    def get_cluster_colormap( self ):
+        colors = self._cluster_colors.copy()
+        for (key, value) in self._marked_colors.items(): colors[key] = value
+        return LinearSegmentedColormap.from_list( 'clusters', colors, N=len(colors) )
+
+    def get_layer_colormap( self ):
+        ncolors = self._cluster_colors.shape[0]
+        colors = np.full( [ncolors,4], 0.0 )
+        for (key, value) in self._marked_colors.items(): colors[key] = list(value) + [1.0]
+        return LinearSegmentedColormap.from_list( 'cluster-layer', colors, N=ncolors )
 
     def run_cluster_model( self, data: xa.DataArray ):
         lgm().log( f"Creating clusters from input data shape = {data.shape}")
@@ -83,37 +97,39 @@ class ClusterManager(SCSingletonConfigurable):
         cluster_data = np.expand_dims( self.model.fit_predict( data.values ), axis=1 )
         self._cluster_points = xa.DataArray( cluster_data, dims=[samples,'clusters'],  name="clusters",
                                            coords={samples:data.coords[samples],'clusters':[0]}, attrs=data.attrs )
+        self._cluster_raster = None
 
     def cluster(self, data: xa.DataArray ) -> xa.DataArray:
         self.run_cluster_model( data )
         return self.get_cluster_map()
 
-    def get_cluster_map(self) -> xa.DataArray:
+    def get_cluster_map( self, layer: bool = False ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        block = tm().getBlock()
-        cluster_raster: xa.DataArray = block.points2raster( self._cluster_points ).squeeze()
-        cluster_raster.attrs['cmap'] = self.get_colormap()
-        return cluster_raster
+        if self._cluster_raster is None:
+            block = tm().getBlock()
+            self._cluster_raster: xa.DataArray = block.points2raster( self._cluster_points ).squeeze()
+        self._cluster_raster.attrs['cmap'] = self.get_colormap( layer )
+        return self._cluster_raster
 
     def get_cluster(self, pid: int ) -> int:
         clusters = self._cluster_points.values.squeeze()
         return clusters[pid]
 
-    def get_points(self, cid: int ) -> np.ndarray:    #    TODO: complete this
-        class_points = np.array([])
+    def get_points(self, cid: int ) -> np.ndarray:
+        class_points = np.array( [], dtype=np.int )
         classes: List[int] = self._markers.get( cid, [] )
         for iclass in classes:
             mask = ( self._cluster_points.values.squeeze() == iclass )
-            pids = self._cluster_points.samples[mask]
+            pids: np.ndarray = self._cluster_points.samples[mask].values
             class_points = np.concatenate( (class_points, pids), axis=0 )
-        return class_points
+        return class_points.astype(np.int)
 
     def mark_cluster( self, pid: int, cid: int ) -> xa.DataArray:
         from spectraclass.model.labels import LabelsManager, lm
         iClass = self.get_cluster( pid )
         lgm().log( f"Mark cluster, pid={pid}, iClass={iClass}, cid={cid}")
         ufm().show( f"Label cluster, cluster[{iClass}] -> class[{cid}]" )
-        self._colors[ iClass ] = lm().get_rgb_color(cid)
+        self._marked_colors[ iClass ] = lm().get_rgb_color(cid)
         self._markers.setdefault( cid, [] ).append( iClass )
         return self.get_cluster_map()
 
@@ -153,6 +169,8 @@ class ClusterSelector:
     @exception_handled
     def on_button_press(self, event: MouseEvent ):
         from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.gui.spatial.widgets.markers import Marker
+        from spectraclass.application.controller import app
         from spectraclass.model.labels import LabelsManager, lm
         lgm().log(f"ClusterSelector: on_button_press: enabled={self.enabled}")
         if (event.xdata != None) and (event.ydata != None) and (event.inaxes == self.ax) and self.enabled:
@@ -161,6 +179,8 @@ class ClusterSelector:
                 if pid >= 0:
                     cid = lm().current_cid
                     cluster_map: xa.DataArray = clm().mark_cluster( pid, cid )
-                    mm().plot_cluster_image( cluster_map )
-                    lm().mark_points( clm().get_points(cid), cid, "labels")
-                    lm().addAction( "cluster", "application", cid=cid )
+                    marker = Marker( "labels", clm().get_points(cid), cid )
+                    app().add_marker("map", marker)
+                    mm().plot_cluster_image(cluster_map)
+                    mm().plot_labels_image(lm().get_label_map())
+#                    lm().addAction( "cluster", "application", cid=cid )
