@@ -1,4 +1,5 @@
 import ipywidgets as ip
+from abc import ABC, abstractmethod
 from matplotlib.backend_bases import PickEvent, MouseEvent, MouseButton, KeyEvent  # , NavigationToolbar2
 from matplotlib.lines import Line2D
 from typing import List, Union, Tuple, Optional, Dict, Callable, Set
@@ -19,7 +20,7 @@ def rescale( x: np.ndarray ):
     if xs.mean() == 0.0: return xs
     return xs / xs.mean()
 
-class LinePlot:
+class LinePlot(ABC):
 
     _x: np.ndarray = None
     _mx: np.ndarray = None
@@ -34,32 +35,34 @@ class LinePlot:
         self.standalone: bool = kwargs.pop('standalone', False)
         self.init_data( **kwargs )
 
-    def abstract(self):
-        raise NotImplementedError("Calling unimplemented method on abstract baseclass LinePlot")
-
     def use_model_data( self, use: bool ):
         self._use_model = use
         self.clear()
 
+    @abstractmethod
     def clear(self):
-        self.abstract()
+        pass
 
+    @abstractmethod
     def addMarker( self, m: Marker ):
-        self.abstract()
+        pass
 
+    @abstractmethod
     def remove_region(self, m: Marker):
-        self.abstract()
+        pass
 
+    @abstractmethod
     def remove_point(self, pid: int ):
-        self.abstract()
+        pass
 
     @classmethod
     def refresh(cls):
         cls._x = None
         cls.init_data()
 
+    @abstractmethod
     def gui(self):
-        self.abstract()
+        pass
 
     @classmethod
     def init_data(cls, **kwargs ):
@@ -76,6 +79,60 @@ class LinePlot:
     @classmethod
     def get_col_values(cls, data: Union[xa.DataArray,List] ):
         return np.array( data ) if isinstance(data, list) else data.values
+
+
+    def lx(self, pids: Union[int,List[int]] ) -> np.ndarray:
+        xv = self._mx if self._use_model else self._x
+        if xv.ndim == 1:   return  xv
+        else:              return  xv[pids].squeeze()
+
+    def ly(self, pids: Union[int,List[int]] ) -> np.ndarray:
+        ydata = self._mploty[pids] if self._use_model else self._ploty[pids]
+        return self.normalize( ydata ).squeeze().transpose()
+
+    def lry(self, pid ) -> np.ndarray:
+        ydata = self._rploty[ pid ]
+        return self.normalize( ydata ).squeeze()
+
+    @property
+    def x(self) -> np.ndarray:
+        xv = self._mx if self._use_model else self._x
+        if xv.ndim == 1:   return  xv
+        else:              return  xv[ self.pids ]
+
+    @property
+    def y( self ) -> np.ndarray :
+        ydata = self._mploty[self.pids] if self._use_model else self._ploty[self.pids]
+        return self.normalize( ydata ).transpose()
+
+    @property
+    def ry( self ) ->  np.ndarray:
+        ydata = self._rploty[ self.tpids ]
+        return self.normalize( ydata ).transpose()
+
+    def normalize(self, data: np.ndarray ) -> np.ndarray:
+        axis = 1 if (data.ndim > 1) else 0
+        mean, std = data.mean( axis=axis, keepdims=True ), data.std( axis=axis, keepdims=True )
+        return ( data - mean) / std
+
+    @property
+    def title(self ) -> str:
+        if len(self.pids) == 1:
+            t = ' '.join([str(mdarray[self.pids[0]]) for mdarray in self._mdata])
+        else:
+            t = "multiplot"
+        return t
+
+    @abstractmethod
+    @property
+    def pids(self) -> List[int]:
+        pass
+
+    @abstractmethod
+    @property
+    def tpids(self) -> List[int]:
+        pass
+
 
 def gpm() -> "GraphPlotManager":
     return GraphPlotManager.instance()
@@ -124,7 +181,9 @@ class GraphPlotManager(SCSingletonConfigurable):
     @classmethod
     def get_graph( cls, index: int, **kwargs ):
         from .mpl import mplGraphPlot
+        from .ds import dsGraphPlot
         if cls._plottype == "mpl": return mplGraphPlot( index, **kwargs )
+        if cls._plottype == "ds":  return dsGraphPlot(index, **kwargs)
 
     def _createGui( self, **kwargs ) -> ipw.Tab():
         wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 500px' ) )
