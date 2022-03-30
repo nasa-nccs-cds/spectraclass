@@ -2,6 +2,7 @@ import xarray
 from sklearn import cluster
 from sklearn.base import ClusterMixin
 from joblib import cpu_count
+from spectraclass.gui.spatial.widgets.markers import Marker
 import time, traceback, shutil
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap, hsv_to_rgb
 from matplotlib.backend_bases import PickEvent, MouseEvent
@@ -47,8 +48,7 @@ class ClusterManager(SCSingletonConfigurable):
     def update_colors(self, ncolors: int):
         hsv = np.full( [ncolors,3], 1.0 )
         hsv[:,0] = np.linspace( 0.0, 1.0, ncolors+1 )[:ncolors]
-#        hsv[:,1] = np.array( [ 1.0-0.5*(i%2) for i in range(ncolors) ] )
-        hsv[:, 1] = np.full( [ncolors], 0.5 )
+        hsv[:, 1] = np.full( [ncolors], 0.4 )
         self._cluster_colors = hsv_to_rgb(hsv)
         lgm().log( f"UPDATE COLORS[{ncolors}], colormap shape = {self._cluster_colors.shape}")
 
@@ -124,14 +124,17 @@ class ClusterManager(SCSingletonConfigurable):
             class_points = np.concatenate( (class_points, pids), axis=0 )
         return class_points.astype(np.int)
 
-    def mark_cluster( self, pid: int, cid: int ) -> xa.DataArray:
+    @log_timing
+    def mark_cluster( self, pid: int, cid: int ) -> Marker:
         from spectraclass.model.labels import LabelsManager, lm
         iClass = self.get_cluster( pid )
         lgm().log( f"Mark cluster, pid={pid}, iClass={iClass}, cid={cid}")
         ufm().show( f"Label cluster, cluster[{iClass}] -> class[{cid}]" )
         self._marked_colors[ iClass ] = lm().get_rgb_color(cid)
         self._markers.setdefault( cid, [] ).append( iClass )
-        return self.get_cluster_map()
+        cmap = self.get_cluster_map().values
+        marker = Marker( "clusters", self.get_points(cid), cid, mask=(cmap==iClass) )
+        return marker
 
         # nodata_value = -2
         # template = self.block.data[0].squeeze(drop=True)
@@ -178,17 +181,9 @@ class ClusterSelector:
                 pid = self.block.coords2pindex(event.ydata, event.xdata)
                 if pid >= 0:
                     cid = lm().current_cid
-                    t0 = time.time()
-                    cluster_map: xa.DataArray = clm().mark_cluster( pid, cid )
-                    marker = Marker( "labels", clm().get_points(cid), cid )
-                    t1 = time.time()
-                    app().add_marker( "map", marker )
-                    t2 = time.time()
-                    mm().plot_cluster_image( cluster_map )
-                    t3 = time.time()
+                    marker: Marker = clm().mark_cluster( pid, cid )
+                    app().add_marker( "cluster", marker )
+                    mm().plot_cluster_image( clm().get_cluster_map() )
                     labels_image: xa.DataArray = lm().get_label_map()
-                    t4 = time.time()
                     mm().plot_labels_image( labels_image )
-                    t5 = time.time()
-                    lgm().log( f"CLUSTER PLOT: {t1-t0:.2f} {t2-t1:.2f} {t3-t2:.2f} {t4-t3:.2f} {t5-t4:.2f} ")
 #                    lm().addAction( "cluster", "application", cid=cid )

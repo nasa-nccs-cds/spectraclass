@@ -268,7 +268,7 @@ class MapManager(SCSingletonConfigurable):
     def one_hot_to_index(self, class_data: xa.DataArray, axis=0) -> xa.DataArray:
         return class_data.argmax( axis=axis, skipna=True, keep_attrs=True ).squeeze()
 
-    @exception_handled
+    @log_timing
     def plot_labels_image(self, classification: xa.DataArray = None ):
         if classification is None:
             if self._classification_data is not None:
@@ -295,7 +295,7 @@ class MapManager(SCSingletonConfigurable):
 
             self.update_canvas()
 
-    @exception_handled
+    @log_timing
     def plot_cluster_image(self, clusters: xa.DataArray = None ):
         lgm().log( f"  plot clusters image, shape = {clusters.shape}" )
         try: self.clusters_image.remove()

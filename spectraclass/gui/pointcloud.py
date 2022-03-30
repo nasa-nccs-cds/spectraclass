@@ -97,6 +97,7 @@ class PointCloudManager(SCSingletonConfigurable):
         lm().deletePids( remove_ids )
         self.update_marker_plot()
 
+    @log_timing
     def addMarker(self, marker: Marker ):
         self.clear_transients()
         lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}, pids[10]={marker.pids[:10]}")

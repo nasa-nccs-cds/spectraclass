@@ -15,10 +15,15 @@ class Marker:
         self.type = type
         self.props = kwargs
         self._pids: np.ndarray = pids if isinstance( pids, np.ndarray ) else np.array(pids)
+        self._mask: Optional[np.ndarray] = kwargs.get( 'mask', None )
 
     @property
     def pids(self) -> List[int]:
         return self._pids.tolist()
+
+    @property
+    def mask(self) -> Optional[np.ndarray]:
+        return self._mask
 
     @property
     def colors(self) -> List[str]:

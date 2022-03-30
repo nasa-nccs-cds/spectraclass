@@ -109,7 +109,7 @@ class GraphPlotManager(SCSingletonConfigurable):
         if self._wGui is None: return None
         return self._graphs[ self._wGui.selected_index ]
 
-    @exception_handled
+    @log_timing
     def plot_graph( self, marker: Marker ):
         current_graph: LinePlot = self.current_graph()
         if current_graph is not None:

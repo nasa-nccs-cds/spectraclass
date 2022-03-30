@@ -360,15 +360,35 @@ class LabelsManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block = kwargs.get( 'block', tm().getBlock() )
         mtype = kwargs.get( 'type' )
-        cmap: xa.DataArray = block.classmap()
+        xcmap: xa.DataArray = block.classmap()
+        cmap = xcmap.values
+        fcmap = np.ravel( cmap )
         lgm().log( f" GENERATE LABEL MAP: {len(lm().markers)} markers")
         for marker in lm().markers:
             if (mtype is None) or (marker.type == mtype):
-                lgm().log( f" Setting {len(marker.pids)} labels for cid = {marker.cid}" )
+                if marker.mask is not None:
+                    fcmap[ marker.mask.flatten() ] = marker.cid
+                else:
+                    lgm().log( f" Setting {len(marker.pids)} labels for cid = {marker.cid}" )
+                    for pid in marker.pids:
+                        idx = block.pid2indices(pid)
+                        cmap[ idx['iy'], idx['ix'] ] = marker.cid
+        return xcmap.copy(data=cmap)
+
+    @log_timing
+    def update_label_map( self, mask: xa.DataArray, cid: int,  **kwargs ) -> xa.DataArray:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        block = kwargs.get( 'block', tm().getBlock() )
+        cmap: xa.DataArray = block.classmap()
+        lgm().log( f" GENERATE LABEL MAP: {len(lm().markers)} markers")
+        for marker in lm().markers:
+            if marker.type not in ["cluster"]:
+                lgm().log( f"update_label_map->MARKER[{marker.type}]: Setting {len(marker.pids)} labels for cid = {marker.cid}" )
          # -->       points2raster
                 for pid in marker.pids:
                     idx = block.pid2indices(pid)
                     cmap[ idx['iy'], idx['ix'] ] = marker.cid
+        cmap[ mask ] = cid
         return cmap
 
     @property

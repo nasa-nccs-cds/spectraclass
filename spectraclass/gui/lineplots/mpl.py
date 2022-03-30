@@ -2,7 +2,7 @@ from matplotlib.backend_bases import PickEvent, MouseEvent, MouseButton, KeyEven
 from matplotlib.lines import Line2D
 from typing import List, Union, Tuple, Optional, Dict, Callable, Set
 from collections import OrderedDict
-import xarray as xa
+import time, xarray as xa
 import numpy as np
 from spectraclass.data.base import DataManager, dm
 from spectraclass.gui.spatial.widgets.markers import Marker
@@ -127,8 +127,8 @@ class mplGraphPlot(LinePlot):
         lrecs = [ LineRec(None, pid, cid) for pid in pids ]
         for lrec in lrecs: self.lrecs[lrec.pid] = lrec
         lines = self.ax.plot( self.lx(pids), self.ly(pids), picker=True, pickradius=2, color=color, alpha=1.0, linewidth=1.0 )
-        for (lrec,line) in zip(lrecs,lines): lrec.line = line
         self.ax.figure.canvas.draw_idle()
+        for (lrec, line) in zip(lrecs, lines): lrec.line = line
 
     @exception_handled
     def get_plotspecs(self):
