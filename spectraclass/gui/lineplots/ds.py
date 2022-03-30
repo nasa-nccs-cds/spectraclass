@@ -23,9 +23,10 @@ class dsGraphPlot(LinePlot):
         self.overlay = hv.NdOverlay({})
         self.plot = datashade( self.overlay, normalization='linear', aggregator=ds.count() ).opts(self.opts)
         self._markers = []
+        self._curves = {}
 
     def gui(self):
-        return
+        return self.plot
 
     def clearTransients( self ):
         pass
@@ -37,29 +38,29 @@ class dsGraphPlot(LinePlot):
         if m.size > 0:
             self.clearTransients()
             self._markers.append( m )
+            for pid in m.pids:
+                self._curves[pid] = hv.Curve( self.ly(pid) )
             self.plot()
 
     @property
     def pids(self) -> List[int]:
-        pass
+        rv = []
+        for m in self._markers:
+            rv.extend( m.pids )
+        return rv
 
     @property
     def tpids(self) -> List[int]:
-        pass
+        rv = []
+        for m in self._markers:
+            if m.cid == 0: rv.extend( m.pids )
+        return rv
 
     @log_timing
     def plot(self):
-        from spectraclass.model.labels import LabelsManager, lm
-        color = lm().graph_colors[cid]
-        lrecs = [ LineRec(None, pid, cid) for pid in pids ]
-        for lrec in lrecs: self.lrecs[lrec.pid] = lrec
-        lines = self.ax.plot( self.lx(pids), self.ly(pids), picker=True, pickradius=2, color=color, alpha=1.0, linewidth=1.0 )
-        self.ax.figure.canvas.draw_idle()
-        for (lrec, line) in zip(lrecs, lines): lrec.line = line
+        self.overlay = hv.NdOverlay( self._curves )
+        self.plot = datashade( self.overlay, normalization='linear', aggregator=ds.count() ).opts(self.opts)
+        lgm().log( f"dsGraphPlot->plot: {self.plot.__class__}")
 
 
-#        self.df = pd.DataFrame( self._ploty )
-#        lgm().log( self.df.head(5) )
 
-#agg = cvs.line(df, x=time, y=list(range(points)), agg=ds.count(), axis=1)
-#img = tf.shade(agg, how='eq_hist')

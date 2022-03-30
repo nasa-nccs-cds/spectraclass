@@ -123,13 +123,13 @@ class LinePlot(ABC):
             t = "multiplot"
         return t
 
-    @abstractmethod
     @property
+    @abstractmethod
     def pids(self) -> List[int]:
         pass
 
-    @abstractmethod
     @property
+    @abstractmethod
     def tpids(self) -> List[int]:
         pass
 
@@ -138,7 +138,7 @@ def gpm() -> "GraphPlotManager":
     return GraphPlotManager.instance()
 
 class GraphPlotManager(SCSingletonConfigurable):
-    _plottype = "mpl"
+    _plottype = "mpl"   #  ds
 
     def __init__( self ):
         super(GraphPlotManager, self).__init__()
@@ -183,7 +183,7 @@ class GraphPlotManager(SCSingletonConfigurable):
         from .mpl import mplGraphPlot
         from .ds import dsGraphPlot
         if cls._plottype == "mpl": return mplGraphPlot( index, **kwargs )
-        if cls._plottype == "ds":  return dsGraphPlot(index, **kwargs)
+        if cls._plottype == "ds":  return dsGraphPlot(  index, **kwargs )
 
     def _createGui( self, **kwargs ) -> ipw.Tab():
         wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 500px' ) )
