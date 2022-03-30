@@ -164,9 +164,9 @@ class MarkerManager( PointsInteractor ):
         self._adding_marker = False
 
     def remove( self, pid: int ):
-        from spectraclass.gui.plot import GraphPlotManager, gpm
+        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         from spectraclass.model.labels import LabelsManager, lm
-        from spectraclass.gui.points3js import PointCloudManager, pcm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         marker = self._markers.pop( pid, None )
         if marker is not None:
             lm().deletePid( pid )

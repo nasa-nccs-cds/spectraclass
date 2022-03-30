@@ -417,9 +417,9 @@ class TableManager(SCSingletonConfigurable):
     @exception_handled
     def on_table_selection(self, selection: np.ndarray):
         from spectraclass.gui.spatial.widgets.markers import Marker
-        from spectraclass.gui.plot import gpm
+        from spectraclass.gui.lineplots.manager import gpm
         from spectraclass.model.labels import LabelsManager, lm
-        from spectraclass.gui.points3js import PointCloudManager, pcm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         cid = lm().current_cid
         pids = self.index[selection]
         gpm().plot_graph( Marker( "marker", pids,  cid ) )

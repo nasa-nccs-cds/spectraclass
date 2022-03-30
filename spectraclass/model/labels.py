@@ -365,6 +365,7 @@ class LabelsManager(SCSingletonConfigurable):
         for marker in lm().markers:
             if (mtype is None) or (marker.type == mtype):
                 lgm().log( f" Setting {len(marker.pids)} labels for cid = {marker.cid}" )
+         # -->       points2raster
                 for pid in marker.pids:
                     idx = block.pid2indices(pid)
                     cmap[ idx['iy'], idx['ix'] ] = marker.cid

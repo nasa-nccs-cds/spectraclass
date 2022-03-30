@@ -48,7 +48,7 @@ class TileManager(SCSingletonConfigurable):
 
     @tl.observe('block_index')
     def _block_index_changed(self, change):
-        from spectraclass.gui.points3js import PointCloudManager, pcm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         pcm().refresh()
 
     @property

@@ -87,7 +87,7 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def  on_threshold_change( self,  *args  ):
-        from spectraclass.gui.points3js import PointCloudManager, pcm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         if not self.silent_thresholds:
             initialized = self.block.set_thresholds( self._use_model_data, self.currentFrame, (self.lower_threshold, self.upper_threshold) )
             if initialized: self.update_threshold_list()
@@ -103,7 +103,7 @@ class MapManager(SCSingletonConfigurable):
         lgm().log(f"update_thresholds(frame={self.currentFrame}): [{self.lower_threshold},{self.upper_threshold}]")
 
     def use_model_data(self, use: bool):
-        from spectraclass.gui.plot import GraphPlotManager, gpm
+        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         if use != self._use_model_data:
             self._use_model_data = use
             if self.base is not None:
@@ -172,7 +172,7 @@ class MapManager(SCSingletonConfigurable):
             self.active_thresholds.value = None
 
     def clear_threshold(self, *args ):
-        from spectraclass.gui.points3js import PointCloudManager, pcm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         trec = self.block.threshold_record( self._use_model_data, self.currentFrame )
         trec.clear()
         self.lower_threshold = 0.0
@@ -279,12 +279,20 @@ class MapManager(SCSingletonConfigurable):
                 self._classification_data = self.one_hot_to_index( self._classification_data )
 
         if self._classification_data is not None:
-            vrange = [ self._classification_data.values.min(), self._classification_data.values.max() ]
-            lgm().log( f"  plot labels image, shape = {self._classification_data.shape}, vrange = {vrange}  " )
-            try: self.labels_image.remove()
-            except Exception: pass
-            self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=self.layers.alpha("labels"), cmap=self.cspecs['cmap'],
+  #          vrange = [ self._classification_data.values.min(), self._classification_data.values.max() ]
+  #          lgm().log( f"  plot labels image, shape = {self._classification_data.shape}, vrange = {vrange}  " )
+            # try: self.labels_image.remove()
+            # except Exception: pass
+            # self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=self.layers.alpha("labels"), cmap=self.cspecs['cmap'],
+            #                                                add_colorbar=False, norm=self.cspecs['norm'])
+
+            if self.labels_image is None:
+                self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=self.layers.alpha("labels"), cmap=self.cspecs['cmap'],
                                                            add_colorbar=False, norm=self.cspecs['norm'])
+            else:
+                self.labels_image.set_data( self._classification_data.values )
+                self.labels_image.changed()
+
             self.update_canvas()
 
     @exception_handled
@@ -297,7 +305,7 @@ class MapManager(SCSingletonConfigurable):
         self.update_canvas()
 
     def layer_managers( self, name: str ) -> List:
-        from spectraclass.gui.points3js import PointCloudManager, pcm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         from spectraclass.learn.cluster import  clm
         if   name == "basemap":   mgrs = [ self.base ]
         elif name == "labels":    mgrs = [ self.labels_image ]
@@ -354,7 +362,7 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def update_spectral_image(self):
-        from spectraclass.gui.points3js import PointCloudManager, pcm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         if self.base is not None:
             fdata: xa.DataArray = self.frame_data
             if fdata is not None:
@@ -465,7 +473,7 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def setBlock( self, block_index: Tuple[int,int] = None, **kwargs ):
         from spectraclass.data.spatial.tile.manager import tm
-        from spectraclass.gui.plot import GraphPlotManager, gpm
+        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         self.block: Block = tm().getBlock( index=block_index )
         if self.block is not None:
             update = kwargs.get( 'update', False )

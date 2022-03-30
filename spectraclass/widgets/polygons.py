@@ -80,8 +80,8 @@ class PolygonInteractor:
         self.draw()
 
     def delete_selection(self):
-        from spectraclass.gui.plot import GraphPlotManager, gpm
-        from spectraclass.gui.points3js import PointCloudManager, pcm
+        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         if self.prec is not None:
             self.polys.remove( self.prec )

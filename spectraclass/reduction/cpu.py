@@ -1014,7 +1014,7 @@ def optimize_layout_euclidean(
     embedding: array of shape (n_samples, n_components)
         The optimized embedding.
     """
-    from spectraclass.gui.points3js import  PointCloudManager
+    from spectraclass.gui.pointcloud import  PointCloudManager
     dim = head_embedding.shape[1]
     move_other = head_embedding.shape[0] == tail_embedding.shape[0]
     alpha = initial_alpha

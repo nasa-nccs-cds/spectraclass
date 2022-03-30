@@ -20,8 +20,8 @@ class Spectraclass(SpectraclassController):
         return self._gui
 
     def create_gui(self, **kwargs):
-        from spectraclass.gui.plot import GraphPlotManager, gpm
-        from spectraclass.gui.points3js import PointCloudManager, pcm
+        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         from spectraclass.gui.unstructured.table import tbm
         from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
         from spectraclass.data.base import DataManager, dm
