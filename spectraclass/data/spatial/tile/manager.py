@@ -208,10 +208,10 @@ class TileManager(SCSingletonConfigurable):
                         else:
                             mdata[toks[0]] = "=".join(toks[1:])
                     except Exception as err:
-                        lgm().log( f"\nLoadMetadata: Error '{err}' reading line '{line}'" )
+                        lgm().log( f"LoadMetadata: Error '{err}' reading line '{line}'" )
                 mdata[ 'block_size' ] = block_sizes
         except Exception as err:
-            lgm().log( f"\nWarning: can't read config file '{file_path}': {err}\n")
+            lgm().log( f"Warning: can't read config file '{file_path}': {err}\n")
         return mdata
 
     @exception_handled
