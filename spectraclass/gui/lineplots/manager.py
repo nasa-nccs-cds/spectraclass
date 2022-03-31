@@ -138,7 +138,7 @@ def gpm() -> "GraphPlotManager":
     return GraphPlotManager.instance()
 
 class GraphPlotManager(SCSingletonConfigurable):
-    _plottype = "mpl"   #  ds
+    _plottype = "ds"   #  ds  mpl
 
     def __init__( self ):
         super(GraphPlotManager, self).__init__()
@@ -150,6 +150,15 @@ class GraphPlotManager(SCSingletonConfigurable):
         if self._wGui is None:
             self._wGui = self._createGui( **kwargs )
         return self._wGui
+
+    def clear(self, **kwargs):
+        pass
+
+    def remove_point(self, **kwargs):
+        pass
+
+    def remove_region(self, **kwargs):
+        pass
 
     def use_model_data(self, use: bool ):
         for g in self._graphs: g.use_model_data( use )
