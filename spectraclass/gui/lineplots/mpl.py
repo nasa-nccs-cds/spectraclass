@@ -35,6 +35,7 @@ class mplGraphPlot(LinePlot):
     def __init__( self, index: int, **kwargs ):
         LinePlot.__init__( self, index, **kwargs )
         self.rlines: List[Line2D] = []
+        self._max_graph_group_size = 100
         self.ax: plt.Axes = None
         self.fig: plt.Figure = None
         self.selected_pid: int = -1
@@ -121,12 +122,14 @@ class mplGraphPlot(LinePlot):
         self.ax.figure.canvas.draw_idle()
 
     @log_timing
-    def plot_lines(self, pids: List[int], cid: int ):
+    def plot_lines(self, mpids: List[int], cid: int ):
         from spectraclass.model.labels import LabelsManager, lm
         color = lm().graph_colors[cid]
+        skip_index = max( len(mpids)//self._max_graph_group_size, 1 )
+        pids = mpids[::skip_index]
         lrecs = [ LineRec(None, pid, cid) for pid in pids ]
         for lrec in lrecs: self.lrecs[lrec.pid] = lrec
-        lines = self.ax.plot( self.lx(pids), self.ly(pids), picker=True, pickradius=2, color=color, alpha=1.0, linewidth=1.0 )
+        lines = self.ax.plot( self.lx(pids), self.ly(pids), picker=True, pickradius=2, color=color, alpha=0.2, linewidth=1.0 )
         self.ax.figure.canvas.draw_idle()
         for (lrec, line) in zip(lrecs, lines): lrec.line = line
 
