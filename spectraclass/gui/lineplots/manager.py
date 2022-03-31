@@ -181,9 +181,9 @@ class GraphPlotManager(SCSingletonConfigurable):
     @classmethod
     def get_graph( cls, index: int, **kwargs ):
         from .mpl import mplGraphPlot
-        from .ds import dsGraphPlot
+#        from .ds import dsGraphPlot
         if cls._plottype == "mpl": return mplGraphPlot( index, **kwargs )
-        if cls._plottype == "ds":  return dsGraphPlot(  index, **kwargs )
+#        if cls._plottype == "ds":  return dsGraphPlot(  index, **kwargs )
 
     def _createGui( self, **kwargs ) -> ipw.Tab():
         wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 500px' ) )
