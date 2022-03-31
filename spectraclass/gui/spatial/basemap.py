@@ -74,7 +74,8 @@ class TileServiceBasemap(SCSingletonConfigurable):
 
     @exception_handled
     def on_move( self, event ):
-        lgm().log( f'\nTileServiceBasemap[{event.inaxes}].on_move: [{event.xdata} {event.ydata}]' )
+        pass
+#        lgm().log( f'   TileServiceBasemap[{event.inaxes}].on_move: [{event.xdata} {event.ydata}]' )
 
     def update(self):
         self.figure.canvas.draw_idle()

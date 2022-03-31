@@ -15,10 +15,15 @@ class Marker:
         self.type = type
         self.props = kwargs
         self._pids: np.ndarray = pids if isinstance( pids, np.ndarray ) else np.array(pids)
+        self._mask: Optional[np.ndarray] = kwargs.get( 'mask', None )
 
     @property
     def pids(self) -> List[int]:
         return self._pids.tolist()
+
+    @property
+    def mask(self) -> Optional[np.ndarray]:
+        return self._mask
 
     @property
     def colors(self) -> List[str]:
@@ -164,9 +169,9 @@ class MarkerManager( PointsInteractor ):
         self._adding_marker = False
 
     def remove( self, pid: int ):
-        from spectraclass.gui.plot import GraphPlotManager, gpm
+        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         from spectraclass.model.labels import LabelsManager, lm
-        from spectraclass.gui.points3js import PointCloudManager, pcm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         marker = self._markers.pop( pid, None )
         if marker is not None:
             lm().deletePid( pid )

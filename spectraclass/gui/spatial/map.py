@@ -3,6 +3,7 @@ import numpy as np
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import logging, os
 from matplotlib.backend_bases import MouseEvent, KeyEvent
+from spectraclass.gui.spatial.widgets.markers import Marker
 from matplotlib.colors import Normalize
 from matplotlib.figure import Figure
 from matplotlib.backend_bases import NavigationToolbar2, _Mode
@@ -23,6 +24,7 @@ from spectraclass.gui.spatial.widgets.layers import LayersManager, Layer
 from spectraclass.model.labels import LabelsManager, lm
 from matplotlib.image import AxesImage
 from spectraclass.xext.xgeo import XGeo
+from spectraclass.learn.cluster import ClusterSelector
 from spectraclass.widgets.slider import PageSlider
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable
@@ -57,6 +59,7 @@ class MapManager(SCSingletonConfigurable):
         self.silent_thresholds = False
         self._adding_marker = False
         self.points_selection: MarkerManager = None
+        self.cluster_selection: ClusterSelector = None
         self.region_selection: PolygonInteractor = None
         self._band_selector: ipw.IntSlider = None
         self._use_model_data = False
@@ -84,7 +87,7 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def  on_threshold_change( self,  *args  ):
-        from spectraclass.gui.points3js import PointCloudManager, pcm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         if not self.silent_thresholds:
             initialized = self.block.set_thresholds( self._use_model_data, self.currentFrame, (self.lower_threshold, self.upper_threshold) )
             if initialized: self.update_threshold_list()
@@ -100,7 +103,7 @@ class MapManager(SCSingletonConfigurable):
         lgm().log(f"update_thresholds(frame={self.currentFrame}): [{self.lower_threshold},{self.upper_threshold}]")
 
     def use_model_data(self, use: bool):
-        from spectraclass.gui.plot import GraphPlotManager, gpm
+        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         if use != self._use_model_data:
             self._use_model_data = use
             if self.base is not None:
@@ -169,7 +172,7 @@ class MapManager(SCSingletonConfigurable):
             self.active_thresholds.value = None
 
     def clear_threshold(self, *args ):
-        from spectraclass.gui.points3js import PointCloudManager, pcm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         trec = self.block.threshold_record( self._use_model_data, self.currentFrame )
         trec.clear()
         self.lower_threshold = 0.0
@@ -211,12 +214,13 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def create_selection_panel(self):
-        self.selection_label = ipw.Label(value='Selection Operation:')
-        self.select_modes = [ 'explore', 'select point', 'select region' ]
+        self.selection_label = ipw.Label( value='Selection Operation:' )
+        self.select_modes = [ 'explore', 'select point', 'select region', 'select cluster' ]
         self.selection = ipw.RadioButtons(  options=self.select_modes, disabled=False, layout={'width': 'max-content'} )
         self.selection.observe( self.set_selection_mode, "value" )
         self.points_selection.set_enabled( False )
         self.region_selection.set_enabled( False )
+        self.cluster_selection.set_enabled(False)
 
     @exception_handled
     def set_selection_mode( self, event: Dict ):
@@ -224,6 +228,7 @@ class MapManager(SCSingletonConfigurable):
         self.set_navigation_enabled(       smode == self.select_modes[0] )
         self.points_selection.set_enabled( smode == self.select_modes[1] )
         self.region_selection.set_enabled( smode == self.select_modes[2] )
+        self.cluster_selection.set_enabled(smode == self.select_modes[3] )
 
     def set_navigation_enabled(self, enabled: bool ):
         from matplotlib.backend_bases import NavigationToolbar2, _Mode
@@ -263,7 +268,7 @@ class MapManager(SCSingletonConfigurable):
     def one_hot_to_index(self, class_data: xa.DataArray, axis=0) -> xa.DataArray:
         return class_data.argmax( axis=axis, skipna=True, keep_attrs=True ).squeeze()
 
-    @exception_handled
+    @log_timing
     def plot_labels_image(self, classification: xa.DataArray = None ):
         if classification is None:
             if self._classification_data is not None:
@@ -274,32 +279,39 @@ class MapManager(SCSingletonConfigurable):
                 self._classification_data = self.one_hot_to_index( self._classification_data )
 
         if self._classification_data is not None:
-            vrange = [ self._classification_data.values.min(), self._classification_data.values.max() ]
-            lgm().log( f"  plot labels image, shape = {self._classification_data.shape}, vrange = {vrange}  " )
-            try: self.labels_image.remove()
-            except Exception: pass
-            self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=0.5, cmap=self.cspecs['cmap'],
+  #          vrange = [ self._classification_data.values.min(), self._classification_data.values.max() ]
+  #          lgm().log( f"  plot labels image, shape = {self._classification_data.shape}, vrange = {vrange}  " )
+            # try: self.labels_image.remove()
+            # except Exception: pass
+            # self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=self.layers.alpha("labels"), cmap=self.cspecs['cmap'],
+            #                                                add_colorbar=False, norm=self.cspecs['norm'])
+
+            if self.labels_image is None:
+                self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=self.layers.alpha("labels"), cmap=self.cspecs['cmap'],
                                                            add_colorbar=False, norm=self.cspecs['norm'])
-            self.layers.set_visibility( "labels", 1.0, True, notify=False )
+            else:
+                self.labels_image.set_data( self._classification_data.values )
+                self.labels_image.changed()
+
             self.update_canvas()
 
-    @exception_handled
+    @log_timing
     def plot_cluster_image(self, clusters: xa.DataArray = None ):
         lgm().log( f"  plot clusters image, shape = {clusters.shape}" )
         try: self.clusters_image.remove()
         except Exception: pass
-        self.clusters_image = clusters.plot.imshow( ax=self.base.gax, add_colorbar=False )
+        self.clusters_image = clusters.plot.imshow( ax=self.base.gax, cmap=clusters.cmap, add_colorbar=False )
         self.layers.set_visibility( "clusters", 1.0, True, notify=False )
         self.update_canvas()
 
     def layer_managers( self, name: str ) -> List:
-        from spectraclass.gui.points3js import PointCloudManager, pcm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         from spectraclass.learn.cluster import  clm
         if   name == "basemap":   mgrs = [ self.base ]
         elif name == "labels":    mgrs = [ self.labels_image ]
         elif name == "clusters":  mgrs = [ self.clusters_image ]
         elif name == "bands":     mgrs = [ self.spectral_image ]
-        elif name == "markers":   mgrs = [ self.points_selection, self.region_selection, pcm() ]
+        elif name == "markers":   mgrs = [ self.points_selection, self.region_selection, self.cluster_selection, pcm() ]
         else: raise Exception( f"Unknown Layer: {name}")
         return mgrs
 
@@ -314,7 +326,7 @@ class MapManager(SCSingletonConfigurable):
 
     def on_layer_change( self, layer: Layer ):
         for mgr in self.layer_managers( layer.name ):
-            lgm().log( f" **** layer_change[{layer.name}]: {id(mgr)} -> alpha_change[{layer.visibility}]")
+   #         lgm().log( f" **** layer_change[{layer.name}]: {id(mgr)} -> alpha_change[{layer.visibility}]")
             mgr.set_alpha( layer.visibility )
         self.update_canvas()
 
@@ -350,7 +362,7 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def update_spectral_image(self):
-        from spectraclass.gui.points3js import PointCloudManager, pcm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         if self.base is not None:
             fdata: xa.DataArray = self.frame_data
             if fdata is not None:
@@ -461,7 +473,7 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def setBlock( self, block_index: Tuple[int,int] = None, **kwargs ):
         from spectraclass.data.spatial.tile.manager import tm
-        from spectraclass.gui.plot import GraphPlotManager, gpm
+        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         self.block: Block = tm().getBlock( index=block_index )
         if self.block is not None:
             update = kwargs.get( 'update', False )
@@ -489,6 +501,7 @@ class MapManager(SCSingletonConfigurable):
             self.init_map()
             self.region_selection = PolygonInteractor( self.base.gax )
             self.points_selection = MarkerManager( self.base.gax, self.block )
+            self.cluster_selection = ClusterSelector(self.base.gax, self.block)
             self.init_hover()
             if not standalone:
                 self.create_selection_panel()

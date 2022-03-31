@@ -300,12 +300,10 @@ class SpatialDataManager(ModeDataManager):
             return f"{base_dir}/{base_file}.tif"
 
     def getMetadataFilePath(self) -> str:
-        base_dir = dm().modal.data_dir
         base_file = dm().modal.image_name
-        if base_file.endswith(".mat") or base_file.endswith(".tif"):
-            return f"{base_dir}/{base_file[:-4]}.mdata.txt"
-        else:
-            return f"{base_dir}/{base_file}.mdata.txt"
+        truncate =  base_file.endswith(".mat") or base_file.endswith(".tif")
+        mfilename = base_file[:-4] if truncate else base_file
+        return f"{self.datasetDir}/{mfilename}.mdata.txt"
 
     def writeGeotiff(self, raster_data: xa.DataArray ) -> Optional[str]:
         output_file = self.getFilePath()

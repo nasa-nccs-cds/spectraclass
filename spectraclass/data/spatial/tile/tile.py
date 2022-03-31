@@ -395,7 +395,7 @@ class Block(DataContainer):
         except Exception as err:
             lgm().log( f" --> pindex2indices Error: {err}, pid = {point_index}, coords = {pi}" )
 
-    def points2raster(self, points_data: xa.DataArray ):
+    def points2raster(self, points_data: xa.DataArray ) -> xa.DataArray:
         lgm().log( f"points->raster, points: dims={points_data.dims}, shape={points_data.shape}")
         dims = [points_data.dims[1], self.data.dims[1], self.data.dims[2]]
         coords = [(dims[0], points_data[dims[0]].data), (dims[1], self.data[dims[1]].data), (dims[2], self.data[dims[2]].data)]

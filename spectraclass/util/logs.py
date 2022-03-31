@@ -26,8 +26,9 @@ def log_timing(f):
             ts = time.time()
             result = f(*args, **kw)
             te = time.time()
-#            lgm().log( 'EXEC %r args:[%r, %r] took: %2.4f sec' %  (f.__name__, args, kw, te-ts) )
-            lgm().log( f'EXEC {f.__name__} took: {te-ts:3.4f} sec' )
+            try:     cname = f.__self__.__class__.__name__
+            except:  cname = ""
+            lgm().log( f'EXEC {cname}.{f.__name__} took: {te-ts:3.4f} sec' )
             return result
         except:
             lgm().exception( f" Error in {f}:" )

@@ -55,7 +55,7 @@ class PolygonInteractor:
 
     @exception_handled
     def on_draw(self, event):
-        lgm().log( "POLY->on_draw")  # lgm().log( f"POLY->close: points = {self.prec.poly.get_xy().tolist()}")
+ #       lgm().log( "POLY->on_draw")  # lgm().log( f"POLY->close: points = {self.prec.poly.get_xy().tolist()}")
         for prec in self.polys:
             self.ax.draw_artist(prec.poly)
             self.ax.draw_artist(prec.line)
@@ -80,8 +80,8 @@ class PolygonInteractor:
         self.draw()
 
     def delete_selection(self):
-        from spectraclass.gui.plot import GraphPlotManager, gpm
-        from spectraclass.gui.points3js import PointCloudManager, pcm
+        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         if self.prec is not None:
             self.polys.remove( self.prec )
@@ -141,7 +141,7 @@ class PolygonInteractor:
 
     @exception_handled
     def on_mouse_move(self, event):
-        lgm().log(f"POLYEDIT-> MOUSE-MOVE: {self.enabled} {event.inaxes is not None} {self.editing} {self.creating} {[event.xdata, event.ydata]}")
+#        lgm().log(f"POLYEDIT-> MOUSE-MOVE: {self.enabled} {event.inaxes is not None} {self.editing} {self.creating} {[event.xdata, event.ydata]}")
         if self.enabled and (event.inaxes is not None):
             if (self.editing or self.creating):
                 self.prec.drag_vertex( event )

@@ -1,5 +1,5 @@
 from spectraclass.data.base import DataManager
-from spectraclass.gui.plot import GraphPlotManager, gpm
+from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
 from spectraclass.model.labels import LabelsManager, lm
 
 dm: DataManager = DataManager.initialize( "demo4", 'swift' )
