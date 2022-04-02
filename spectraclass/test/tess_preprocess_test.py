@@ -10,6 +10,5 @@ dm.modal.data_dir = "/Volumes/Shared/Data"
 dm.modal.dset_name = "s20"
 dm.proc_type = "cpu"
 ModeDataManager.model_dims = 24
+dm.prepare_inputs( reprocess=True )
 
-block_nsamples: Dict[Tuple,int] = dm.prepare_inputs( reprocess=True )
-dm.save_config( block_nsamples )

@@ -47,13 +47,19 @@ class ModeDataManager(SCSingletonConfigurable):
         self._dset_selection: ip.Select = None
         self._dataset_prefix: str = ""
         self._file_selector = None
-        self._image_name = None
+        self._active_image = 0
+
+    def set_current_image(self, image_index: int ):
+        lgm().log( f"Setting active_image[{self._active_image}]: {self.image_name}")
+        self._active_image = image_index
+
+    @property
+    def num_images(self):
+        return len( self.image_names )
 
     @property
     def image_name(self):
-        if self._image_name is None:
-            self._image_name = self.image_names[0]
-        return self._image_name
+        return self.image_names[self._active_image]
 
     @property
     def file_selector(self):
@@ -66,14 +72,8 @@ class ModeDataManager(SCSingletonConfigurable):
     def on_image_change( self, event: Dict ):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.spatial.map import MapManager, mm
-        self._image_name = self.file_selector.value
+        self._active_image = self.file_selector.index
         dm().clear_project_cache()
-        mm().update_plots(True)
-
-    def set_image_name(self, image_name: str ):
-        from spectraclass.gui.spatial.map import MapManager, mm
-        self._image_name = image_name
-        lgm().log( f"Install new image: {image_name}", print=True )
         mm().update_plots(True)
 
     @property
@@ -133,11 +133,10 @@ class ModeDataManager(SCSingletonConfigurable):
     @exception_handled
     def select_dataset(self,*args):
         from spectraclass.data.base import DataManager, dm
-        if dm().dsid() != self.selected_dataset:
-            ufm().show( "Loading new data block")
-            lgm().log( f"Loading dataset '{self.selected_dataset}', current dataset = '{dm().dsid()}', mdmgr id = {id(self)}")
-            dm().loadProject( self.selected_dataset )
-            ufm().clear()
+        ufm().show( "Loading new data block")
+        lgm().log( f"Loading dataset '{self.selected_dataset}', current dataset = '{dm().dsid()}', mdmgr id = {id(self)}")
+        dm().loadProject( self.selected_dataset )
+        ufm().clear()
         dm().refresh_all()
 
     def getSelectionPanel(self) -> ip.HBox:
@@ -226,6 +225,7 @@ class ModeDataManager(SCSingletonConfigurable):
                     result = variable[::self.subsample_index] if (variable.ndim == 1) else variable[ ::self.subsample_index, :]
                     result.attrs.update(kwargs)
             dvars[vname] = result
+            lgm().log(f" -----> VAR {vname}{result.dims}: shape = {result.shape}")
             if vname in [ 'norm', 'embedding' ]:
                 dvars['spectra'] = result
                 dvars['plot-y'] = result
@@ -240,13 +240,14 @@ class ModeDataManager(SCSingletonConfigurable):
                 lgm().log(f"Warning: Attempt to Load empty dataset {self.dataFile( **kwargs )}", print=True)
                 return None
             else:
+                lgm().log(f" ---> Opening Dataset {self.dsid()} from file {xdataset.attrs['data_file']}")
                 dvars: Dict[str,Union[xa.DataArray,List,Dict]] = self.dset_subsample( xdataset, dsid=self.dsid(), **kwargs )
                 attrs = xdataset.attrs.copy()
                 raw_data = dvars['samples']
-                lgm().log(f" ---> Opened Dataset {self.dsid()} from file {xdataset.attrs['data_file']}")
                 lgm().log( f" -----> reduction: shape = {dvars['reduction'].shape}, #NULL={np.count_nonzero(np.isnan(dvars['reduction'].values))}")
                 lgm().log( f" -----> point_data: shape = {raw_data.shape}, #NULL={np.count_nonzero(np.isnan(raw_data.values))}")
                 dvars['plot-x'] = dvars['bands'] if ('bands'in dvars) else dvars['band']
+                dvars['plot-mx'] = dvars['model']
                 dvars['plot-mx'] = dvars['model']
                 attrs['dsid'] = self.dsid()
                 attrs['type'] = 'spectra'

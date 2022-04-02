@@ -188,7 +188,8 @@ class Block(DataContainer):
         self._flow = None
         self._samples_axis: Optional[xa.DataArray] = None
         self._point_data: Optional[xa.DataArray] = None
-        self._point_coords: Dict[str,np.ndarray] = None
+        self._point_coords: Optional[Dict[str,np.ndarray]] = None
+        self._point_mask: Optional[np.ndarray] = None
         lgm().log(f"CREATE Block: ix={ix}, iy={iy}")
 
     def set_thresholds(self, bUseModel: bool, iFrame: int, thresholds: Tuple[float,float] ) -> bool:
@@ -217,7 +218,7 @@ class Block(DataContainer):
                         value = mask_name
         return ( mask_list, value )
 
-    def get_mask(self) -> xa.DataArray:
+    def get_threshold_mask(self, raster=False ) -> np.ndarray:
         if self._tmask is None:
             for trecs in self._trecs:
                 for iFrame, trec in trecs.items():
@@ -226,11 +227,12 @@ class Block(DataContainer):
                         self._tmask = trec.tmask if (self._tmask is None) else (self._tmask | trec.tmask)
         if self._tmask is not None:
             lgm().log( f" TTTTTTT>> Get Threshold Mask, shape = {self._tmask.shape}, #masked = {np.count_nonzero(self._tmask.values)}")
-        return self._tmask
-
-    def get_points_mask(self) -> xa.DataArray:
-        (ptmask, rmask) = self.raster2points( self.get_mask() )
-        return ptmask
+            if not raster:
+                ptmask = self._tmask.values.flatten()
+                ptmask = ptmask[self._point_mask]
+                lgm().log( f" TTTTTTT>> get_points_mask: ptmask.shape={ptmask.shape}, ptmask.nonzero={np.count_nonzero(ptmask)} ")
+                return ptmask
+            return self._tmask.values
 
     def classmap(self, default_value: int =0 ) -> xa.DataArray:
         return xa.full_like( self.data[0].squeeze(drop=True), default_value, dtype=np.int )
@@ -326,7 +328,13 @@ class Block(DataContainer):
             self._samples_axis = self._point_data.coords['samples']
             self._point_data.attrs['type'] = 'block'
             self._point_data.attrs['dsid'] = self.dsid()
+            self._point_mask = pmask
         return (self._point_data, self._point_coords )
+
+    @property
+    def point_mask(self) -> np.ndarray:
+        if self._point_mask is None: self.getPointData()
+        return self._point_mask
 
     @property
     def point_coords(self) -> Dict[str,np.ndarray]:

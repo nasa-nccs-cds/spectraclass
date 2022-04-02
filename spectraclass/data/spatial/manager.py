@@ -37,12 +37,13 @@ class SpatialDataManager(ModeDataManager):
 
     def getModelData( self, raw_model_data: xa.DataArray, **kwargs) -> Optional[xa.DataArray]:
         from spectraclass.gui.spatial.map import MapManager, mm
-        lgm().log(f" *** MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape}")
-        tmask: xa.DataArray = mm().getThresholdMask()
-        if tmask is not None:
-            lgm().log( f" ---> mask[{tmask.dims}], shape={tmask.shape}, nmasked={np.count_nonzero(tmask.values)}")
-            raw_model_data = raw_model_data[~tmask.values]
-        return raw_model_data
+        tmask: np.ndarray = mm().threshold_mask(raster=False)
+        if tmask is None:
+            lgm().log(f" *** MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape},  NO threshold mask")
+            return raw_model_data
+        else:
+            lgm().log( f" *** MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape}, mask shape = {tmask.shape}")
+            return raw_model_data[~tmask]
 
     @classmethod
     def extent(cls, image_data: xa.DataArray ) -> List[float]: # left, right, bottom, top
@@ -215,76 +216,79 @@ class SpatialDataManager(ModeDataManager):
         return xa.Dataset( data_vars=data_vars, coords=coords )
 
     @exception_handled
-    def prepare_inputs(self, **kwargs ) -> Dict[Tuple,int]:
+    def prepare_inputs(self, **kwargs ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         lgm().log(f" Preparing inputs", print=True)
         reprocess = kwargs.get( 'reprocess',False )
-        block_nsamples = {}
-        ufm().show( f"Preprocessing data blocks for image {dm().modal.image_name}", "blue" )
-        ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
-        for block in self.tiles.tile.getBlocks():
-            block_data_file =  dm().modal.dataFile(block=block)
-            nsamples = 0
-            coord_data = {}
-            process_dataset = True
-            block_file_exists = os.path.isfile( block_data_file )
-            if block_file_exists:
-                dataset: xa.Dataset = xa.open_dataset( block_data_file )
-                try:
-                    nsamples = 0 if (len( dataset.coords ) == 0) else dataset.coords['samples'].size
-                    block_nsamples[block.block_coords] = nsamples
-                    process_dataset = reprocess
-                except Exception as err:
-                    lgm().log(f" Error getting samples from existing block_data_file: {block_data_file}\n ---> ERROR = {err}",  print=True)
-            if not process_dataset:
-                lgm().log( f" Skipping existing block{block.block_coords} with nsamples={nsamples}, existing file: {block_data_file}", print=True)
-            else:
-                lgm().log(f" Processing Block{block.block_coords}, shape = {block.shape}",  print=True)
-                try:
-                    blocks_point_data, coord_data = block.getPointData()
-                    lgm().log(f" Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}", print=True)
-                except NoDataInBounds:
-                    blocks_point_data = xa.DataArray( ea2, dims=('samples','band'), coords = dict(samples=ea1,band=ea1) )
-
-                if blocks_point_data.size > 0:
-                    normed_data: xa.DataArray = self.pnorm(blocks_point_data)
-                    prange = ( normed_data.values.min(), normed_data.values.max(), normed_data.values.mean() )
-                    lgm().log(f" Preparing point data with shape {normed_data.shape}, range={prange}, #nan={np.count_nonzero(np.isnan(blocks_point_data))}", print=True)
-                    blocks_reduction = rm().reduce( normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
+        for image_index in range( dm().modal.num_images ):
+            self.set_current_image( image_index )
+            block_nsamples = {}
+            ufm().show( f"Preprocessing data blocks for image {dm().modal.image_name}", "blue" )
+            ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
+            for block in self.tiles.tile.getBlocks():
+                block_data_file =  dm().modal.dataFile(block=block)
+                nsamples = 0
+                coord_data = {}
+                process_dataset = True
+                block_file_exists = os.path.isfile( block_data_file )
+                if block_file_exists:
+                    dataset: xa.Dataset = xa.open_dataset( block_data_file )
+                    try:
+                        nsamples = 0 if (len( dataset.coords ) == 0) else dataset.coords['samples'].size
+                        block_nsamples[block.block_coords] = nsamples
+                        process_dataset = reprocess
+                    except Exception as err:
+                        lgm().log(f" Error getting samples from existing block_data_file: {block_data_file}\n ---> ERROR = {err}",  print=True)
+                if not process_dataset:
+                    lgm().log( f" Skipping existing block{block.block_coords} with nsamples={nsamples}, existing file: {block_data_file}", print=True)
                 else:
-                    em2 = np.empty(shape=[0,self.model_dims], dtype=np.float)
-                    reduced_spectra = xa.DataArray(em2, dims=( 'samples', 'model' ), coords=dict(samples=ea1, model=np.arange(self.model_dims)))
-                    blocks_reduction = [ ( reduced_spectra, blocks_point_data, blocks_point_data ), ]
+                    lgm().log(f" Processing Block{block.block_coords}, shape = {block.shape}",  print=True)
+                    try:
+                        blocks_point_data, coord_data = block.getPointData()
+                        lgm().log(f" Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}", print=True)
+                    except NoDataInBounds:
+                        blocks_point_data = xa.DataArray( ea2, dims=('samples','band'), coords = dict(samples=ea1,band=ea1) )
 
-                if blocks_reduction is not None:
-                    self.model_dims = blocks_reduction[0][0].shape[1]
-                    for ( reduced_spectra, reproduction, point_data ) in blocks_reduction:
-                        model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
-                        raw_data: xa.DataArray = block.data
-                        data_vars = dict( raw=raw_data, norm=point_data )
-                        block_nsamples[block.block_coords] = point_data.shape[0]
-                        reduced_dataArray =  xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
-                        lgm().log(f"Writing output file: '{block_data_file}' with {blocks_point_data.size} samples, mask={coord_data['mask']}")
-                        lgm().log( f" -----> reduction: shape = {reduced_spectra.shape}, #NULL={np.count_nonzero(np.isnan(reduced_spectra))}")
-                        lgm().log( f" -----> point_data: shape = {point_data.shape}, #NULL={np.count_nonzero(np.isnan(point_data.values))}")
-                        data_vars['reduction'] = reduced_dataArray
-                        data_vars['reproduction'] = reproduction
-                        data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y','x'], coords={ d:raw_data.coords[d] for d in ['x','y'] } )
-                        result_dataset = xa.Dataset( data_vars )
-#                       self._reduced_raster_file = os.path.join(self.datasetDir, self.dataset + ".tif")
-                        lgm().log(f" Writing reduced output to {block_data_file} with {blocks_point_data.size} samples, dset attrs:")
-                        for varname, da in result_dataset.data_vars.items():
-                            da.attrs['long_name'] = ".".join( [ point_data.attrs['file_name'], varname ] )
-                        for vname, v in data_vars.items():
-                            lgm().log(f" ---> {vname}: shape={v.shape}, size={v.size}, dims={v.dims}, coords={[':'.join([cid,str(c.shape)]) for (cid,c) in v.coords.items()]}")
-                        if os.path.exists( block_data_file ): os.remove( block_data_file )
-                        else: os.makedirs( os.path.dirname( block_data_file ), exist_ok=True )
-                        result_dataset.to_netcdf( block_data_file )
-#                        print(f"Writing raster file: '{self._reduced_raster_file}' with dims={reduced_dataArray.dims}, attrs = {reduced_dataArray.attrs}")
-#                        reduced_dataArray.rio.set_spatial_dims()
-#                        raw_data.rio.to_raster( self._reduced_raster_file )
-                tm().saveMetadata( block_nsamples )
-        return block_nsamples
+                    if blocks_point_data.size > 0:
+                        normed_data: xa.DataArray = self.pnorm(blocks_point_data)
+                        prange = ( normed_data.values.min(), normed_data.values.max(), normed_data.values.mean() )
+                        lgm().log(f" Preparing point data with shape {normed_data.shape}, range={prange}, #nan={np.count_nonzero(np.isnan(blocks_point_data))}", print=True)
+                        blocks_reduction = rm().reduce( normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )
+                    else:
+                        em2 = np.empty(shape=[0,self.model_dims], dtype=np.float)
+                        reduced_spectra = xa.DataArray(em2, dims=( 'samples', 'model' ), coords=dict(samples=ea1, model=np.arange(self.model_dims)))
+                        blocks_reduction = [ ( reduced_spectra, blocks_point_data, blocks_point_data ), ]
+
+                    if blocks_reduction is not None:
+                        self.model_dims = blocks_reduction[0][0].shape[1]
+                        for ( reduced_spectra, reproduction, point_data ) in blocks_reduction:
+                            model_coords = dict( samples=point_data.samples, model=np.arange(self.model_dims) )
+                            raw_data: xa.DataArray = block.data
+                            data_vars = dict( raw=raw_data, norm=point_data )
+                            block_nsamples[block.block_coords] = point_data.shape[0]
+                            reduced_dataArray =  xa.DataArray( reduced_spectra, dims=['samples', 'model'], coords=model_coords )
+                            lgm().log(f"Writing output file: '{block_data_file}' with {blocks_point_data.size} samples, mask={coord_data['mask']}")
+                            lgm().log( f" -----> reduction: shape = {reduced_spectra.shape}, #NULL={np.count_nonzero(np.isnan(reduced_spectra))}")
+                            lgm().log( f" -----> point_data: shape = {point_data.shape}, #NULL={np.count_nonzero(np.isnan(point_data.values))}")
+                            data_vars['reduction'] = reduced_dataArray
+                            data_vars['reproduction'] = reproduction
+                            data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y','x'], coords={ d:raw_data.coords[d] for d in ['x','y'] } )
+                            result_dataset = xa.Dataset( data_vars )
+    #                       self._reduced_raster_file = os.path.join(self.datasetDir, self.dataset + ".tif")
+                            lgm().log(f" Writing reduced output to {block_data_file} with {blocks_point_data.size} samples, dset attrs:")
+                            for varname, da in result_dataset.data_vars.items():
+                                da.attrs['long_name'] = ".".join( [ point_data.attrs['file_name'], varname ] )
+                            for vname, v in data_vars.items():
+                                lgm().log(f" ---> {vname}: shape={v.shape}, size={v.size}, dims={v.dims}, coords={[':'.join([cid,str(c.shape)]) for (cid,c) in v.coords.items()]}")
+                            if os.path.exists( block_data_file ): os.remove( block_data_file )
+                            else: os.makedirs( os.path.dirname( block_data_file ), exist_ok=True )
+                            result_dataset.to_netcdf( block_data_file )
+    #                        print(f"Writing raster file: '{self._reduced_raster_file}' with dims={reduced_dataArray.dims}, attrs = {reduced_dataArray.attrs}")
+    #                        reduced_dataArray.rio.set_spatial_dims()
+    #                        raw_data.rio.to_raster( self._reduced_raster_file )
+                    tm().saveMetadata( block_nsamples )
+                    dm().save_config( block_nsamples )
+
 
     def dataFile( self, **kwargs ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm

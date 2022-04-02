@@ -149,10 +149,11 @@ class PointCloudManager(SCSingletonConfigurable):
         from spectraclass.reduction.embedding import ReductionManager, rm
         from spectraclass.data.base import dm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
-        refresh = kwargs.get( 'refresh', False )
+        refresh = kwargs.get( 'refresh', True )
         model_data = dm().getModelData()
 
         if (model_data is not None) and (model_data.shape[0] > 1):
+            lgm().log(f"UMAP.init: model_data{model_data.dims} shape = {model_data.shape}")
             flow: ActivationFlow = afm().getActivationFlow()
             if flow is None: return False
             node_data = model_data if refresh else None

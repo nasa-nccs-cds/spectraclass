@@ -411,28 +411,23 @@ class MapManager(SCSingletonConfigurable):
         use_model = kwargs.get( 'model', self._use_model_data )
         return dm().getModelData().shape[1] if use_model else self.data.shape[0]
 
-    def getThresholdMask(self) -> Optional[xa.DataArray]:
-        if self.block is not None:
-            return self.block.get_points_mask()
-
     @property
     def frame_data(self) -> Optional[xa.DataArray]:
         if self.currentFrame >= self.nFrames(): return None
         fdata = self.data[self.currentFrame]
         lgm().log( f" ******* frame_data[{self.currentFrame}], shape: {fdata.shape}, {svalid(fdata.values)}")
-        tmask: xa.DataArray = self.block.get_mask()
+        tmask: np.ndarray = self.block.get_threshold_mask( raster=True )
         if tmask is None:
             lgm().log(f" ---> NO threshold mask")
         else:
             mdata = fdata.values.flatten()
-            mdata[tmask.values.flatten()] = np.nan
+            mdata[tmask.flatten()] = np.nan
             fdata = fdata.copy( data=mdata.reshape(fdata.shape) )
             lgm().log(f" ---> threshold mask, {svalid(fdata.values)}")
         return fdata
 
-    @property
-    def threshold_mask(self) -> xa.DataArray:
-        return self.block.get_mask()
+    def threshold_mask( self, raster=True ) -> np.ndarray:
+        return self.block.get_threshold_mask(raster)
 
     @property
     def figure(self) -> Figure:
@@ -473,9 +468,13 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def setBlock( self, block_index: Tuple[int,int] = None, **kwargs ):
         from spectraclass.data.spatial.tile.manager import tm
+        from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         self.block: Block = tm().getBlock( index=block_index )
         if self.block is not None:
+            dm().clear_project_cache()
+            pcm().reset()
             update = kwargs.get( 'update', False )
             lgm().log(f" -------------------- Loading block: {self.block.block_coords}  -------------------- " )
             if self.base is not None:
