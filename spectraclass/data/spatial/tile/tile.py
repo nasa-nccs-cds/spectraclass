@@ -7,6 +7,11 @@ import xarray as xa
 from typing import List, Union, Tuple, Optional, Dict
 import os, math, pickle, time
 
+def combine_masks( mask1: Optional[np.ndarray], mask2: Optional[np.ndarray] ) -> Optional[np.ndarray]:
+    if mask1 is None: return mask2
+    if mask2 is None: return mask1
+    return mask1 & mask2
+
 class DataContainer:
 
     def __init__(self, **kwargs):
@@ -218,18 +223,20 @@ class Block(DataContainer):
                         value = mask_name
         return ( mask_list, value )
 
-    def get_threshold_mask(self, raster=False ) -> np.ndarray:
+    def get_threshold_mask(self, raster=False, reduced = True ) -> np.ndarray:
         if self._tmask is None:
+            ntmask = None
             for trecs in self._trecs:
                 for iFrame, trec in trecs.items():
                     if trec.tmask is not None:
                         lgm().log( f"    T>> Merging Frame-{iFrame} Threshold Mask, shape = {trec.tmask.shape}, #masked = {np.count_nonzero(trec.tmask.values)}")
-                        self._tmask = trec.tmask if (self._tmask is None) else (self._tmask | trec.tmask)
+                        ntmask = trec.tmask if (ntmask is None) else (ntmask | trec.tmask)
+            if ntmask is not None: self._tmask = ~ntmask
         if self._tmask is not None:
             lgm().log( f" TTTTTTT>> Get Threshold Mask, shape = {self._tmask.shape}, #masked = {np.count_nonzero(self._tmask.values)}")
             if not raster:
                 ptmask = self._tmask.values.flatten()
-                ptmask = ptmask[self._point_mask]
+                ptmask = ptmask[self._point_mask] if reduced else ptmask & self._point_mask
                 lgm().log( f" TTTTTTT>> get_points_mask: ptmask.shape={ptmask.shape}, ptmask.nonzero={np.count_nonzero(ptmask)} ")
                 return ptmask
             return self._tmask.values
@@ -282,7 +289,10 @@ class Block(DataContainer):
     def _apply_mask(self, block_array: xa.DataArray ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         nodata_value = np.nan
-        mask_array: Optional[xa.DataArray] = tm().getMask()
+        pmask_array: Optional[np.ndarray] = tm().getMask()
+        tmask_array: Optional[np.ndarray] = self.get_threshold_mask( reduced=False )
+        mask_array = combine_masks( pmask_array, tmask_array )
+        if mask_array is not None: lgm().log( f"apply_mask: shape = {mask_array.shape}, #nonzero={np.count_nonzero(mask_array)}")
         return block_array if mask_array is None else block_array.where( mask_array, nodata_value )
 
     def addTextureBands( self ):
@@ -404,11 +414,13 @@ class Block(DataContainer):
             lgm().log( f" --> pindex2indices Error: {err}, pid = {point_index}, coords = {pi}" )
 
     def points2raster(self, points_data: xa.DataArray ) -> xa.DataArray:
-        lgm().log( f"points->raster, points: dims={points_data.dims}, shape={points_data.shape}")
+        tmask = self.get_threshold_mask( reduced=False )
+        lgm().log( f"points->raster, points: dims={points_data.dims}, shape={points_data.shape}; data: dims={self.data.dims}, shape={self.data.shape}")
+        lgm().log( f" ---> tmask: shape = {tmask.shape}, #nonzero = {np.count_nonzero(tmask)};  pmask: shape = {self.mask.shape}, #nonzero = {np.count_nonzero(self.mask)}")
         dims = [points_data.dims[1], self.data.dims[1], self.data.dims[2]]
         coords = [(dims[0], points_data[dims[0]].data), (dims[1], self.data[dims[1]].data), (dims[2], self.data[dims[2]].data)]
         raster_data = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
-        raster_data[ self.mask ] = points_data.data
+        raster_data[ tmask ] = points_data.data
         raster_data = raster_data.transpose().reshape([points_data.shape[1], self.data.shape[1], self.data.shape[2]])
         lgm().log( f"Generated Raster data, shape={raster_data.shape}, dims={dims}, with mask shape={self.mask.shape}" )
         return xa.DataArray( raster_data, coords, dims, points_data.name, points_data.attrs )

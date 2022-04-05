@@ -108,7 +108,7 @@ class TileManager(SCSingletonConfigurable):
         if bindex is not None: self.block_index = bindex
         return self.tile.getBlock( self.block_index[0], self.block_index[1] )
 
-    def getMask(self) -> Optional[xa.DataArray]:
+    def getMask(self) -> Optional[np.ndarray]:
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.control import UserFeedbackManager, ufm
         if self.mask_class < 1: return None
@@ -122,7 +122,7 @@ class TileManager(SCSingletonConfigurable):
         if mask is None:
             ufm().show( f"The mask for class {self.mask_class} has not yet been generated.", "red")
             lgm().log( f"Can't apply mask for class {self.mask_class} because it has not yet been generated. Mask file: {mask_file}" )
-        return mask
+        return mask.values if (mask is not None) else None
 
 
     def get_marker(self, lon: float, lat: float, cid: int =-1, **kwargs ) -> Marker:

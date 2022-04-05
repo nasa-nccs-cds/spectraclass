@@ -43,7 +43,7 @@ class SpatialDataManager(ModeDataManager):
             return raw_model_data
         else:
             lgm().log( f" *** MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape}, mask shape = {tmask.shape}")
-            return raw_model_data[~tmask]
+            return raw_model_data[tmask]
 
     @classmethod
     def extent(cls, image_data: xa.DataArray ) -> List[float]: # left, right, bottom, top

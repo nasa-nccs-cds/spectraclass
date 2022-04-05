@@ -179,8 +179,9 @@ class ClusterSelector:
         if (event.xdata != None) and (event.ydata != None) and (event.inaxes == self.ax) and self.enabled:
             if int(event.button) == self.LEFT_BUTTON:
                 pid = self.block.coords2pindex(event.ydata, event.xdata)
+                cid = lm().current_cid
+                lgm().log(f" ----> mark_cluster: pid={pid}, cid={cid}, coords = {[event.ydata, event.xdata]}")
                 if pid >= 0:
-                    cid = lm().current_cid
                     marker: Marker = clm().mark_cluster( pid, cid )
                     app().add_marker( "cluster", marker )
                     mm().plot_cluster_image( clm().get_cluster_map() )

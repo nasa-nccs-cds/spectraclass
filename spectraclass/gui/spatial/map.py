@@ -421,7 +421,7 @@ class MapManager(SCSingletonConfigurable):
             lgm().log(f" ---> NO threshold mask")
         else:
             mdata = fdata.values.flatten()
-            mdata[tmask.flatten()] = np.nan
+            mdata[(~tmask).flatten()] = np.nan
             fdata = fdata.copy( data=mdata.reshape(fdata.shape) )
             lgm().log(f" ---> threshold mask, {svalid(fdata.values)}")
         return fdata
