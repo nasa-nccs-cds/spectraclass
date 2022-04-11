@@ -158,12 +158,16 @@ class ClusterManager(SCSingletonConfigurable):
 class ClusterSelector:
     LEFT_BUTTON = 1
 
-    def __init__(self, ax, block: Block ):
+    def __init__(self, ax ):
         self.ax = ax
         self.enabled = False
-        self.block: Block = block
         self.canvas = ax.figure.canvas
         self.canvas.mpl_connect('button_press_event', self.on_button_press)
+
+    @property
+    def block(self) -> Block:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        return tm().getBlock()
 
     def set_enabled(self, enable: bool ):
         lgm().log( f"ClusterSelector: set enabled = {enable}")
@@ -180,7 +184,7 @@ class ClusterSelector:
             if int(event.button) == self.LEFT_BUTTON:
                 pid = self.block.coords2pindex(event.ydata, event.xdata)
                 cid = lm().current_cid
-                lgm().log(f" ----> mark_cluster: pid={pid}, cid={cid}, coords = {[event.ydata, event.xdata]}")
+                lgm().log(f"#IA: mark_cluster: pid={pid}, cid={cid}, coords = {[event.ydata, event.xdata]}")
                 if pid >= 0:
                     marker: Marker = clm().mark_cluster( pid, cid )
                     app().add_marker( "cluster", marker )

@@ -108,6 +108,7 @@ class TileManager(SCSingletonConfigurable):
         if bindex is not None: self.block_index = bindex
         return self.tile.getBlock( self.block_index[0], self.block_index[1] )
 
+    @exception_handled
     def getMask(self) -> Optional[np.ndarray]:
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.control import UserFeedbackManager, ufm

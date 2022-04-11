@@ -86,14 +86,15 @@ class MarkerManager( PointsInteractor ):
     LEFT_BUTTON = 1
     PICK_DIST = 5
 
-    def __init__(self, ax, block: Block ):
+    def __init__(self, ax ):
         super(MarkerManager, self).__init__( ax )
-        self._block: Block = block
         self._adding_marker = False
         self._markers = {}
 
-    def set_block(self, block ):
-        self._block = block
+    @property
+    def block(self) -> Block:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        return tm().getBlock()
 
     @exception_handled
     def delete_marker(self, x, y ):
