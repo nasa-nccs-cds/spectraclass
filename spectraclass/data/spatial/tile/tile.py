@@ -20,6 +20,9 @@ def shp( array: Optional[Union[np.ndarray,xa.DataArray]] ):
 def nz( array: Optional[Union[np.ndarray,xa.DataArray]] ):
     return "NONE" if array is None else np.count_nonzero(array)
 
+def nnan( array: Optional[Union[np.ndarray,xa.DataArray]] ):
+    return "NONE" if array is None else np.count_nonzero( ~np.isnan(array) )
+
 class DataContainer:
 
     def __init__(self, **kwargs):
@@ -237,26 +240,26 @@ class Block(DataContainer):
         return ( mask_list, value )
 
     @exception_handled
-    def get_threshold_mask(self, raster=False, reduced = True ) -> np.ndarray:
+    def get_threshold_mask( self, raster=False, reduced=True ) -> np.ndarray:
+        lgm().log( f"#IA: get_threshold_mask[B-{hex(id(self))}] (raster={raster}) ************************************** **************************************" )
         if self._tmask is None:
-            lgm().log(f"#IA: get_threshold_mask[B-{hex(id(self))}], ntrecs={[len(trecs.keys()) for trecs in self._trecs]}")
-            lgm().trace( f"get_threshold_mask[B-{hex(id(self))}]" )
+            lgm().log( f"#IA: ***************> ntrecs={[len(trecs.keys()) for trecs in self._trecs]}")
             ntmask = None
             for trecs in self._trecs:
                 for iFrame, trec in trecs.items():
-                    lgm().log( f"#IA: Merging Frame-{iFrame} Threshold Mask, shape = {shp(trec.tmask)}, #masked = {nz(trec.tmask)}")
+                    lgm().log( f"#IA: ***************> Merging Frame-{iFrame} Threshold Mask, shape={shp(trec.tmask)}, nz={nz(trec.tmask)}" )
                     if trec.tmask is not None:
                         ntmask = trec.tmask if (ntmask is None) else (ntmask | trec.tmask)
             if ntmask is not None:
                 self._tmask = ~ntmask
-                lgm().log( f"#IA: Merging [tmask, nz={nz(self._tmask)}] & [rmask, nz={nz(self.raster_mask)}]")
+                lgm().log( f"#IA: ***************> Merging [tmask, nz={nz(self._tmask)}] & [rmask, nz={nz(self.raster_mask)}]" )
                 self._tmask = self._tmask & self.raster_mask
         if self._tmask is not None:
-            lgm().log( f"#IA: Get Threshold Mask(raster={raster}), shape = {shp(self._tmask)}, #masked = {nz(self._tmask)}")
+            lgm().log( f"#IA: ***************> MASK--> shape = {shp(self._tmask)}, nz={nz(self._tmask)}" )
             if not raster:
                 ptmask = self._tmask.values.flatten()
                 if reduced: ptmask = ptmask[self._point_mask]
-                lgm().log( f"#IA: get_points_mask: ptmask.shape={shp(ptmask)}, #masked = {nz(ptmask)} ")
+                lgm().log( f"#IA: ***************> MASK--> ptmask.shape={shp(ptmask)}, nz={nz(ptmask)} " )
                 return ptmask
             return self._tmask.values
 
@@ -305,14 +308,17 @@ class Block(DataContainer):
         block_raster.name = self.file_name
         return block_raster
 
-    def _apply_mask(self, block_array: xa.DataArray ) -> xa.DataArray:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        nodata_value = np.nan
-        pmask_array: Optional[np.ndarray] = tm().getMask()
-        tmask_array: Optional[np.ndarray] = self.get_threshold_mask( reduced=False )
-        mask_array = combine_masks( pmask_array, tmask_array )
-        lgm().log( f"#IA: apply_mask shapes-> pmask={shp(pmask_array)}, tmask={shp(tmask_array)}, cmask={shp(mask_array)}, data={shp(block_array)};    #nonzero={nz(mask_array)}")
-        return block_array if mask_array is None else block_array.where( mask_array, nodata_value )
+    @exception_handled
+    def _apply_mask( self, block_array: xa.DataArray, raster=False, reduced=False ) -> xa.DataArray:
+        lgm().log(f"#IA: apply_mask ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" )
+        mask_array: Optional[np.ndarray] = self.get_threshold_mask( raster=raster, reduced=reduced )
+        result = block_array
+        if mask_array is not None:
+            if raster and block_array.ndim == 3: mask_array = np.expand_dims( mask_array, 0 )
+            lgm().log( f"#IA: ~~~~~~~~~~>> shapes-> mask={shp(mask_array)}, data={shp(block_array)}; nz={nz(mask_array)}")
+            result = block_array.copy( data=np.where( mask_array, block_array.values, np.nan ) )
+            lgm().log( f"#IA: ~~~~~~~~~~>> resulting masked-data shape={shp(result)}; nnan/band={nnan(result.values)//result.shape[0]}")
+        return result
 
     def addTextureBands( self ):
         from spectraclass.features.texture.manager import TextureManager, texm
@@ -324,13 +330,18 @@ class Block(DataContainer):
         return f"{tm().tileName()}_b-{tm().fmt(self.shape)}-{self.block_coords[0]}-{self.block_coords[1]}"
 
     def get_index_array(self) -> xa.DataArray:
-        mdata = self._apply_mask(self.data)
-        stacked_data: xa.DataArray = self.data.stack( samples=mdata.dims[-2:] )
-        filtered_samples = stacked_data[1].dropna( dim="samples" )
+        lgm().log(f"#IA: get_index_array: -----------------------------------------")
+        mdata = self._apply_mask( self.data, raster=True )
+        lgm().log(f"#IA: --> mdata shape = {mdata.shape}, dims = {mdata.dims}")
+        stacked_data: xa.DataArray = mdata.stack( samples=mdata.dims[-2:] )[0].squeeze(drop=True)
+        lgm().log(f"#IA: --> stacked_data shape = {stacked_data.shape}, dims = {stacked_data.dims}, nnan={nnan(stacked_data.values)}")
+        filtered_samples = stacked_data.dropna( dim="samples" )
+        lgm().log(f"#IA: --> filtered_samples shape = {filtered_samples.shape}, dims = {filtered_samples.dims}")
         indices = np.arange(filtered_samples.shape[0])
         point_indices = xa.DataArray( indices, dims=['samples'], coords=dict(samples=filtered_samples.samples) )
+        lgm().log(f"#IA: --> point_indices shape = {point_indices.shape}, dims = {point_indices.dims}")
         result = point_indices.reindex( samples=stacked_data.samples, fill_value= -1 ).unstack()
-        lgm().log( f"#IA: get_index_array: result shape = {result.shape}")
+        lgm().log( f"#IA: --> result shape = {result.shape}, dims = {result.dims},  max index = {np.nanmax(result.values)}")
         return result
 
     def get_pid_array(self) -> np.ndarray:
