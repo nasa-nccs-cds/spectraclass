@@ -10,11 +10,11 @@ from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timin
 def pid( instance ): return hex(id(instance))[-4:]
 
 class Marker:
-    def __init__(self, type: str, pids: Union[np.ndarray,Iterable], cid: int, **kwargs ):
+    def __init__(self, type: str, gids: Union[np.ndarray,Iterable], cid: int, **kwargs ):
         self.cid = cid
         self.type = type
         self.props = kwargs
-        self._pids: np.ndarray = pids if isinstance( pids, np.ndarray ) else np.array(pids)
+        self._pids: np.ndarray = gids if isinstance( gids, np.ndarray ) else np.array( gids, dtype=np.int64 )
         self._mask: Optional[np.ndarray] = kwargs.get( 'mask', None )
 
     @property

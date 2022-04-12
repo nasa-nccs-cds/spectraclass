@@ -35,7 +35,8 @@ class TileManager(SCSingletonConfigurable):
 
     def __init__(self):
         super(TileManager, self).__init__()
-        self._tiles: Dict[Tuple,Tile] = {}
+        self._tiles: Dict[str,Tile] = {}
+        self._idxtiles: Dict[int, Tile] = {}
         self.cacheTileData = True
         self._block_dims = None
         self._tile_metadata = None
@@ -54,7 +55,21 @@ class TileManager(SCSingletonConfigurable):
     @property
     def tile(self) -> Tile:
         if self.image_name in self._tiles: return self._tiles[self.image_name]
-        return self._tiles.setdefault( self.image_name, Tile() )
+        new_tile = Tile( self.image_index )
+        self._idxtiles[ self.image_index ] = new_tile
+        return self._tiles.setdefault( self.image_name, new_tile )
+
+    def get_tile( self, tile_index: int ):
+        if tile_index in self._idxtiles: return self._idxtiles[tile_index]
+        new_tile = Tile( tile_index )
+        self._idxtiles[ tile_index ] = new_tile
+        return self._tiles.setdefault( self.get_image_name(tile_index), new_tile )
+
+    def tile_grid_offset(self, tile_index: int ) -> int:
+        offset = 0
+        for itile in range( tile_index ):
+            offset = offset + self.get_tile( itile ).grid_size
+        return offset
 
     @property
     def extent(self):
@@ -96,6 +111,13 @@ class TileManager(SCSingletonConfigurable):
     @property
     def image_name(self):
         return DataManager.instance().modal.image_name
+
+    def get_image_name( self, image_index: int ):
+        return DataManager.instance().modal.image_names[ image_index ]
+
+    @property
+    def image_index(self):
+        return DataManager.instance().modal.image_index
 
     @property
     def block_coords(self):

@@ -56,6 +56,10 @@ class DataContainer:
     def _get_data(self) -> xa.DataArray:
         raise NotImplementedError(f" Attempt to call abstract method _get_data on {self.__class__.__name__}")
 
+    @property
+    def grid_size(self) -> int:
+        return self.data.shape[-1]*self.data.shape[-2]
+
     def update_transform(self):
 #        self.transformer.transform_bounds()
 #        gt = self.data.attrs['transform']
@@ -120,9 +124,10 @@ class DataContainer:
 
 class Tile(DataContainer):
 
-    def __init__(self, **kwargs ):
+    def __init__(self, tile_index: int, **kwargs ):
         super(Tile, self).__init__(**kwargs)
         self._blocks = {}
+        self._index = tile_index
         self.subsampling: int =  kwargs.get('subsample',1)
 
     def _get_data(self) -> xa.DataArray:

@@ -58,6 +58,10 @@ class ModeDataManager(SCSingletonConfigurable):
         return len( self.image_names )
 
     @property
+    def image_index(self):
+        return self._active_image
+
+    @property
     def image_name(self):
         return self.image_names[self._active_image]
 
@@ -272,9 +276,13 @@ class ModeDataManager(SCSingletonConfigurable):
     def loadDataFile( self, **kwargs ) -> Optional[xa.Dataset]:
         dFile = self.dataFile( **kwargs )
         if os.path.isfile( dFile ):
-            lgm().log( f"loadDataFile: {dFile}" )
             dataset: xa.Dataset = xa.open_dataset( dFile, concat_characters=True )
             dataset.attrs['data_file'] = dFile
+            vars = [ f"{vid}{var.dims}" for (vid,var) in dataset.variables.items()]
+            coords = [f"{cid}{coord.shape}" for (cid, coord) in dataset.coords.items()]
+            lgm().log( f"#GID: loadDataFile: {dFile}, coords={coords}, vars={vars}" )
+            lgm().log( f"#GID:  --> coords={coords}")
+            lgm().log( f"#GID:  --> vars={vars}")
         else:
             ufm().show( f"This file/tile needs to be preprocesed.", "red" )
             raise Exception( f"Missing data file: {dFile}" )
