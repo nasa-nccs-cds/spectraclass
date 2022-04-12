@@ -30,7 +30,7 @@ class PointCloudManager(SCSingletonConfigurable):
     def __init__( self):
         super(PointCloudManager, self).__init__()
         self._gui = None
-        self._xyz: np.ndarray = None
+        self._xyz: xa.DataArray = None
         self.points: p3js.Points = None
         self.marker_points: Optional[p3js.Points] = None
         self.marker_pids = {}
@@ -123,23 +123,23 @@ class PointCloudManager(SCSingletonConfigurable):
             self.marker_points.geometry = self.getMarkerGeometry()
 
     @property
-    def xyz(self)-> np.ndarray:
+    def xyz(self)-> xa.DataArray:
         if self._xyz is None: self.init_data()
         return self._xyz
 
     @xyz.setter
-    def xyz(self, value: np.ndarray):
-        self._xyz = value
+    def xyz(self, data_array: Union[xa.DataArray,np.ndarray] ):
+        self._xyz = self._xyz.copy( data=data_array ) if (type(data_array) == np.ndarray) else data_array
         self._bounds = []
-        self.voxelizer = Voxelizer( value, 0.1*self.scale )
-        self.point_locator = value.sum(axis=1)
+        self.voxelizer = Voxelizer( self._xyz.values, 0.1*self.scale )
+        self.point_locator = self._xyz.values.sum(axis=1)
 
     def initialize_points(self):
-        self._xyz: np.ndarray = self.empty_pointset
+        self._xyz: xa.DataArray = self.empty_pointset
 
     @property
-    def empty_pointset(self) -> np.ndarray:
-        return np.empty(shape=[0, 3], dtype=np.float)
+    def empty_pointset(self) -> xa.DataArray:
+        return xa.DataArray( np.empty(shape=[0, 3], dtype=np.float), dims=["samples","model"] )
 
     @property
     def empty_pids(self) -> np.ndarray:
@@ -150,7 +150,7 @@ class PointCloudManager(SCSingletonConfigurable):
         from spectraclass.data.base import dm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
         refresh = kwargs.get( 'refresh', True )
-        model_data = dm().getModelData()
+        model_data: Optional[xa.DataArray] = dm().getModelData()
 
         if (model_data is not None) and (model_data.shape[0] > 1):
             lgm().log(f"UMAP.init: model_data{model_data.dims} shape = {model_data.shape}")
@@ -162,7 +162,7 @@ class PointCloudManager(SCSingletonConfigurable):
             self.xyz = self.normalize(embedding)
             return True
 
-    def normalize(self, point_data: np.ndarray):
+    def normalize(self, point_data: xa.DataArray) -> xa.DataArray:
         return (point_data - point_data.mean()) * (self.scale / point_data.std())
 
     def getColors( self, **kwargs ):
@@ -194,9 +194,9 @@ class PointCloudManager(SCSingletonConfigurable):
         markers = dict( sorted( self.marker_pids.items() ) )
         colors = lm().get_rgb_colors( list(markers.values()) )
         idxs = list(markers.keys())
-        positions = self.xyz[ np.array( idxs ) ] if len(idxs) else np.empty( shape=[0,3], dtype=np.int )
+        positions = self.xyz.sel( samples=np.array( idxs ) ) if len(idxs) else np.empty( shape=[0,3], dtype=np.int )
         lgm().log(f"*** getMarkerGeometry: positions shape = {positions.shape}, color shape = {colors.shape}")
-        attrs = dict( position = p3js.BufferAttribute( positions, normalized=False ),  color =    p3js.BufferAttribute( colors ) )
+        attrs = dict( position=p3js.BufferAttribute( positions, normalized=False ), color=p3js.BufferAttribute( colors ) )
         return p3js.BufferGeometry( attributes=attrs )
 
     def createPoints( self, **kwargs ):

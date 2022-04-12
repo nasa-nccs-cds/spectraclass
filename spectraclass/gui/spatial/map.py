@@ -268,8 +268,9 @@ class MapManager(SCSingletonConfigurable):
     def one_hot_to_index(self, class_data: xa.DataArray, axis=0) -> xa.DataArray:
         return class_data.argmax( axis=axis, skipna=True, keep_attrs=True ).squeeze()
 
-    @log_timing
+    @exception_handled
     def plot_labels_image(self, classification: xa.DataArray = None ):
+
         if classification is None:
             if self._classification_data is not None:
                 self._classification_data = xa.zeros_like( self._classification_data )
@@ -279,17 +280,18 @@ class MapManager(SCSingletonConfigurable):
                 self._classification_data = self.one_hot_to_index( self._classification_data )
 
         if self._classification_data is not None:
-  #          vrange = [ self._classification_data.values.min(), self._classification_data.values.max() ]
-  #          lgm().log( f"  plot labels image, shape = {self._classification_data.shape}, vrange = {vrange}  " )
-            # try: self.labels_image.remove()
-            # except Exception: pass
-            # self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=self.layers.alpha("labels"), cmap=self.cspecs['cmap'],
-            #                                                add_colorbar=False, norm=self.cspecs['norm'])
+            try:
+                self.labels_image.remove()
+                self.labels_image = None
+            except Exception: pass
 
+            vrange = [ self._classification_data.values.min(), self._classification_data.values.max() ]
             if self.labels_image is None:
-                self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=self.layers.alpha("labels"), cmap=self.cspecs['cmap'],
-                                                           add_colorbar=False, norm=self.cspecs['norm'])
+                alpha, cmap, norm = self.layers.alpha("labels"), self.cspecs['cmap'], self.cspecs['norm']
+                lgm().log(f"  create labels image, shape={self._classification_data.shape}, dims={self._classification_data.dims}, vrange={vrange}, alpha={alpha}  ")
+                self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=alpha, cmap=cmap, norm=norm, add_colorbar=False)
             else:
+                lgm().log(f"  update labels image, shape={self._classification_data.shape}, vrange={vrange}  ")
                 self.labels_image.set_data( self._classification_data.values )
                 self.labels_image.changed()
 

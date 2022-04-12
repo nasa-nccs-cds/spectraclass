@@ -39,11 +39,13 @@ class SpatialDataManager(ModeDataManager):
         from spectraclass.gui.spatial.map import MapManager, mm
         tmask: np.ndarray = mm().threshold_mask(raster=False)
         if tmask is None:
-            lgm().log(f" *** MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape},  NO threshold mask")
+            lgm().log(f"*** MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape},  NO threshold mask")
             return raw_model_data
         else:
-            lgm().log( f" *** MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape}, mask shape = {tmask.shape}")
-            return raw_model_data[tmask]
+            result = raw_model_data[tmask]
+            lgm().log( f"*** MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape}, mask shape = {tmask.shape}")
+            lgm().log( f"#GID: filtered model_data[{result.dims}], shape= {result.shape}, max[samples index] = {result.samples.values.max()}")
+            return result
 
     @classmethod
     def extent(cls, image_data: xa.DataArray ) -> List[float]: # left, right, bottom, top

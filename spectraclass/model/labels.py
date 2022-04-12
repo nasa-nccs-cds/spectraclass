@@ -95,6 +95,8 @@ class LabelsManager(SCSingletonConfigurable):
         self._buttons = []
 
     def set_classification( self, classification: np.ndarray ):
+        crange = [ classification.min(), classification.max() ]
+        lgm().log( f"set_classification: shape={classification.shape}, range={crange}" )
         self._classification = classification
 
     def clear_classification( self ):
@@ -256,7 +258,7 @@ class LabelsManager(SCSingletonConfigurable):
         self._labels_data[:] = 0
         for marker in mks:
             lgm().log(f" MARKER[{marker.cid}]: #pids = {len(marker.pids)}")
-            self._labels_data[ marker.pids ] = marker.cid
+            self._labels_data.loc[ dict( samples=marker.pids ) ] = marker.cid
 
     def getLabelsArray(self) -> xa.DataArray:
         self.updateLabels()
