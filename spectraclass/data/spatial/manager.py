@@ -233,7 +233,7 @@ class SpatialDataManager(ModeDataManager):
                 coord_data = {}
                 process_dataset = True
                 block_file_exists = os.path.isfile( block_data_file )
-                if block_file_exists:
+                if block_file_exists and not reprocess:
                     dataset: xa.Dataset = xa.open_dataset( block_data_file )
                     try:
                         nsamples = 0 if (len( dataset.coords ) == 0) else dataset.coords['samples'].size
@@ -285,6 +285,7 @@ class SpatialDataManager(ModeDataManager):
                             if os.path.exists( block_data_file ): os.remove( block_data_file )
                             else: os.makedirs( os.path.dirname( block_data_file ), exist_ok=True )
                             result_dataset.to_netcdf( block_data_file )
+                            block_nsamples[block.block_coords] = result_dataset.coords['samples'].size
     #                        print(f"Writing raster file: '{self._reduced_raster_file}' with dims={reduced_dataArray.dims}, attrs = {reduced_dataArray.attrs}")
     #                        reduced_dataArray.rio.set_spatial_dims()
     #                        raw_data.rio.to_raster( self._reduced_raster_file )

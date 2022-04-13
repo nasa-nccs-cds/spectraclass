@@ -166,7 +166,7 @@ class TileManager(SCSingletonConfigurable):
         from shapely.geometry import Polygon
         if cid == -1: cid = lm().current_cid
         block: Block = self.getBlock()
-        idx2pid: np.ndarray = block.index_array.values.flatten()
+#        idx2pid: np.ndarray = block.index_array.values.flatten()
         raster:  xa.DataArray = block.data[0].squeeze()
         X, Y = raster.x.values, raster.y.values
         try:
@@ -174,7 +174,7 @@ class TileManager(SCSingletonConfigurable):
             MX, MY = np.meshgrid(X, Y)
             PID: np.ndarray = np.array(range(raster.size))
             mask: np.ndarray = svect.contains( polygon, MX, MY ).flatten()
-            pids = idx2pid[ PID[mask] ]
+            pids = PID[mask] # idx2pid[ PID[mask] ]
             marker = Marker( "label", pids[ pids > -1 ].tolist(), cid )
             lgm().log( f"Poly selection-> Create marker[{marker.size}], cid = {cid}")
         except Exception as err:

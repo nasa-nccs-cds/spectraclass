@@ -100,7 +100,7 @@ class PointCloudManager(SCSingletonConfigurable):
     @log_timing
     def addMarker(self, marker: Marker ):
         self.clear_transients()
-        lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}, pids[10]={marker.pids[:10]}")
+        lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}, pid range={[marker.pids.min(),marker.pids.max()]}")
         for pid in marker.pids:
             self.mark_point( pid, marker.cid )
         self.update_marker_plot()
@@ -131,7 +131,7 @@ class PointCloudManager(SCSingletonConfigurable):
     def xyz(self, data_array: Union[xa.DataArray,np.ndarray] ):
         self._xyz = self._xyz.copy( data=data_array ) if (type(data_array) == np.ndarray) else data_array
         self._bounds = []
-        self.voxelizer = Voxelizer( self._xyz.values, 0.1*self.scale )
+        self.voxelizer = Voxelizer( self._xyz, 0.1*self.scale )
         self.point_locator = self._xyz.values.sum(axis=1)
 
     def initialize_points(self):
@@ -191,11 +191,12 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @exception_handled
     def getMarkerGeometry( self ) -> p3js.BufferGeometry:
-        markers = dict( sorted( self.marker_pids.items() ) )
-        colors = lm().get_rgb_colors( list(markers.values()) )
-        idxs = list(markers.keys())
-        positions = self.xyz.sel( samples=np.array( idxs ) ) if len(idxs) else np.empty( shape=[0,3], dtype=np.int )
-        lgm().log(f"*** getMarkerGeometry: positions shape = {positions.shape}, color shape = {colors.shape}")
+        colors = lm().get_rgb_colors( list(self.marker_pids.values()) )
+        idxs = np.array( list(self.marker_pids.keys()) )
+        srange, ssize = [self._xyz.samples.values.min(),self._xyz.samples.values.max()], self._xyz.samples.values.size
+        lgm().log(f"*** getMarkerGeometry->idxs: size = {idxs.size}, range = {[idxs.min(),idxs.max()]}; samples: size = {ssize}, range={srange}")
+        lgm().log(f" ---> has idx {idxs[0]} : {idxs[0] in self._xyz.samples.values}, " )
+        positions = self.xyz.sel( samples= idxs ) if idxs.size else np.empty( shape=[0,3], dtype=np.int )
         attrs = dict( position=p3js.BufferAttribute( positions, normalized=False ), color=p3js.BufferAttribute( colors ) )
         return p3js.BufferGeometry( attributes=attrs )
 
@@ -237,7 +238,6 @@ class PointCloudManager(SCSingletonConfigurable):
         ppid = self.voxelizer.get_pid( point )
         if ppid >= 0:
             self.pick_point = ppid
-            lgm().log(f" *** PCM.on_pick: pid={self.pick_point}, [{point}]")
             if mm().initialized():
                 if highlight:   pos = mm().highlight_points( [self.pick_point], [0] )
                 else:           pos = mm().mark_point( self.pick_point, cid=0 )

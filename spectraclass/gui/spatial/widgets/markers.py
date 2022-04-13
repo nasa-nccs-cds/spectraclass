@@ -10,16 +10,20 @@ from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timin
 def pid( instance ): return hex(id(instance))[-4:]
 
 class Marker:
-    def __init__(self, type: str, gids: Union[np.ndarray,Iterable], cid: int, **kwargs ):
+
+    def __init__(self, type: str, pids: Union[np.ndarray,Iterable], cid: int, **kwargs ):
+        from spectraclass.data.spatial.tile.manager import tm
         self.cid = cid
         self.type = type
         self.props = kwargs
-        self._pids: np.ndarray = gids if isinstance( gids, np.ndarray ) else np.array( gids, dtype=np.int64 )
+        self.block_index = kwargs.get( 'block_index', tm().block_index )
+        self.image_index = kwargs.get( 'image_index', tm().image_index )
+        self._pids: np.ndarray = pids if isinstance( pids, np.ndarray ) else np.array( pids, dtype=np.int64 )
         self._mask: Optional[np.ndarray] = kwargs.get( 'mask', None )
 
     @property
-    def pids(self) -> List[int]:
-        return self._pids.tolist()
+    def pids(self) -> np.ndarray:
+        return self._pids
 
     @property
     def mask(self) -> Optional[np.ndarray]:
@@ -110,8 +114,8 @@ class MarkerManager( PointsInteractor ):
     def get_highlight_points( self ) -> Tuple[ List[float], List[float], List[int] ]:
         ycoords, xcoords, cids = [], [], []
         for (pid,cid) in self._highlight_points:
-            coords = self._block.pid2coords(pid)
-            if (coords is not None) and self._block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
+            coords = self.block.pid2coords(pid)
+            if (coords is not None) and self.block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
                 ycoords.append( coords['y'] )
                 xcoords.append( coords['x'] )
                 cids.append( cid )
@@ -131,23 +135,12 @@ class MarkerManager( PointsInteractor ):
                 else:
                     lgm().log( f" ** get_points, markers = {marker.pids}")
                     for pid in marker.pids:
-                        coords = self._block.pid2coords(pid)
-                        if (coords is not None) and self._block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
+                        coords = self.block.pid2coords(pid)
+                        if (coords is not None) and self.block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
                             ycoords.append( coords['y'] )
                             xcoords.append( coords['x'] )
                             colors.append( lm().colors[marker.cid] )
         return ycoords, xcoords, colors
-
-    @log_timing
-    def get_classmap(self) -> xa.DataArray:
-        from spectraclass.model.labels import LabelsManager, lm
-        cmap: xa.DataArray = self._block.classmap()
-        for marker in lm().markers:
-            if marker.type == "label":
-                for pid in marker.pids:
-                    idx = self._block.pid2indices(pid)
-                    cmap[ idx['iy'], idx['ix'] ] = marker.cid
-        return cmap
 
 
     # def on_pick( self, event: PickEvent ):
@@ -196,7 +189,7 @@ class MarkerManager( PointsInteractor ):
             if int(event.button) == self.RIGHT_BUTTON:
                 self.delete_marker( event.xdata, event.ydata )
             elif int(event.button) == self.LEFT_BUTTON:
-                pid = self._block.coords2pindex(event.ydata, event.xdata)
+                pid = self.block.coords2pindex(event.ydata, event.xdata)
                 lgm().log(f"on_button_press --> selected pid = {pid}, button = {event.button}")
                 self.mark_point( pid, point=(event.xdata,event.ydata) )
             self.plot()

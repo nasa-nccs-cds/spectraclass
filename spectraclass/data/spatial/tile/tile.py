@@ -356,8 +356,8 @@ class Block(DataContainer):
 
     @property
     def shape(self) -> Tuple[int,int]:
-        from spectraclass.data.spatial.tile.manager import TileManager
-        return TileManager.instance().block_shape
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        return tm().block_shape
 
     @property
     def zeros(self) -> np.ndarray:
@@ -369,9 +369,8 @@ class Block(DataContainer):
 
     def getPointData( self ) -> Tuple[xa.DataArray,Dict]:
         if self._point_data is None:
-            result, pmask, rmask =  self.raster2points( self.data )
+            self._point_data, pmask, rmask =  self.raster2points( self.data )
             self._point_coords: Dict[str,np.ndarray] = dict( y=self.data.y.values, x=self.data.x.values, mask=pmask )
-            self._point_data = result.assign_coords( samples = np.arange( 0, result.shape[0] ) )
             self._samples_axis = self._point_data.coords['samples']
             self._point_data.attrs['type'] = 'block'
             self._point_data.attrs['dsid'] = self.dsid()
@@ -438,23 +437,23 @@ class Block(DataContainer):
         return dict( iy = iy, ix = ix )
 
     def pid2coords(self, pid: int) -> Dict:
-        point_index = self.pid_array[pid]
-        xs = self.point_coords['x'].size
-        pi = dict( x= point_index % xs,  y= point_index // xs )
+        pi =self.pid2indices( pid )
         try:
-            return { c: self.point_coords[c][ pi[c] ] for c in ['y','x'] }
+            return { c: self.point_coords[c][ pi[f"i{c}"] ] for c in ['y','x'] }
         except Exception as err:
-            lgm().log( f" --> pindex2coords Error: {err}, pid = {point_index}, coords = {pi}" )
+            lgm().log( f" --> pindex2coords Error: {err}, pid = {pid}, coords = {pi}" )
 
     def pid2indices(self, pid: int) -> Dict:
-        point_index = self.pid_array[pid]
-        xs = self.point_coords['x'].size
-        pi = dict( x= point_index % xs,  y= point_index // xs )
-        try:
-            selected_sample: List = [ self.point_coords[c][ pi[c] ] for c in ['y','x'] ]
-            return self.coords2indices( selected_sample[0], selected_sample[1] )
-        except Exception as err:
-            lgm().log( f" --> pindex2indices Error: {err}, pid = {point_index}, coords = {pi}" )
+        return dict( ix=pid % self.shape[1], iy=pid // self.shape[1] )
+
+        # point_index = self.pid_array[pid]
+        # xs = self.point_coords['x'].size
+        # pi = dict( x= point_index % xs,  y= point_index // xs )
+        # try:
+        #     selected_sample: List = [ self.point_coords[c][ pi[c] ] for c in ['y','x'] ]
+        #     return self.coords2indices( selected_sample[0], selected_sample[1] )
+        # except Exception as err:
+        #     lgm().log( f" --> pindex2indices Error: {err}, pid = {point_index}, coords = {pi}" )
 
     def points2raster(self, points_data: xa.DataArray ) -> xa.DataArray:
         tmask = self.get_threshold_mask( reduced=False )
@@ -478,22 +477,28 @@ class Block(DataContainer):
             point_data = point_data if np.isnan( nodata ) else point_data.where( point_data != nodata, np.nan )
         pmask: np.ndarray = ~np.isnan(point_data.values) if (self._point_coords is None) else self.mask
         if pmask.ndim == 2: pmask = pmask.any(axis=1)
+        point_index = np.arange( 0, base_raster.shape[-1]*base_raster.shape[-2] )
         filtered_point_data: xa.DataArray = point_data[ pmask, : ] if ( point_data.ndim == 2 ) else point_data[ pmask ]
         filtered_point_data.attrs['dsid'] = base_raster.name
         lgm().log( f"raster2points -> [{base_raster.name}]: filtered_point_data shape = {filtered_point_data.shape}" )
         lgm().log( f"#IA: raster2points:  base_raster{base_raster.dims} shp={base_raster.shape}, rmask shp={shp(rmask)}, nz={nz(rmask)} ")
         lgm().log( f" ---> mask shape = {pmask.shape}, mask #valid = {np.count_nonzero(pmask)}/{pmask.size}, completed in {time.time()-t0} sec" )
-        return filtered_point_data, pmask, rmask
+        return filtered_point_data.assign_coords( samples=point_index[ pmask ] ), pmask, rmask
 
     def coords2pindex( self, cy, cx ) -> int:
+        from spectraclass.gui.control import UserFeedbackManager, ufm
         try:
             index = self.coords2indices( cy, cx )
-            return self.index_array.values[ index['iy'], index['ix'] ]
+            idx = index['ix'] + self.shape[1]*index['iy']
+            ufm().show( f"(iy,ix) = ({index['iy']},{index['ix']}) -> {idx}")
+            return idx
+#            return self.index_array.values[ index['iy'], index['ix'] ]
         except IndexError as err:
             return -1
 
     def multi_coords2pindex(self, ycoords: List[float], xcoords: List[float] ) -> np.ndarray:
         ( yi, xi ) = self.multi_coords2indices( ycoords, xcoords )
-        return self.index_array.values[ yi, xi ]
+        return xi + self.shape[1] * yi
+ #       return self.index_array.values[ yi, xi ]
 
 
