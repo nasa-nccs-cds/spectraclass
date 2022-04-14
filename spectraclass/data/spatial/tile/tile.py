@@ -2,6 +2,7 @@ import traceback
 
 from skimage.transform import ProjectiveTransform
 import numpy as np
+from os import path
 import numpy.ma as ma
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from pyproj import Transformer
@@ -272,12 +273,6 @@ class Block(DataContainer):
         return xa.full_like( self.data[0].squeeze(drop=True), default_value, dtype=np.int )
 
     @property
-    def index_array(self):
-        if self._index_array is None:
-            self._index_array = self.get_index_array()
-        return self._index_array
-
-    @property
     def pid_array(self):
         if self._pid_array is None:
             self._pid_array = self.get_pid_array()
@@ -297,7 +292,7 @@ class Block(DataContainer):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.gui.control import UserFeedbackManager, ufm
         block_data_file = dm().modal.dataFile( block=self )
-        if os.path.isfile( block_data_file ):
+        if path.isfile( block_data_file ):
             dataset: Optional[xa.Dataset] = dm().modal.loadDataFile(block=self)
             raw_raster = dataset["raw"]
             if raw_raster.size == 0: ufm().show( "This block does not appear to have any data.", "red" )
@@ -333,21 +328,6 @@ class Block(DataContainer):
     def file_name(self):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         return f"{tm().tileName()}_b-{tm().fmt(self.shape)}-{self.block_coords[0]}-{self.block_coords[1]}"
-
-    def get_index_array(self) -> xa.DataArray:
-        lgm().log(f"#IA: get_index_array: -----------------------------------------")
-        mdata = self._apply_mask( self.data, raster=True )
-        lgm().log(f"#IA: --> mdata shape = {mdata.shape}, dims = {mdata.dims}")
-        stacked_data: xa.DataArray = mdata.stack( samples=mdata.dims[-2:] )[0].squeeze(drop=True)
-        lgm().log(f"#IA: --> stacked_data shape = {stacked_data.shape}, dims = {stacked_data.dims}, nnan={nnan(stacked_data.values)}")
-        filtered_samples = stacked_data.dropna( dim="samples" )
-        lgm().log(f"#IA: --> filtered_samples shape = {filtered_samples.shape}, dims = {filtered_samples.dims}")
-        indices = np.arange(filtered_samples.shape[0])
-        point_indices = xa.DataArray( indices, dims=['samples'], coords=dict(samples=filtered_samples.samples) )
-        lgm().log(f"#IA: --> point_indices shape = {point_indices.shape}, dims = {point_indices.dims}")
-        result = point_indices.reindex( samples=stacked_data.samples, fill_value= -1 ).unstack()
-        lgm().log( f"#IA: --> result shape = {result.shape}, dims = {result.dims},  max index = {np.nanmax(result.values)}")
-        return result
 
     def get_pid_array(self) -> np.ndarray:
         d0: np.ndarray = self.data.values[0].squeeze().flatten()
@@ -471,6 +451,7 @@ class Block(DataContainer):
         t0 = time.time()
         if base_raster is None: return (None, None, None)
         rmask = ~np.isnan( base_raster[0].values.squeeze() )
+        lgm().log( f"raster2points: stack spatial dims: {base_raster.dims[-2:]} (last dim varies fastest)" )
         point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
         if '_FillValue' in point_data.attrs:
             nodata = point_data.attrs['_FillValue']
@@ -487,13 +468,21 @@ class Block(DataContainer):
 
     def coords2pindex( self, cy, cx ) -> int:
         from spectraclass.gui.control import UserFeedbackManager, ufm
+        index = self.coords2indices(cy, cx)
+        ix, iy = index['ix'], index['iy']
+        gid = ix + self.shape[1] * iy
         try:
-            index = self.coords2indices( cy, cx )
-            idx = index['ix'] + self.shape[1]*index['iy']
-            ufm().show( f"(iy,ix) = ({index['iy']},{index['ix']}) -> {idx}")
-            return idx
+            pdata, pcoords = self.getPointData()
+            s, x, y = pdata.samples.values, self.data.x.values, self.data.y.values
+            x0,y0 = x[0],y[0]
+            pids = np.where( s == gid )
+            spid = -1 if len(pids) == 0 else pids[0]
+            ufm().show( f"(ix,iy) => ({ix},{iy}) -> {gid}, spid={spid}, dx={int(x[ix]-x0)}, dy={int(y[iy]-y0)}, (cx,cy)=({int(cx)},{int(cy)})")
+            return gid
 #            return self.index_array.values[ index['iy'], index['ix'] ]
         except IndexError as err:
+            ufm().show( f"(ix,iy) => ({ix},{iy}) -> {gid}: Exception: {err}" )
+            lgm().trace( f"coords2pindex ERROR: {err}")
             return -1
 
     def multi_coords2pindex(self, ycoords: List[float], xcoords: List[float] ) -> np.ndarray:

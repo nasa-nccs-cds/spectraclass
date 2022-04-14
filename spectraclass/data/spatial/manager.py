@@ -222,6 +222,7 @@ class SpatialDataManager(ModeDataManager):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         lgm().log(f" Preparing inputs", print=True)
         reprocess = kwargs.get( 'reprocess',False )
+        if reprocess: dm().modal.removeDataset()
         for image_index in range( dm().modal.num_images ):
             self.set_current_image( image_index )
             block_nsamples = {}
@@ -229,16 +230,15 @@ class SpatialDataManager(ModeDataManager):
             ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
             for block in self.tiles.tile.getBlocks():
                 block_data_file =  dm().modal.dataFile(block=block)
+                process_dataset = True
                 nsamples = 0
                 coord_data = {}
-                process_dataset = True
-                block_file_exists = os.path.isfile( block_data_file )
-                if block_file_exists and not reprocess:
-                    dataset: xa.Dataset = xa.open_dataset( block_data_file )
+                if os.path.isfile( block_data_file ):
                     try:
-                        nsamples = 0 if (len( dataset.coords ) == 0) else dataset.coords['samples'].size
-                        block_nsamples[block.block_coords] = nsamples
-                        process_dataset = reprocess
+                        with xa.open_dataset(block_data_file) as dataset:
+                            nsamples = 0 if (len( dataset.coords ) == 0) else dataset.coords['samples'].size
+                            block_nsamples[block.block_coords] = nsamples
+                            process_dataset = False
                     except Exception as err:
                         lgm().log(f" Error getting samples from existing block_data_file: {block_data_file}\n ---> ERROR = {err}",  print=True)
                 if not process_dataset:

@@ -191,11 +191,19 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @exception_handled
     def getMarkerGeometry( self ) -> p3js.BufferGeometry:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.data.spatial.tile.tile import Block
         colors = lm().get_rgb_colors( list(self.marker_pids.values()) )
         idxs = np.array( list(self.marker_pids.keys()) )
-        srange, ssize = [self._xyz.samples.values.min(),self._xyz.samples.values.max()], self._xyz.samples.values.size
-        lgm().log(f"*** getMarkerGeometry->idxs: size = {idxs.size}, range = {[idxs.min(),idxs.max()]}; samples: size = {ssize}, range={srange}")
-        lgm().log(f" ---> has idx {idxs[0]} : {idxs[0] in self._xyz.samples.values}, " )
+        block: Block = tm().getBlock(index=(4, 4))
+        (pdata, pcoords) = block.getPointData()
+        samples: np.ndarray = pdata.samples.values
+        pids = np.where( samples == idxs )
+
+        srange, ssize = [self.xyz.samples.values.min(),self.xyz.samples.values.max()], self.xyz.samples.values.size
+        xrange = [ self.xyz.values.min(), self.xyz.values.max() ]
+        lgm().log(f"*** getMarkerGeometry->idxs: size = {idxs.size}, range = {[idxs.min(),idxs.max()]}; samples: size = {ssize}, range={srange}; data range = {xrange}")
+        lgm().log(f" ---> has idx around {idxs[0]} : {[(idx in self.xyz.samples.values) for idx in range(idxs[0]-10,idxs[0]+10)]}, " )
         positions = self.xyz.sel( samples= idxs ) if idxs.size else np.empty( shape=[0,3], dtype=np.int )
         attrs = dict( position=p3js.BufferAttribute( positions, normalized=False ), color=p3js.BufferAttribute( colors ) )
         return p3js.BufferGeometry( attributes=attrs )

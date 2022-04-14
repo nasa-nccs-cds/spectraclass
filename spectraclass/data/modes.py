@@ -4,6 +4,7 @@ import ipywidgets as ipw
 import os, glob, sys
 import netCDF4 as nc
 import ipywidgets as ip
+from os import path
 from collections import OrderedDict
 from pathlib import Path
 from spectraclass.gui.control import UserFeedbackManager, ufm
@@ -26,8 +27,8 @@ class ModeDataManager(SCSingletonConfigurable):
 
     image_names = tl.List( default_value=["NONE"] ).tag(config=True ,sync=True)
     dset_name = tl.Unicode("").tag(config=True)
-    cache_dir = tl.Unicode(os.path.expanduser("~/Development/Cache")).tag(config=True)
-    data_dir = tl.Unicode(os.path.expanduser("~/Development/Data")).tag(config=True)
+    cache_dir = tl.Unicode( path.expanduser("~/Development/Cache")).tag(config=True)
+    data_dir = tl.Unicode( path.expanduser("~/Development/Data")).tag(config=True)
     class_file = tl.Unicode("NONE").tag(config=True, sync=True)
 
     model_dims = tl.Int(32).tag(config=True, sync=True)
@@ -261,7 +262,13 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def blockFilePath( self, **kwargs ) -> str:
         ext = kwargs.get('ext','nc')
-        return os.path.join(self.datasetDir, self.dsid(**kwargs) + "." + ext )
+        return path.join(self.datasetDir, self.dsid(**kwargs) + "." + ext )
+
+    def removeDataset(self):
+        for f in os.listdir(self.datasetDir):
+            file = os.path.join(self.datasetDir, f)
+            if path.isfile( file ):
+                os.remove( file )
 
     def leafletRasterPath( self, **kwargs ) -> str:
         from spectraclass.data.base import DataManager, dm
@@ -271,11 +278,11 @@ class ModeDataManager(SCSingletonConfigurable):
         raise NotImplementedError( "Attempt to call virtual method")
 
     def hasBlockData(self) -> bool:
-        return os.path.isfile( self.dataFile() )
+        return path.isfile( self.dataFile() )
 
     def loadDataFile( self, **kwargs ) -> Optional[xa.Dataset]:
         dFile = self.dataFile( **kwargs )
-        if os.path.isfile( dFile ):
+        if path.isfile( dFile ):
             dataset: xa.Dataset = xa.open_dataset( dFile, concat_characters=True )
             dataset.attrs['data_file'] = dFile
             vars = [ f"{vid}{var.dims}" for (vid,var) in dataset.variables.items()]
@@ -297,10 +304,10 @@ class ModeDataManager(SCSingletonConfigurable):
         return longest_pre, [ p[plen:] for p in paths ]
 
     def getDatasetList( self ) -> Tuple[str,List[str]]:
-        dset_glob = os.path.expanduser(f"{self.datasetDir}/*.nc")
+        dset_glob = path.expanduser(f"{self.datasetDir}/*.nc")
         lgm().log(f"  Listing datasets from glob: '{dset_glob}' ")
-        files = list(filter(os.path.isfile, glob.glob(dset_glob)))
-        files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+        files = list(filter( path.isfile, glob.glob(dset_glob)))
+        files.sort(key=lambda x: path.getmtime(x), reverse=True)
         filenames = [Path(f).stem for f in files]
         return self.filterCommonPrefix( filenames )
 
@@ -310,7 +317,7 @@ class ModeDataManager(SCSingletonConfigurable):
     @property
     def datasetDir(self):
         from spectraclass.data.base import DataManager, dm
-        dsdir = os.path.join( self.cache_dir, "spectraclass", dm().mode )
+        dsdir = path.join( self.cache_dir, "spectraclass", dm().mode )
         os.makedirs(dsdir, 0o777, exist_ok=True)
         return dsdir
 
