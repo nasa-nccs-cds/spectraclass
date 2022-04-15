@@ -7,7 +7,7 @@ from spectraclass.gui.spatial.widgets.markers import Marker
 from typing import List, Union, Tuple, Optional, Dict, Callable, Iterable
 from matplotlib import cm
 import numpy.ma as ma
-import xarray as xa
+import pickle, xarray as xa
 from spectraclass.data.spatial.voxels import Voxelizer
 from matplotlib.colors import Normalize
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
@@ -99,11 +99,12 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @log_timing
     def addMarker(self, marker: Marker ):
-        self.clear_transients()
-        lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}, pid range={[marker.pids.min(),marker.pids.max()]}")
-        for pid in marker.pids:
-            self.mark_point( pid, marker.cid )
-        self.update_marker_plot()
+        if marker.size > 0:
+            self.clear_transients()
+            lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}, pid range={[marker.pids.min(),marker.pids.max()]}")
+            for pid in marker.pids:
+                self.mark_point( pid, marker.cid )
+            self.update_marker_plot()
 
     def deleteMarkers( self, pids: List[int] ):
         for pid in pids:
@@ -195,10 +196,11 @@ class PointCloudManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.tile import Block
         colors = lm().get_rgb_colors( list(self.marker_pids.values()) )
         idxs = np.array( list(self.marker_pids.keys()) )
-        block: Block = tm().getBlock(index=(4, 4))
-        (pdata, pcoords) = block.getPointData()
-        samples: np.ndarray = pdata.samples.values
-        pids = np.where( samples == idxs )
+        pickle.dump( idxs.tolist(), open("/tmp/idxs.pkl","wb") )
+        # block: Block = tm().getBlock(index=(4, 4))
+        # (pdata, pcoords) = block.getPointData()
+        # samples: np.ndarray = pdata.samples.values
+        # pids = np.where( samples == idxs )
 
         srange, ssize = [self.xyz.samples.values.min(),self.xyz.samples.values.max()], self.xyz.samples.values.size
         xrange = [ self.xyz.values.min(), self.xyz.values.max() ]

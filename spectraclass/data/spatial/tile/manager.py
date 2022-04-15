@@ -153,10 +153,10 @@ class TileManager(SCSingletonConfigurable):
         block = self.getBlock()
         proj = Proj( block.data.attrs.get( 'wkt', block.data.spatial_ref.crs_wkt ) )
         x, y = proj( lon, lat )
-        pid = block.coords2pindex( y, x )
-        assert pid >= 0, f"Marker selection error, no points for coord: {[y, x]}"
+        gid = block.coords2gid(y, x)
+        assert gid >= 0, f"Marker selection error, no points for coord: {[y, x]}"
         ic = cid if (cid >= 0) else lm().current_cid
-        return Marker( "marker", [pid], ic, **kwargs )
+        return Marker( "marker", [gid], ic, **kwargs )
 
     @exception_handled
     @log_timing

@@ -189,9 +189,9 @@ class MarkerManager( PointsInteractor ):
             if int(event.button) == self.RIGHT_BUTTON:
                 self.delete_marker( event.xdata, event.ydata )
             elif int(event.button) == self.LEFT_BUTTON:
-                pid = self.block.coords2pindex(event.ydata, event.xdata)
-                lgm().log(f"on_button_press --> selected pid = {pid}, button = {event.button}")
-                self.mark_point( pid, point=(event.xdata,event.ydata) )
+                gid = self.block.coords2gid(event.ydata, event.xdata)
+                lgm().log(f"on_button_press --> selected gid = {gid}, button = {event.button}")
+                self.mark_point( gid, point=(event.xdata,event.ydata) )
             self.plot()
 
 

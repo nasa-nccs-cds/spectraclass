@@ -20,8 +20,10 @@ def rescale( x: np.ndarray ):
     if xs.mean() == 0.0: return xs
     return xs / xs.mean()
 
-def sel( array: xa.DataArray, pids: Union[int,List[int]] ) -> np.ndarray:
-    if type(pids) is not list: pids = [pids]
+def sel( array: xa.DataArray, pids: Union[int,List[int],np.ndarray,xa.DataArray] ) -> np.ndarray:
+    if isinstance( pids, np.ndarray ): pids = pids.tolist()
+    elif isinstance( pids, xa.DataArray ): pids = pids.values.tolist()
+    elif not isinstance( pids, (list, tuple, set) ): pids = [ pids ]
     lgm().log( f"LinePlot.sel---> array[{array.dims}] shape: {array.shape}, range: {[array.values.min(), array.values.max()]}, pids[:10]={pids[:10]}")
     return array.sel( dict(samples=pids) ).values
 

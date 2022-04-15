@@ -466,24 +466,26 @@ class Block(DataContainer):
         lgm().log( f" ---> mask shape = {pmask.shape}, mask #valid = {np.count_nonzero(pmask)}/{pmask.size}, completed in {time.time()-t0} sec" )
         return filtered_point_data.assign_coords( samples=point_index[ pmask ] ), pmask, rmask
 
-    def coords2pindex( self, cy, cx ) -> int:
-        from spectraclass.gui.control import UserFeedbackManager, ufm
+    def coords2gid(self, cy, cx) -> int:
         index = self.coords2indices(cy, cx)
         ix, iy = index['ix'], index['iy']
         gid = ix + self.shape[1] * iy
-        try:
-            pdata, pcoords = self.getPointData()
-            s, x, y = pdata.samples.values, self.data.x.values, self.data.y.values
-            x0,y0 = x[0],y[0]
-            pids = np.where( s == gid )
-            spid = -1 if len(pids) == 0 else pids[0]
-            ufm().show( f"(ix,iy) => ({ix},{iy}) -> {gid}, spid={spid}, dx={int(x[ix]-x0)}, dy={int(y[iy]-y0)}, (cx,cy)=({int(cx)},{int(cy)})")
-            return gid
-#            return self.index_array.values[ index['iy'], index['ix'] ]
-        except IndexError as err:
-            ufm().show( f"(ix,iy) => ({ix},{iy}) -> {gid}: Exception: {err}" )
-            lgm().trace( f"coords2pindex ERROR: {err}")
-            return -1
+        return gid
+
+#        from spectraclass.gui.control import UserFeedbackManager, ufm
+#         try:
+#             pdata, pcoords = self.getPointData()
+#             s, x, y = pdata.samples.values, self.data.x.values, self.data.y.values
+#             x0,y0 = x[0],y[0]
+#             pids = np.where( s == gid )
+#             spid = -1 if len(pids) == 0 else pids[0]
+#             ufm().show( f"(ix,iy) => ({ix},{iy}) -> {gid}, spid={spid}, dx={int(x[ix]-x0)}, dy={int(y[iy]-y0)}, (cx,cy)=({int(cx)},{int(cy)})")
+#             return gid
+# #            return self.index_array.values[ index['iy'], index['ix'] ]
+#         except IndexError as err:
+#             ufm().show( f"(ix,iy) => ({ix},{iy}) -> {gid}: Exception: {err}" )
+#             lgm().trace( f"coords2pindex ERROR: {err}")
+#             return -1
 
     def multi_coords2pindex(self, ycoords: List[float], xcoords: List[float] ) -> np.ndarray:
         ( yi, xi ) = self.multi_coords2indices( ycoords, xcoords )

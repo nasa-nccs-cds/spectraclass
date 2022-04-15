@@ -1,3 +1,5 @@
+import pickle
+
 from spectraclass.data.base import DataManager
 from spectraclass.data.base import ModeDataManager
 from spectraclass.model.labels import LabelsManager, lm
@@ -6,6 +8,14 @@ from spectraclass.data.spatial.tile.tile import Block
 import xarray as xa, numpy as np
 import matplotlib.pyplot as plt
 from typing import List, Union, Tuple, Optional, Dict, Callable
+
+def gid2indices( git: int ) -> Tuple[int,int]:
+    iy = gid // x.size
+    ix = gid % x.size
+    return ( iy, ix )
+
+def indices2gid( iy: int, ix: int ) -> int:
+    return ix + iy * x.size
 
 image_indices = [2,3,4]
 dm: DataManager = DataManager.initialize( "demo2", 'desis' )
@@ -27,11 +37,20 @@ block: Block = tm().getBlock( index=(4,4) )
 samples: np.ndarray = pdata.samples.values
 x,y = pcoords['x'], pcoords['y']
 image_data = np.full( [y.size,x.size], 0 )
+cluster_gids: List[int] = pickle.load( open( "/tmp/cluster_gids.pkl", "rb" ) )
+test_gid=43894
 
 for iy in range( y.size ):
     for ix in range( x.size ):
-        pid = ix + iy * x.size
-        image_data[iy,ix] = int( pid in samples )
+        gid = indices2gid( iy, ix )
+        image_data[iy,ix] = int( gid in samples )
+
+for gid in cluster_gids:
+    (iy,ix) = gid2indices( gid )
+    image_data[iy, ix] = 2
+
+(iy,ix) = gid2indices( test_gid )
+image_data[iy, ix] = 3
 
 image = xa.DataArray( image_data, dims=['y','x'], coords = dict( x=x, y=y ) )
 image.plot.imshow( )
