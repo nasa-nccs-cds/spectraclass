@@ -114,7 +114,7 @@ class MarkerManager( PointsInteractor ):
     def get_highlight_points( self ) -> Tuple[ List[float], List[float], List[int] ]:
         ycoords, xcoords, cids = [], [], []
         for (pid,cid) in self._highlight_points:
-            coords = self.block.pid2coords(pid)
+            coords = self.block.gid2coords(pid)
             if (coords is not None) and self.block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
                 ycoords.append( coords['y'] )
                 xcoords.append( coords['x'] )
@@ -135,7 +135,7 @@ class MarkerManager( PointsInteractor ):
                 else:
                     lgm().log( f" ** get_points, markers = {marker.pids}")
                     for pid in marker.pids:
-                        coords = self.block.pid2coords(pid)
+                        coords = self.block.gid2coords(pid)
                         if (coords is not None) and self.block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
                             ycoords.append( coords['y'] )
                             xcoords.append( coords['x'] )
@@ -173,13 +173,13 @@ class MarkerManager( PointsInteractor ):
             pcm().deleteMarkers( [pid] )
 
     @log_timing
-    def mark_point(self, pid, **kwargs ) -> Optional[Tuple[float,float]]:
+    def mark_point(self, gid, **kwargs ) -> Optional[Tuple[float,float]]:
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.map import MapManager, mm
-        if pid >= 0:
+        if gid >= 0:
             cid = kwargs.get( 'cid', lm().current_cid )
-            point = kwargs.get('point', mm().get_point_coords( pid ) )
-            m = Marker( "marker", [pid], cid, point=point )
+            point = kwargs.get('point', mm().get_point_coords( gid ) )
+            m = Marker( "marker", [gid], cid, point=point )
             self.add(m)
             return point
 
@@ -189,7 +189,7 @@ class MarkerManager( PointsInteractor ):
             if int(event.button) == self.RIGHT_BUTTON:
                 self.delete_marker( event.xdata, event.ydata )
             elif int(event.button) == self.LEFT_BUTTON:
-                gid = self.block.coords2gid(event.ydata, event.xdata)
+                gid,ix,iy = self.block.coords2gid(event.ydata, event.xdata)
                 lgm().log(f"on_button_press --> selected gid = {gid}, button = {event.button}")
                 self.mark_point( gid, point=(event.xdata,event.ydata) )
             self.plot()

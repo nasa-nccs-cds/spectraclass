@@ -373,7 +373,7 @@ class LabelsManager(SCSingletonConfigurable):
                 else:
                     lgm().log( f" Setting {len(marker.pids)} labels for cid = {marker.cid}" )
                     for pid in marker.pids:
-                        idx = block.pid2indices(pid)
+                        idx = block.gid2indices(pid)
                         cmap[ idx['iy'], idx['ix'] ] = marker.cid
         return xcmap.copy(data=cmap)
 
@@ -388,7 +388,7 @@ class LabelsManager(SCSingletonConfigurable):
                 lgm().log( f"update_label_map->MARKER[{marker.type}]: Setting {len(marker.pids)} labels for cid = {marker.cid}" )
          # -->       points2raster
                 for pid in marker.pids:
-                    idx = block.pid2indices(pid)
+                    idx = block.gid2indices(pid)
                     cmap[ idx['iy'], idx['ix'] ] = marker.cid
         cmap[ mask ] = cid
         return cmap

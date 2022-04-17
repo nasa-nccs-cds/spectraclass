@@ -133,7 +133,7 @@ class MapManager(SCSingletonConfigurable):
         return pdata[:,self.currentFrame] if current_frame else pdata
 
     def get_point_coords( self, pid: int ) -> Tuple[float,float]:
-        coords = self.block.pid2coords(pid)
+        coords = self.block.gid2coords(pid)
         return coords['x'], coords['y']
 
     @property

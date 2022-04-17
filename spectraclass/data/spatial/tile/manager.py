@@ -45,7 +45,8 @@ class TileManager(SCSingletonConfigurable):
 
     @property
     def block_shape(self):
-        return [self.block_size] * 2
+        block = self.getBlock()
+        return block.shape
 
     @tl.observe('block_index')
     def _block_index_changed(self, change):
@@ -153,8 +154,8 @@ class TileManager(SCSingletonConfigurable):
         block = self.getBlock()
         proj = Proj( block.data.attrs.get( 'wkt', block.data.spatial_ref.crs_wkt ) )
         x, y = proj( lon, lat )
-        gid = block.coords2gid(y, x)
-        assert gid >= 0, f"Marker selection error, no points for coord: {[y, x]}"
+        gid,ix,iy = block.coords2gid(y, x)
+        assert gid >= 0, f"Marker selection error, no points for coord[{ix},{iy}]: {[x,y]}"
         ic = cid if (cid >= 0) else lm().current_cid
         return Marker( "marker", [gid], ic, **kwargs )
 

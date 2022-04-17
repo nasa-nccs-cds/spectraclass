@@ -206,7 +206,7 @@ class Block(DataContainer):
         self.config = kwargs
         self._trecs: Tuple[ Dict[int,ThresholdRecord], Dict[int,ThresholdRecord] ] = ( {}, {} )
         self.block_coords = (ix,iy)
-        self.validate_parameters()
+ #       self.validate_parameters()
         self._index_array: xa.DataArray = None
         self._pid_array: np.ndarray = None
         self._flow = None
@@ -327,7 +327,7 @@ class Block(DataContainer):
     @property
     def file_name(self):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        return f"{tm().tileName()}_b-{tm().fmt(self.shape)}-{self.block_coords[0]}-{self.block_coords[1]}"
+        return f"{tm().tileName()}_b-{tm().block_size}-{self.block_coords[0]}-{self.block_coords[1]}"
 
     def get_pid_array(self) -> np.ndarray:
         d0: np.ndarray = self.data.values[0].squeeze().flatten()
@@ -335,17 +335,18 @@ class Block(DataContainer):
         return pids[ ~np.isnan(d0) ]
 
     @property
-    def shape(self) -> Tuple[int,int]:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        return tm().block_shape
+    def shape(self) -> Tuple[int,...]:
+        return self.data.shape
 
     @property
     def zeros(self) -> np.ndarray:
         return np.zeros( self.shape, np.int)
 
     def getBounds(self ) -> Tuple[ Tuple[int,int], Tuple[int,int] ]:
-        x0, y0 = self.block_coords[0]*self.shape[0], self.block_coords[1]*self.shape[1]
-        return ( x0, x0+self.shape[1] ), ( y0, y0+self.shape[0] )
+        from spectraclass.data.spatial.tile.manager import tm
+        bsize = tm().block_size
+        x0, y0 = self.block_coords[0]*bsize, self.block_coords[1]*bsize
+        return ( x0, x0+bsize ), ( y0, y0+bsize )
 
     def getPointData( self ) -> Tuple[xa.DataArray,Dict]:
         if self._point_data is None:
@@ -412,18 +413,14 @@ class Block(DataContainer):
         indices = trans_coords.transpose().astype( np.int32 )
         return indices[1], indices[0]
 
-    def indices2coords(self, iy, ix) -> Dict:
-        (iy,ix) = self.ptransform(np.array([[ix+0.5, iy+0.5], ]))
-        return dict( iy = iy, ix = ix )
-
-    def pid2coords(self, pid: int) -> Dict:
-        pi =self.pid2indices( pid )
+    def gid2coords(self, pid: int) -> Dict:
+        pi =self.gid2indices(pid)
         try:
             return { c: self.point_coords[c][ pi[f"i{c}"] ] for c in ['y','x'] }
         except Exception as err:
             lgm().log( f" --> pindex2coords Error: {err}, pid = {pid}, coords = {pi}" )
 
-    def pid2indices(self, pid: int) -> Dict:
+    def gid2indices(self, pid: int) -> Dict:
         return dict( ix=pid % self.shape[1], iy=pid // self.shape[1] )
 
         # point_index = self.pid_array[pid]
@@ -466,11 +463,11 @@ class Block(DataContainer):
         lgm().log( f" ---> mask shape = {pmask.shape}, mask #valid = {np.count_nonzero(pmask)}/{pmask.size}, completed in {time.time()-t0} sec" )
         return filtered_point_data.assign_coords( samples=point_index[ pmask ] ), pmask, rmask
 
-    def coords2gid(self, cy, cx) -> int:
+    def coords2gid(self, cy, cx) -> Tuple[int,int,int]:
         index = self.coords2indices(cy, cx)
         ix, iy = index['ix'], index['iy']
         gid = ix + self.shape[1] * iy
-        return gid
+        return gid,ix,iy
 
 #        from spectraclass.gui.control import UserFeedbackManager, ufm
 #         try:
@@ -487,9 +484,8 @@ class Block(DataContainer):
 #             lgm().trace( f"coords2pindex ERROR: {err}")
 #             return -1
 
-    def multi_coords2pindex(self, ycoords: List[float], xcoords: List[float] ) -> np.ndarray:
+    def multi_coords2gid(self, ycoords: List[float], xcoords: List[float]) -> np.ndarray:
         ( yi, xi ) = self.multi_coords2indices( ycoords, xcoords )
         return xi + self.shape[1] * yi
- #       return self.index_array.values[ yi, xi ]
 
 
