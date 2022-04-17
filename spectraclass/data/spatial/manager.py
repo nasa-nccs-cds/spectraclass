@@ -229,6 +229,7 @@ class SpatialDataManager(ModeDataManager):
             ufm().show( f"Preprocessing data blocks for image {dm().modal.image_name}", "blue" )
             ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
             for block in self.tiles.tile.getBlocks():
+                lgm().log(f" Processing block{block.block_coords}")
                 block_data_file =  dm().modal.dataFile(block=block)
                 process_dataset = True
                 nsamples = 0
@@ -294,8 +295,11 @@ class SpatialDataManager(ModeDataManager):
 
 
     def dataFile( self, **kwargs ):
+        from spectraclass.data.spatial.tile.tile import Block
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        file_name = f"{tm().tileName()}_b-{tm().block_size}-{tm().block_index[0]}-{tm().block_index[1]}"
+        block: Block = kwargs.get('block',None)
+        bindex = tm().block_index if (block is None) else block.block_coords
+        file_name = f"{tm().tileName()}_b-{tm().block_size}-{bindex[0]}-{bindex[1]}"
         return os.path.join( self.datasetDir, file_name + f"-m{self.model_dims}.nc" )
 
     def getFilePath(self) -> str:
