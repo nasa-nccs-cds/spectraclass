@@ -7,7 +7,7 @@ from spectraclass.gui.spatial.widgets.markers import Marker
 from typing import List, Union, Tuple, Optional, Dict, Callable, Iterable
 from matplotlib import cm
 import numpy.ma as ma
-import xarray as xa
+import pickle, xarray as xa
 from spectraclass.data.spatial.voxels import Voxelizer
 from matplotlib.colors import Normalize
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
@@ -30,7 +30,7 @@ class PointCloudManager(SCSingletonConfigurable):
     def __init__( self):
         super(PointCloudManager, self).__init__()
         self._gui = None
-        self._xyz: np.ndarray = None
+        self._xyz: xa.DataArray = None
         self.points: p3js.Points = None
         self.marker_points: Optional[p3js.Points] = None
         self.marker_pids = {}
@@ -99,11 +99,12 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @log_timing
     def addMarker(self, marker: Marker ):
-        self.clear_transients()
-        lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}, pids[10]={marker.pids[:10]}")
-        for pid in marker.pids:
-            self.mark_point( pid, marker.cid )
-        self.update_marker_plot()
+        if marker.size > 0:
+            self.clear_transients()
+            lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}, pid range={[marker.pids.min(),marker.pids.max()]}")
+            for pid in marker.pids:
+                self.mark_point( pid, marker.cid )
+            self.update_marker_plot()
 
     def deleteMarkers( self, pids: List[int] ):
         for pid in pids:
@@ -123,23 +124,23 @@ class PointCloudManager(SCSingletonConfigurable):
             self.marker_points.geometry = self.getMarkerGeometry()
 
     @property
-    def xyz(self)-> np.ndarray:
+    def xyz(self)-> xa.DataArray:
         if self._xyz is None: self.init_data()
         return self._xyz
 
     @xyz.setter
-    def xyz(self, value: np.ndarray):
-        self._xyz = value
+    def xyz(self, data_array: Union[xa.DataArray,np.ndarray] ):
+        self._xyz = self._xyz.copy( data=data_array ) if (type(data_array) == np.ndarray) else data_array
         self._bounds = []
-        self.voxelizer = Voxelizer( value, 0.1*self.scale )
-        self.point_locator = value.sum(axis=1)
+        self.voxelizer = Voxelizer( self._xyz, 0.1*self.scale )
+        self.point_locator = self._xyz.values.sum(axis=1)
 
     def initialize_points(self):
-        self._xyz: np.ndarray = self.empty_pointset
+        self._xyz: xa.DataArray = self.empty_pointset
 
     @property
-    def empty_pointset(self) -> np.ndarray:
-        return np.empty(shape=[0, 3], dtype=np.float)
+    def empty_pointset(self) -> xa.DataArray:
+        return xa.DataArray( np.empty(shape=[0, 3], dtype=np.float), dims=["samples","model"] )
 
     @property
     def empty_pids(self) -> np.ndarray:
@@ -149,10 +150,11 @@ class PointCloudManager(SCSingletonConfigurable):
         from spectraclass.reduction.embedding import ReductionManager, rm
         from spectraclass.data.base import dm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
-        refresh = kwargs.get( 'refresh', False )
-        model_data = dm().getModelData()
+        refresh = kwargs.get( 'refresh', True )
+        model_data: Optional[xa.DataArray] = dm().getModelData()
 
         if (model_data is not None) and (model_data.shape[0] > 1):
+            lgm().log(f"UMAP.init: model_data{model_data.dims} shape = {model_data.shape}")
             flow: ActivationFlow = afm().getActivationFlow()
             if flow is None: return False
             node_data = model_data if refresh else None
@@ -161,7 +163,7 @@ class PointCloudManager(SCSingletonConfigurable):
             self.xyz = self.normalize(embedding)
             return True
 
-    def normalize(self, point_data: np.ndarray):
+    def normalize(self, point_data: xa.DataArray) -> xa.DataArray:
         return (point_data - point_data.mean()) * (self.scale / point_data.std())
 
     def getColors( self, **kwargs ):
@@ -190,12 +192,22 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @exception_handled
     def getMarkerGeometry( self ) -> p3js.BufferGeometry:
-        markers = dict( sorted( self.marker_pids.items() ) )
-        colors = lm().get_rgb_colors( list(markers.values()) )
-        idxs = list(markers.keys())
-        positions = self.xyz[ np.array( idxs ) ] if len(idxs) else np.empty( shape=[0,3], dtype=np.int )
-        lgm().log(f"*** getMarkerGeometry: positions shape = {positions.shape}, color shape = {colors.shape}")
-        attrs = dict( position = p3js.BufferAttribute( positions, normalized=False ),  color =    p3js.BufferAttribute( colors ) )
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.data.spatial.tile.tile import Block
+        colors = lm().get_rgb_colors( list(self.marker_pids.values()) )
+        idxs = np.array( list(self.marker_pids.keys()) )
+        pickle.dump( idxs.tolist(), open("/tmp/idxs.pkl","wb") )
+        # block: Block = tm().getBlock(index=(4, 4))
+        # (pdata, pcoords) = block.getPointData()
+        # samples: np.ndarray = pdata.samples.values
+        # pids = np.where( samples == idxs )
+
+        srange, ssize = [self.xyz.samples.values.min(),self.xyz.samples.values.max()], self.xyz.samples.values.size
+        xrange = [ self.xyz.values.min(), self.xyz.values.max() ]
+        lgm().log(f"*** getMarkerGeometry->idxs: size = {idxs.size}, range = {[idxs.min(),idxs.max()]}; samples: size = {ssize}, range={srange}; data range = {xrange}")
+        lgm().log(f" ---> has idx around {idxs[0]} : {[(idx in self.xyz.samples.values) for idx in range(idxs[0]-10,idxs[0]+10)]}, " )
+        positions = self.xyz.sel( samples= idxs ) if idxs.size else np.empty( shape=[0,3], dtype=np.int )
+        attrs = dict( position=p3js.BufferAttribute( positions, normalized=False ), color=p3js.BufferAttribute( colors ) )
         return p3js.BufferGeometry( attributes=attrs )
 
     def createPoints( self, **kwargs ):
@@ -236,7 +248,6 @@ class PointCloudManager(SCSingletonConfigurable):
         ppid = self.voxelizer.get_pid( point )
         if ppid >= 0:
             self.pick_point = ppid
-            lgm().log(f" *** PCM.on_pick: pid={self.pick_point}, [{point}]")
             if mm().initialized():
                 if highlight:   pos = mm().highlight_points( [self.pick_point], [0] )
                 else:           pos = mm().mark_point( self.pick_point, cid=0 )

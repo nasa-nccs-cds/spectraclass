@@ -133,7 +133,7 @@ class MapManager(SCSingletonConfigurable):
         return pdata[:,self.currentFrame] if current_frame else pdata
 
     def get_point_coords( self, pid: int ) -> Tuple[float,float]:
-        coords = self.block.pid2coords(pid)
+        coords = self.block.gid2coords(pid)
         return coords['x'], coords['y']
 
     @property
@@ -268,8 +268,9 @@ class MapManager(SCSingletonConfigurable):
     def one_hot_to_index(self, class_data: xa.DataArray, axis=0) -> xa.DataArray:
         return class_data.argmax( axis=axis, skipna=True, keep_attrs=True ).squeeze()
 
-    @log_timing
+    @exception_handled
     def plot_labels_image(self, classification: xa.DataArray = None ):
+
         if classification is None:
             if self._classification_data is not None:
                 self._classification_data = xa.zeros_like( self._classification_data )
@@ -279,17 +280,18 @@ class MapManager(SCSingletonConfigurable):
                 self._classification_data = self.one_hot_to_index( self._classification_data )
 
         if self._classification_data is not None:
-  #          vrange = [ self._classification_data.values.min(), self._classification_data.values.max() ]
-  #          lgm().log( f"  plot labels image, shape = {self._classification_data.shape}, vrange = {vrange}  " )
-            # try: self.labels_image.remove()
-            # except Exception: pass
-            # self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=self.layers.alpha("labels"), cmap=self.cspecs['cmap'],
-            #                                                add_colorbar=False, norm=self.cspecs['norm'])
+            try:
+                self.labels_image.remove()
+                self.labels_image = None
+            except Exception: pass
 
+            vrange = [ self._classification_data.values.min(), self._classification_data.values.max() ]
             if self.labels_image is None:
-                self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=self.layers.alpha("labels"), cmap=self.cspecs['cmap'],
-                                                           add_colorbar=False, norm=self.cspecs['norm'])
+                alpha, cmap, norm = self.layers.alpha("labels"), self.cspecs['cmap'], self.cspecs['norm']
+                lgm().log(f"  create labels image, shape={self._classification_data.shape}, dims={self._classification_data.dims}, vrange={vrange}, alpha={alpha}  ")
+                self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=alpha, cmap=cmap, norm=norm, add_colorbar=False)
             else:
+                lgm().log(f"  update labels image, shape={self._classification_data.shape}, vrange={vrange}  ")
                 self.labels_image.set_data( self._classification_data.values )
                 self.labels_image.changed()
 
@@ -411,28 +413,23 @@ class MapManager(SCSingletonConfigurable):
         use_model = kwargs.get( 'model', self._use_model_data )
         return dm().getModelData().shape[1] if use_model else self.data.shape[0]
 
-    def getThresholdMask(self) -> Optional[xa.DataArray]:
-        if self.block is not None:
-            return self.block.get_points_mask()
-
     @property
     def frame_data(self) -> Optional[xa.DataArray]:
         if self.currentFrame >= self.nFrames(): return None
         fdata = self.data[self.currentFrame]
         lgm().log( f" ******* frame_data[{self.currentFrame}], shape: {fdata.shape}, {svalid(fdata.values)}")
-        tmask: xa.DataArray = self.block.get_mask()
+        tmask: np.ndarray = self.block.get_threshold_mask( raster=True )
         if tmask is None:
             lgm().log(f" ---> NO threshold mask")
         else:
             mdata = fdata.values.flatten()
-            mdata[tmask.values.flatten()] = np.nan
+            mdata[(~tmask).flatten()] = np.nan
             fdata = fdata.copy( data=mdata.reshape(fdata.shape) )
             lgm().log(f" ---> threshold mask, {svalid(fdata.values)}")
         return fdata
 
-    @property
-    def threshold_mask(self) -> xa.DataArray:
-        return self.block.get_mask()
+    def threshold_mask( self, raster=True ) -> np.ndarray:
+        return self.block.get_threshold_mask(raster)
 
     @property
     def figure(self) -> Figure:
@@ -473,15 +470,17 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def setBlock( self, block_index: Tuple[int,int] = None, **kwargs ):
         from spectraclass.data.spatial.tile.manager import tm
+        from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         self.block: Block = tm().getBlock( index=block_index )
         if self.block is not None:
+            dm().clear_project_cache()
+            pcm().reset()
             update = kwargs.get( 'update', False )
             lgm().log(f" -------------------- Loading block: {self.block.block_coords}  -------------------- " )
             if self.base is not None:
                 self.base.set_bounds(self.block.xlim, self.block.ylim)
-            if self.points_selection is not None:
-                self.points_selection.set_block(self.block)
             self.band_axis = kwargs.pop('band', 0)
             self.z_axis_name = self.data.dims[self.band_axis]
             self.x_axis = kwargs.pop('x', 2)
@@ -500,8 +499,8 @@ class MapManager(SCSingletonConfigurable):
             standalone = self.base.setup_plot( "Label Construction", (x0,x1), (y0,y1), index=100, **kwargs )
             self.init_map()
             self.region_selection = PolygonInteractor( self.base.gax )
-            self.points_selection = MarkerManager( self.base.gax, self.block )
-            self.cluster_selection = ClusterSelector(self.base.gax, self.block)
+            self.points_selection = MarkerManager( self.base.gax )
+            self.cluster_selection = ClusterSelector( self.base.gax )
             self.init_hover()
             if not standalone:
                 self.create_selection_panel()

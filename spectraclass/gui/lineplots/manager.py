@@ -20,6 +20,13 @@ def rescale( x: np.ndarray ):
     if xs.mean() == 0.0: return xs
     return xs / xs.mean()
 
+def sel( array: xa.DataArray, pids: Union[int,List[int],np.ndarray,xa.DataArray] ) -> np.ndarray:
+    if isinstance( pids, np.ndarray ): pids = pids.tolist()
+    elif isinstance( pids, xa.DataArray ): pids = pids.values.tolist()
+    elif not isinstance( pids, (list, tuple, set) ): pids = [ pids ]
+    lgm().log( f"LinePlot.sel---> array[{array.dims}] shape: {array.shape}, range: {[array.values.min(), array.values.max()]}, pids[:10]={pids[:10]}")
+    return array.sel( dict(samples=pids) ).values
+
 class LinePlot(ABC):
 
     _x: np.ndarray = None
@@ -68,11 +75,11 @@ class LinePlot(ABC):
     def init_data(cls, **kwargs ):
         if cls._x is None:
             project_data: Dict[str,Union[xa.DataArray,List,Dict]]  = dm().loadCurrentProject("graph")
-            cls._x: np.ndarray = project_data["plot-x"].values
-            cls._mx: np.ndarray = project_data["plot-mx"].values
-            cls._ploty: np.ndarray = project_data["plot-y"].values
-            cls._rploty: np.ndarray = project_data["reproduction"].values
-            cls._mploty: np.ndarray = project_data["reduction"].values
+            cls._x: xa.DataArray = project_data["plot-x"]
+            cls._mx: xa.DataArray = project_data["plot-mx"]
+            cls._ploty: xa.DataArray = project_data["plot-y"]
+            cls._rploty: xa.DataArray = project_data["reproduction"]
+            cls._mploty: xa.DataArray = project_data["reduction"]
             table_cols = DataManager.instance().table_cols
             cls._mdata: List[np.ndarray] = [ cls.get_col_values(project_data[mdv]) for mdv in table_cols ]
 
@@ -81,34 +88,32 @@ class LinePlot(ABC):
         return np.array( data ) if isinstance(data, list) else data.values
 
 
-    def lx(self, pids: Union[int,List[int]] ) -> np.ndarray:
+    def lx(self, pids: Union[int,List[int]] ) -> xa.DataArray:
         xv = self._mx if self._use_model else self._x
         if xv.ndim == 1:   return  xv
-        else:              return  xv[pids].squeeze()
+        else:              return  sel( xv, pids ).squeeze()
 
     def ly(self, pids: Union[int,List[int]] ) -> np.ndarray:
-        ydata = self._mploty[pids] if self._use_model else self._ploty[pids]
-        return self.normalize( ydata ).squeeze().transpose()
+        ydata = self._mploty if self._use_model else self._ploty
+        return self.normalize( sel( ydata, pids ) ).squeeze().transpose()
 
     def lry(self, pid ) -> np.ndarray:
-        ydata = self._rploty[ pid ]
-        return self.normalize( ydata ).squeeze()
+        return self.normalize( sel( self._rploty, pid ) ).squeeze()
 
     @property
     def x(self) -> np.ndarray:
         xv = self._mx if self._use_model else self._x
         if xv.ndim == 1:   return  xv
-        else:              return  xv[ self.pids ]
+        else:              return  sel( xv, self.pids )
 
     @property
     def y( self ) -> np.ndarray :
-        ydata = self._mploty[self.pids] if self._use_model else self._ploty[self.pids]
-        return self.normalize( ydata ).transpose()
+        ydata = self._mploty if self._use_model else self._ploty
+        return self.normalize( sel( ydata, self.pids ) ).transpose()
 
     @property
     def ry( self ) ->  np.ndarray:
-        ydata = self._rploty[ self.tpids ]
-        return self.normalize( ydata ).transpose()
+        return self.normalize( sel( self._rploty, self.tpids ) ).transpose()
 
     def normalize(self, data: np.ndarray ) -> np.ndarray:
         axis = 1 if (data.ndim > 1) else 0

@@ -113,7 +113,7 @@ class DataManager(SCSingletonConfigurable):
 
     def preprocess_data(self):
         if not self.modal.hasBlockData() or not self.hasMetadata():
-            block_data =  self.prepare_inputs( )
+            self.prepare_inputs( )
             self.save_config( block_data )
 
     def app(self) -> SpectraclassController:
@@ -262,20 +262,18 @@ class DataManager(SCSingletonConfigurable):
                 self._project_data = self._mode_data_manager_.loadCurrentProject()
                 assert self._project_data is not None, "Project initialization failed- check log file for details"
                 ns = self._project_data['samples'].size
+                lgm().log(f"LOAD TILE[{self.dsid()}]: #samples = {ns} ")
                 if ns == 0: ufm().show( "This tile contains no data","red")
             return self._project_data
 
     def loadProject(self, dsid: str = None ) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
         if dsid is not None: self.set_dsid( dsid )
-        project_data: Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ] = self._mode_data_manager_.loadCurrentProject()
-        if project_data is not None:
-            ns = project_data['samples'].size
-            if ns == 0: ufm().show("This tile contains no data", "red")
-        return project_data
+        self._project_data = None
+        return self._mode_data_manager_.loadCurrentProject()
 
     @exception_handled
-    def prepare_inputs( self, **kwargs ) -> Dict[Tuple,int]:
-        return self._mode_data_manager_.prepare_inputs( **kwargs )
+    def prepare_inputs( self, **kwargs ):
+        self._mode_data_manager_.prepare_inputs( **kwargs )
 
     @exception_handled
     def getSpectralData( self, **kwargs ) -> Optional[xa.DataArray]:

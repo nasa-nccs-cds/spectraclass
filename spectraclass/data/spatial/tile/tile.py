@@ -1,11 +1,28 @@
+import traceback
+
 from skimage.transform import ProjectiveTransform
 import numpy as np
+from os import path
 import numpy.ma as ma
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from pyproj import Transformer
 import xarray as xa
 from typing import List, Union, Tuple, Optional, Dict
 import os, math, pickle, time
+
+def combine_masks( mask1: Optional[np.ndarray], mask2: Optional[np.ndarray] ) -> Optional[np.ndarray]:
+    if mask1 is None: return mask2
+    if mask2 is None: return mask1
+    return mask1 & mask2
+
+def shp( array: Optional[Union[np.ndarray,xa.DataArray]] ):
+    return "NONE" if (array is None) else array.shape
+
+def nz( array: Optional[Union[np.ndarray,xa.DataArray]] ):
+    return "NONE" if array is None else np.count_nonzero(array)
+
+def nnan( array: Optional[Union[np.ndarray,xa.DataArray]] ):
+    return "NONE" if array is None else np.count_nonzero( ~np.isnan(array) )
 
 class DataContainer:
 
@@ -34,10 +51,15 @@ class DataContainer:
     def data(self) -> xa.DataArray:
         if self._data is None:
             self._data = self._get_data()
+            lgm().log( f"IA: block data, shape: {shp(self._data)}, dims: {self._data.dims}")
         return self._data
 
     def _get_data(self) -> xa.DataArray:
         raise NotImplementedError(f" Attempt to call abstract method _get_data on {self.__class__.__name__}")
+
+    @property
+    def grid_size(self) -> int:
+        return self.data.shape[-1]*self.data.shape[-2]
 
     def update_transform(self):
 #        self.transformer.transform_bounds()
@@ -103,9 +125,10 @@ class DataContainer:
 
 class Tile(DataContainer):
 
-    def __init__(self, **kwargs ):
+    def __init__(self, tile_index: int, **kwargs ):
         super(Tile, self).__init__(**kwargs)
         self._blocks = {}
+        self._index = tile_index
         self.subsampling: int =  kwargs.get('subsample',1)
 
     def _get_data(self) -> xa.DataArray:
@@ -131,12 +154,13 @@ class ThresholdRecord:
         self._tmask: xa.DataArray = None
         self.thresholds: Tuple[float,float] = (0.0,1.0)
         self.fixed: bool = False
-        self.needs_update = [ False, False ]
+        self.needs_update = [ True, True ]
         self.fdata: xa.DataArray = fdata
         self._drange = None
 
     @property
     def tmask(self) -> Optional[xa.DataArray]:
+        self.compute_mask()
         return self._tmask
 
     @property
@@ -182,21 +206,25 @@ class Block(DataContainer):
         self.config = kwargs
         self._trecs: Tuple[ Dict[int,ThresholdRecord], Dict[int,ThresholdRecord] ] = ( {}, {} )
         self.block_coords = (ix,iy)
-        self.validate_parameters()
+ #       self.validate_parameters()
         self._index_array: xa.DataArray = None
         self._pid_array: np.ndarray = None
         self._flow = None
         self._samples_axis: Optional[xa.DataArray] = None
         self._point_data: Optional[xa.DataArray] = None
-        self._point_coords: Dict[str,np.ndarray] = None
+        self._point_coords: Optional[Dict[str,np.ndarray]] = None
+        self._point_mask: Optional[np.ndarray] = None
+        self._raster_mask: Optional[np.ndarray] = None
         lgm().log(f"CREATE Block: ix={ix}, iy={iy}")
 
     def set_thresholds(self, bUseModel: bool, iFrame: int, thresholds: Tuple[float,float] ) -> bool:
         trec: ThresholdRecord = self.threshold_record( bUseModel, iFrame )
         initialized = trec.is_empty()
         mask = trec.set_thresholds( thresholds )
-        lgm().log(f" MASK[{iFrame}].set_thresholds---> nmasked pixels = {np.count_nonzero(mask)} ")
+        lgm().log(f"#IA: MASK[{iFrame}].set_thresholds---> nmasked pixels = {np.count_nonzero(mask)} ")
         self._tmask = None
+        self._index_array = None
+        self.tile.reset()
         return initialized
 
     def threshold_record(self, model_data: bool, iFrame: int ) -> ThresholdRecord:
@@ -217,29 +245,32 @@ class Block(DataContainer):
                         value = mask_name
         return ( mask_list, value )
 
-    def get_mask(self) -> xa.DataArray:
+    @exception_handled
+    def get_threshold_mask( self, raster=False, reduced=True ) -> np.ndarray:
+        lgm().log( f"#IA: get_threshold_mask[B-{hex(id(self))}] (raster={raster}) ************************************** **************************************" )
         if self._tmask is None:
+            lgm().log( f"#IA: ***************> ntrecs={[len(trecs.keys()) for trecs in self._trecs]}")
+            ntmask = None
             for trecs in self._trecs:
                 for iFrame, trec in trecs.items():
+                    lgm().log( f"#IA: ***************> Merging Frame-{iFrame} Threshold Mask, shape={shp(trec.tmask)}, nz={nz(trec.tmask)}" )
                     if trec.tmask is not None:
-                        lgm().log( f"    T>> Merging Frame-{iFrame} Threshold Mask, shape = {trec.tmask.shape}, #masked = {np.count_nonzero(trec.tmask.values)}")
-                        self._tmask = trec.tmask if (self._tmask is None) else (self._tmask | trec.tmask)
+                        ntmask = trec.tmask if (ntmask is None) else (ntmask | trec.tmask)
+            if ntmask is not None:
+                self._tmask = ~ntmask
+                lgm().log( f"#IA: ***************> Merging [tmask, nz={nz(self._tmask)}] & [rmask, nz={nz(self.raster_mask)}]" )
+                self._tmask = self._tmask & self.raster_mask
         if self._tmask is not None:
-            lgm().log( f" TTTTTTT>> Get Threshold Mask, shape = {self._tmask.shape}, #masked = {np.count_nonzero(self._tmask.values)}")
-        return self._tmask
-
-    def get_points_mask(self) -> xa.DataArray:
-        (ptmask, rmask) = self.raster2points( self.get_mask() )
-        return ptmask
+            lgm().log( f"#IA: ***************> MASK--> shape = {shp(self._tmask)}, nz={nz(self._tmask)}" )
+            if not raster:
+                ptmask = self._tmask.values.flatten()
+                if reduced: ptmask = ptmask[self._point_mask]
+                lgm().log( f"#IA: ***************> MASK--> ptmask.shape={shp(ptmask)}, nz={nz(ptmask)} " )
+                return ptmask
+            return self._tmask.values
 
     def classmap(self, default_value: int =0 ) -> xa.DataArray:
         return xa.full_like( self.data[0].squeeze(drop=True), default_value, dtype=np.int )
-
-    @property
-    def index_array(self):
-        if self._index_array is None:
-            self._index_array = self.get_index_array()
-        return self._index_array
 
     @property
     def pid_array(self):
@@ -261,7 +292,7 @@ class Block(DataContainer):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.gui.control import UserFeedbackManager, ufm
         block_data_file = dm().modal.dataFile( block=self )
-        if os.path.isfile( block_data_file ):
+        if path.isfile( block_data_file ):
             dataset: Optional[xa.Dataset] = dm().modal.loadDataFile(block=self)
             raw_raster = dataset["raw"]
             if raw_raster.size == 0: ufm().show( "This block does not appear to have any data.", "red" )
@@ -269,7 +300,7 @@ class Block(DataContainer):
             if self.tile.data is None: return None
             xbounds, ybounds = self.getBounds()
             raster_slice = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
-            raw_raster = TileManager.process_tile_data( raster_slice )
+            raw_raster = raster_slice if (raster_slice.size == 0) else TileManager.process_tile_data( raster_slice )
         block_raster = self._apply_mask( raw_raster )
         block_raster.attrs['block_coords'] = self.block_coords
         block_raster.attrs['dsid'] = self.dsid()
@@ -277,11 +308,17 @@ class Block(DataContainer):
         block_raster.name = self.file_name
         return block_raster
 
-    def _apply_mask(self, block_array: xa.DataArray ) -> xa.DataArray:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        nodata_value = np.nan
-        mask_array: Optional[xa.DataArray] = tm().getMask()
-        return block_array if mask_array is None else block_array.where( mask_array, nodata_value )
+    @exception_handled
+    def _apply_mask( self, block_array: xa.DataArray, raster=False, reduced=False ) -> xa.DataArray:
+        lgm().log(f"#IA: apply_mask ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" )
+        mask_array: Optional[np.ndarray] = self.get_threshold_mask( raster=raster, reduced=reduced )
+        result = block_array
+        if mask_array is not None:
+            if raster and block_array.ndim == 3: mask_array = np.expand_dims( mask_array, 0 )
+            lgm().log( f"#IA: ~~~~~~~~~~>> shapes-> mask={shp(mask_array)}, data={shp(block_array)}; nz={nz(mask_array)}")
+            result = block_array.copy( data=np.where( mask_array, block_array.values, np.nan ) )
+            lgm().log( f"#IA: ~~~~~~~~~~>> resulting masked-data shape={shp(result)}; nnan/band={nnan(result.values)//result.shape[0]}")
+        return result
 
     def addTextureBands( self ):
         from spectraclass.features.texture.manager import TextureManager, texm
@@ -290,15 +327,7 @@ class Block(DataContainer):
     @property
     def file_name(self):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        return f"{tm().tileName()}_b-{tm().fmt(self.shape)}-{self.block_coords[0]}-{self.block_coords[1]}"
-
-    def get_index_array(self) -> xa.DataArray:
-        stacked_data: xa.DataArray = self.data.stack( samples=self.data.dims[-2:] )
-        filtered_samples = stacked_data[1].dropna( dim="samples" )
-        indices = np.arange(filtered_samples.shape[0])
-        point_indices = xa.DataArray( indices, dims=['samples'], coords=dict(samples=filtered_samples.samples) )
-        result = point_indices.reindex( samples=stacked_data.samples, fill_value= -1 )
-        return result.unstack()
+        return f"{tm().tileName()}_b-{tm().block_size}-{self.block_coords[0]}-{self.block_coords[1]}"
 
     def get_pid_array(self) -> np.ndarray:
         d0: np.ndarray = self.data.values[0].squeeze().flatten()
@@ -306,27 +335,39 @@ class Block(DataContainer):
         return pids[ ~np.isnan(d0) ]
 
     @property
-    def shape(self) -> Tuple[int,int]:
-        from spectraclass.data.spatial.tile.manager import TileManager
-        return TileManager.instance().block_shape
+    def shape(self) -> Tuple[int,...]:
+        return self.data.shape
 
     @property
     def zeros(self) -> np.ndarray:
         return np.zeros( self.shape, np.int)
 
     def getBounds(self ) -> Tuple[ Tuple[int,int], Tuple[int,int] ]:
-        x0, y0 = self.block_coords[0]*self.shape[0], self.block_coords[1]*self.shape[1]
-        return ( x0, x0+self.shape[1] ), ( y0, y0+self.shape[0] )
+        from spectraclass.data.spatial.tile.manager import tm
+        bsize = tm().block_size
+        x0, y0 = self.block_coords[0]*bsize, self.block_coords[1]*bsize
+        return ( x0, x0+bsize ), ( y0, y0+bsize )
 
     def getPointData( self ) -> Tuple[xa.DataArray,Dict]:
         if self._point_data is None:
-            result, pmask =  self.raster2points( self.data )
+            self._point_data, pmask, rmask =  self.raster2points( self.data )
             self._point_coords: Dict[str,np.ndarray] = dict( y=self.data.y.values, x=self.data.x.values, mask=pmask )
-            self._point_data = result.assign_coords( samples = np.arange( 0, result.shape[0] ) )
             self._samples_axis = self._point_data.coords['samples']
             self._point_data.attrs['type'] = 'block'
             self._point_data.attrs['dsid'] = self.dsid()
+            self._point_mask = pmask
+            self._raster_mask = rmask
         return (self._point_data, self._point_coords )
+
+    @property
+    def point_mask(self) -> np.ndarray:
+        if self._point_mask is None: self.getPointData()
+        return self._point_mask
+
+    @property
+    def raster_mask(self) -> np.ndarray:
+        if self._raster_mask is None: self.getPointData()
+        return self._raster_mask
 
     @property
     def point_coords(self) -> Dict[str,np.ndarray]:
@@ -372,63 +413,79 @@ class Block(DataContainer):
         indices = trans_coords.transpose().astype( np.int32 )
         return indices[1], indices[0]
 
-    def indices2coords(self, iy, ix) -> Dict:
-        (iy,ix) = self.ptransform(np.array([[ix+0.5, iy+0.5], ]))
-        return dict( iy = iy, ix = ix )
-
-    def pid2coords(self, pid: int) -> Dict:
-        point_index = self.pid_array[pid]
-        xs = self.point_coords['x'].size
-        pi = dict( x= point_index % xs,  y= point_index // xs )
+    def gid2coords(self, pid: int) -> Dict:
+        pi =self.gid2indices(pid)
         try:
-            return { c: self.point_coords[c][ pi[c] ] for c in ['y','x'] }
+            return { c: self.point_coords[c][ pi[f"i{c}"] ] for c in ['y','x'] }
         except Exception as err:
-            lgm().log( f" --> pindex2coords Error: {err}, pid = {point_index}, coords = {pi}" )
+            lgm().log( f" --> pindex2coords Error: {err}, pid = {pid}, coords = {pi}" )
 
-    def pid2indices(self, pid: int) -> Dict:
-        point_index = self.pid_array[pid]
-        xs = self.point_coords['x'].size
-        pi = dict( x= point_index % xs,  y= point_index // xs )
-        try:
-            selected_sample: List = [ self.point_coords[c][ pi[c] ] for c in ['y','x'] ]
-            return self.coords2indices( selected_sample[0], selected_sample[1] )
-        except Exception as err:
-            lgm().log( f" --> pindex2indices Error: {err}, pid = {point_index}, coords = {pi}" )
+    def gid2indices(self, pid: int) -> Dict:
+        return dict( ix=pid % self.shape[1], iy=pid // self.shape[1] )
+
+        # point_index = self.pid_array[pid]
+        # xs = self.point_coords['x'].size
+        # pi = dict( x= point_index % xs,  y= point_index // xs )
+        # try:
+        #     selected_sample: List = [ self.point_coords[c][ pi[c] ] for c in ['y','x'] ]
+        #     return self.coords2indices( selected_sample[0], selected_sample[1] )
+        # except Exception as err:
+        #     lgm().log( f" --> pindex2indices Error: {err}, pid = {point_index}, coords = {pi}" )
 
     def points2raster(self, points_data: xa.DataArray ) -> xa.DataArray:
-        lgm().log( f"points->raster, points: dims={points_data.dims}, shape={points_data.shape}")
+        tmask = self.get_threshold_mask( reduced=False )
+        lgm().log( f"points->raster, points: dims={points_data.dims}, shape={points_data.shape}; data: dims={self.data.dims}, shape={self.data.shape}")
+        lgm().log( f" ---> tmask: shape = {tmask.shape}, #nonzero = {np.count_nonzero(tmask)};  pmask: shape = {self.mask.shape}, #nonzero = {np.count_nonzero(self.mask)}")
         dims = [points_data.dims[1], self.data.dims[1], self.data.dims[2]]
         coords = [(dims[0], points_data[dims[0]].data), (dims[1], self.data[dims[1]].data), (dims[2], self.data[dims[2]].data)]
         raster_data = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
-        raster_data[ self.mask ] = points_data.data
+        raster_data[ tmask ] = points_data.data
         raster_data = raster_data.transpose().reshape([points_data.shape[1], self.data.shape[1], self.data.shape[2]])
         lgm().log( f"Generated Raster data, shape={raster_data.shape}, dims={dims}, with mask shape={self.mask.shape}" )
         return xa.DataArray( raster_data, coords, dims, points_data.name, points_data.attrs )
 
-    def raster2points( self, base_raster: xa.DataArray ) -> Tuple[ Optional[xa.DataArray], Optional[np.ndarray] ]:   #  base_raster dims: [ band, y, x ]
+    def raster2points( self, base_raster: xa.DataArray ) -> Tuple[ Optional[xa.DataArray], Optional[np.ndarray], Optional[np.ndarray] ]:   #  base_raster dims: [ band, y, x ]
         t0 = time.time()
-        if base_raster is None: return (None, None)
+        if base_raster is None: return (None, None, None)
+        rmask = ~np.isnan( base_raster[0].values.squeeze() ) if (base_raster.size > 0) else None
+        lgm().log( f"raster2points: stack spatial dims: {base_raster.dims[-2:]} (last dim varies fastest)" )
         point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
         if '_FillValue' in point_data.attrs:
             nodata = point_data.attrs['_FillValue']
             point_data = point_data if np.isnan( nodata ) else point_data.where( point_data != nodata, np.nan )
         pmask: np.ndarray = ~np.isnan(point_data.values) if (self._point_coords is None) else self.mask
         if pmask.ndim == 2: pmask = pmask.any(axis=1)
+        point_index = np.arange( 0, base_raster.shape[-1]*base_raster.shape[-2] )
         filtered_point_data: xa.DataArray = point_data[ pmask, : ] if ( point_data.ndim == 2 ) else point_data[ pmask ]
         filtered_point_data.attrs['dsid'] = base_raster.name
         lgm().log( f"raster2points -> [{base_raster.name}]: filtered_point_data shape = {filtered_point_data.shape}" )
-        lgm().log( f" --> mask shape = {pmask.shape}, mask #valid = {np.count_nonzero(pmask)}/{pmask.size}, completed in {time.time()-t0} sec" )
-        return filtered_point_data, pmask
+        lgm().log( f"#IA: raster2points:  base_raster{base_raster.dims} shp={base_raster.shape}, rmask shp={shp(rmask)}, nz={nz(rmask)} ")
+        lgm().log( f" ---> mask shape = {pmask.shape}, mask #valid = {np.count_nonzero(pmask)}/{pmask.size}, completed in {time.time()-t0} sec" )
+        return filtered_point_data.assign_coords( samples=point_index[ pmask ] ), pmask, rmask
 
-    def coords2pindex( self, cy, cx ) -> int:
-        try:
-            index = self.coords2indices( cy, cx )
-            return self.index_array.values[ index['iy'], index['ix'] ]
-        except IndexError as err:
-            return -1
+    def coords2gid(self, cy, cx) -> Tuple[int,int,int]:
+        index = self.coords2indices(cy, cx)
+        ix, iy = index['ix'], index['iy']
+        gid = ix + self.shape[1] * iy
+        return gid,ix,iy
 
-    def multi_coords2pindex(self, ycoords: List[float], xcoords: List[float] ) -> np.ndarray:
+#        from spectraclass.gui.control import UserFeedbackManager, ufm
+#         try:
+#             pdata, pcoords = self.getPointData()
+#             s, x, y = pdata.samples.values, self.data.x.values, self.data.y.values
+#             x0,y0 = x[0],y[0]
+#             pids = np.where( s == gid )
+#             spid = -1 if len(pids) == 0 else pids[0]
+#             ufm().show( f"(ix,iy) => ({ix},{iy}) -> {gid}, spid={spid}, dx={int(x[ix]-x0)}, dy={int(y[iy]-y0)}, (cx,cy)=({int(cx)},{int(cy)})")
+#             return gid
+# #            return self.index_array.values[ index['iy'], index['ix'] ]
+#         except IndexError as err:
+#             ufm().show( f"(ix,iy) => ({ix},{iy}) -> {gid}: Exception: {err}" )
+#             lgm().trace( f"coords2pindex ERROR: {err}")
+#             return -1
+
+    def multi_coords2gid(self, ycoords: List[float], xcoords: List[float]) -> np.ndarray:
         ( yi, xi ) = self.multi_coords2indices( ycoords, xcoords )
-        return self.index_array.values[ yi, xi ]
+        return xi + self.shape[1] * yi
 
 

@@ -35,7 +35,8 @@ class TileManager(SCSingletonConfigurable):
 
     def __init__(self):
         super(TileManager, self).__init__()
-        self._tiles: Dict[Tuple,Tile] = {}
+        self._tiles: Dict[str,Tile] = {}
+        self._idxtiles: Dict[int, Tile] = {}
         self.cacheTileData = True
         self._block_dims = None
         self._tile_metadata = None
@@ -44,7 +45,8 @@ class TileManager(SCSingletonConfigurable):
 
     @property
     def block_shape(self):
-        return [self.block_size] * 2
+        block = self.getBlock()
+        return block.shape
 
     @tl.observe('block_index')
     def _block_index_changed(self, change):
@@ -54,7 +56,21 @@ class TileManager(SCSingletonConfigurable):
     @property
     def tile(self) -> Tile:
         if self.image_name in self._tiles: return self._tiles[self.image_name]
-        return self._tiles.setdefault( self.image_name, Tile() )
+        new_tile = Tile( self.image_index )
+        self._idxtiles[ self.image_index ] = new_tile
+        return self._tiles.setdefault( self.image_name, new_tile )
+
+    def get_tile( self, tile_index: int ):
+        if tile_index in self._idxtiles: return self._idxtiles[tile_index]
+        new_tile = Tile( tile_index )
+        self._idxtiles[ tile_index ] = new_tile
+        return self._tiles.setdefault( self.get_image_name(tile_index), new_tile )
+
+    def tile_grid_offset(self, tile_index: int ) -> int:
+        offset = 0
+        for itile in range( tile_index ):
+            offset = offset + self.get_tile( itile ).grid_size
+        return offset
 
     @property
     def extent(self):
@@ -97,6 +113,13 @@ class TileManager(SCSingletonConfigurable):
     def image_name(self):
         return DataManager.instance().modal.image_name
 
+    def get_image_name( self, image_index: int ):
+        return DataManager.instance().modal.image_names[ image_index ]
+
+    @property
+    def image_index(self):
+        return DataManager.instance().modal.image_index
+
     @property
     def block_coords(self):
         return self.block_index
@@ -108,7 +131,8 @@ class TileManager(SCSingletonConfigurable):
         if bindex is not None: self.block_index = bindex
         return self.tile.getBlock( self.block_index[0], self.block_index[1] )
 
-    def getMask(self) -> Optional[xa.DataArray]:
+    @exception_handled
+    def getMask(self) -> Optional[np.ndarray]:
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.control import UserFeedbackManager, ufm
         if self.mask_class < 1: return None
@@ -122,7 +146,7 @@ class TileManager(SCSingletonConfigurable):
         if mask is None:
             ufm().show( f"The mask for class {self.mask_class} has not yet been generated.", "red")
             lgm().log( f"Can't apply mask for class {self.mask_class} because it has not yet been generated. Mask file: {mask_file}" )
-        return mask
+        return mask.values if (mask is not None) else None
 
 
     def get_marker(self, lon: float, lat: float, cid: int =-1, **kwargs ) -> Marker:
@@ -130,10 +154,10 @@ class TileManager(SCSingletonConfigurable):
         block = self.getBlock()
         proj = Proj( block.data.attrs.get( 'wkt', block.data.spatial_ref.crs_wkt ) )
         x, y = proj( lon, lat )
-        pid = block.coords2pindex( y, x )
-        assert pid >= 0, f"Marker selection error, no points for coord: {[y, x]}"
+        gid,ix,iy = block.coords2gid(y, x)
+        assert gid >= 0, f"Marker selection error, no points for coord[{ix},{iy}]: {[x,y]}"
         ic = cid if (cid >= 0) else lm().current_cid
-        return Marker( "marker", [pid], ic, **kwargs )
+        return Marker( "marker", [gid], ic, **kwargs )
 
     @exception_handled
     @log_timing
@@ -143,7 +167,7 @@ class TileManager(SCSingletonConfigurable):
         from shapely.geometry import Polygon
         if cid == -1: cid = lm().current_cid
         block: Block = self.getBlock()
-        idx2pid: np.ndarray = block.index_array.values.flatten()
+#        idx2pid: np.ndarray = block.index_array.values.flatten()
         raster:  xa.DataArray = block.data[0].squeeze()
         X, Y = raster.x.values, raster.y.values
         try:
@@ -151,7 +175,7 @@ class TileManager(SCSingletonConfigurable):
             MX, MY = np.meshgrid(X, Y)
             PID: np.ndarray = np.array(range(raster.size))
             mask: np.ndarray = svect.contains( polygon, MX, MY ).flatten()
-            pids = idx2pid[ PID[mask] ]
+            pids = PID[mask] # idx2pid[ PID[mask] ]
             marker = Marker( "label", pids[ pids > -1 ].tolist(), cid )
             lgm().log( f"Poly selection-> Create marker[{marker.size}], cid = {cid}")
         except Exception as err:

@@ -1,3 +1,5 @@
+import pickle
+
 import xarray
 from sklearn import cluster
 from sklearn.base import ClusterMixin
@@ -111,9 +113,22 @@ class ClusterManager(SCSingletonConfigurable):
         self._cluster_raster.attrs['cmap'] = self.get_colormap( layer )
         return self._cluster_raster
 
-    def get_cluster(self, pid: int ) -> int:
-        clusters = self._cluster_points.values.squeeze()
-        return clusters[pid]
+    @property
+    def samples(self) -> np.ndarray:
+        return self._cluster_points.samples.values
+
+    def gid2pid( self, gid: int ) -> int:
+        pids = np.where( self.samples == gid )
+        return pids[0] if len(pids) else -1
+
+    def get_cluster(self, gid: int ) -> int:
+        pid: int = self.gid2pid( gid )
+        if pid >= 0:
+            return self.samples[pid]
+        else:
+            lgm().log( f" ------> Can find cluster: gid={gid}, samples: gid-in={gid in self.samples}, size={self.samples.size}, range={[self.samples.min(),self.samples.max()]}")
+            pickle.dump( self.samples.tolist(), open("/tmp/cluster_gids.pkl","wb") )
+            return -1
 
     def get_points(self, cid: int ) -> np.ndarray:
         class_points = np.array( [], dtype=np.int )
@@ -125,15 +140,12 @@ class ClusterManager(SCSingletonConfigurable):
         return class_points.astype(np.int)
 
     @log_timing
-    def mark_cluster( self, pid: int, cid: int ) -> Marker:
+    def mark_cluster( self, gid: int, cid: int, icluster: int ) -> Marker:
         from spectraclass.model.labels import LabelsManager, lm
-        iClass = self.get_cluster( pid )
-        lgm().log( f"Mark cluster, pid={pid}, iClass={iClass}, cid={cid}")
-        ufm().show( f"Label cluster, cluster[{iClass}] -> class[{cid}]" )
-        self._marked_colors[ iClass ] = lm().get_rgb_color(cid)
-        self._markers.setdefault( cid, [] ).append( iClass )
+        self._marked_colors[ icluster ] = lm().get_rgb_color(cid)
+        self._markers.setdefault( cid, [] ).append( icluster )
         cmap = self.get_cluster_map().values
-        marker = Marker( "clusters", self.get_points(cid), cid, mask=(cmap==iClass) )
+        marker = Marker( "clusters", self.get_points(cid), cid, mask=(cmap==icluster) )
         return marker
 
         # nodata_value = -2
@@ -158,12 +170,16 @@ class ClusterManager(SCSingletonConfigurable):
 class ClusterSelector:
     LEFT_BUTTON = 1
 
-    def __init__(self, ax, block: Block ):
+    def __init__(self, ax ):
         self.ax = ax
         self.enabled = False
-        self.block: Block = block
         self.canvas = ax.figure.canvas
         self.canvas.mpl_connect('button_press_event', self.on_button_press)
+
+    @property
+    def block(self) -> Block:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        return tm().getBlock()
 
     def set_enabled(self, enable: bool ):
         lgm().log( f"ClusterSelector: set enabled = {enable}")
@@ -175,13 +191,17 @@ class ClusterSelector:
         from spectraclass.gui.spatial.widgets.markers import Marker
         from spectraclass.application.controller import app
         from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.gui.control import UserFeedbackManager, ufm
         lgm().log(f"ClusterSelector: on_button_press: enabled={self.enabled}")
         if (event.xdata != None) and (event.ydata != None) and (event.inaxes == self.ax) and self.enabled:
             if int(event.button) == self.LEFT_BUTTON:
-                pid = self.block.coords2pindex(event.ydata, event.xdata)
-                if pid >= 0:
-                    cid = lm().current_cid
-                    marker: Marker = clm().mark_cluster( pid, cid )
+                gid,ix,iy = self.block.coords2gid(event.ydata, event.xdata)
+                cid = lm().current_cid
+                icluster = clm().get_cluster(gid)
+                ufm().show(f"Mark cluster: ({ix},{iy})-> {gid}: cluster = {icluster}", color="blue")
+                lgm().log(f"#IA: mark_cluster: [{ix},{iy}]->{gid}, cid={cid}")
+                if icluster >= 0:
+                    marker: Marker = clm().mark_cluster(gid, cid, icluster)
                     app().add_marker( "cluster", marker )
                     mm().plot_cluster_image( clm().get_cluster_map() )
                     labels_image: xa.DataArray = lm().get_label_map()

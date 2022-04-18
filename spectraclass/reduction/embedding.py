@@ -156,7 +156,7 @@ class ReductionManager(SCSingletonConfigurable):
                 lgm().exception( f"Unable to process test input[{iT}], input shape = {test_input.shape}, error = {err}" )
         return results
 
-    def umap_init( self,  point_data: xa.DataArray, **kwargs ) -> Optional[np.ndarray]:
+    def umap_init( self,  point_data: xa.DataArray, **kwargs ) -> Optional[xa.DataArray]:
         from .cpu import UMAP
         self._state = self.NEW_DATA
         self._dsid = point_data.attrs['dsid']
@@ -166,6 +166,7 @@ class ReductionManager(SCSingletonConfigurable):
         mapper.input_data = point_data.values
         if point_data.shape[1] <= self.ndim:
             mapper.set_embedding(mapper.input_data)
+            return point_data
         else:
             lgm().log( f"umap_init: init = {self.init}")
             if self.init == "autoencoder":
@@ -174,9 +175,10 @@ class ReductionManager(SCSingletonConfigurable):
             mapper.init = self.init
             kwargs['nepochs'] = 1
             labels_data: np.ndarray = LabelsManager.instance().getLabelsArray().values
-            lgm().log(f"INIT UMAP embedding with input data shape = {mapper.input_data.shape}, labels_data shape = {labels_data.shape}, parms: {kwargs}")
+            lgm().log(f"INIT UMAP embedding with input data{point_data.dims}, shape = {mapper.input_data.shape}, labels_data shape = {labels_data.shape}, parms: {kwargs}")
             mapper.embed( mapper.input_data, labels_data, **kwargs )
-        return mapper.embedding
+            ecoords = dict( samples=point_data.samples, model=np.arange(0,self.ndim) )
+            return xa.DataArray( mapper.embedding, dims=['samples','model'], coords=ecoords, attrs=point_data.attrs )
 
     def umap_embedding( self, **kwargs ) -> Optional[np.ndarray]:
         from .cpu import UMAP

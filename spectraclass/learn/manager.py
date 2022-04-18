@@ -253,7 +253,8 @@ class ClassificationManager(SCSingletonConfigurable):
 
     @exception_handled
     def learn_classification( self, filtered_point_data: np.ndarray, filtered_labels: np.ndarray, **kwargs  ):
-        lgm().log( f"\n learn_classification-> point_data: {filtered_point_data.shape}, labels: {filtered_labels.shape} \n")
+        lrng = [ filtered_labels.min(),filtered_labels.max() ]
+        lgm().log( f"learn_classification-> point_data: shape={filtered_point_data.shape}; labels: shape={filtered_labels.shape}, range={lrng}")
         self.model.learn_classification( filtered_point_data, filtered_labels, **kwargs  )
 
     @exception_handled

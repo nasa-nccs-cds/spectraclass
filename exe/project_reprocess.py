@@ -11,8 +11,5 @@ else:
     niter: int = int(sys.argv[3])
 
     dm: DataManager = DataManager.initialize( project, mode )
-    block_nsamples: Dict[Tuple,int] = {}
-    for iter in range(niter):
-        block_nsamples = dm.prepare_inputs( reprocess=True )
-    dm.save_config( block_nsamples )
+    dm.prepare_inputs( reprocess=True )
 

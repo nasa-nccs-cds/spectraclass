@@ -10,10 +10,10 @@ def close( pt0, pt1, min_dist: float ):
 
 class Voxelizer:
 
-    def __init__(self, points: np.ndarray, resolution: float  ):
-        self.points = points
+    def __init__(self, points: xa.DataArray, resolution: float  ):
+        self.points = points.values
         self.resolution = resolution
-        self.compute_bounds( points )
+        self.compute_bounds( points.values )
         self.compute_voxel_indices( points )
         self.vrange = ( self.vids.min(), self.vids.max() )
         lgm().log( f" ** compute vindices[{self.vids.shape}]--> bounds: {[self.vids.min(), self.vids.max()]}")
@@ -44,16 +44,17 @@ class Voxelizer:
         nb = self.nbins.flatten().astype(int)
         return vid3[:,0]*nb[1]*nb[2] + vid3[:,1]*nb[2] + vid3[:,2]
 
-    def compute_voxel_indices(self, points: np.ndarray ):
-        v3id = (self.normalize(points) * self.nbins).astype(int)
+    def compute_voxel_indices(self, points: xa.DataArray ):
+        v3id = (self.normalize(points.values) * self.nbins).astype(int)
         self.vids = self.serialize( v3id )
-        self.indices = np.arange( self.vids.shape[0] )
+        self.indices = points.samples.values
 
     def compute_voxel_index(self, point: np.ndarray ) -> int:
         v3id = (self.normalize(point) * self.nbins).astype(int)
         return self.serialize( v3id )[0]
 
     def get_pid(self, point: Tuple[float,float,float]):
+        pid = -1
         npt = np.array(point).reshape([1, 3])
         vid = self.compute_voxel_index( npt )
         mask = (self.vids==vid)
@@ -62,7 +63,8 @@ class Voxelizer:
             vpoints: np.ndarray = self.points[mask]
             dist: np.ndarray = np.abs( vpoints - npt ).max(axis=1)
             pid = lindices[ dist.argmin() ]
-            return pid
+        lgm().log(f" *** PCM.on_pick: pid={pid}, vid={vid}, point={point}")
+        lgm().log(f"    PCM-->indices: size={self.indices.size}, range={[self.indices.min(),self.indices.max()]}")
         return -1
 
     # def pick_point(self, ray: np.ndarray, tolerance: float  ):
