@@ -300,7 +300,7 @@ class Block(DataContainer):
             if self.tile.data is None: return None
             xbounds, ybounds = self.getBounds()
             raster_slice = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
-            raw_raster = TileManager.process_tile_data( raster_slice )
+            raw_raster = raster_slice if (raster_slice.size == 0) else TileManager.process_tile_data( raster_slice )
         block_raster = self._apply_mask( raw_raster )
         block_raster.attrs['block_coords'] = self.block_coords
         block_raster.attrs['dsid'] = self.dsid()
@@ -447,7 +447,7 @@ class Block(DataContainer):
     def raster2points( self, base_raster: xa.DataArray ) -> Tuple[ Optional[xa.DataArray], Optional[np.ndarray], Optional[np.ndarray] ]:   #  base_raster dims: [ band, y, x ]
         t0 = time.time()
         if base_raster is None: return (None, None, None)
-        rmask = ~np.isnan( base_raster[0].values.squeeze() )
+        rmask = ~np.isnan( base_raster[0].values.squeeze() ) if (base_raster.size > 0) else None
         lgm().log( f"raster2points: stack spatial dims: {base_raster.dims[-2:]} (last dim varies fastest)" )
         point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
         if '_FillValue' in point_data.attrs:
