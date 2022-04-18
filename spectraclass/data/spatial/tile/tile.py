@@ -466,7 +466,7 @@ class Block(DataContainer):
     def coords2gid(self, cy, cx) -> Tuple[int,int,int]:
         index = self.coords2indices(cy, cx)
         ix, iy = index['ix'], index['iy']
-        gid = ix + self.shape[1] * iy
+        gid = ix + self.shape[-1] * iy
         return gid,ix,iy
 
 #        from spectraclass.gui.control import UserFeedbackManager, ufm

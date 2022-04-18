@@ -1,5 +1,4 @@
-import pickle
-
+import pickle, os
 from spectraclass.data.base import DataManager
 from spectraclass.data.base import ModeDataManager
 from spectraclass.model.labels import LabelsManager, lm
@@ -11,8 +10,15 @@ from typing import List, Union, Tuple, Optional, Dict, Callable
 
 image_indices = [2,3,4]
 dm: DataManager = DataManager.initialize( "demo2", 'desis' )
-dm.modal.cache_dir = "/Volumes/Shared/Cache"
-dm.modal.data_dir = "/Volumes/Shared/Data/DESIS"
+host = "laptop"
+
+if (host == "laptop"):
+    dm.modal.data_dir = os.path.expanduser("~/Development/Data/DESIS")
+    dm.modal.cache_dir = os.path.expanduser("~/Development/Cache")
+else:
+    dm.modal.cache_dir = "/Volumes/Shared/Cache"
+    dm.modal.data_dir = "/Volumes/Shared/Data/DESIS"
+
 dm.modal.image_names = [ f"DESIS-HSI-L1C-DT0468853252_00{index}-20200628T153803-V0210" for index in image_indices ]
 TileManager.block_size = 250
 ModeDataManager.model_dims = 16
@@ -30,11 +36,16 @@ samples: np.ndarray = pdata.samples.values
 x,y = pcoords['x'], pcoords['y']
 image_data = np.full( [y.size,x.size], 0 )
 cluster_gids: List[int] = pickle.load( open( "/tmp/cluster_gids.pkl", "rb" ) )
-test_gid=37341
+test_gid=44512
 
 def gid2indices( gindex: int ) -> Tuple[int,int]:
     iy = gindex // x.size
     ix = gindex % x.size
+    return ( iy, ix )
+
+def gid2indices1( gindex: int ) -> Tuple[int,int]:
+    iy = gindex // y.size
+    ix = gindex % y.size
     return ( iy, ix )
 
 def indices2gid( iy: int, ix: int ) -> int:

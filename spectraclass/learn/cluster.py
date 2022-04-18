@@ -119,12 +119,16 @@ class ClusterManager(SCSingletonConfigurable):
 
     def gid2pid( self, gid: int ) -> int:
         pids = np.where( self.samples == gid )
+        if isinstance(pids,tuple): pids = pids[0]
+        lgm().log(f"gid2pid: pids({type(pids)})={pids}, gid({type(gid)})={gid}, sample shape={self.samples.shape}")
         return pids[0] if len(pids) else -1
 
     def get_cluster(self, gid: int ) -> int:
         pid: int = self.gid2pid( gid )
         if pid >= 0:
-            return self.samples[pid]
+            result = self._cluster_points.values[pid, 0]
+            lgm().log( f"get_cluster: pid({type(pid)})={pid}, result({type(result)})={result}")
+            return result
         else:
             lgm().log( f" ------> Can find cluster: gid={gid}, samples: gid-in={gid in self.samples}, size={self.samples.size}, range={[self.samples.min(),self.samples.max()]}")
             pickle.dump( self.samples.tolist(), open("/tmp/cluster_gids.pkl","wb") )
