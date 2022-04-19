@@ -38,7 +38,6 @@ class TileServiceImage(AxesImage):
         self.projection = projection
         self.cache = []
         self.current_extent = []
-        self._block_selection_callback = None
         self._selected_block: Rectangle = None
         self._blocks: List[Rectangle] = []
         self.axes.figure.canvas.mpl_connect('button_press_event', self.on_press)

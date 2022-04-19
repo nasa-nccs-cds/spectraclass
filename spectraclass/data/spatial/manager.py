@@ -299,7 +299,7 @@ class SpatialDataManager(ModeDataManager):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block: Block = kwargs.get('block',None)
         bindex = tm().block_index if (block is None) else block.block_coords
-        file_name = f"{tm().tileName()}_b-{tm().block_size}-{bindex[0]}-{bindex[1]}"
+        file_name = f"{tm().tileName(**kwargs)}_b-{tm().block_size}-{bindex[0]}-{bindex[1]}"
         return os.path.join( self.datasetDir, file_name + f"-m{self.model_dims}.nc" )
 
     def getFilePath(self) -> str:

@@ -64,7 +64,7 @@ class TileManager(SCSingletonConfigurable):
         if tile_index in self._idxtiles: return self._idxtiles[tile_index]
         new_tile = Tile( tile_index )
         self._idxtiles[ tile_index ] = new_tile
-        return self._tiles.setdefault( self.get_image_name(tile_index), new_tile )
+        return self._tiles.setdefault( self.get_image_name(index=tile_index), new_tile )
 
     def tile_grid_offset(self, tile_index: int ) -> int:
         offset = 0
@@ -113,7 +113,8 @@ class TileManager(SCSingletonConfigurable):
     def image_name(self):
         return DataManager.instance().modal.image_name
 
-    def get_image_name( self, image_index: int ):
+    def get_image_name( self, **kwargs ):
+        image_index = kwargs.get('index', DataManager.instance().modal._active_image )
         return DataManager.instance().modal.image_names[ image_index ]
 
     @property
@@ -124,12 +125,17 @@ class TileManager(SCSingletonConfigurable):
     def block_coords(self):
         return self.block_index
 
+    def setBlock( self, block_index ):
+        self.block_index = block_index
+
     @exception_handled
     def getBlock( self, **kwargs ) -> Block:
-        bindex = kwargs.get( 'index' )
+        bindex = kwargs.get( 'bindex' )
+        tindex = kwargs.get( 'tindex' )
         if (bindex is None) and ('block' in kwargs): bindex = kwargs['block'].block_coords
         if bindex is not None: self.block_index = bindex
-        return self.tile.getBlock( self.block_index[0], self.block_index[1] )
+        tile = self.tile if (tindex is None) else self.get_tile( tindex )
+        return tile.getBlock( self.block_index[0], self.block_index[1] )
 
     @exception_handled
     def getMask(self) -> Optional[np.ndarray]:
@@ -186,9 +192,8 @@ class TileManager(SCSingletonConfigurable):
     def getTileFileName(self, with_extension = True ) -> str:
         return self.image_name + ".tif" if with_extension else self.image_name
 
-    def tileName( self, base_name: str = None ) -> str:
-        base = self.image_name if base_name is None else base_name
-        return base
+    def tileName( self, **kwargs ) -> str:
+        return self.get_image_name( **kwargs )
 
     def fmt(self, value) -> str:
         return str(value).strip("([])").replace(",", "-").replace(" ", "")

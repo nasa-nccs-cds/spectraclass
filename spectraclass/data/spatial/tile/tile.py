@@ -141,7 +141,7 @@ class Tile(DataContainer):
 
     def getBlock(self, ix: int, iy: int, **kwargs ) -> Optional["Block"]:
         if (ix,iy) in self._blocks: return self._blocks[ (ix,iy) ]
-        return self._blocks.setdefault( (ix,iy), Block( self, ix, iy, **kwargs ) )
+        return self._blocks.setdefault( (ix,iy), Block( self, ix, iy, self._index, **kwargs ) )
 
     def getBlocks(self, **kwargs ) -> List["Block"]:
         from spectraclass.data.spatial.tile.manager import TileManager
@@ -198,14 +198,16 @@ class ThresholdRecord:
 
 class Block(DataContainer):
 
-    def __init__(self, tile: Tile, ix: int, iy: int, **kwargs ):
+    def __init__(self, tile: Tile, ix: int, iy: int, itile: int, **kwargs ):
         super(Block, self).__init__( data_projected=True, **kwargs )
         self.tile: Tile = tile
         self.init_task = None
         self._tmask: xa.DataArray = None
+        self._model_data: xa.DataArray = None
         self.config = kwargs
         self._trecs: Tuple[ Dict[int,ThresholdRecord], Dict[int,ThresholdRecord] ] = ( {}, {} )
         self.block_coords = (ix,iy)
+        self.tile_index = itile
  #       self.validate_parameters()
         self._index_array: xa.DataArray = None
         self._pid_array: np.ndarray = None
@@ -291,9 +293,9 @@ class Block(DataContainer):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.gui.control import UserFeedbackManager, ufm
-        block_data_file = dm().modal.dataFile( block=self )
+        block_data_file = dm().modal.dataFile( block=self, index=self.tile_index )
         if path.isfile( block_data_file ):
-            dataset: Optional[xa.Dataset] = dm().modal.loadDataFile(block=self)
+            dataset: Optional[xa.Dataset] = dm().modal.loadDataFile(block=self, index=self.tile_index )
             raw_raster = dataset["raw"]
             if raw_raster.size == 0: ufm().show( "This block does not appear to have any data.", "red" )
         else:
@@ -307,6 +309,22 @@ class Block(DataContainer):
         block_raster.attrs['file_name'] = self.file_name
         block_raster.name = self.file_name
         return block_raster
+
+    @property
+    def model_data(self):
+        if self._model_data is None:
+            self._model_data = self._get_model_data()
+        return self._model_data
+
+    def _get_model_data(self) -> xa.DataArray:
+        from spectraclass.data.base import DataManager, dm
+        dataset: Optional[xa.Dataset] = dm().modal.loadDataFile( block=self, index=self.tile_index )
+        point_data = dataset["reduction"]
+        point_data.attrs['block_coords'] = self.block_coords
+        point_data.attrs['dsid'] = self.dsid()
+        point_data.attrs['file_name'] = self.file_name
+        point_data.name = self.file_name
+        return point_data
 
     @exception_handled
     def _apply_mask( self, block_array: xa.DataArray, raster=False, reduced=False ) -> xa.DataArray:

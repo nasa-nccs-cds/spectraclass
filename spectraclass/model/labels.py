@@ -186,6 +186,9 @@ class LabelsManager(SCSingletonConfigurable):
 
     @property
     def markers(self):
+        return [m for m in self._markers if m.active]
+
+    def getMarkers(self) -> List[Marker]:
         return self._markers
 
     def addAction(self, type: str, source: str, **kwargs ):
@@ -259,6 +262,14 @@ class LabelsManager(SCSingletonConfigurable):
             lgm().log(f" MARKER[{marker.cid}]: #pids = {len(marker.pids)}")
             self._labels_data.loc[ dict( samples=marker.pids ) ] = marker.cid
 
+    def getTrainingLabels(self) -> Dict[ Tuple, np.ndarray ]:
+        label_data = {}
+        for marker in self._markers:
+            key = ( marker.image_index, marker.block_index, marker.cid )
+            if key not in label_data:   label_data[key] = marker.pids
+            else:                       np.append( label_data[key], marker.pids, axis = 0 )
+        return label_data
+
     def getLabelsArray(self) -> xa.DataArray:
         self.updateLabels()
         return self._labels_data.copy()
@@ -287,22 +298,12 @@ class LabelsManager(SCSingletonConfigurable):
     def deletePid(self, pid: int ):
         if pid >= 0 :
             empty_markers = []
-            for marker in self._markers:
+            for marker in self.markers:
                 marker.deletePid(pid)
                 if marker.empty: empty_markers.append( marker )
             for m in empty_markers:
                 lgm().log( f"LM: Removing marker: {m}")
                 self._markers.remove( m )
-
-
-    # def clearMarkerConflicts(self, m: Marker):
-    #     points_selection = []
-    #     for marker in self._markers:
-    #         if marker.cid != m.cid:
-    #             marker.deletePids( marker.pids )
-    #         if (not marker.isEmpty()):
-    #             points_selection.append( marker )
-    #     self._markers = points_selection
 
     def clearTransientMarkers(self, m: Marker):
         top_marker = self.topMarker
@@ -364,8 +365,8 @@ class LabelsManager(SCSingletonConfigurable):
         xcmap: xa.DataArray = block.classmap()
         cmap = xcmap.values
         fcmap = np.ravel( cmap )
-        lgm().log( f" GENERATE LABEL MAP: {len(lm().markers)} markers")
-        for marker in lm().markers:
+        lgm().log( f" GENERATE LABEL MAP: {len(self.markers)} markers")
+        for marker in self.markers:
             if (mtype is None) or (marker.type == mtype):
                 if marker.mask is not None:
                     fcmap[ marker.mask.flatten() ] = marker.cid
@@ -381,8 +382,8 @@ class LabelsManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block = kwargs.get( 'block', tm().getBlock() )
         cmap: xa.DataArray = block.classmap()
-        lgm().log( f" GENERATE LABEL MAP: {len(lm().markers)} markers")
-        for marker in lm().markers:
+        lgm().log( f" GENERATE LABEL MAP: {len(self.markers)} markers")
+        for marker in self.markers:
             if marker.type not in ["cluster"]:
                 lgm().log( f"update_label_map->MARKER[{marker.type}]: Setting {len(marker.pids)} labels for cid = {marker.cid}" )
          # -->       points2raster

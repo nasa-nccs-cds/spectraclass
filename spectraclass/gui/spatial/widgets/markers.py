@@ -22,6 +22,11 @@ class Marker:
         self._mask: Optional[np.ndarray] = kwargs.get( 'mask', None )
 
     @property
+    def active(self) -> bool:
+        from spectraclass.data.spatial.tile.manager import tm
+        return (self.block_index == tm().block_index) and (self.image_index == self.image_index)
+
+    @property
     def pids(self) -> np.ndarray:
         return self._pids
 

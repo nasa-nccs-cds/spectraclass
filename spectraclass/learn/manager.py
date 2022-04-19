@@ -69,6 +69,7 @@ class ModelTable:
     def refresh(self):
         self._table.cells = self.get_table_cells()
 
+    @exception_handled
     def add(self, model_name: str ):
         self._dataFrame = self._dataFrame.append( pd.DataFrame( [model_name], columns=["models"] ), ignore_index=True )
         self.refresh()

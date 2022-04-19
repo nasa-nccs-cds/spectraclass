@@ -473,7 +473,8 @@ class MapManager(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
-        self.block: Block = tm().getBlock( index=block_index )
+        if block_index is not None: tm().setBlock( block_index )
+        self.block: Block = tm().getBlock()
         if self.block is not None:
             dm().clear_project_cache()
             pcm().reset()

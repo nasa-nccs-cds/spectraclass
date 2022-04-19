@@ -66,6 +66,9 @@ class ModeDataManager(SCSingletonConfigurable):
     def image_name(self):
         return self.image_names[self._active_image]
 
+    def get_image_name( self, image_index: int ):
+        return self.image_names[ image_index ]
+
     @property
     def file_selector(self):
         if self._file_selector is None:
