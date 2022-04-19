@@ -266,8 +266,7 @@ class LabelsManager(SCSingletonConfigurable):
         label_data = {}
         for marker in self._markers:
             key = ( marker.image_index, marker.block_index, marker.cid )
-            if key not in label_data:   label_data[key] = marker.pids
-            else:                       np.append( label_data[key], marker.pids, axis = 0 )
+            label_data[key] = marker.pids if (key not in label_data) else np.append( label_data[key], marker.pids, axis=0 )
         return label_data
 
     def getLabelsArray(self) -> xa.DataArray:

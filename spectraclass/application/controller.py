@@ -166,14 +166,12 @@ class SpectraclassController(SCSingletonConfigurable):
         training_data, training_labels = None, None
         for ( (tindex, bindex, cid), pids ) in label_data.items():
             model_data: xa.DataArray = tm().getBlock( tindex=tindex, bindex=bindex ).model_data
-            training_mask: np.ndarray = model_data.samples.values.isin( pids )
+            training_mask: np.ndarray = np.isin( model_data.samples.values, pids )
             tdata: np.ndarray = model_data.values[ training_mask ]
-            tlabels: np.ndarray = np.full( [training_mask.size], cid )
-            if training_data is None:
-                training_data, training_labels = tdata, tlabels
-            else:
-                np.append( training_data, tdata, axis=0 )
-                np.append( training_labels, tlabels, axis=0 )
+            lgm().log( f"Adding training data: {tindex=}, {bindex=}, {cid=}, #pids={pids.size} ")
+            tlabels: np.ndarray = np.full( [pids.size], cid )
+            training_data   = tdata   if (training_data   is None) else np.append( training_data,   tdata,   axis=0 )
+            training_labels = tlabels if (training_labels is None) else np.append( training_labels, tlabels, axis=0 )
         return training_data, training_labels
 
     @log_timing
