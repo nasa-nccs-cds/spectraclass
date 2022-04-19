@@ -103,7 +103,8 @@ class MarkerManager( PointsInteractor ):
     @exception_handled
     def delete_marker(self, x, y ):
         apx, apy = self.ax.transData.transform( (x, y) )
-        for (pid, marker) in self._markers.items():
+        markers = dict( **self._markers )
+        for (pid, marker) in markers.items():
             (mx,my) = marker.props['point']
             amx, amy = self.ax.transData.transform( (mx, my) )
             if (abs(apx-amx)<self.PICK_DIST) and (abs(apy-amy)<self.PICK_DIST):

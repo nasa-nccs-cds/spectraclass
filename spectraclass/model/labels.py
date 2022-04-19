@@ -224,7 +224,6 @@ class LabelsManager(SCSingletonConfigurable):
             self.template = point_data[:,0] # .squeeze( drop=True ) # if point_data.ndim == 2 else point_data
             self.template.attrs = point_data.attrs
         if self.template is not None:
-            lgm().log( f" *** Init Labels Data, dims = {self.template.dims}, shape = {self.template.shape}, point_data dims = {point_data.dims}, point_data shape = {point_data.shape}")
             self._labels_data: xa.DataArray = xa.full_like( self.template, 0, dtype=np.int32 ).where( self.template.notnull(), nodata_value )
             self._labels_data.attrs['_FillValue'] = nodata_value
             self._labels_data.name = self.template.attrs['dsid'] + "_labels"
