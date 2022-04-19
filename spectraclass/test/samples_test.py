@@ -14,7 +14,7 @@ host = "laptop"
 
 if (host == "laptop"):
     dm.modal.data_dir = os.path.expanduser("~/Development/Data/DESIS")
-    dm.modal.cache_dir = os.path.expanduser("~/Development/Cache")
+    dm.modal.cache_dir = os.path.expanduser("/Volumes/archive/Cache")
 else:
     dm.modal.cache_dir = "/Volumes/Shared/Cache"
     dm.modal.data_dir = "/Volumes/Shared/Data/DESIS"
@@ -41,11 +41,6 @@ test_gid=44512
 def gid2indices( gindex: int ) -> Tuple[int,int]:
     iy = gindex // x.size
     ix = gindex % x.size
-    return ( iy, ix )
-
-def gid2indices1( gindex: int ) -> Tuple[int,int]:
-    iy = gindex // y.size
-    ix = gindex % y.size
     return ( iy, ix )
 
 def indices2gid( iy: int, ix: int ) -> int:
