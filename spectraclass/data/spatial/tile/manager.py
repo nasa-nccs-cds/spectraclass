@@ -26,7 +26,7 @@ def tm() -> "TileManager":
 class TileManager(SCSingletonConfigurable):
 
     block_size = tl.Int(250).tag(config=True, sync=True)
-    block_index = tl.List( default_value=[0,0] ).tag(config=True, sync=True)
+    block_index = tl.Tuple( default_value=(0,0) ).tag(config=True, sync=True)
     mask_class = tl.Int(0).tag(config=True, sync=True)
     image_attrs = {}
     ESPG = 3857
@@ -118,12 +118,12 @@ class TileManager(SCSingletonConfigurable):
         return DataManager.instance().modal.image_names[ image_index ]
 
     @property
-    def image_index(self):
+    def image_index(self) -> int:
         return DataManager.instance().modal.image_index
 
     @property
-    def block_coords(self):
-        return self.block_index
+    def block_coords(self) -> Tuple:
+        return tuple(self.block_index)
 
     def setBlock( self, block_index ):
         self.block_index = block_index

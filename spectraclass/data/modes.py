@@ -59,7 +59,7 @@ class ModeDataManager(SCSingletonConfigurable):
         return len( self.image_names )
 
     @property
-    def image_index(self):
+    def image_index(self) -> int:
         return self._active_image
 
     @property

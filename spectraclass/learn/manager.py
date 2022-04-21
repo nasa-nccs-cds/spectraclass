@@ -29,7 +29,7 @@ class ModelTable:
         self._selections_cell = None
         self._dataFrame = pd.DataFrame( self._cdata, columns=self._cnames )
         lgm().log(f"Creating ModelTable from DataFrame: {self._dataFrame}")
-        self._table: ips.Sheet = ips.Sheet( rows=self._dataFrame.shape[0], columns=len(self._cnames)+1,
+        self._table: ips.Sheet = ips.Sheet( rows=100, columns=len(self._cnames)+1,
                                          cells=self.get_table_cells(), row_headers=False, column_headers=[""]+self._cnames )
 
     def to_df( self ) -> pd.DataFrame:
@@ -184,7 +184,7 @@ class ClassificationManager(SCSingletonConfigurable):
         from .svc import SVCLearningModel
         self._models['mlp'] = self.create_default_mlp()
         self._models['svc'] = SVCLearningModel()
-        self._models['cnn'] = self.create_default_cnn()
+ #       self._models['cnn'] = self.create_default_cnn()
 
     def create_default_cnn(self) -> "LearningModel":
         pass

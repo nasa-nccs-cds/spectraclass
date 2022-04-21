@@ -58,8 +58,6 @@ class LearningModel:
         if np.count_nonzero( class_data > 0 ) == 0:
             ufm().show( "Must label some points before learning the classification" )
             return None
-        if class_data.ndim == 1:
-            class_data = self.index_to_one_hot( class_data )
         lgm().log(f"Learning mapping with shapes: point_data{point_data.shape}, class_data{class_data.shape}")
         self.fit( point_data, class_data, **kwargs )
         lgm().log(f"Completed learning in {time.time() - t1} sec.")
@@ -122,6 +120,8 @@ class KerasModelWrapper(LearningModel):
     def fit(self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
         nepochs = kwargs.pop( 'nepochs', 25 )
         test_size = kwargs.pop( 'test_size', 0.0 )
+        if class_data.ndim == 1:
+            class_data = self.index_to_one_hot( class_data )
         if test_size > 0.0:
             tx, vx, ty, vy = train_test_split( data, class_data, test_size=test_size )
             self._model.fit( tx, ty, epochs=nepochs, validation_data=(vx,vy), **kwargs )
