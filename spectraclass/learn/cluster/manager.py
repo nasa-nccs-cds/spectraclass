@@ -31,7 +31,7 @@ class ClusterManager(SCSingletonConfigurable):
     def __init__(self, **kwargs ):
         super(ClusterManager, self).__init__(**kwargs)
         self._ncluster_options = range( 2, 20 )
-        self._mid_options = [ "kmeans" ] # "hierarchical" "DBSCAN", "spectral" ]
+        self._mid_options = [ "kmeans", "autoencoder", "umap" ] # "hierarchical" "DBSCAN", "spectral" ]
         self._cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
         self._marked_colors: Dict[Tuple,Tuple[float,float,float]] = {}
@@ -59,7 +59,7 @@ class ClusterManager(SCSingletonConfigurable):
         return self._mid_options
 
     def create_model(self, mid: str ) -> ClusterMixin:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from .autoencoder import AutoEncoderCluster
         nclusters = self._ncluster_selector.value
         self.update_colors( nclusters )
         lgm().log( f"Creating {mid} model with {nclusters} clusters")
@@ -68,6 +68,9 @@ class ClusterManager(SCSingletonConfigurable):
                            random_state= self.random_state,
                            batch_size= 256 * cpu_count() )
             return cluster.MiniBatchKMeans( **params )
+        if mid == "autoencoder":
+            params = dict( n_clusters= nclusters )
+            return AutoEncoderCluster( **params )
         elif mid == "hierarchical":
             return cluster.AgglomerativeClustering( linkage="ward", n_clusters=nclusters ) # , connectivity= )
         elif mid == "DBSCAN":
@@ -200,7 +203,18 @@ class ClusterManager(SCSingletonConfigurable):
     def gui(self) -> ipw.DOMWidget:
         selectors = [ self._model_selector,self._ncluster_selector ]
         for selector in selectors: selector.observe( self.on_parameter_change, names=['value'] )
-        return ipw.HBox(selectors, layout=ipw.Layout(width="600px", height="300px", border='2px solid firebrick'))
+        return ipw.VBox( [ ipw.HBox( selectors, layout=ipw.Layout(width="600px", height="300px", border='2px solid firebrick') ), self.tuning_gui() ] )
+
+    @exception_handled
+    def tuning_gui(self) -> ipw.DOMWidget:
+        nclusters = self._ncluster_selector.value
+        tuning_sliders = []
+        for icluster in range( nclusters ):
+            label = ipw.Label( value=f"Cluster-{icluster}" )
+            if icluster == 0: lgm().log( f" label.style = {label.style.keys}" )
+            slider = ipw.FloatSlider( 0.5, description="", min=0.0, max=1.0)
+            tuning_sliders.append( ipw.HBox( [ label, slider ] ) )
+        return  ipw.VBox( tuning_sliders, layout=ipw.Layout( width="600px", border='2px solid firebrick' ) )
 
 class ClusterSelector:
     LEFT_BUTTON = 1

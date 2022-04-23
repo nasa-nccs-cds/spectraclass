@@ -24,7 +24,7 @@ from spectraclass.gui.spatial.widgets.layers import LayersManager, Layer
 from spectraclass.model.labels import LabelsManager, lm
 from matplotlib.image import AxesImage
 from spectraclass.xext.xgeo import XGeo
-from spectraclass.learn.cluster import ClusterSelector
+from spectraclass.learn.cluster.manager import ClusterSelector
 from spectraclass.widgets.slider import PageSlider
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable
@@ -308,7 +308,7 @@ class MapManager(SCSingletonConfigurable):
 
     def layer_managers( self, name: str ) -> List:
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
-        from spectraclass.learn.cluster import  clm
+        from spectraclass.learn.cluster.manager import  clm
         if   name == "basemap":   mgrs = [ self.base ]
         elif name == "labels":    mgrs = [ self.labels_image ]
         elif name == "clusters":  mgrs = [ self.clusters_image ]
@@ -470,7 +470,7 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def setBlock( self, block_index: Tuple[int,int] = None, **kwargs ):
         from spectraclass.data.spatial.tile.manager import tm
-        from spectraclass.learn.cluster import clm
+        from spectraclass.learn.cluster.manager import clm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm

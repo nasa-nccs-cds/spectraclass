@@ -149,7 +149,7 @@ class SpectraclassController(SCSingletonConfigurable):
 
     @log_timing
     def cluster(self):
-        from spectraclass.learn.cluster import clm
+        from spectraclass.learn.cluster.manager import clm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.model.labels import LabelsManager, Action, lm
