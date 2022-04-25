@@ -9,7 +9,7 @@ class AutoEncoderCluster(ClusterBase):
 
     def __init__( self, n_clusters: int, **kwargs ):
         ClusterBase.__init__( self, n_clusters )
-        self.nepochs = kwargs.get( 'nepochs', 10 )
+        self.nepochs = kwargs.get( 'nepochs',   10 )
         self.method = kwargs.get('method', "autoencoder" )
         self.cscale = np.full( [1,self._n_clusters], 0.5 )
         self._reduction = None
