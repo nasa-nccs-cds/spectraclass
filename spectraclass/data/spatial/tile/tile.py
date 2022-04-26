@@ -199,6 +199,7 @@ class ThresholdRecord:
 class Block(DataContainer):
 
     def __init__(self, tile: Tile, ix: int, iy: int, itile: int, **kwargs ):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         super(Block, self).__init__( data_projected=True, **kwargs )
         self.tile: Tile = tile
         self.init_task = None
@@ -217,7 +218,7 @@ class Block(DataContainer):
         self._point_coords: Optional[Dict[str,np.ndarray]] = None
         self._point_mask: Optional[np.ndarray] = None
         self._raster_mask: Optional[np.ndarray] = None
-        lgm().log(f"CREATE Block: ix={ix}, iy={iy}")
+        lgm().log(f"CREATE Block: ix={ix}, iy={iy}, tile-shape={tile.data.shape}, block-bounds={self.getBounds()}, block-size={tm().block_size}")
 
     def set_thresholds(self, bUseModel: bool, iFrame: int, thresholds: Tuple[float,float] ) -> bool:
         trec: ThresholdRecord = self.threshold_record( bUseModel, iFrame )
