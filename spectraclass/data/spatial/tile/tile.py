@@ -219,8 +219,9 @@ class Block(DataContainer):
         self._point_coords: Optional[Dict[str,np.ndarray]] = None
         self._point_mask: Optional[np.ndarray] = None
         self._raster_mask: Optional[np.ndarray] = None
+        dfile = dm().modal.dataFile(block=self, index=self.tile_index)
         lgm().log(f"CREATE Block: ix={ix}, iy={iy}, tile-shape={tile.data.shape}, block-bounds={self.getBounds()}")
-        lgm().log(f" ---> block-size={tm().block_size}, data-file={dm().modal.dataFile(block=self, index=self.tile_index)}")
+        lgm().log(f" ---> block-size={tm().block_size}, data-file={dfile}, exists={os.path.isfile(dfile)}")
 
     def set_thresholds(self, bUseModel: bool, iFrame: int, thresholds: Tuple[float,float] ) -> bool:
         trec: ThresholdRecord = self.threshold_record( bUseModel, iFrame )
