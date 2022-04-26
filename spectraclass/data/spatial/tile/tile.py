@@ -295,14 +295,16 @@ class Block(DataContainer):
         from spectraclass.gui.control import UserFeedbackManager, ufm
         block_data_file = dm().modal.dataFile( block=self, index=self.tile_index )
         if path.isfile( block_data_file ):
-            dataset: Optional[xa.Dataset] = dm().modal.loadDataFile(block=self, index=self.tile_index )
+            dataset: Optional[xa.Dataset] = dm().modal.loadDataFile(block=self, index=self.tile_index)
             raw_raster = dataset["raw"]
+            lgm().log(f"TILE->get_data: load-datafile raster shape={raw_raster.shape}")
             if raw_raster.size == 0: ufm().show( "This block does not appear to have any data.", "red" )
         else:
             if self.tile.data is None: return None
             xbounds, ybounds = self.getBounds()
             raster_slice = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
             raw_raster = raster_slice if (raster_slice.size == 0) else TileManager.process_tile_data( raster_slice )
+            lgm().log(f"TILE->get_data: load-slice ybounds={ybounds}, xbounds={xbounds}, raster shape={raw_raster.shape}")
         block_raster = self._apply_mask( raw_raster )
         block_raster.attrs['block_coords'] = self.block_coords
         block_raster.attrs['dsid'] = self.dsid()
