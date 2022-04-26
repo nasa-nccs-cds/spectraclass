@@ -192,7 +192,7 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         ckey = ( tm().image_index, tm().block_coords, icluster )
-        lgm().log(f" mark_cluster: {ckey=} {cid=}")
+        lgm().log(f" mark_cluster: ckey={ckey} cid={cid}")
         self._marked_colors[ ckey ] = lm().get_rgb_color(cid)
         self.get_marked_clusters(cid).append( icluster )
         cmap = self.get_cluster_map().values
