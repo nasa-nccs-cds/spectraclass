@@ -290,6 +290,7 @@ class SpatialDataManager(ModeDataManager):
     #                        print(f"Writing raster file: '{self._reduced_raster_file}' with dims={reduced_dataArray.dims}, attrs = {reduced_dataArray.attrs}")
     #                        reduced_dataArray.rio.set_spatial_dims()
     #                        raw_data.rio.to_raster( self._reduced_raster_file )
+                    tm().block_index = (0,0)
                     tm().saveMetadata( block_nsamples )
                     dm().save_config( block_nsamples )
 
