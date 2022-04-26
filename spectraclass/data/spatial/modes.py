@@ -6,6 +6,7 @@ import os, sys
 class AvirisDataManager(SpatialDataManager):
     from spectraclass.gui.spatial.application import Spectraclass
     valid_aviris_bands = tl.List( default_value=[ 0,100000] ).tag(config=True, sync=True)
+    version = tl.Unicode( "v2p9" )
 
     MODE = "aviris"
     METAVARS = []
@@ -22,6 +23,11 @@ class AvirisDataManager(SpatialDataManager):
         for ib, bv1 in enumerate(self.valid_aviris_bands):
             if ib % 2 == 1: self.VALID_BANDS.append( [ bv0, bv1 ] )
             bv0 = bv1
+
+    @property
+    def image_name(self):
+        base_name = self.image_names[self._active_image]
+        return f"ang{base_name}rfl/ang{base_name}_rfl_{self.version}/ang{base_name}_corr_{self.version}.tif"
 
 class KeelinDataManager(SpatialDataManager):
     from spectraclass.gui.spatial.application import Spectraclass
