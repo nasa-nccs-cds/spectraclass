@@ -31,11 +31,11 @@ class ClusterManager(SCSingletonConfigurable):
     def __init__(self, **kwargs ):
         super(ClusterManager, self).__init__(**kwargs)
         self._ncluster_options = range( 2, 20 )
-        self._mid_options = [ "kmeans" ]
+        self._mid_options = [ "kmeans" ] # "hierarchical" "DBSCAN", "spectral" ]
         self._cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
-        self._marked_colors: Dict[int,Tuple[float,float,float]] = {}
-        self._markers = {}
+        self._marked_colors: Dict[Tuple,Tuple[float,float,float]] = {}
+        self._marked_clusters: Dict[Tuple, List] = {}
         self._cluster_points: xa.DataArray = None
         self._models: Dict[str,ClusterMixin] = {}
         self._model_selector = ipw.Select( options=self.mids, description='Methods:', value=self.modelid, disabled=False,
@@ -59,6 +59,7 @@ class ClusterManager(SCSingletonConfigurable):
         return self._mid_options
 
     def create_model(self, mid: str ) -> ClusterMixin:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         nclusters = self._ncluster_selector.value
         self.update_colors( nclusters )
         lgm().log( f"Creating {mid} model with {nclusters} clusters")
@@ -67,6 +68,13 @@ class ClusterManager(SCSingletonConfigurable):
                            random_state= self.random_state,
                            batch_size= 256 * cpu_count() )
             return cluster.MiniBatchKMeans( **params )
+        elif mid == "hierarchical":
+            return cluster.AgglomerativeClustering( linkage="ward", n_clusters=nclusters ) # , connectivity= )
+        elif mid == "DBSCAN":
+             eps = 0.001 / nclusters
+             return cluster.DBSCAN( eps=eps, min_samples=10, metric="cosine" )
+        elif mid == "spectral":
+            return cluster.SpectralClustering( n_clusters=nclusters )
 
     def on_parameter_change(self, *args ):
         self.update_model()
@@ -84,14 +92,31 @@ class ClusterManager(SCSingletonConfigurable):
 
     def get_cluster_colormap( self ):
         colors = self._cluster_colors.copy()
-        for (key, value) in self._marked_colors.items(): colors[key] = value
+        for (icluster, value) in self.marked_colors.items(): colors[icluster] = value
         return LinearSegmentedColormap.from_list( 'clusters', colors, N=len(colors) )
+
+    @property
+    def marked_colors(self) -> Dict[int,Tuple[float,float,float]]:
+        mcolors = {}
+        for (ckey, value) in self._marked_colors.items():
+            icluster = self.get_icluster( ckey )
+            if icluster >= 0: mcolors[icluster] = value
+        return mcolors
+
+    def get_icluster( self, ckey: Tuple ) -> int:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        ( tindex, bindex, icluster ) = ckey
+        return icluster if ( (tindex==tm().image_index) and (bindex==tm().block_index) )  else -1
 
     def get_layer_colormap( self ):
         ncolors = self._cluster_colors.shape[0]
         colors = np.full( [ncolors,4], 0.0 )
-        for (key, value) in self._marked_colors.items(): colors[key] = list(value) + [1.0]
+        for (key, value) in self.marked_colors.items(): colors[key] = list(value) + [1.0]
         return LinearSegmentedColormap.from_list( 'cluster-layer', colors, N=ncolors )
+
+    def clear(self):
+        self._cluster_points = None
+        self._cluster_raster = None
 
     def run_cluster_model( self, data: xa.DataArray ):
         lgm().log( f"Creating clusters from input data shape = {data.shape}")
@@ -132,11 +157,16 @@ class ClusterManager(SCSingletonConfigurable):
             pickle.dump( self.samples.tolist(), open("/tmp/cluster_gids.pkl","wb") )
             return -1
 
+    def get_marked_clusters( self, cid: int ) -> List[int]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        ckey = ( tm().image_index, tm().block_coords, cid )
+        return self._marked_clusters.setdefault( ckey, [] )
+
     def get_points(self, cid: int ) -> np.ndarray:
         class_points = np.array( [], dtype=np.int )
-        classes: List[int] = self._markers.get( cid, [] )
-        for iclass in classes:
-            mask = ( self._cluster_points.values.squeeze() == iclass )
+        clusters: List[int] = self.get_marked_clusters(cid)
+        for icluster in clusters:
+            mask = ( self._cluster_points.values.squeeze() == icluster )
             pids: np.ndarray = self._cluster_points.samples[mask].values
             class_points = np.concatenate( (class_points, pids), axis=0 )
         return class_points.astype(np.int)
@@ -144,10 +174,13 @@ class ClusterManager(SCSingletonConfigurable):
     @log_timing
     def mark_cluster( self, gid: int, cid: int, icluster: int ) -> Marker:
         from spectraclass.model.labels import LabelsManager, lm
-        self._marked_colors[ icluster ] = lm().get_rgb_color(cid)
-        self._markers.setdefault( cid, [] ).append( icluster )
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        ckey = ( tm().image_index, tm().block_coords, icluster )
+        lgm().log(f" mark_cluster: {ckey=} {cid=}")
+        self._marked_colors[ ckey ] = lm().get_rgb_color(cid)
+        self.get_marked_clusters(cid).append( icluster )
         cmap = self.get_cluster_map().values
-        marker = Marker( "clusters", self.get_points(cid), cid, mask=(cmap==icluster) )
+        marker = Marker("clusters", self.get_points(cid), cid, mask=(cmap == icluster))
         return marker
 
         # nodata_value = -2

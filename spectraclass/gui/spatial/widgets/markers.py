@@ -16,10 +16,15 @@ class Marker:
         self.cid = cid
         self.type = type
         self.props = kwargs
-        self.block_index = kwargs.get( 'block_index', tm().block_index )
+        self.block_index = kwargs.get( 'block_index', tm().block_coords )
         self.image_index = kwargs.get( 'image_index', tm().image_index )
         self._pids: np.ndarray = pids if isinstance( pids, np.ndarray ) else np.array( pids, dtype=np.int64 )
         self._mask: Optional[np.ndarray] = kwargs.get( 'mask', None )
+
+    @property
+    def active(self) -> bool:
+        from spectraclass.data.spatial.tile.manager import tm
+        return (self.block_index == tm().block_index) and (self.image_index == self.image_index)
 
     @property
     def pids(self) -> np.ndarray:
@@ -103,7 +108,8 @@ class MarkerManager( PointsInteractor ):
     @exception_handled
     def delete_marker(self, x, y ):
         apx, apy = self.ax.transData.transform( (x, y) )
-        for (pid, marker) in self._markers.items():
+        markers = dict( **self._markers )
+        for (pid, marker) in markers.items():
             (mx,my) = marker.props['point']
             amx, amy = self.ax.transData.transform( (mx, my) )
             if (abs(apx-amx)<self.PICK_DIST) and (abs(apy-amy)<self.PICK_DIST):

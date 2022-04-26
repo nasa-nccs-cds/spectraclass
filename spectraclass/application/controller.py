@@ -159,21 +159,46 @@ class SpectraclassController(SCSingletonConfigurable):
         mm().plot_cluster_image( cluster_image )
         ufm().show(f"Clustering completed")
 
+    def get_training_set(self) -> Tuple[np.ndarray,np.ndarray]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.model.labels import LabelsManager, Action, lm
+        label_data = lm().getTrainingLabels()
+        training_data, training_labels = None, None
+        for ( (tindex, bindex, cid), pids ) in label_data.items():
+            model_data: xa.DataArray = tm().getBlock( tindex=tindex, bindex=bindex ).model_data
+            training_mask: np.ndarray = np.isin( model_data.samples.values, pids )
+            tdata: np.ndarray = model_data.values[ training_mask ]
+            lgm().log( f"Adding training data: {tindex=}, {bindex=}, {cid=}, #pids={pids.size} ")
+            tlabels: np.ndarray = np.full( [pids.size], cid )
+            training_data   = tdata   if (training_data   is None) else np.append( training_data,   tdata,   axis=0 )
+            training_labels = tlabels if (training_labels is None) else np.append( training_labels, tlabels, axis=0 )
+        return training_data, training_labels
+
     @log_timing
     def learn(self):
         from spectraclass.learn.manager import ClassificationManager, cm
-        from spectraclass.data.base import DataManager, dm
-        from spectraclass.model.labels import LabelsManager, Action, lm
         ufm().show("Learning Classification Mapping... ")
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> LEARN ")
-        embedding: xa.DataArray = dm().getModelData()
-        labels_data: xa.DataArray = lm().getLabelsArray()
-        labels_mask = (labels_data > 0)
-        filtered_labels: np.ndarray = labels_data.where(labels_mask, drop=True).astype(np.int32).values
-        filtered_point_data: np.ndarray = embedding.where(labels_mask, drop=True).values
-        lgm().log(f"SHAPES--> embedding: {embedding.shape}, labels_data: {labels_data.shape}, filtered_labels: {filtered_labels.shape}, filtered_point_data: {filtered_point_data.shape}" )
-        cm().learn_classification( filtered_point_data, filtered_labels )
+        training_data, training_labels = self.get_training_set()
+        lgm().log(f"SHAPES--> training_data: {training_data.shape}, training_labels: {training_labels.shape}" )
+        cm().learn_classification( training_data, training_labels )
         ufm().show( "Classification Mapping learned" )
+
+    # @log_timing
+    # def learn(self):
+    #     from spectraclass.learn.manager import ClassificationManager, cm
+    #     from spectraclass.data.base import DataManager, dm
+    #     from spectraclass.model.labels import LabelsManager, Action, lm
+    #     ufm().show("Learning Classification Mapping... ")
+    #     lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> LEARN ")
+    #     embedding: xa.DataArray = dm().getModelData()
+    #     labels_data: xa.DataArray = lm().getLabelsArray()
+    #     labels_mask = (labels_data > 0)
+    #     filtered_labels: np.ndarray = labels_data.where(labels_mask, drop=True).astype(np.int32).values
+    #     filtered_point_data: np.ndarray = embedding.where(labels_mask, drop=True).values
+    #     lgm().log(f"SHAPES--> embedding: {embedding.shape}, labels_data: {labels_data.shape}, filtered_labels: {filtered_labels.shape}, filtered_point_data: {filtered_point_data.shape}" )
+    #     cm().learn_classification( filtered_point_data, filtered_labels )
+    #     ufm().show( "Classification Mapping learned" )
 
     @log_timing
     def propagate_selection(self, niters=1):

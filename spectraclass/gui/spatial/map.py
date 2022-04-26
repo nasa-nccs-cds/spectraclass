@@ -470,10 +470,12 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def setBlock( self, block_index: Tuple[int,int] = None, **kwargs ):
         from spectraclass.data.spatial.tile.manager import tm
+        from spectraclass.learn.cluster import clm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
-        self.block: Block = tm().getBlock( index=block_index )
+        if block_index is not None: tm().setBlock( block_index )
+        self.block: Block = tm().getBlock()
         if self.block is not None:
             dm().clear_project_cache()
             pcm().reset()
@@ -488,6 +490,7 @@ class MapManager(SCSingletonConfigurable):
             self.y_axis = kwargs.pop('y', 1)
             self.y_axis_name = self.data.dims[self.y_axis]
             gpm().refresh()
+            clm().clear()
             if update:  self.update_plots()
             ufm().show(f" ** Tile Loaded ** ")
 
