@@ -3,7 +3,7 @@ import xarray as xa
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.backend_bases import PickEvent, MouseEvent
-import contextlib, time
+import contextlib, time, json
 from typing import List, Optional, Dict, Tuple
 from matplotlib.image import AxesImage
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
@@ -68,19 +68,23 @@ class TileServiceImage(AxesImage):
     @exception_handled
     def add_block_selection(self):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        mdata = tm().tile_metadata
+        from spectraclass.data.spatial.tile.tile import Block
         [dx, _, x0, _, dy, y0 ] = tm().transform
-        block_shape = tm().block_shape
-        block_size = mdata['block_size']
-        width, height = dx*block_shape[0], dy*block_shape[1]
-        maxsize = max( block_size.values() )
-        for bc, bsize in block_size.items():
-            if bsize > 0:
-                selected = (list(bc) == tm().block_index)
-                xc, yc = x0 + width*bc[0], y0+height*bc[1]
-                lw = 3 if selected else 1
+        b0: Block = tm().getBlock(0,0)
+        block_dims = b0.data.attrs['block_dims']
+        block_sizes = tm().decode( b0.data.attrs['block_sizes'] )
+        block_size = tm().block_size
+        max_samples = block_size*block_size
+        width, height = dx*block_size, dy*block_size
+        for tx in range( block_dims[0] ):
+            for ty in range( block_dims[1] ):
+                bc = tx + ty * block_dims[0]
+                bsize = block_sizes[(tx,ty)]
+                selected = ([tx,ty] == tm().block_index)
+                xc, yc = x0 + width*tx, y0+height*ty
+                lw = 3 if selected else ( 2 if bsize else 1 )
                 color = 'orange' if selected else 'yellow'
-                r = Rectangle( (xc,yc), width, height, fill=False, edgecolor=color, lw=lw, alpha=bsize/maxsize )
+                r = Rectangle( (xc,yc), width, height, fill=False, edgecolor=color, lw=lw, alpha=bsize/max_samples )
                 setattr( r, 'block_index', bc )
                 r.set_picker( True )
                 self.axes.add_patch( r )

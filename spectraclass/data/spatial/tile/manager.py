@@ -1,5 +1,6 @@
 from skimage.transform import ProjectiveTransform
 import numpy as np
+import codecs
 import xarray as xa
 import shapely.vectorized as svect
 from typing import List, Union, Tuple, Optional, Dict
@@ -25,9 +26,11 @@ def tm() -> "TileManager":
 
 class TileManager(SCSingletonConfigurable):
 
-    block_size = tl.Int(250).tag(config=True, sync=True)
-    block_index = tl.Tuple( default_value=(0,0) ).tag(config=True, sync=True)
-    mask_class = tl.Int(0).tag(config=True, sync=True)
+    block_size = tl.Int(250).tag( config=True, sync=True )
+    block_index = tl.Tuple( default_value=(0,0) ).tag( config=True, sync=True )
+    mask_class = tl.Int(0).tag( config=True, sync=True )
+    autoprocess = tl.Bool(True).tag( config=True, sync=True )
+    reprocess = tl.Bool(False).tag( config=True, sync=True )
     image_attrs = {}
     ESPG = 3857
     crs = ccrs.epsg(ESPG) # "+a=6378137.0 +b=6378137.0 +nadgrids=@null +proj=merc +lon_0=0.0 +x_0=0.0 +y_0=0.0 +units=m +no_defs"
@@ -42,6 +45,14 @@ class TileManager(SCSingletonConfigurable):
         self._tile_metadata = None
         self._tile_size = None
         self._tile_shape = None
+
+    @classmethod
+    def encode( cls, obj ) -> str:
+        return codecs.encode(pickle.dumps(obj), "base64").decode()
+
+    @classmethod
+    def decode( cls, pickled: str ):
+        return pickle.loads(codecs.decode(pickled.encode(), "base64"))
 
     @property
     def block_shape(self):
@@ -80,11 +91,11 @@ class TileManager(SCSingletonConfigurable):
     def transform(self):
         return self.tile.transform
 
-    @property
-    def tile_metadata(self):
-        if self._tile_metadata is None:
-            self._tile_metadata = self.loadMetadata()
-        return self._tile_metadata
+    # @property
+    # def tile_metadata(self):
+    #     if self._tile_metadata is None:
+    #         self._tile_metadata = self.loadMetadata()
+    #     return self._tile_metadata
 
     @classmethod
     def reproject_to_latlon( cls, x, y ):
@@ -221,40 +232,40 @@ class TileManager(SCSingletonConfigurable):
         lgm().log(f"Completed process_tile_data in ( {time.time()-t1:.1f}, {t1-t0:.1f} ) sec")
         return result
 
-    def loadMetadata(self) -> Dict:
-        file_path = DataManager.instance().modal.getMetadataFilePath()
-        mdata = {}
-        try:
-            with open( file_path, "r" ) as mdfile:
-                print(f"Loading metadata from file: {file_path}")
-                block_sizes = {}  # { (1,1): 244284, (0,0): 134321 }
-                for line in mdfile.readlines():
-                    try:
-                        toks = line.split("=")
-                        if toks[0].startswith('block_size'):
-                            bstok = toks[0].split("-")
-                            block_sizes[ (int(bstok[1]), int(bstok[2])) ] = int( toks[1] )
-                        else:
-                            mdata[toks[0]] = "=".join(toks[1:])
-                    except Exception as err:
-                        lgm().log( f"LoadMetadata: Error '{err}' reading line '{line}'" )
-                mdata[ 'block_size' ] = block_sizes
-        except Exception as err:
-            lgm().log( f"Warning: can't read config file '{file_path}': {err}\n")
-        return mdata
-
-    @exception_handled
-    def saveMetadata( self, block_data: Dict[Tuple,int] ):
-        file_path = DataManager.instance().modal.getMetadataFilePath()
-        print( f"Writing metadata file: {file_path}")
-        with open( file_path, "w" ) as mdfile:
-            mdfile.write( f"tile_shape={self.tile.data.shape}\n" )
-            mdfile.write( f"block_dims={self.block_dims}\n" )
-            mdfile.write( f"tile_size={self.tile_size}\n" )
-            for (aid,aiv) in self.tile.data.attrs.items():
-                mdfile.write(f"{aid}={aiv}\n")
-            for bcoords, bsize in block_data.items():
-                mdfile.write(f"block_size-{bcoords[0]}-{bcoords[1]}={bsize}\n")
+    # def loadMetadata(self) -> Dict:
+    #     file_path = DataManager.instance().modal.getMetadataFilePath()
+    #     mdata = {}
+    #     try:
+    #         with open( file_path, "r" ) as mdfile:
+    #             print(f"Loading metadata from file: {file_path}")
+    #             block_sizes = {}  # { (1,1): 244284, (0,0): 134321 }
+    #             for line in mdfile.readlines():
+    #                 try:
+    #                     toks = line.split("=")
+    #                     if toks[0].startswith('block_size'):
+    #                         bstok = toks[0].split("-")
+    #                         block_sizes[ (int(bstok[1]), int(bstok[2])) ] = int( toks[1] )
+    #                     else:
+    #                         mdata[toks[0]] = "=".join(toks[1:])
+    #                 except Exception as err:
+    #                     lgm().log( f"LoadMetadata: Error '{err}' reading line '{line}'" )
+    #             mdata[ 'block_size' ] = block_sizes
+    #     except Exception as err:
+    #         lgm().log( f"Warning: can't read config file '{file_path}': {err}\n")
+    #     return mdata
+    #
+    # @exception_handled
+    # def saveMetadata( self, block_data: Dict[Tuple,int] ):
+    #     file_path = DataManager.instance().modal.getMetadataFilePath()
+    #     print( f"Writing metadata file: {file_path}")
+    #     with open( file_path, "w" ) as mdfile:
+    #         mdfile.write( f"tile_shape={self.tile.data.shape}\n" )
+    #         mdfile.write( f"block_dims={self.block_dims}\n" )
+    #         mdfile.write( f"tile_size={self.tile_size}\n" )
+    #         for (aid,aiv) in self.tile.data.attrs.items():
+    #             mdfile.write(f"{aid}={aiv}\n")
+    #         for bcoords, bsize in block_data.items():
+    #             mdfile.write(f"block_size-{bcoords[0]}-{bcoords[1]}={bsize}\n")
 
 #     def getPointData( self ) -> Tuple[xa.DataArray,xa.DataArray]:
 #         from spectraclass.data.spatial.manager import SpatialDataManager

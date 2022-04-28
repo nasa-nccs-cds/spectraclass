@@ -7,6 +7,7 @@ import os, warnings
 import tensorflow as tf
 from enum import Enum
 import ipywidgets as ip
+from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.application.controller import SpectraclassController
 import xarray as xa
@@ -114,7 +115,7 @@ class DataManager(SCSingletonConfigurable):
     def preprocess_data(self):
         if not self.modal.hasBlockData() or not self.hasMetadata():
             self.prepare_inputs( )
-            self.save_config( block_data )
+            self.save_config()
 
     def app(self) -> SpectraclassController:
         return self.modal.application.instance()
@@ -153,35 +154,32 @@ class DataManager(SCSingletonConfigurable):
         return os.path.join( output_dir, f"{self.dsid()}-masks.nc" )
 
     @exception_handled
-    def save_config( self, block_data: Dict[Tuple,int] ):
+    def save_config( self ):
         from spectraclass.gui.spatial.map import MapManager, mm
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.reduction.embedding import ReductionManager, rm
         from spectraclass.features.texture.manager import TextureManager, texm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
-        if block_data and len( block_data ) > 0:
-            afm(), lm(), pcm(), mm(), texm(), rm()
-            tm().saveMetadata( block_data )
-            conf_dict = self.generate_config_file()
-            for scope, trait_classes in conf_dict.items():
-                cfg_file = os.path.realpath( self.config_file( scope, self.mode ) )
-                os.makedirs(os.path.dirname(cfg_file), 0o777, exist_ok=True)
-                lines = []
+        afm(), lm(), pcm(), mm(), texm(), rm()
+        conf_dict = self.generate_config_file()
+        for scope, trait_classes in conf_dict.items():
+            cfg_file = os.path.realpath( self.config_file( scope, self.mode ) )
+            os.makedirs(os.path.dirname(cfg_file), 0o777, exist_ok=True)
+            lines = []
 
-                for class_name, trait_map in trait_classes.items():
-                    for trait_name, trait_value in trait_map.items():
-                        tval_str = f'"{trait_value}"' if isinstance(trait_value, str) else f"{trait_value}"
-                        cfg_str = f"c.{class_name}.{trait_name} = {tval_str}\n"
-                        lines.append( cfg_str )
+            for class_name, trait_map in trait_classes.items():
+                for trait_name, trait_value in trait_map.items():
+                    tval_str = f'"{trait_value}"' if isinstance(trait_value, str) else f"{trait_value}"
+                    cfg_str = f"c.{class_name}.{trait_name} = {tval_str}\n"
+                    lines.append( cfg_str )
 
-                lgm().log(f"Writing config file: {cfg_file}")
-                with self._lock:
-                    cfile_handle = open(cfg_file, "w")
-                    cfile_handle.writelines(lines)
-                    cfile_handle.close()
-                lgm().log(f"Config file written")
+            lgm().log(f"Writing config file: {cfg_file}")
+            with self._lock:
+                cfile_handle = open(cfg_file, "w")
+                cfile_handle.writelines(lines)
+                cfile_handle.close()
+            lgm().log(f"Config file written")
 
     def generate_config_file(self) -> Dict:
         #        print( f"Generate config file, _classes = {[inst.__class__ for inst in cls.config_instances]}")
@@ -274,6 +272,10 @@ class DataManager(SCSingletonConfigurable):
     @exception_handled
     def prepare_inputs( self, **kwargs ):
         self._mode_data_manager_.prepare_inputs( **kwargs )
+
+    @exception_handled
+    def process_block( self, block: Block  ) -> xa.Dataset:
+        return self._mode_data_manager_.process_block( block )
 
     @exception_handled
     def getSpectralData( self, **kwargs ) -> Optional[xa.DataArray]:

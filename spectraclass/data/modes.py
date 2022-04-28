@@ -5,6 +5,7 @@ import os, glob, sys
 import netCDF4 as nc
 import ipywidgets as ip
 from os import path
+from spectraclass.data.spatial.tile.tile import Block
 from collections import OrderedDict
 from pathlib import Path
 from spectraclass.gui.control import UserFeedbackManager, ufm
@@ -125,6 +126,9 @@ class ModeDataManager(SCSingletonConfigurable):
         raise NotImplementedError()
 
     def prepare_inputs(self, **kwargs ) -> Dict[Tuple,int]:
+        raise NotImplementedError()
+
+    def process_block( self, block: Block  ) -> xa.Dataset:
         raise NotImplementedError()
 
     def update_extent(self):

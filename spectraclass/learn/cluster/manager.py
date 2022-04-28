@@ -12,7 +12,7 @@ import xarray as xa
 import ipywidgets as ipw
 from functools import partial
 import numpy as np
-from typing import List, Tuple, Optional, Dict, Union
+from typing import List, Union, Tuple, Optional, Dict, Callable, Iterable
 import traitlets as tl
 from spectraclass.data.spatial.tile.tile import Block, Tile
 import traitlets.config as tlc
@@ -26,15 +26,30 @@ def clm() -> "ClusterManager":
 
 class ClusterMagnitudeWidget(ipw.HBox):
 
-    def __init__(self, index: int ):
+    magnitude = tl.Float(0.5).tag(config=True, sync=True)
+
+    def __init__(self, index: int, **kwargs ):
+        handler = kwargs.get('handler', None)
+        self.handlers = [] if (handler is None) else [handler]
         self.label = ipw.Button( description=f"Cluster-{index}", style=dict( button_color=f"rgb{clm().cluster_color(index)}" ) )
         if index == 0: lgm().log(f" label.style = {self.label.style.keys}")
+        self._index = index
         self.slider = ipw.FloatSlider(0.5, description="", min=0.0, max=1.0)
+        ipw.jslink( (self.slider, 'value'), (self, 'magnitude') )
         self.label.on_click( self.reset )
         ipw.HBox.__init__( self, [self.label,self.slider] )
+        self.observe( self._on_change, 'magnitude')
 
     def reset(self, *args ):
         self.slider.value = 0.5
+
+    def _on_change( self, change: Dict ):
+        for handler in self.handlers:
+            handler( self._index, change['new'] )
+
+    def add_handler( self, handler: Callable[[int,float],None] ):
+        self.handlers.append( handler )
+
 
 class ClusterManager(SCSingletonConfigurable):
     modelid = tl.Unicode("kmeans").tag(config=True, sync=True)
@@ -221,8 +236,11 @@ class ClusterManager(SCSingletonConfigurable):
     @exception_handled
     def tuning_gui(self) -> ipw.DOMWidget:
         nclusters = self._ncluster_selector.value
-        tuning_sliders = [ ClusterMagnitudeWidget( icluster ) for icluster in range( nclusters ) ]
+        tuning_sliders = [ ClusterMagnitudeWidget( icluster, handler=self.tune_cluster ) for icluster in range( nclusters ) ]
         return  ipw.VBox( tuning_sliders, layout=ipw.Layout( width="600px", border='2px solid firebrick' ) )
+
+    def tune_cluster(self, icluster: int, magnitude: float ):
+        lgm().log( f" tune_cluster[{icluster}] -> mag = {magnitude}")
 
 class ClusterSelector:
     LEFT_BUTTON = 1
