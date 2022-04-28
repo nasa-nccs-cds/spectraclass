@@ -222,7 +222,7 @@ class SpatialDataManager(ModeDataManager):
         block_data_file = dm().modal.dataFile(block=block)
         ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
         coord_data = {}
-        lgm().log(f" Processing Block{block.block_coords}, shape = {block.shape}", print=True)
+        lgm().log(f" Processing Block{block.block_coords}", print=True)
         try:
             blocks_point_data, coord_data = block.getPointData()
             lgm().log(f" Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}", print=True)
@@ -246,7 +246,7 @@ class SpatialDataManager(ModeDataManager):
                 raw_data: xa.DataArray = block.data
                 data_vars = dict(raw=raw_data, norm=point_data)
                 reduced_dataArray = xa.DataArray(reduced_spectra, dims=['samples', 'model'], coords=model_coords)
-                lgm().log(  f"Writing output file: '{block_data_file}' with {blocks_point_data.size} samples, mask={coord_data['mask']}")
+                lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.size} samples", print=True )
                 lgm().log( f" -----> reduction: shape = {reduced_spectra.shape}, #NULL={np.count_nonzero(np.isnan(reduced_spectra))}")
                 lgm().log( f" -----> point_data: shape = {point_data.shape}, #NULL={np.count_nonzero(np.isnan(point_data.values))}")
                 data_vars['reduction'] = reduced_dataArray

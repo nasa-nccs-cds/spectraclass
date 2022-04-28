@@ -5,7 +5,7 @@ import xarray as xa
 import shapely.vectorized as svect
 from typing import List, Union, Tuple, Optional, Dict
 from pyproj import Proj
-from spectraclass.data.base import DataManager, DataType
+from spectraclass.data.base import DataManager, dm, DataType
 from spectraclass.util.logs import LogManager, lgm, log_timing
 import os, math, pickle, time
 import cartopy.crs as ccrs
@@ -122,15 +122,15 @@ class TileManager(SCSingletonConfigurable):
 
     @property
     def image_name(self):
-        return DataManager.instance().modal.image_name
+        return dm().modal.image_name
 
     def get_image_name( self, **kwargs ):
         image_index = kwargs.get('index', DataManager.instance().modal._active_image )
-        return DataManager.instance().modal.image_names[ image_index ]
+        return dm().modal.image_names[ image_index ]
 
     @property
     def image_index(self) -> int:
-        return DataManager.instance().modal.image_index
+        return dm().modal.image_index
 
     @property
     def block_coords(self) -> Tuple:

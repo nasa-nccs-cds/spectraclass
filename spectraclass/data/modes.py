@@ -288,6 +288,7 @@ class ModeDataManager(SCSingletonConfigurable):
         return path.isfile( self.dataFile() )
 
     def loadDataFile( self, **kwargs ) -> Optional[xa.Dataset]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         dFile = self.dataFile( **kwargs )
         if path.isfile( dFile ):
             dataset: xa.Dataset = xa.open_dataset( dFile, concat_characters=True )
@@ -298,8 +299,13 @@ class ModeDataManager(SCSingletonConfigurable):
             lgm().log( f"#GID:  --> coords={coords}")
             lgm().log( f"#GID:  --> vars={vars}")
         else:
-            ufm().show( f"This file/tile needs to be preprocesed.", "red" )
-            raise Exception( f"Missing data file: {dFile}" )
+            if tm().autoprocess:
+                ufm().show(f"Processing data block.", "blue")
+                block = tm().getBlock()
+                dataset = self.process_block( block )
+            else:
+                ufm().show( f"This file/tile needs to be preprocesed.", "red" )
+                raise Exception( f"Missing data file: {dFile}" )
         return dataset
 
     def filterCommonPrefix(self, paths: List[str])-> Tuple[str,List[str]]:
