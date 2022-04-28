@@ -15,8 +15,8 @@ else:
 
 dm.modal.image_names = ["20170720t004130"]
 dm.proc_type = "cpu"
-TileManager.block_size = 256
-ModeDataManager.model_dims = 24
+TileManager.block_size = 256  # 250
+ModeDataManager.model_dims = 24  # 16
 TileManager.block_index = [0, 2]
 
 dm.loadCurrentProject()

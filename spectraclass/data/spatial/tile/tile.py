@@ -307,6 +307,7 @@ class Block(DataContainer):
         block_raster.name = self.file_name
         return block_raster
 
+    @log_timing
     def load_block_raster(self) -> Optional[xa.DataArray]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.data.base import DataManager, dm
@@ -382,6 +383,7 @@ class Block(DataContainer):
         x0, y0 = self.block_coords[0]*bsize, self.block_coords[1]*bsize
         return ( x0, x0+bsize ), ( y0, y0+bsize )
 
+    @log_timing
     def getPointData( self ) -> Tuple[xa.DataArray,Dict]:
         if self._point_data is None:
             self._point_data, pmask, rmask =  self.raster2points( self.data )

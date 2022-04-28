@@ -245,9 +245,12 @@ class ModeDataManager(SCSingletonConfigurable):
 
     @exception_handled
     def loadDataset(self, **kwargs) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         if self.dsid() not in self.datasets:
             lgm().log(f"Load dataset {self.dsid()}, current datasets = {self.datasets.keys()}")
-            xdataset: xa.Dataset = self.loadDataFile(**kwargs)
+            xdataset: Optional[xa.Dataset] = self.loadDataFile(**kwargs)
+            if xdataset is None:
+                xdataset = self.process_block( tm().getBlock() )
             if len(xdataset.variables.keys()) == 0:
                 lgm().log(f"Warning: Attempt to Load empty dataset {self.dataFile( **kwargs )}", print=True)
                 return None
@@ -288,24 +291,16 @@ class ModeDataManager(SCSingletonConfigurable):
         return path.isfile( self.dataFile() )
 
     def loadDataFile( self, **kwargs ) -> Optional[xa.Dataset]:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         dFile = self.dataFile( **kwargs )
+        dataset: Optional[xa.Dataset] = None
         if path.isfile( dFile ):
-            dataset: xa.Dataset = xa.open_dataset( dFile, concat_characters=True )
+            dataset = xa.open_dataset( dFile, concat_characters=True )
             dataset.attrs['data_file'] = dFile
             vars = [ f"{vid}{var.dims}" for (vid,var) in dataset.variables.items()]
             coords = [f"{cid}{coord.shape}" for (cid, coord) in dataset.coords.items()]
             lgm().log( f"#GID: loadDataFile: {dFile}, coords={coords}, vars={vars}" )
             lgm().log( f"#GID:  --> coords={coords}")
             lgm().log( f"#GID:  --> vars={vars}")
-        else:
-            if tm().autoprocess:
-                ufm().show(f"Processing data block.", "blue")
-                block = tm().getBlock()
-                dataset = self.process_block( block )
-            else:
-                ufm().show( f"This file/tile needs to be preprocesed.", "red" )
-                raise Exception( f"Missing data file: {dFile}" )
         return dataset
 
     def filterCommonPrefix(self, paths: List[str])-> Tuple[str,List[str]]:
