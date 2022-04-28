@@ -1,5 +1,3 @@
-import traceback
-from spectraclass.data.spatial.tile.tile import Block
 import numpy as np
 import xarray as xa
 import ipywidgets as ip
@@ -217,8 +215,7 @@ class SpatialDataManager(ModeDataManager):
         coords = { c: np.empty([1]) for c in [ 'x', 'y', 'band', 'samples', 'model' ] }
         return xa.Dataset( data_vars=data_vars, coords=coords )
 
-    def process_block( self, block: Block  ) -> xa.Dataset:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
+    def process_block( self, block  ) -> xa.Dataset:
         block_data_file = dm().modal.dataFile(block=block)
         ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
         coord_data = {}
@@ -240,6 +237,7 @@ class SpatialDataManager(ModeDataManager):
             blocks_reduction = [(reduced_spectra, blocks_point_data, blocks_point_data), ]
 
         if blocks_reduction is not None:
+            from spectraclass.data.spatial.tile.manager import TileManager, tm
             self.model_dims = blocks_reduction[0][0].shape[1]
             for (reduced_spectra, reproduction, point_data) in blocks_reduction:
                 model_coords = dict(samples=point_data.samples, model=np.arange(self.model_dims))

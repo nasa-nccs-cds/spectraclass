@@ -7,7 +7,6 @@ import os, warnings
 import tensorflow as tf
 from enum import Enum
 import ipywidgets as ip
-from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.application.controller import SpectraclassController
 import xarray as xa
@@ -274,7 +273,7 @@ class DataManager(SCSingletonConfigurable):
         self._mode_data_manager_.prepare_inputs( **kwargs )
 
     @exception_handled
-    def process_block( self, block: Block  ) -> xa.Dataset:
+    def process_block( self, block ) -> xa.Dataset:
         return self._mode_data_manager_.process_block( block )
 
     @exception_handled

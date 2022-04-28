@@ -5,7 +5,6 @@ import os, glob, sys
 import netCDF4 as nc
 import ipywidgets as ip
 from os import path
-from spectraclass.data.spatial.tile.tile import Block
 from collections import OrderedDict
 from pathlib import Path
 from spectraclass.gui.control import UserFeedbackManager, ufm
@@ -128,7 +127,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def prepare_inputs(self, **kwargs ) -> Dict[Tuple,int]:
         raise NotImplementedError()
 
-    def process_block( self, block: Block  ) -> xa.Dataset:
+    def process_block(self, block  ) -> xa.Dataset:
         raise NotImplementedError()
 
     def update_extent(self):
@@ -255,7 +254,7 @@ class ModeDataManager(SCSingletonConfigurable):
                 lgm().log(f"Warning: Attempt to Load empty dataset {self.dataFile( **kwargs )}", print=True)
                 return None
             else:
-                lgm().log(f" ---> Opening Dataset {self.dsid()} from file {xdataset.attrs['data_file']}")
+                lgm().log(f" ---> Opening Dataset {self.dsid()}")
                 dvars: Dict[str,Union[xa.DataArray,List,Dict]] = self.dset_subsample( xdataset, dsid=self.dsid(), **kwargs )
                 attrs = xdataset.attrs.copy()
                 raw_data = dvars['samples']

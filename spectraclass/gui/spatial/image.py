@@ -70,7 +70,7 @@ class TileServiceImage(AxesImage):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.data.spatial.tile.tile import Block
         [dx, _, x0, _, dy, y0 ] = tm().transform
-        b0: Block = tm().getBlock(0,0)
+        b0: Block = tm().getBlock(bindex=(0,0))
         block_dims = b0.data.attrs['block_dims']
         block_sizes = tm().decode( b0.data.attrs['block_sizes'] )
         block_size = tm().block_size

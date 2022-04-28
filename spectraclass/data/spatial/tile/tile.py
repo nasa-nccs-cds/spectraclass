@@ -139,14 +139,14 @@ class Tile(DataContainer):
     def name(self) -> str:
         return self.data.attrs['tilename']
 
-    def getBlock(self, ix: int, iy: int, **kwargs ) -> Optional["Block"]:
+    def getDataBlock(self, ix: int, iy: int, **kwargs ) -> Optional["Block"]:
         if (ix,iy) in self._blocks: return self._blocks[ (ix,iy) ]
         return self._blocks.setdefault( (ix,iy), Block( self, ix, iy, self._index, **kwargs ) )
 
     def getBlocks(self, **kwargs ) -> List["Block"]:
         from spectraclass.data.spatial.tile.manager import TileManager
         tm = TileManager.instance()
-        return [ self.getBlock( ix, iy, **kwargs ) for ix in range(0,tm.block_dims[0]) for iy in range(0,tm.block_dims[1]) ]
+        return [ self.getDataBlock( ix, iy, **kwargs ) for ix in range(0,tm.block_dims[0]) for iy in range(0,tm.block_dims[1]) ]
 
 class ThresholdRecord:
 
@@ -302,6 +302,9 @@ class Block(DataContainer):
             lgm().log(f"BLOCK{self.block_coords}: load-slice ybounds={ybounds}, xbounds={xbounds}, raster shape={raw_raster.shape}")
         block_raster = self._apply_mask( raw_raster )
         block_raster.attrs['block_coords'] = self.block_coords
+        block_raster.attrs['tile_shape'] = tm().tile.data.shape
+        block_raster.attrs['block_dims'] = tm().block_dims
+        block_raster.attrs['tile_size']  = tm().tile_size
         block_raster.attrs['dsid'] = self.dsid()
         block_raster.attrs['file_name'] = self.file_name
         block_raster.name = self.file_name
@@ -309,22 +312,18 @@ class Block(DataContainer):
 
     @log_timing
     def load_block_raster(self) -> Optional[xa.DataArray]:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.control import UserFeedbackManager, ufm
         block_data_file = dm().modal.dataFile( block=self, index=self.tile_index )
+        raw_raster: Optional[xa.DataArray] = None
         if path.isfile( block_data_file ):
             dataset: xa.Dataset = dm().modal.loadDataFile( block=self, index=self.tile_index )
-        else:
-            if not tm().autoprocess: return None
-            ufm().show("Processing data block.", "blue")
-            dataset: xa.Dataset = dm().modal.process_block( self )
-        raw_raster = dataset["raw"]
-        for aid, aval in dataset.attrs.items():
-            if aid not in raw_raster.attrs:
-                raw_raster.attrs[aid] = aval
-        lgm().log(f"BLOCK{self.block_coords}->get_data: load-datafile raster shape={raw_raster.shape}")
-        if raw_raster.size == 0: ufm().show( "This block does not appear to have any data.", "red" )
+            raw_raster = dataset["raw"]
+            for aid, aval in dataset.attrs.items():
+                if aid not in raw_raster.attrs:
+                    raw_raster.attrs[aid] = aval
+            lgm().log(f"BLOCK{self.block_coords}->get_data: load-datafile raster shape={raw_raster.shape}")
+            if raw_raster.size == 0: ufm().show( "This block does not appear to have any data.", "red" )
         return raw_raster
 
     @property

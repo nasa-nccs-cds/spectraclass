@@ -5,7 +5,7 @@ from spectraclass.application.controller import SpectraclassController, app
 import os
 host = "desktop"
 
-dm: DataManager = DataManager.initialize("demo2", 'aviris')
+dm: DataManager = DataManager.initialize( "demo2", 'aviris' )
 if (host == "laptop"):
     dm.modal.data_dir = os.path.expanduser("~/Development/Data/Aviris/processed")
     dm.modal.cache_dir = os.path.expanduser("/Volumes/archive/Cache")

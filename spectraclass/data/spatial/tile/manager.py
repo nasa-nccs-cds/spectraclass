@@ -104,20 +104,19 @@ class TileManager(SCSingletonConfigurable):
     @property
     def block_dims(self) -> Tuple[int,int]:
         if self._block_dims is None:
-            self._block_dims = [ math.ceil(self.tile_shape[i]/self.block_shape[i]) for i in (0,1) ]
+            self._block_dims = [ math.ceil(self.tile_shape[i]/self.block_size) for i in (0,1) ]
         return self._block_dims
 
     @property
     def tile_size(self) -> Tuple[int,int]:
         if self._tile_size is None:
-            self._tile_size = [ (self.block_dims[i] * self.block_shape[i]) for i in (0,1) ]
+            self._tile_size = [ ( self.block_dims[i] * self.block_size ) for i in (0,1) ]
         return self._tile_size
 
     @property
     def tile_shape(self) -> Tuple[int,int]:
         if self._tile_shape is None:
-            idata: xa.DataArray = self.getTileData()
-            self._tile_shape = [ idata.shape[-1], idata.shape[-2] ]
+            self._tile_shape = [ self.tile.data.shape[-1], self.tile.data.shape[-2] ]
         return self._tile_shape
 
     @property
@@ -146,7 +145,7 @@ class TileManager(SCSingletonConfigurable):
         if (bindex is None) and ('block' in kwargs): bindex = kwargs['block'].block_coords
         if bindex is not None: self.block_index = bindex
         tile = self.tile if (tindex is None) else self.get_tile( tindex )
-        return tile.getBlock( self.block_index[0], self.block_index[1] )
+        return tile.getDataBlock( self.block_index[0], self.block_index[1] )
 
     @exception_handled
     def getMask(self) -> Optional[np.ndarray]:
