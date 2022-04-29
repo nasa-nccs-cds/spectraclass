@@ -310,15 +310,38 @@ class Block(DataContainer):
         block_raster.name = self.file_name
         return block_raster
 
+    @property
+    def data_file(self):
+        from spectraclass.data.base import DataManager, dm
+        return dm().modal.dataFile( block=self, index=self.tile_index )
+
+    @log_timing
+    def has_data_samples(self) -> bool:
+        file_exists = path.isfile(self.data_file)
+        if file_exists:
+            with xa.open_dataset(self.data_file) as dataset:
+                nsamples = 0 if (len( dataset.coords ) == 0) else dataset.coords['samples'].size
+                lgm().log( f" BLOCK{self.block_coords} data_samples={nsamples}")
+                file_exists = (nsamples > 0)
+        return file_exists
+
+    def has_data_file(self, non_empty=False ) -> bool:
+        file_exists = path.isfile(self.data_file)
+        if non_empty and file_exists:
+            return self.has_data_samples()
+        return file_exists
+
     @log_timing
     def load_block_raster(self) -> Optional[xa.DataArray]:
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.control import UserFeedbackManager, ufm
-        block_data_file = dm().modal.dataFile( block=self, index=self.tile_index )
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         raw_raster: Optional[xa.DataArray] = None
-        if path.isfile( block_data_file ):
+        if self.has_data_file():
             dataset: xa.Dataset = dm().modal.loadDataFile( block=self, index=self.tile_index )
-            raw_raster = dataset["raw"]
+            raw_raster = tm().mask_nodata( dataset["raw"] )
+            drange = [ np.nanmin(raw_raster.values), np.nanmax(raw_raster.values) ]
+            lgm().log( f" ---> load_block_raster{self.block_coords}: raw data range = {drange}, raw data attrs = {dataset['raw'].attrs.keys()}" )
             for aid, aval in dataset.attrs.items():
                 if aid not in raw_raster.attrs:
                     raw_raster.attrs[aid] = aval

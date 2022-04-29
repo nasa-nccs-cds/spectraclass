@@ -35,6 +35,7 @@ class TileServiceImage(AxesImage):
         block_selection = kwargs.pop('block_selection', False)
         self.user_is_interacting = False
         super().__init__(ax, **kwargs)
+        self.base_alpha = 0.2
         self.projection = projection
         self.cache = []
         self.current_extent = []
@@ -43,6 +44,7 @@ class TileServiceImage(AxesImage):
         self.axes.figure.canvas.mpl_connect('button_press_event', self.on_press)
         self.axes.figure.canvas.mpl_connect('button_release_event', self.on_release)
         self.axes.figure.canvas.mpl_connect('pick_event', self.on_pick)
+        self.axes.figure.canvas.toolbar_visible = not block_selection
         self.on_release()
         if xrange is not None: self.axes.set_xbound( xrange[0], xrange[1] )
         if yrange is not None: self.axes.set_ybound( yrange[0], yrange[1] )
@@ -70,22 +72,19 @@ class TileServiceImage(AxesImage):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.data.spatial.tile.tile import Block
         [dx, _, x0, _, dy, y0 ] = tm().transform
-        b0: Block = tm().getBlock(bindex=(0,0))
-        block_dims = b0.data.attrs['block_dims']
-        block_sizes = tm().decode( b0.data.attrs['block_sizes'] )
         block_size = tm().block_size
-        max_samples = block_size*block_size
+        block_dims = tm().block_dims
         width, height = dx*block_size, dy*block_size
         for tx in range( block_dims[0] ):
             for ty in range( block_dims[1] ):
-                bc = tx + ty * block_dims[0]
-                bsize = block_sizes[(tx,ty)]
+                block = tm().tile.getDataBlock( tx, ty )
                 selected = ([tx,ty] == tm().block_index)
                 xc, yc = x0 + width*tx, y0+height*ty
-                lw = 3 if selected else ( 2 if bsize else 1 )
                 color = 'orange' if selected else 'yellow'
-                r = Rectangle( (xc,yc), width, height, fill=False, edgecolor=color, lw=lw, alpha=bsize/max_samples )
-                setattr( r, 'block_index', bc )
+                lw = 2 if selected else 1
+                alpha = 1.0 if block.has_data_file( True ) else self.base_alpha
+                r = Rectangle( (xc,yc), width, height, fill=False, edgecolor=color, lw=lw, alpha=alpha )
+                setattr( r, 'block_index', (tx,ty) )
                 r.set_picker( True )
                 self.axes.add_patch( r )
                 self._blocks.append( r )
@@ -102,15 +101,15 @@ class TileServiceImage(AxesImage):
 
     def select_block(self, r: Rectangle ):
         from spectraclass.gui.spatial.map import MapManager, mm
-        from spectraclass.gui.control import ufm
         if r != self._selected_block:
             lgm().log(f"\n  ******** Selected block: {r.block_index}  ******** ")
-            ufm().show(f" Loading Tile {r.block_index}")
             if self._selected_block is not None:
                 self._selected_block.set_linewidth(1)
+                r.set_alpha( self.base_alpha )
                 self._selected_block.set_color("yellow")
-            r.set_linewidth(3)
+            r.set_linewidth(2)
             r.set_color("orange")
+            r.set_alpha( 1.0 )
             self._selected_block = r
             self.figure.canvas.draw_idle()
             mm().setBlock( r.block_index, update=True )

@@ -368,6 +368,7 @@ class MapManager(SCSingletonConfigurable):
         if self.base is not None:
             fdata: xa.DataArray = self.frame_data
             if fdata is not None:
+                lgm().log(f"set_color_bounds: full data range = {[np.nanmin(fdata.values),np.nanmax(fdata.values)]}")
                 drange = self.get_color_bounds(fdata)
                 alpha = self.layers('bands').visibility
                 norm = Normalize(**drange)
@@ -417,7 +418,8 @@ class MapManager(SCSingletonConfigurable):
     def frame_data(self) -> Optional[xa.DataArray]:
         if self.currentFrame >= self.nFrames(): return None
         fdata = self.data[self.currentFrame]
-        lgm().log( f" ******* frame_data[{self.currentFrame}], shape: {fdata.shape}, {svalid(fdata.values)}")
+        vrange = [ np.nanmin(fdata.values), np.nanmax(fdata.values) ]
+        lgm().log( f" ******* frame_data[{self.currentFrame}], shape: {fdata.shape}, {svalid(fdata.values)}, vrange={vrange}, attrs={fdata.attrs.keys()}")
         tmask: np.ndarray = self.block.get_threshold_mask( raster=True )
         if tmask is None:
             lgm().log(f" ---> NO threshold mask")
@@ -477,6 +479,7 @@ class MapManager(SCSingletonConfigurable):
         if block_index is not None: tm().setBlock( block_index )
         self.block: Block = tm().getBlock()
         if self.block is not None:
+            ufm().show(f" *** Loading Block{self.block.block_coords}")
             dm().clear_project_cache()
             pcm().reset()
             update = kwargs.get( 'update', False )
@@ -492,7 +495,7 @@ class MapManager(SCSingletonConfigurable):
             gpm().refresh()
             clm().clear()
             if update:  self.update_plots()
-            ufm().show(f" ** Tile Loaded ** ")
+            ufm().show(f" ** Block Loaded ** ")
 
     def gui(self,**kwargs):
         if self.base is None:

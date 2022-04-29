@@ -56,7 +56,7 @@ class SpatialDataManager(ModeDataManager):
         if self._tile_selection_basemap is None:
             self._tile_selection_basemap = TileServiceBasemap( block_selection=True )
             (x0, x1, y0, y1) = self.tiles.tile.extent
-            self._tile_selection_basemap.setup_plot( "Tile Selection", (x0, x1), (y0, y1), index=99, size=(3,3), slider=False, **kwargs )
+            self._tile_selection_basemap.setup_plot( "Tile Selection", (x0, x1), (y0, y1), index=99, size=(6,6), slider=False, **kwargs )
         return self._tile_selection_basemap.gui()
 
     def update_extent(self):
@@ -219,7 +219,7 @@ class SpatialDataManager(ModeDataManager):
         block_data_file = dm().modal.dataFile(block=block)
         ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
         coord_data = {}
-        lgm().log(f" Processing Block{block.block_coords}", print=True)
+        ufm().show( f" *** Processing Block{block.block_coords}" )
         try:
             blocks_point_data, coord_data = block.getPointData()
             lgm().log(f" Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}", print=True)

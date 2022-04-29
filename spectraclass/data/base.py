@@ -252,8 +252,9 @@ class DataManager(SCSingletonConfigurable):
     def getInputFileData(self, vname: str = None, **kwargs ) -> np.ndarray:
         return self._mode_data_manager_.getInputFileData( vname, **kwargs )
 
-    def loadCurrentProject(self, caller_id: str = "main" ) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
+    def loadCurrentProject(self, caller_id: str = "main", clear = False ) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
         lgm().log( f" DataManager: loadCurrentProject: {caller_id}" )
+        if clear: self._project_data = None
         if self._mode_data_manager_ is not None:
             if self._project_data is None:
                 self._project_data = self._mode_data_manager_.loadCurrentProject()

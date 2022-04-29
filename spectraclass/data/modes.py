@@ -73,7 +73,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def file_selector(self):
         if self._file_selector is None:
             lgm().log( f"Creating file_selector, options={self.image_names}, value={self.image_names[0]}")
-            self._file_selector =  ip.Select( options=self.image_names, value=self.image_name, layout=ipw.Layout(width='600px') )
+            self._file_selector =  ip.Select( options=self.image_names, value=self.image_names[0], layout=ipw.Layout(width='600px') )
             self._file_selector.observe( self.on_image_change, names=['value'] )
         return self._file_selector
 
@@ -262,7 +262,6 @@ class ModeDataManager(SCSingletonConfigurable):
                 lgm().log( f" -----> point_data: shape = {raw_data.shape}, #NULL={np.count_nonzero(np.isnan(raw_data.values))}")
                 dvars['plot-x'] = dvars['bands'] if ('bands'in dvars) else dvars['band']
                 dvars['plot-mx'] = dvars['model']
-                dvars['plot-mx'] = dvars['model']
                 attrs['dsid'] = self.dsid()
                 attrs['type'] = 'spectra'
                 dvars['attrs'] = attrs
@@ -290,6 +289,8 @@ class ModeDataManager(SCSingletonConfigurable):
         return path.isfile( self.dataFile() )
 
     def loadDataFile( self, **kwargs ) -> Optional[xa.Dataset]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        ufm().show(f" Loading Tile {tm().block_index}")
         dFile = self.dataFile( **kwargs )
         dataset: Optional[xa.Dataset] = None
         if path.isfile( dFile ):

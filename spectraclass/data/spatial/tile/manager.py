@@ -52,7 +52,7 @@ class TileManager(SCSingletonConfigurable):
 
     @classmethod
     def decode( cls, pickled: str ):
-        return pickle.loads(codecs.decode(pickled.encode(), "base64"))
+        if pickled: return pickle.loads(codecs.decode(pickled.encode(), "base64"))
 
     @property
     def block_shape(self):
@@ -136,7 +136,9 @@ class TileManager(SCSingletonConfigurable):
         return tuple(self.block_index)
 
     def setBlock( self, block_index ):
-        self.block_index = block_index
+        if block_index != self.block_index:
+            self.block_index = block_index
+            dm().loadCurrentProject( 'setBlock', True )
 
     @exception_handled
     def getBlock( self, **kwargs ) -> Block:
@@ -228,6 +230,9 @@ class TileManager(SCSingletonConfigurable):
         result = tile_data.rio.reproject(cls.crs)
         result.attrs['wkt'] = result.spatial_ref.crs_wkt
         result.attrs['long_name'] = tile_data.attrs.get('long_name', None)
+        if '_FillValue' in result.attrs:
+           nodata = result.attrs['_FillValue']
+           result = result if np.isnan(nodata) else result.where(result != nodata, np.nan)
         lgm().log(f"Completed process_tile_data in ( {time.time()-t1:.1f}, {t1-t0:.1f} ) sec")
         return result
 

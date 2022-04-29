@@ -26,7 +26,7 @@ def clm() -> "ClusterManager":
 
 class ClusterMagnitudeWidget(ipw.HBox):
 
-    magnitude = tl.Float(0.5).tag(config=True, sync=True)
+#    magnitude = tl.Float(0.5).tag(config=True, sync=True)
 
     def __init__(self, index: int, **kwargs ):
         handler = kwargs.get('handler', None)
@@ -35,10 +35,11 @@ class ClusterMagnitudeWidget(ipw.HBox):
         if index == 0: lgm().log(f" label.style = {self.label.style.keys}")
         self._index = index
         self.slider = ipw.FloatSlider(0.5, description="", min=0.0, max=1.0)
-        ipw.jslink( (self.slider, 'value'), (self, 'magnitude') )
+#        ipw.jslink( (self.slider, 'value'), (self, 'magnitude') )
         self.label.on_click( self.reset )
         ipw.HBox.__init__( self, [self.label,self.slider] )
-        self.observe( self._on_change, 'magnitude')
+#        self.observe( self._on_change, 'magnitude')
+        self.observe(self._on_change, 'slider.value')
 
     def reset(self, *args ):
         self.slider.value = 0.5
