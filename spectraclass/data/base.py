@@ -109,7 +109,7 @@ class DataManager(SCSingletonConfigurable):
         return dataManager
 
     def hasMetadata(self):
-        return os.path.isfile( DataManager.instance().modal.getMetadataFilePath() )
+        return os.path.isfile( self.metadata_file )
 
     def preprocess_data(self):
         if not self.modal.hasBlockData() or not self.hasMetadata():
@@ -219,6 +219,10 @@ class DataManager(SCSingletonConfigurable):
     @property
     def cache_dir(self) -> str:
         return os.path.join( self.modal.cache_dir, "spectraclass", self.modal.MODE, self.name )
+
+    @property
+    def metadata_file(self) -> str:
+        return f"{self.cache_dir}/{self.modal.image_name}.mdata.txt"
 
     def dsid(self, **kwargs ) -> str:
         return self._mode_data_manager_.dsid( **kwargs )

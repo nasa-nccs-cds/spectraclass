@@ -326,12 +326,6 @@ class SpatialDataManager(ModeDataManager):
         else:
             return f"{base_dir}/{base_file}.tif"
 
-    def getMetadataFilePath(self) -> str:
-        base_file = dm().modal.image_name
-        truncate =  base_file.endswith(".mat") or base_file.endswith(".tif")
-        mfilename = base_file[:-4] if truncate else base_file
-        return f"{self.datasetDir}/{mfilename}.mdata.txt"
-
     def writeGeotiff(self, raster_data: xa.DataArray ) -> Optional[str]:
         output_file = self.getFilePath()
         try:
@@ -357,9 +351,9 @@ class SpatialDataManager(ModeDataManager):
 
     @exception_handled
     def readGeoTiff(self, input_file_path: str, **kwargs ) -> xa.DataArray:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         t0 = time.time()
-        raster = rio.open_rasterio( input_file_path, driver='GTiff' )
-        input_bands = raster
+        input_bands = rio.open_rasterio( input_file_path ) # , chunks=(1,tm().block_size,tm().block_size) )
         input_bands.attrs['long_name'] = Path(input_file_path).stem
         lgm().log( f"Completed Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}, time={time.time()-t0:.2f} sec", print=True )
         gt = [ float(sval) for sval in input_bands.spatial_ref.GeoTransform.split() ]

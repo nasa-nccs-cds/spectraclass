@@ -42,7 +42,6 @@ class TileManager(SCSingletonConfigurable):
         self._idxtiles: Dict[int, Tile] = {}
         self.cacheTileData = True
         self._block_dims = None
-        self._tile_metadata = None
         self._tile_size = None
         self._tile_shape = None
 
@@ -235,41 +234,6 @@ class TileManager(SCSingletonConfigurable):
            result = result if np.isnan(nodata) else result.where(result != nodata, np.nan)
         lgm().log(f"Completed process_tile_data in ( {time.time()-t1:.1f}, {t1-t0:.1f} ) sec")
         return result
-
-    # def loadMetadata(self) -> Dict:
-    #     file_path = DataManager.instance().modal.getMetadataFilePath()
-    #     mdata = {}
-    #     try:
-    #         with open( file_path, "r" ) as mdfile:
-    #             print(f"Loading metadata from file: {file_path}")
-    #             block_sizes = {}  # { (1,1): 244284, (0,0): 134321 }
-    #             for line in mdfile.readlines():
-    #                 try:
-    #                     toks = line.split("=")
-    #                     if toks[0].startswith('block_size'):
-    #                         bstok = toks[0].split("-")
-    #                         block_sizes[ (int(bstok[1]), int(bstok[2])) ] = int( toks[1] )
-    #                     else:
-    #                         mdata[toks[0]] = "=".join(toks[1:])
-    #                 except Exception as err:
-    #                     lgm().log( f"LoadMetadata: Error '{err}' reading line '{line}'" )
-    #             mdata[ 'block_size' ] = block_sizes
-    #     except Exception as err:
-    #         lgm().log( f"Warning: can't read config file '{file_path}': {err}\n")
-    #     return mdata
-    #
-    # @exception_handled
-    # def saveMetadata( self, block_data: Dict[Tuple,int] ):
-    #     file_path = DataManager.instance().modal.getMetadataFilePath()
-    #     print( f"Writing metadata file: {file_path}")
-    #     with open( file_path, "w" ) as mdfile:
-    #         mdfile.write( f"tile_shape={self.tile.data.shape}\n" )
-    #         mdfile.write( f"block_dims={self.block_dims}\n" )
-    #         mdfile.write( f"tile_size={self.tile_size}\n" )
-    #         for (aid,aiv) in self.tile.data.attrs.items():
-    #             mdfile.write(f"{aid}={aiv}\n")
-    #         for bcoords, bsize in block_data.items():
-    #             mdfile.write(f"block_size-{bcoords[0]}-{bcoords[1]}={bsize}\n")
 
 #     def getPointData( self ) -> Tuple[xa.DataArray,xa.DataArray]:
 #         from spectraclass.data.spatial.manager import SpatialDataManager

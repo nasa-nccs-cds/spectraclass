@@ -35,7 +35,7 @@ class TileServiceImage(AxesImage):
         block_selection = kwargs.pop('block_selection', False)
         self.user_is_interacting = False
         super().__init__(ax, **kwargs)
-        self.base_alpha = 0.2
+        self.base_alpha = 0.5
         self.projection = projection
         self.cache = []
         self.current_extent = []
@@ -73,23 +73,27 @@ class TileServiceImage(AxesImage):
         from spectraclass.data.spatial.tile.tile import Block
         [dx, _, x0, _, dy, y0 ] = tm().transform
         block_size = tm().block_size
+        max_nvalid = block_size * block_size
         block_dims = tm().block_dims
         width, height = dx*block_size, dy*block_size
         for tx in range( block_dims[0] ):
             for ty in range( block_dims[1] ):
-                block = tm().tile.getDataBlock( tx, ty )
-                selected = ([tx,ty] == tm().block_index)
-                xc, yc = x0 + width*tx, y0+height*ty
-                color = 'orange' if selected else 'yellow'
-                lw = 2 if selected else 1
-                alpha = 1.0 if block.has_data_file( True ) else self.base_alpha
-                r = Rectangle( (xc,yc), width, height, fill=False, edgecolor=color, lw=lw, alpha=alpha )
-                setattr( r, 'block_index', (tx,ty) )
-                r.set_picker( True )
-                self.axes.add_patch( r )
-                self._blocks.append( r )
-                if selected: self._selected_block = r
-         #       lgm().log( f" BLOCK[{bc}]: xc={xc:.1f}, yc={yc:.1f}, size=({width:.1f},{height:.1f})\n  ->> Axis bounds: xlim={self.axes.get_xlim()}, ylim={self.axes.get_ylim()}", print=True )
+                block: Block = tm().tile.getDataBlock( tx, ty )
+                nvalid = tm().tile.block_nvalid( block )
+                if nvalid > 0:
+                    selected = ([tx,ty] == tm().block_index)
+                    cached = block.has_data_file( True )
+                    xc, yc = x0 + width*tx, y0+height*ty
+                    color = 'red' if selected else ( 'orange' if cached else 'yellow' )
+                    lw = 2 if selected else 1
+                    alpha = self.base_alpha * ( nvalid/max_nvalid )
+                    r = Rectangle( (xc,yc), width, height, fill=False, edgecolor=color, lw=lw, alpha=alpha )
+                    setattr( r, 'block_index', (tx,ty) )
+                    r.set_picker( True )
+                    self.axes.add_patch( r )
+                    self._blocks.append( r )
+                    if selected: self._selected_block = r
+             #       lgm().log( f" BLOCK[{bc}]: xc={xc:.1f}, yc={yc:.1f}, size=({width:.1f},{height:.1f})\n  ->> Axis bounds: xlim={self.axes.get_xlim()}, ylim={self.axes.get_ylim()}", print=True )
 
     def on_press(self, event: MouseEvent =None):
         self.user_is_interacting = True
@@ -105,11 +109,9 @@ class TileServiceImage(AxesImage):
             lgm().log(f"\n  ******** Selected block: {r.block_index}  ******** ")
             if self._selected_block is not None:
                 self._selected_block.set_linewidth(1)
-                r.set_alpha( self.base_alpha )
-                self._selected_block.set_color("yellow")
+                self._selected_block.set_color('orange')
             r.set_linewidth(2)
-            r.set_color("orange")
-            r.set_alpha( 1.0 )
+            r.set_color("red")
             self._selected_block = r
             self.figure.canvas.draw_idle()
             mm().setBlock( r.block_index, update=True )
