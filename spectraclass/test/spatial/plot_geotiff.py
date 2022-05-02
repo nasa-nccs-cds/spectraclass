@@ -1,4 +1,5 @@
 import time
+import numpy as np
 import xarray as xa
 from matplotlib.image import AxesImage
 import matplotlib.pyplot as plt
@@ -10,10 +11,15 @@ origin = "upper"
 cmap="jet"
 SpectralDataFile = "/Users/tpmaxwel/Development/Data/Aviris/ang20170720t004130rfl/ang20170720t004130_rfl_v2p9/ang20170720t004130_corr_v2p9.tif"
 
-data_array: xa.DataArray = rio.open_rasterio( SpectralDataFile ) # , chunks=True ) # TileManager.read_data_layer( SpectralDataFile, origin, nodata_fill=0 )
-band_array = data_array[iband].squeeze()
+data_array: xa.DataArray = rio.open_rasterio( SpectralDataFile, chunks=True )
+band_array: np.ndarray = data_array[iband].values.squeeze()
+nodata = data_array.attrs.get('_FillValue')
+band_array[band_array == nodata] = np.nan
+valid_mask = ~np.isnan(band_array)
+nvalid = np.count_nonzero(valid_mask)
+ntotal = valid_mask.size
+print(f"Read data, shape = {band_array.shape}, #valid = {nvalid}/{ntotal}, fraction = {nvalid/ntotal}, read time = {(time.time()-t0)/60} min " )
 
-ax0 = plt.axes( ) # projection=ax_crs )
+ax0 = plt.axes( )
 img0: AxesImage = ax0.imshow( band_array, origin=origin, cmap=cmap )
-print(f"Plotting Image, shape = {data_array.shape[1:]}, time = {time.time()-t0} sec. " )
 plt.show()
