@@ -238,11 +238,14 @@ class Tile(DataContainer):
             nodata = self.data.attrs.get('_FillValue')
             for block in blocks:
                 xbounds, ybounds = block.getBounds()
-                raster_slice: np.ndarray = tm().tile.data[ 0, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ].to_numpy().squeeze()
-                if not np.isnan(nodata):
-                    raster_slice[ raster_slice == nodata ] = np.nan
-                valid_mask = ~np.isnan( raster_slice )
-                block_data[ block.block_coords ] = np.count_nonzero(valid_mask)
+                try:
+                    raster_slice: np.ndarray = tm().tile.data[ 0, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ].to_numpy().squeeze()
+                    if not np.isnan(nodata):
+                        raster_slice[ raster_slice == nodata ] = np.nan
+                    valid_mask = ~np.isnan( raster_slice )
+                    block_data[ block.block_coords ] = np.count_nonzero(valid_mask)
+                except Exception as err:
+                    lgm().log( f"Error processing block{block.block_coords}: xbounds={xbounds}, ybounds={ybounds}, base shape = {tm().tile.data.shape}")
 
             os.makedirs( os.path.dirname(file_path), exist_ok=True )
             try:
