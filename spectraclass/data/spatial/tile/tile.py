@@ -239,7 +239,6 @@ class Tile(DataContainer):
             nodata = self.data.attrs.get('_FillValue')
             for block in blocks:
                 xbounds, ybounds = block.getBounds()
-                t0 = time.time()
                 raster_slice: np.ndarray = tile_raster[ 0, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ].to_numpy().squeeze()
      #           lgm().log( f"   * READ raster slice[{block.block_coords}], xbounds={xbounds}, ybounds={ybounds}, slice shape={raster_slice.shape}, time={time.time()-t0}")
                 if not np.isnan(nodata):
@@ -254,7 +253,7 @@ class Tile(DataContainer):
                         mdfile.write( f"{k}={v}\n" )
                     for bcoords, bsize in block_data.items():
                         mdfile.write( f"{self.bsizekey(bcoords)}={bsize}\n" )
-                lgm().log(f" ---> Writing metadata file: {file_path}, time = {time.time()-t0} sec", print=True)
+                lgm().log(f" ---> Writing metadata file: {file_path}, time = {(time.time()-t0)/60} min", print=True)
             except Exception as err:
                 lgm().log(f" ---> ERROR Writing metadata file at {file_path}: {err}", print=True)
                 if os.path.isfile(file_path): os.remove(file_path)
