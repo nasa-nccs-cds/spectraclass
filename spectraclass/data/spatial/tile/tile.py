@@ -224,9 +224,10 @@ class Tile(DataContainer):
             lgm().log(f" ---> ERROR Writing metadata file at {file_path}: {err}", print=True)
             if os.path.isfile(file_path): os.remove(file_path)
 
-    @log_timing
+    @exception_handled
     def saveMetadata( self ):
         from spectraclass.data.base import DataManager, dm
+        t0 = time.time()
         file_path = dm().metadata_file
         block_data: Dict[Tuple,int] = {}
         blocks: List["Block"] = self.getBlocks()
@@ -250,7 +251,7 @@ class Tile(DataContainer):
                     mdfile.write( f"{k}={v}\n" )
                 for bcoords, bsize in block_data.items():
                     mdfile.write( f"{self.bsizekey(bcoords)}={bsize}\n" )
-            lgm().log(f" ---> Writing metadata file: {file_path}", print=True)
+            lgm().log(f" ---> Writing metadata file: {file_path}, time = {time.time()-t0} sec", print=True)
         except Exception as err:
             lgm().log(f" ---> ERROR Writing metadata file at {file_path}: {err}", print=True)
             if os.path.isfile(file_path): os.remove(file_path)
