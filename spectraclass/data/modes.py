@@ -29,6 +29,7 @@ class ModeDataManager(SCSingletonConfigurable):
     dset_name = tl.Unicode("").tag(config=True)
     cache_dir = tl.Unicode( path.expanduser("~/Development/Cache")).tag(config=True)
     data_dir = tl.Unicode( path.expanduser("~/Development/Data")).tag(config=True)
+    ext = tl.Unicode( ".tif" ).tag(config=True)
     class_file = tl.Unicode("NONE").tag(config=True, sync=True)
 
     model_dims = tl.Int(32).tag(config=True, sync=True)
@@ -280,7 +281,7 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def leafletRasterPath( self, **kwargs ) -> str:
         from spectraclass.data.base import DataManager, dm
-        return f"files/spectraclass/datasets/{self.MODE}/{dm().name}/{self.dsid(**kwargs)}.tif"
+        return f"files/spectraclass/datasets/{self.MODE}/{dm().name}/{self.dsid(**kwargs)}{self.ext}"
 
     def dataFile( self, **kwargs ):
         raise NotImplementedError( "Attempt to call virtual method")

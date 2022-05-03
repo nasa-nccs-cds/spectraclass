@@ -320,11 +320,12 @@ class SpatialDataManager(ModeDataManager):
 
     def getFilePath(self) -> str:
         base_dir = dm().modal.data_dir
+        ext = dm().modal.ext
         base_file = dm().modal.image_name
-        if base_file.endswith(".mat") or base_file.endswith(".tif"):
+        if base_file.endswith(ext):
             return f"{base_dir}/{base_file}"
         else:
-            return f"{base_dir}/{base_file}.tif"
+            return f"{base_dir}/{base_file}{ext}"
 
     def writeGeotiff(self, raster_data: xa.DataArray ) -> Optional[str]:
         output_file = self.getFilePath()

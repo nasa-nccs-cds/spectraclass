@@ -201,7 +201,8 @@ class TileManager(SCSingletonConfigurable):
         return marker
 
     def getTileFileName(self, with_extension = True ) -> str:
-        return self.image_name + ".tif" if with_extension else self.image_name
+        ext = dm().modal.ext
+        return self.image_name + ext if with_extension else self.image_name
 
     def tileName( self, **kwargs ) -> str:
         return self.get_image_name( **kwargs )

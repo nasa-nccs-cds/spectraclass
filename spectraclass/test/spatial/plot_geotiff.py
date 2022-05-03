@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 import rioxarray as rio
 t0 = time.time()
 
-iband = 0
+iband = 150
 origin = "upper"
 cmap="jet"
-SpectralDataFile = "/Users/tpmaxwel/Development/Data/Aviris/ang20170720t004130rfl/ang20170720t004130_rfl_v2p9/ang20170720t004130_corr_v2p9.tif"
+SpectralDataFile = "/Users/tpmaxwel/Development/Data/Aviris/ang20170720t004130rfl/ang20170720t004130_rfl_v2p9/ang20170720t004130_corr_v2p9_img"
 
 data_array: xa.DataArray = rio.open_rasterio( SpectralDataFile, chunks=True )
 band_array: np.ndarray = data_array[iband].values.squeeze()
@@ -18,7 +18,7 @@ band_array[band_array == nodata] = np.nan
 valid_mask = ~np.isnan(band_array)
 nvalid = np.count_nonzero(valid_mask)
 ntotal = valid_mask.size
-print(f"Read data, shape = {band_array.shape}, #valid = {nvalid}/{ntotal}, fraction = {nvalid/ntotal}, read time = {(time.time()-t0)/60} min " )
+print(f"Read data, shape = {band_array.shape}, #valid = {nvalid}/{ntotal}, fraction = {nvalid/ntotal}, read time = {time.time()-t0} sec " )
 print( "Spatial Ref: ")
 print( data_array.spatial_ref )
 print( "Coords: ")

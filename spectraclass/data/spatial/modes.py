@@ -27,7 +27,7 @@ class AvirisDataManager(SpatialDataManager):
     @property
     def image_name(self):
         base_name = self.image_names[self._active_image]
-        return f"ang{base_name}rfl/ang{base_name}_rfl_{self.version}/ang{base_name}_corr_{self.version}.tif"
+        return f"ang{base_name}rfl/ang{base_name}_rfl_{self.version}/ang{base_name}_corr_{self.version}{self.ext}"
 
 class KeelinDataManager(SpatialDataManager):
     from spectraclass.gui.spatial.application import Spectraclass
@@ -52,4 +52,4 @@ class DesisDataManager(SpatialDataManager):
         super(DesisDataManager, self).__init__()
 
     def getFilePath(self ) -> str:
-        return f"{self.data_dir}/{self.tiles.image_name}-SPECTRAL_IMAGE.tif"
+        return f"{self.data_dir}/{self.tiles.image_name}-SPECTRAL_IMAGE{self.ext}"
