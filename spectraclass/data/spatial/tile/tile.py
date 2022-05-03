@@ -29,6 +29,9 @@ class DataContainer:
     def __init__(self, **kwargs):
         super(DataContainer, self).__init__()
         self._data_projected = kwargs.get( 'data_projected', False )
+        self.initialize()
+
+    def initialize(self):
         self._extent: List[float] = None
         self._transform: List[float] = None
         self._ptransform: ProjectiveTransform = None
@@ -36,9 +39,6 @@ class DataContainer:
         self._transformer: Transformer = None
         self._xlim = None
         self._ylim = None
-
-    def reset(self):
-        self._data = None
 
     @property
     def transformer(self) -> Transformer:
@@ -156,6 +156,7 @@ class Tile(DataContainer):
     @log_timing
     def getBlocks(self, **kwargs ) -> List["Block"]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        lgm().log( f"getBlocks: tile_shape[x,y]={tm().tile_shape},  block_dims[x,y]={tm().block_dims}, raster_shape={tm().tile.data.shape}")
         return [ self.getDataBlock( ix, iy, **kwargs ) for ix in range(0,tm().block_dims[0]) for iy in range(0,tm().block_dims[1]) ]
 
     def init_metadata(self):
@@ -376,7 +377,7 @@ class Block(DataContainer):
         lgm().log(f"#IA: MASK[{iFrame}].set_thresholds---> nmasked pixels = {np.count_nonzero(mask)} ")
         self._tmask = None
         self._index_array = None
-        self.tile.reset()
+        self.tile.initialize()
         return initialized
 
     def threshold_record(self, model_data: bool, iFrame: int ) -> ThresholdRecord:
@@ -551,7 +552,9 @@ class Block(DataContainer):
         from spectraclass.data.spatial.tile.manager import tm
         bsize = tm().block_size
         x0, y0 = self.block_coords[0]*bsize, self.block_coords[1]*bsize
-        return ( x0, x0+bsize ), ( y0, y0+bsize )
+        bounds = ( x0, x0+bsize ), ( y0, y0+bsize )
+        lgm().log( f"GET BLOCK{self.block_coords} BOUNDS: dx={bounds[0]}, dy={bounds[1]}")
+        return bounds
 
     @log_timing
     def getPointData( self ) -> Tuple[xa.DataArray,Dict]:
