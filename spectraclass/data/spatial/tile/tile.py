@@ -235,12 +235,10 @@ class Tile(DataContainer):
             blocks: List["Block"] = self.getBlocks()
             print( f"Generating metadata for image {file_path}" )
             lgm().log(f"------------ saveMetadata: raster shape = {self.data.shape}" )
-            tile_raster: xa.DataArray = DataManager.instance().modal.readSpectralData()
             nodata = self.data.attrs.get('_FillValue')
             for block in blocks:
                 xbounds, ybounds = block.getBounds()
-                raster_slice: np.ndarray = tile_raster[ 0, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ].to_numpy().squeeze()
-     #           lgm().log( f"   * READ raster slice[{block.block_coords}], xbounds={xbounds}, ybounds={ybounds}, slice shape={raster_slice.shape}, time={time.time()-t0}")
+                raster_slice: np.ndarray = tm().tile.data[ 0, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ].to_numpy().squeeze()
                 if not np.isnan(nodata):
                     raster_slice[ raster_slice == nodata ] = np.nan
                 valid_mask = ~np.isnan( raster_slice )

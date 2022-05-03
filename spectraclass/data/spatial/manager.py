@@ -359,14 +359,14 @@ class SpatialDataManager(ModeDataManager):
             return self.readGeoTiff( file_path, **kwargs )
 
     @exception_handled
-    def readGeoTiff(self, input_file_path: str, **kwargs ) -> xa.DataArray:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        t0 = time.time()
-        input_bands = rio.open_rasterio( input_file_path ) # , chunks=(1,tm().block_size,tm().block_size) )
+    def readGeoTiff(self, input_file_path: str ) -> xa.DataArray:
+        input_bands = rio.open_rasterio( input_file_path )
         input_bands.attrs['long_name'] = Path(input_file_path).stem
-        lgm().log( f"Completed Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}, time={time.time()-t0:.2f} sec", print=True )
+        lgm().log( f"Completed Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}", print=True )
         gt = [ float(sval) for sval in input_bands.spatial_ref.GeoTransform.split() ]
         input_bands.attrs['transform'] = [ gt[1], gt[2], gt[0], gt[4], gt[5], gt[3] ]
+        lgm().log("ATTRIBUTES:")
+        for (k,v) in input_bands.attrs.items(): lgm().log(f" ** {k}: {v}" )
         return input_bands
 
     def readMatlabFile(self, input_file_path: str ) -> xa.DataArray:
