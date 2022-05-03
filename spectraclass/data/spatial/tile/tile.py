@@ -224,37 +224,40 @@ class Tile(DataContainer):
             lgm().log(f" ---> ERROR Writing metadata file at {file_path}: {err}", print=True)
             if os.path.isfile(file_path): os.remove(file_path)
 
-    @exception_handled
+    @log_timing
     def saveMetadata( self ):
         from spectraclass.data.base import DataManager, dm
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         t0 = time.time()
         file_path = dm().metadata_file
-        block_data: Dict[Tuple,int] = {}
-        blocks: List["Block"] = self.getBlocks()
-        lgm().log(f"------------ saveMetadata: raster shape = {self.data.shape}" )
-        tile_raster: xa.DataArray = DataManager.instance().modal.readSpectralData()
-        nodata = self.data.attrs.get('_FillValue')
-        for block in blocks:
-            xbounds, ybounds = block.getBounds()
-            t0 = time.time()
-            raster_slice: np.ndarray = tile_raster[ 0, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ].to_numpy().squeeze()
- #           lgm().log( f"   * READ raster slice[{block.block_coords}], xbounds={xbounds}, ybounds={ybounds}, slice shape={raster_slice.shape}, time={time.time()-t0}")
-            if not np.isnan(nodata):
-                raster_slice[ raster_slice == nodata ] = np.nan
-            valid_mask = ~np.isnan( raster_slice )
-            block_data[ block.block_coords ] = np.count_nonzero(valid_mask)
+        if tm().reprocess or not os.path.isfile(file_path):
+            block_data: Dict[Tuple,int] = {}
+            blocks: List["Block"] = self.getBlocks()
+            print( f"Generating metadata for image {file_path}" )
+            lgm().log(f"------------ saveMetadata: raster shape = {self.data.shape}" )
+            tile_raster: xa.DataArray = DataManager.instance().modal.readSpectralData()
+            nodata = self.data.attrs.get('_FillValue')
+            for block in blocks:
+                xbounds, ybounds = block.getBounds()
+                t0 = time.time()
+                raster_slice: np.ndarray = tile_raster[ 0, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ].to_numpy().squeeze()
+     #           lgm().log( f"   * READ raster slice[{block.block_coords}], xbounds={xbounds}, ybounds={ybounds}, slice shape={raster_slice.shape}, time={time.time()-t0}")
+                if not np.isnan(nodata):
+                    raster_slice[ raster_slice == nodata ] = np.nan
+                valid_mask = ~np.isnan( raster_slice )
+                block_data[ block.block_coords ] = np.count_nonzero(valid_mask)
 
-        os.makedirs( os.path.dirname(file_path), exist_ok=True )
-        try:
-            with open( file_path, "w" ) as mdfile:
-                for (k,v) in self.data.attrs.items():
-                    mdfile.write( f"{k}={v}\n" )
-                for bcoords, bsize in block_data.items():
-                    mdfile.write( f"{self.bsizekey(bcoords)}={bsize}\n" )
-            lgm().log(f" ---> Writing metadata file: {file_path}, time = {time.time()-t0} sec", print=True)
-        except Exception as err:
-            lgm().log(f" ---> ERROR Writing metadata file at {file_path}: {err}", print=True)
-            if os.path.isfile(file_path): os.remove(file_path)
+            os.makedirs( os.path.dirname(file_path), exist_ok=True )
+            try:
+                with open( file_path, "w" ) as mdfile:
+                    for (k,v) in self.data.attrs.items():
+                        mdfile.write( f"{k}={v}\n" )
+                    for bcoords, bsize in block_data.items():
+                        mdfile.write( f"{self.bsizekey(bcoords)}={bsize}\n" )
+                lgm().log(f" ---> Writing metadata file: {file_path}, time = {time.time()-t0} sec", print=True)
+            except Exception as err:
+                lgm().log(f" ---> ERROR Writing metadata file at {file_path}: {err}", print=True)
+                if os.path.isfile(file_path): os.remove(file_path)
 
     @log_timing
     def saveMetadata_parallel( self ):

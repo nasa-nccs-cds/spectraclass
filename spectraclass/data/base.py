@@ -278,6 +278,10 @@ class DataManager(SCSingletonConfigurable):
         self._mode_data_manager_.prepare_inputs( **kwargs )
 
     @exception_handled
+    def generate_metadata( self, **kwargs ):
+        self._mode_data_manager_.generate_metadata( **kwargs )
+
+    @exception_handled
     def process_block( self, block ) -> xa.Dataset:
         return self._mode_data_manager_.process_block( block )
 

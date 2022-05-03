@@ -1,5 +1,6 @@
 from .manager import SpatialDataManager
 from typing import List, Union, Tuple, Optional, Dict, Callable
+from pathlib import Path
 import traitlets as tl
 import os, sys
 
@@ -23,6 +24,16 @@ class AvirisDataManager(SpatialDataManager):
         for ib, bv1 in enumerate(self.valid_aviris_bands):
             if ib % 2 == 1: self.VALID_BANDS.append( [ bv0, bv1 ] )
             bv0 = bv1
+
+    @classmethod
+    def extract_image_name( cls, image_path: str ) -> str:
+        basename = Path(image_path).stem
+        if basename.startswith("ang"): basename = basename[3:]
+        return basename.split("_")[0]
+
+    @property
+    def default_images_glob(self):
+        return f"ang*rfl/ang*_rfl_{self.version}/ang*_corr_{self.version}{self.ext}"
 
     @property
     def image_name(self):

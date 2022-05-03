@@ -2,7 +2,7 @@ import numpy as np
 from typing import List, Optional, Dict, Tuple, Union
 import ipywidgets as ipw
 import os, glob, sys
-import netCDF4 as nc
+from pathlib import Path
 import ipywidgets as ip
 from os import path
 from collections import OrderedDict
@@ -25,7 +25,8 @@ class ModeDataManager(SCSingletonConfigurable):
     VALID_BANDS = None
     application: SpectraclassController = None
 
-    image_names = tl.List( default_value=["NONE"] ).tag(config=True ,sync=True)
+    image_names = tl.List( default_value=[] ).tag(config=True ,sync=True)
+    images_glob = tl.Unicode(default_value="").tag(config=True, sync=True)
     dset_name = tl.Unicode("").tag(config=True)
     cache_dir = tl.Unicode( path.expanduser("~/Development/Cache")).tag(config=True)
     data_dir = tl.Unicode( path.expanduser("~/Development/Data")).tag(config=True)
@@ -50,10 +51,26 @@ class ModeDataManager(SCSingletonConfigurable):
         self._dataset_prefix: str = ""
         self._file_selector = None
         self._active_image = 0
+        self.process_images_glob()
+
+    def generate_image_list(self):
+        self.process_images_glob()
+
+    @property
+    def default_images_glob(self):
+        return "*" + self.ext
+
+    def process_images_glob(self):
+        iglob = self.images_glob if self.images_glob else self.default_images_glob
+        image_path_list = glob.glob( self.data_dir + "/" + iglob )
+        self.image_names = [ self.extract_image_name( image_path ) for image_path in image_path_list ]
 
     def set_current_image(self, image_index: int ):
         lgm().log( f"Setting active_image[{self._active_image}]: {self.image_name}")
         self._active_image = image_index
+
+    def extract_image_name(self, image_path: str ) -> str:
+        return Path(image_path).stem
 
     @property
     def num_images(self):
@@ -126,6 +143,9 @@ class ModeDataManager(SCSingletonConfigurable):
         raise NotImplementedError()
 
     def prepare_inputs(self, **kwargs ) -> Dict[Tuple,int]:
+        raise NotImplementedError()
+
+    def generate_metadata(self, **kwargs ):
         raise NotImplementedError()
 
     def process_block(self, block  ) -> xa.Dataset:
