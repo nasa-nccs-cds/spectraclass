@@ -35,6 +35,7 @@ class TileServiceImage(AxesImage):
         block_selection = kwargs.pop('block_selection', False)
         self.user_is_interacting = False
         super().__init__(ax, **kwargs)
+        self.block_colors = dict( selected='red', cached='orange', existing='white' )
         self.base_alpha = 0.5
         self.projection = projection
         self.cache = []
@@ -84,10 +85,10 @@ class TileServiceImage(AxesImage):
                     selected = ([tx,ty] == tm().block_index)
                     cached = block.has_data_file( True )
                     xc, yc = x0 + width*tx, y0+height*ty
-                    color = 'red' if selected else ( 'orange' if cached else 'yellow' )
-                    lw = 2 if selected else 1
+                    status = 'selected' if selected else ( 'cached' if cached else 'existing' )
+                    lw = 2 if ( selected or cached ) else 1
                     alpha = self.base_alpha * ( nvalid/max_nvalid )
-                    r = Rectangle( (xc,yc), width, height, fill=False, edgecolor=color, lw=lw, alpha=alpha )
+                    r = Rectangle( (xc,yc), width, height, fill=False, edgecolor=self.block_colors[status], lw=lw, alpha=alpha )
                     setattr( r, 'block_index', (tx,ty) )
                     r.set_picker( True )
                     self.axes.add_patch( r )
@@ -108,10 +109,9 @@ class TileServiceImage(AxesImage):
         if r != self._selected_block:
             lgm().log(f"\n  ******** Selected block: {r.block_index}  ******** ")
             if self._selected_block is not None:
-                self._selected_block.set_linewidth(1)
-                self._selected_block.set_color('orange')
+                self._selected_block.set_color( self.block_colors['cached'] )
             r.set_linewidth(2)
-            r.set_color("red")
+            r.set_color( self.block_colors['selected'] )
             self._selected_block = r
             self.figure.canvas.draw_idle()
             mm().setBlock( r.block_index, update=True )

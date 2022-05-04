@@ -56,7 +56,7 @@ class SpatialDataManager(ModeDataManager):
         if self._tile_selection_basemap is None:
             self._tile_selection_basemap = TileServiceBasemap( block_selection=True )
             (x0, x1, y0, y1) = self.tiles.tile.extent
-            self._tile_selection_basemap.setup_plot( "Tile Selection", (x0, x1), (y0, y1), index=99, size=(6,6), slider=False, **kwargs )
+            self._tile_selection_basemap.setup_plot( "Tile Selection", (x0, x1), (y0, y1), index=99, size=6.0, slider=False, **kwargs )
         return self._tile_selection_basemap.gui()
 
     def update_extent(self):
