@@ -142,8 +142,8 @@ class Tile(DataContainer):
     def block_sizes(self) -> Dict[ Tuple[int,int], int ]:
         return self.metadata['block_size']
 
-    def block_nvalid(self, block_coords: Optional[Tuple[int,int]] ) -> int:
-        return self.block_sizes.get( block_coords, 0 )
+    def block_nvalid(self, block_coords: Tuple[int,int] ) -> int:
+        return self.block_sizes.get( tuple(block_coords), 0 )
 
     def get_valid_block_coords(self, block_coords: Tuple[int,int] ) -> Tuple[int,int]:
         if self.block_nvalid(block_coords) > 0: return block_coords
