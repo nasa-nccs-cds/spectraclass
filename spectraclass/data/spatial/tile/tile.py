@@ -489,8 +489,7 @@ class Block(DataContainer):
         if self.has_data_file():
             dataset: xa.Dataset = dm().modal.loadDataFile( block=self, index=self.tile_index )
             raw_raster = tm().mask_nodata( dataset["raw"] )
-            drange = [ np.nanmin(raw_raster.values), np.nanmax(raw_raster.values) ]
-            lgm().log( f" ---> load_block_raster{self.block_coords}: raw data range = {drange}, raw data attrs = {dataset['raw'].attrs.keys()}" )
+            lgm().log( f" ---> load_block_raster{self.block_coords}: raw data attrs = {dataset['raw'].attrs.keys()}" )
             for aid, aval in dataset.attrs.items():
                 if aid not in raw_raster.attrs:
                     raw_raster.attrs[aid] = aval

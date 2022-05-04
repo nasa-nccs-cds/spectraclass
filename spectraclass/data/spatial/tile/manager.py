@@ -270,4 +270,4 @@ class TileManager(SCSingletonConfigurable):
     @classmethod
     def mask_nodata(self, raster: xa.DataArray) -> xa.DataArray:
         nodata_value = raster.attrs.get('data_ignore_value', -9999)
-        return raster.where(raster != nodata_value, float('nan'))
+        return raster.where(raster != nodata_value, float('nan') )
