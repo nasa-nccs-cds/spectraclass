@@ -138,8 +138,14 @@ class Tile(DataContainer):
             self.init_metadata()
         return self._metadata
 
-    def block_nvalid(self, block: "Block" ) -> int:
-        return int( self.metadata[ self.bsizekey( block.block_coords ) ] )
+    def block_nvalid(self, block_coords: Optional[Tuple[int,int]] ) -> int:
+        if block_coords is None: return 0
+        return int( self.metadata[ self.bsizekey( block_coords ) ] )
+
+    def get_valid_block_coords(self, block_coords: Tuple[int,int] ) -> Tuple[int,int]:
+        if self.block_nvalid(block_coords) > 0: return block_coords
+        for (bskey,nvalid) in self.metadata.items():
+            if nvalid > 0: return self.bskey2coords( bskey )
 
     def _get_data(self) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager
@@ -297,6 +303,10 @@ class Tile(DataContainer):
     def bsizekey(self, bcoords: Tuple[int,int] ) -> str:
         return f"nvalid-{bcoords[0]}-{bcoords[1]}"
 
+    def bskey2coords(self, bskey: str ) -> Tuple[int,int]:
+        toks = bskey.split("-")
+        return ( int(toks[1]), int(toks[2]) )
+
 class ThresholdRecord:
 
     def __init__(self, fdata: xa.DataArray ):
@@ -357,7 +367,7 @@ class Block(DataContainer):
         self._model_data: xa.DataArray = None
         self.config = kwargs
         self._trecs: Tuple[ Dict[int,ThresholdRecord], Dict[int,ThresholdRecord] ] = ( {}, {} )
-        self.block_coords = (ix,iy)
+        self.block_coords: Tuple[int,int] = (ix,iy)
         self.tile_index = itile
  #       self.validate_parameters()
         self._index_array: xa.DataArray = None

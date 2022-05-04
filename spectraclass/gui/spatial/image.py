@@ -80,7 +80,7 @@ class TileServiceImage(AxesImage):
         for tx in range( block_dims[0] ):
             for ty in range( block_dims[1] ):
                 block: Block = tm().tile.getDataBlock( tx, ty )
-                nvalid = tm().tile.block_nvalid( block )
+                nvalid = tm().tile.block_nvalid( block.block_coords )
                 if nvalid > 0:
                     selected = ([tx,ty] == tm().block_index)
                     cached = block.has_data_file( True )
