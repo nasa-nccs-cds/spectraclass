@@ -138,14 +138,17 @@ class Tile(DataContainer):
             self.init_metadata()
         return self._metadata
 
+    @property
+    def block_sizes(self) -> Dict[ Tuple[int,int], int ]:
+        return self.metadata['block_size']
+
     def block_nvalid(self, block_coords: Optional[Tuple[int,int]] ) -> int:
-        if block_coords is None: return 0
-        return int( self.metadata[ self.bsizekey( block_coords ) ] )
+        return self.block_sizes.get( block_coords, 0 )
 
     def get_valid_block_coords(self, block_coords: Tuple[int,int] ) -> Tuple[int,int]:
         if self.block_nvalid(block_coords) > 0: return block_coords
-        for (bskey,nvalid) in self.metadata.items():
-            if nvalid > 0: return self.bskey2coords( bskey )
+        for (coords,nvalid) in self.block_sizes.items():
+            if nvalid > 0: return coords
 
     def _get_data(self) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager
