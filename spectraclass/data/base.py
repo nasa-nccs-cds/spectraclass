@@ -243,7 +243,10 @@ class DataManager(SCSingletonConfigurable):
         if self._wGui is None:
             SpectraclassController.set_spectraclass_theme()
             mode_gui = self._mode_data_manager_.gui()
-            self._wGui = ip.HBox( [ mode_gui, dm().control_panel() ] )
+            self._wGui = ipw.Tab()
+            self._wGui.set_title( 0, "blocks" )
+            self._wGui.set_title( 1, "images" )
+            self._wGui.children = [ mode_gui, dm().control_panel() ]
         return self._wGui
 
     def control_panel(self) -> ip.VBox:

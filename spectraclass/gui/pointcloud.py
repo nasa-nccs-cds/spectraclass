@@ -200,8 +200,8 @@ class PointCloudManager(SCSingletonConfigurable):
             srange, ssize = [self.xyz.samples.values.min(),self.xyz.samples.values.max()], self.xyz.samples.values.size
             xrange = [ self.xyz.values.min(), self.xyz.values.max() ]
             lgm().log(f"*** getMarkerGeometry->idxs: size = {idxs.size}, range = {[idxs.min(),idxs.max()]}; samples: size = {ssize}, range={srange}; data range = {xrange}")
-            lgm().log(f" ---> has idx around {idxs[0]} : {[(idx in self.xyz.samples.values) for idx in range(idxs[0]-10,idxs[0]+10)]}, " )
-            positions = self.xyz.sel( samples= idxs )
+            mask = np.isin( self.xyz.samples.values, idxs, assume_unique=True )
+            positions = self.xyz.values[mask]
         attrs = dict( position=p3js.BufferAttribute( positions, normalized=False ), color=p3js.BufferAttribute( colors ) )
         return p3js.BufferGeometry( attributes=attrs )
 

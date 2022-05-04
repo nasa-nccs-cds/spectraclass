@@ -503,7 +503,6 @@ class Block(DataContainer):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         raw_raster: Optional[xa.DataArray] = None
         if self.has_data_file():
-            lgm().trace("load_block_raster")
             dataset: xa.Dataset = dm().modal.loadDataFile( block=self, index=self.tile_index )
             raw_raster = tm().mask_nodata( dataset["raw"] )
             lgm().log( f" ---> load_block_raster{self.block_coords}: raw data attrs = {dataset['raw'].attrs.keys()}" )
