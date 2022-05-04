@@ -146,9 +146,12 @@ class Tile(DataContainer):
         return self.block_sizes.get( tuple(block_coords), 0 )
 
     def get_valid_block_coords(self, block_coords: Tuple[int,int] ) -> Tuple[int,int]:
+        from spectraclass.data.base import DataManager, dm
         if self.block_nvalid(block_coords) > 0: return block_coords
         for (coords,nvalid) in self.block_sizes.items():
             if nvalid > 0: return coords
+        lgm().log( f"No valid blocks in tile.\nMetadata File: {dm().metadata_file}\nBlock sizes: {self.block_sizes}")
+        raise Exception( "No valid blocks in tile")
 
     def _get_data(self) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager
@@ -184,7 +187,7 @@ class Tile(DataContainer):
                 for line in mdfile.readlines():
                     try:
                         toks = line.split("=")
-                        if toks[0].startswith('block_size'):
+                        if toks[0].startswith('nvalid'):
                             bstok = toks[0].split("-")
                             block_sizes[ (int(bstok[1]), int(bstok[2])) ] = int( toks[1] )
                         else:

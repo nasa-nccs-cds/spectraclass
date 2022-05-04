@@ -35,7 +35,7 @@ class TileServiceImage(AxesImage):
         block_selection = kwargs.pop('block_selection', False)
         self.user_is_interacting = False
         super().__init__(ax, **kwargs)
-        self.block_colors = dict( selected='red', cached='orange', existing='white' )
+        self.block_colors = dict( selected='magenta', cached='yellow', existing='white' )
         self.base_alpha = 0.5
         self.projection = projection
         self.cache = []
