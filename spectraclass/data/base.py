@@ -114,7 +114,7 @@ class DataManager(SCSingletonConfigurable):
     def preprocess_data(self):
         if not self.modal.hasBlockData() or not self.hasMetadata():
             self.prepare_inputs( )
- #           self.save_config()
+            self.save_config()
 
     def app(self) -> SpectraclassController:
         return self.modal.application.instance()
