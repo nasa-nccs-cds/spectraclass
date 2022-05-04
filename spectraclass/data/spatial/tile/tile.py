@@ -96,7 +96,7 @@ class DataContainer:
         return [ self.ycoord[0], self.ycoord[-1] ]
 
     @property
-    def xlim(self) -> List[float]:
+    def xlim(self) -> Tuple[float,float]:
         if self._xlim is None:
             xc: np.ndarray = self.xcoord
             dx = (xc[-1]-xc[0])/(xc.size-1)
@@ -104,7 +104,7 @@ class DataContainer:
         return self._xlim
 
     @property
-    def ylim(self) -> List[float]:
+    def ylim(self) -> Tuple[float,float]:
         if self._ylim is None:
             yc: np.ndarray = self.ycoord
             dy = (yc[-1]-yc[0])/(yc.size-1)
