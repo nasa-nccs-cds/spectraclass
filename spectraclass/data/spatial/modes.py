@@ -60,6 +60,9 @@ class DesisDataManager(SpatialDataManager):
     application = Spectraclass
 
     def __init__(self):
-        self.ext = "-SPECTRAL_IMAGE.tif"
         super(DesisDataManager, self).__init__()
+
+    @property
+    def default_images_glob(self):
+        return "*-SPECTRAL_IMAGE" + self.ext
 
