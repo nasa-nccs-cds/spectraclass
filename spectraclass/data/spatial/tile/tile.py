@@ -246,7 +246,7 @@ class Tile(DataContainer):
         if tm().reprocess or not os.path.isfile(file_path):
             block_data: Dict[Tuple,int] = {}
             blocks: List["Block"] = self.getBlocks()
-            print( f"Generating metadata: {os.path.basename(file_path)}" )
+            print( f"Generating metadata: {dm().modal.image_name}.mdata.txt" )
             lgm().log(f"------------ saveMetadata: raster shape = {self.data.shape}" )
             nodata = self.data.attrs.get('_FillValue')
             for block in blocks:
@@ -271,7 +271,7 @@ class Tile(DataContainer):
                 lgm().log(f" ---> ERROR Writing metadata file at {file_path}: {err}", print=True)
                 if os.path.isfile(file_path): os.remove(file_path)
         else:
-            print(f"Skipping image with existing metadata: {os.path.basename(file_path)}" )
+            print(f"Skipping existing: {dm().modal.image_name}.mdata.txt" )
 
     @log_timing
     def saveMetadata_parallel( self ):
