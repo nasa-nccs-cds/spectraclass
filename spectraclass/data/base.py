@@ -269,6 +269,7 @@ class DataManager(SCSingletonConfigurable):
                 ns = self._project_data['samples'].size
                 lgm().log(f"LOAD TILE[{self.dsid()}]: #samples = {ns} ")
                 if ns == 0: ufm().show( "This tile contains no data","red")
+                self.save_config()
             return self._project_data
 
     def loadProject(self, dsid: str = None ) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
@@ -283,6 +284,7 @@ class DataManager(SCSingletonConfigurable):
     @exception_handled
     def generate_metadata( self, **kwargs ):
         self._mode_data_manager_.generate_metadata( **kwargs )
+        self.save_config()
 
     @exception_handled
     def process_block( self, block ) -> xa.Dataset:
