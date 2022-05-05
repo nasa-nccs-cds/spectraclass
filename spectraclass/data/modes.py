@@ -59,7 +59,7 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def generate_image_list(self):
         if len( self.image_names ) == 0:
-            iglob = self.data_dir + (self.images_glob if self.images_glob else self.default_images_glob)
+            iglob = f"{self.data_dir}/{(self.images_glob if self.images_glob else self.default_images_glob)}"
             image_path_list = glob.glob( iglob )
             self.image_names = [ self.extract_image_name( image_path ) for image_path in image_path_list ]
             lgm().log( f"Generate image names from glob '{iglob}': {self.image_names}")
