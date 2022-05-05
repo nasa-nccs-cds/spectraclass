@@ -53,7 +53,7 @@ class KeelinDataManager(SpatialDataManager):
 
 class DesisDataManager(SpatialDataManager):
     from spectraclass.gui.spatial.application import Spectraclass
-    MODE = "DESIS"
+    MODE = "desis"
     METAVARS = []
     INPUTS = dict()
     VALID_BANDS = [ [5, sys.maxsize], ]

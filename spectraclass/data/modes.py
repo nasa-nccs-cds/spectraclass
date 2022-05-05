@@ -27,9 +27,9 @@ class ModeDataManager(SCSingletonConfigurable):
 
     image_names = tl.List( default_value=[] ).tag( config=True, sync=True, cache=False )
     images_glob = tl.Unicode(default_value="").tag( config=True, sync=True, cache=False )
-    dset_name = tl.Unicode("").tag(config=True)
-    cache_dir = tl.Unicode( path.expanduser("~/Development/Cache")).tag(config=True)
-    data_dir = tl.Unicode( path.expanduser("~/Development/Data")).tag(config=True)
+    dset_name = tl.Unicode( "" ).tag(config=True)
+    cache_dir = tl.Unicode( "" ).tag(config=True)
+    data_dir = tl.Unicode( "" ).tag(config=True)
     ext = tl.Unicode( ".tif" ).tag(config=True)
     class_file = tl.Unicode("NONE").tag(config=True, sync=True)
 
