@@ -246,7 +246,7 @@ class Tile(DataContainer):
         if tm().reprocess or not os.path.isfile(file_path):
             block_data: Dict[Tuple,int] = {}
             blocks: List["Block"] = self.getBlocks()
-            print( f"Generating metadata for image {file_path}" )
+            print( f"Generating metadata: {os.path.basename(file_path)}" )
             lgm().log(f"------------ saveMetadata: raster shape = {self.data.shape}" )
             nodata = self.data.attrs.get('_FillValue')
             for block in blocks:
