@@ -258,8 +258,7 @@ class Tile(DataContainer):
                     valid_mask = ~np.isnan( raster_slice )
                     block_data[ block.block_coords ] = np.count_nonzero(valid_mask)
                 except Exception as err:
-                    lgm().log( f"Error processing block{block.block_coords}: xbounds={xbounds}, ybounds={ybounds}, base shape = {tm().tile.data.shape}")
-
+                    lgm().exception( f"Error processing block{block.block_coords}: xbounds={xbounds}, ybounds={ybounds}, base shape = {tm().tile.data.shape}")
             os.makedirs( os.path.dirname(file_path), exist_ok=True )
             try:
                 with open( file_path, "w" ) as mdfile:
@@ -271,6 +270,8 @@ class Tile(DataContainer):
             except Exception as err:
                 lgm().log(f" ---> ERROR Writing metadata file at {file_path}: {err}", print=True)
                 if os.path.isfile(file_path): os.remove(file_path)
+        else:
+            print(f"Skipping image with existing metadata: {file_path}")
 
     @log_timing
     def saveMetadata_parallel( self ):
