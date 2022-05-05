@@ -274,9 +274,11 @@ class SpatialDataManager(ModeDataManager):
     def generate_metadata(self, **kwargs ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         dm().modal.generate_image_list()
+        lgm().log( f"METADATA GENERATING:", print=True )
         for image_index in range( dm().modal.num_images ):
             self.set_current_image( image_index )
             tm().tile.saveMetadata()
+        lgm().log( f"METADATA GENERATION COMPLETE", print=True )
 
     @exception_handled
     def prepare_inputs(self, **kwargs ):

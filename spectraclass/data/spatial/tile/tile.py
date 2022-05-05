@@ -271,7 +271,7 @@ class Tile(DataContainer):
                 lgm().log(f" ---> ERROR Writing metadata file at {file_path}: {err}", print=True)
                 if os.path.isfile(file_path): os.remove(file_path)
         else:
-            print(f"Skipping image with existing metadata: {file_path}")
+            print(f"Skipping image with existing metadata: {os.path.basename(file_path)}" )
 
     @log_timing
     def saveMetadata_parallel( self ):
