@@ -251,7 +251,7 @@ class Tile(DataContainer):
             for block in blocks:
                 xbounds, ybounds = block.getBounds()
                 try:
-                    raster_slice: np.ndarray = tm().tile.data[ 0, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ].to_numpy().squeeze()
+                    raster_slice: np.ndarray = tm().tile.data[ 0, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ].to_numpy().squeeze().astype(np.float32)
                     if not np.isnan(nodata):
                         lgm().log(f"----> processing raster block, shape = {raster_slice.shape}, dtype={raster_slice.dtype}, nodata={nodata}")
                         raster_slice[ raster_slice == nodata ] = np.nan
@@ -316,13 +316,19 @@ class Tile(DataContainer):
 
 class ThresholdRecord:
 
-    def __init__(self, fdata: xa.DataArray ):
+    def __init__(self, fdata: xa.DataArray, block_coords: Tuple[int,int], image_index: int ):
         self._tmask: xa.DataArray = None
+        self._block_coords: Tuple[int,int] = block_coords
+        self._image_index: int = image_index
         self.thresholds: Tuple[float,float] = (0.0,1.0)
         self.fixed: bool = False
         self.needs_update = [ True, True ]
         self.fdata: xa.DataArray = fdata
         self._drange = None
+
+    def applicable(self, block_coords: Tuple[int,int] ) -> bool:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        return ( self._image_index == tm().image_index ) and ( self._block_coords == block_coords )
 
     @property
     def tmask(self) -> Optional[xa.DataArray]:
@@ -365,8 +371,6 @@ class ThresholdRecord:
 class Block(DataContainer):
 
     def __init__(self, tile: Tile, ix: int, iy: int, itile: int, **kwargs ):
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        from spectraclass.data.base import DataManager, dm
         super(Block, self).__init__( data_projected=True, **kwargs )
         self.tile: Tile = tile
         self.init_task = None
@@ -399,16 +403,17 @@ class Block(DataContainer):
 
     def threshold_record(self, model_data: bool, iFrame: int ) -> ThresholdRecord:
         from spectraclass.data.base import dm
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         trecs: Dict[int,ThresholdRecord] = self._trecs[ int(model_data) ]
         if iFrame in trecs: return trecs[ iFrame ]
         fdata: xa.DataArray = self.points2raster( dm().getModelData() ) if model_data else self.data
-        return trecs.setdefault( iFrame,  ThresholdRecord( fdata[iFrame] ) )
+        return trecs.setdefault( iFrame,  ThresholdRecord( fdata[iFrame], self.block_coords, tm().image_index ) )
 
     def get_mask_list(self, current_frame = -1 ) -> Tuple[ List[str], str ]:
         mask_list, types, value = [], ["band", "model" ], None
         for ttype, trecs in zip(types,self._trecs):
             for iFrame, trec in trecs.items():
-                if trec.tmask is not None:
+                if trec.applicable(self.block_coords) and (trec.tmask is not None):
                     mask_name = f"{ttype}:{iFrame}"
                     mask_list.append( mask_name )
                     if iFrame == current_frame:
