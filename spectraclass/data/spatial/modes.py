@@ -61,6 +61,4 @@ class DesisDataManager(SpatialDataManager):
 
     def __init__(self):
         super(DesisDataManager, self).__init__()
-
-    def getFilePath(self ) -> str:
-        return f"{self.data_dir}/{self.tiles.image_name}-SPECTRAL_IMAGE{self.ext}"
+        self.ext = "-SPECTRAL_IMAGE.tif"
