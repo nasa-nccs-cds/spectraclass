@@ -32,7 +32,7 @@ class ClusterMagnitudeWidget(ipw.HBox):
         self.label = ipw.Button( description=f"Cluster-{index}", style=dict( button_color=color ) )
         if index == 0: lgm().log(f" label.style = {self.label.style.keys}")
         self._index = index
-        self.slider = ipw.FloatSlider(0.5, description="", min=0.0, max=1.0)
+        self.slider = ipw.FloatSlider( 1.0, description="", min=0.0, max=4.0, step=0.1 )
         self.label.on_click( self.reset )
         ipw.HBox.__init__( self, [self.label,self.slider] )
 
