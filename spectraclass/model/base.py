@@ -52,12 +52,14 @@ class SCSingletonConfigurable(tlc.Configurable):
         class_traits = instance.class_traits(config=True)
 #        print(f"  ADDING TRAITS [{instance.__class__}]: {class_traits.keys()}")
         for tid, trait in class_traits.items():
-            tval = getattr(instance, tid)
-            trait_scope = dm().name   # instance.config_scope()
-            trait_instance_values = trait_map.setdefault( trait_scope, {} )
-            trait_values = trait_instance_values.setdefault( instance.__class__.__name__, {} )
-#            print( f"    *** add_trait_value[{instance.config_scope()},{instance.__class__.__name__}]: {tid} -> {tval}")
-            trait_values[tid] = tval
+            cache = trait.metadata.get('cache',True)
+            if cache:
+                tval = getattr(instance, tid)
+                trait_scope = dm().name   # instance.config_scope()
+                trait_instance_values = trait_map.setdefault( trait_scope, {} )
+                trait_values = trait_instance_values.setdefault( instance.__class__.__name__, {} )
+    #            print( f"    *** add_trait_value[{instance.config_scope()},{instance.__class__.__name__}]: {tid} -> {tval}")
+                trait_values[tid] = tval
 
     @classmethod
     def get_subclass_instances(cls):

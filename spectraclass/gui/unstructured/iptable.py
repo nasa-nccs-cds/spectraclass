@@ -51,7 +51,7 @@ class ipSpreadsheet:
         self._filteredData = None
         self._current_page = self.get_page_index( pid )
         row = pid - self.current_page * TableManager.rows_per_page
-        lgm().log(f" %%%% select_row: {pid=} page={self.current_page} {row=}")
+        lgm().log(f" %%%% select_row: pid={pid} page={self.current_page} row={row}")
         self.refresh()
         if self._selection_callback:
             self._selection_callback( self.selection )
@@ -520,7 +520,7 @@ class TableManager(SCSingletonConfigurable):
             elif match == "contains":    mask = np_coldata.str.contains(  match_str )
             elif match == "regex":       mask = np_coldata.str.match( r'{}'.format(match_str) )
             else: raise Exception( f"Unrecognized match option: {match}")
-            lgm().log( f" FILTER: options={self._match_options}, {match_str=}, result mask = {mask}")
+            lgm().log( f" FILTER: options={self._match_options}, match_str={match_str}, result mask = {mask}")
             self.selected_table.set_filter_data( df[mask] )
         self._update_page_widget()
 

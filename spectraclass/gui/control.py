@@ -92,7 +92,7 @@ class ParametersManager(SCSingletonConfigurable):
     def createPanel(self, title: str ):
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.data.base import DataManager, dm
-        from spectraclass.learn.cluster import clm
+        from spectraclass.learn.cluster.manager import clm
         from spectraclass.learn.manager import ClassificationManager, cm
         if title   == "layers":     return  mm().layers.gui()
         elif title == "persist":    return  cm().create_persistence_gui()

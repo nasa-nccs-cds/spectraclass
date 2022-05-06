@@ -98,23 +98,25 @@ class DataManager(SCSingletonConfigurable):
 
     @classmethod
     def initialize(cls, name: str, mode: str ):
-        try: tf.enable_eager_execution()
-        except: pass
-        lgm().init_logging(name, mode)
+#        try: tf.enable_eager_execution()
+#        except: pass
+        name = name.lower()
+        mode = mode.lower()
+        lgm().init_logging( name, mode )
         dataManager = cls.instance()
         dataManager._configure_( name, mode )
         if mode.lower() not in cls._mode_data_managers_: raise Exception( f"Mode {mode} is not defined, available modes = {cls._mode_data_managers_.keys()}")
-        dataManager._mode_data_manager_ = cls._mode_data_managers_[ mode.lower() ].instance()
+        dataManager._mode_data_manager_ = cls._mode_data_managers_[ mode ].instance()
         lgm().log("Logging configured")
         return dataManager
 
     def hasMetadata(self):
-        return os.path.isfile( DataManager.instance().modal.getMetadataFilePath() )
+        return os.path.isfile( self.metadata_file )
 
     def preprocess_data(self):
         if not self.modal.hasBlockData() or not self.hasMetadata():
             self.prepare_inputs( )
-            self.save_config( block_data )
+            self.save_config()
 
     def app(self) -> SpectraclassController:
         return self.modal.application.instance()
@@ -153,35 +155,32 @@ class DataManager(SCSingletonConfigurable):
         return os.path.join( output_dir, f"{self.dsid()}-masks.nc" )
 
     @exception_handled
-    def save_config( self, block_data: Dict[Tuple,int] ):
+    def save_config( self ):
         from spectraclass.gui.spatial.map import MapManager, mm
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.reduction.embedding import ReductionManager, rm
         from spectraclass.features.texture.manager import TextureManager, texm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
-        if block_data and len( block_data ) > 0:
-            afm(), lm(), pcm(), mm(), texm(), rm()
-            tm().saveMetadata( block_data )
-            conf_dict = self.generate_config_file()
-            for scope, trait_classes in conf_dict.items():
-                cfg_file = os.path.realpath( self.config_file( scope, self.mode ) )
-                os.makedirs(os.path.dirname(cfg_file), 0o777, exist_ok=True)
-                lines = []
+        afm(), lm(), pcm(), mm(), texm(), rm()
+        conf_dict = self.generate_config_file()
+        for scope, trait_classes in conf_dict.items():
+            cfg_file = os.path.realpath( self.config_file( scope, self.mode ) )
+            os.makedirs(os.path.dirname(cfg_file), 0o777, exist_ok=True)
+            lines = []
 
-                for class_name, trait_map in trait_classes.items():
-                    for trait_name, trait_value in trait_map.items():
-                        tval_str = f'"{trait_value}"' if isinstance(trait_value, str) else f"{trait_value}"
-                        cfg_str = f"c.{class_name}.{trait_name} = {tval_str}\n"
-                        lines.append( cfg_str )
+            for class_name, trait_map in trait_classes.items():
+                for trait_name, trait_value in trait_map.items():
+                    tval_str = f'"{trait_value}"' if isinstance(trait_value, str) else f"{trait_value}"
+                    cfg_str = f"c.{class_name}.{trait_name} = {tval_str}\n"
+                    lines.append( cfg_str )
 
-                lgm().log(f"Writing config file: {cfg_file}")
-                with self._lock:
-                    cfile_handle = open(cfg_file, "w")
-                    cfile_handle.writelines(lines)
-                    cfile_handle.close()
-                lgm().log(f"Config file written")
+            lgm().log(f"Writing config file: {cfg_file}")
+            with self._lock:
+                cfile_handle = open(cfg_file, "w")
+                cfile_handle.writelines(lines)
+                cfile_handle.close()
+            lgm().log(f"Config file written")
 
     def generate_config_file(self) -> Dict:
         #        print( f"Generate config file, _classes = {[inst.__class__ for inst in cls.config_instances]}")
@@ -223,6 +222,10 @@ class DataManager(SCSingletonConfigurable):
     def cache_dir(self) -> str:
         return os.path.join( self.modal.cache_dir, "spectraclass", self.modal.MODE, self.name )
 
+    @property
+    def metadata_file(self) -> str:
+        return f"{self.cache_dir}/{self.modal.image_name}.mdata.txt"
+
     def dsid(self, **kwargs ) -> str:
         return self._mode_data_manager_.dsid( **kwargs )
 
@@ -242,7 +245,10 @@ class DataManager(SCSingletonConfigurable):
         if self._wGui is None:
             SpectraclassController.set_spectraclass_theme()
             mode_gui = self._mode_data_manager_.gui()
-            self._wGui = ip.HBox( [ mode_gui, dm().control_panel() ] )
+            self._wGui = ipw.Tab()
+            self._wGui.set_title( 0, "blocks" )
+            self._wGui.set_title( 1, "images" )
+            self._wGui.children = [ mode_gui, dm().control_panel() ]
         return self._wGui
 
     def control_panel(self) -> ip.VBox:
@@ -255,8 +261,9 @@ class DataManager(SCSingletonConfigurable):
     def getInputFileData(self, vname: str = None, **kwargs ) -> np.ndarray:
         return self._mode_data_manager_.getInputFileData( vname, **kwargs )
 
-    def loadCurrentProject(self, caller_id: str = "main" ) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
+    def loadCurrentProject(self, caller_id: str = "main", clear = False ) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
         lgm().log( f" DataManager: loadCurrentProject: {caller_id}" )
+        if clear: self._project_data = None
         if self._mode_data_manager_ is not None:
             if self._project_data is None:
                 self._project_data = self._mode_data_manager_.loadCurrentProject()
@@ -264,6 +271,7 @@ class DataManager(SCSingletonConfigurable):
                 ns = self._project_data['samples'].size
                 lgm().log(f"LOAD TILE[{self.dsid()}]: #samples = {ns} ")
                 if ns == 0: ufm().show( "This tile contains no data","red")
+                self.save_config()
             return self._project_data
 
     def loadProject(self, dsid: str = None ) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
@@ -274,6 +282,15 @@ class DataManager(SCSingletonConfigurable):
     @exception_handled
     def prepare_inputs( self, **kwargs ):
         self._mode_data_manager_.prepare_inputs( **kwargs )
+
+    @exception_handled
+    def generate_metadata( self, **kwargs ):
+        self._mode_data_manager_.generate_metadata( **kwargs )
+        self.save_config()
+
+    @exception_handled
+    def process_block( self, block ) -> xa.Dataset:
+        return self._mode_data_manager_.process_block( block )
 
     @exception_handled
     def getSpectralData( self, **kwargs ) -> Optional[xa.DataArray]:

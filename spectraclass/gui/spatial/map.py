@@ -24,7 +24,7 @@ from spectraclass.gui.spatial.widgets.layers import LayersManager, Layer
 from spectraclass.model.labels import LabelsManager, lm
 from matplotlib.image import AxesImage
 from spectraclass.xext.xgeo import XGeo
-from spectraclass.learn.cluster import ClusterSelector
+from spectraclass.learn.cluster.manager import ClusterSelector
 from spectraclass.widgets.slider import PageSlider
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable
@@ -308,7 +308,7 @@ class MapManager(SCSingletonConfigurable):
 
     def layer_managers( self, name: str ) -> List:
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
-        from spectraclass.learn.cluster import  clm
+        from spectraclass.learn.cluster.manager import  clm
         if   name == "basemap":   mgrs = [ self.base ]
         elif name == "labels":    mgrs = [ self.labels_image ]
         elif name == "clusters":  mgrs = [ self.clusters_image ]
@@ -368,6 +368,7 @@ class MapManager(SCSingletonConfigurable):
         if self.base is not None:
             fdata: xa.DataArray = self.frame_data
             if fdata is not None:
+                lgm().log(f"set_color_bounds: full data range = {[np.nanmin(fdata.values),np.nanmax(fdata.values)]}")
                 drange = self.get_color_bounds(fdata)
                 alpha = self.layers('bands').visibility
                 norm = Normalize(**drange)
@@ -417,7 +418,8 @@ class MapManager(SCSingletonConfigurable):
     def frame_data(self) -> Optional[xa.DataArray]:
         if self.currentFrame >= self.nFrames(): return None
         fdata = self.data[self.currentFrame]
-        lgm().log( f" ******* frame_data[{self.currentFrame}], shape: {fdata.shape}, {svalid(fdata.values)}")
+        vrange = [ np.nanmin(fdata.values), np.nanmax(fdata.values) ]
+        lgm().log( f" ******* frame_data[{self.currentFrame}], shape: {fdata.shape}, {svalid(fdata.values)}, vrange={vrange}, attrs={fdata.attrs.keys()}")
         tmask: np.ndarray = self.block.get_threshold_mask( raster=True )
         if tmask is None:
             lgm().log(f" ---> NO threshold mask")
@@ -470,13 +472,14 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def setBlock( self, block_index: Tuple[int,int] = None, **kwargs ):
         from spectraclass.data.spatial.tile.manager import tm
-        from spectraclass.learn.cluster import clm
+        from spectraclass.learn.cluster.manager import clm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
         if block_index is not None: tm().setBlock( block_index )
         self.block: Block = tm().getBlock()
         if self.block is not None:
+            ufm().show(f" *** Loading Block{self.block.block_coords}")
             dm().clear_project_cache()
             pcm().reset()
             update = kwargs.get( 'update', False )
@@ -492,7 +495,7 @@ class MapManager(SCSingletonConfigurable):
             gpm().refresh()
             clm().clear()
             if update:  self.update_plots()
-            ufm().show(f" ** Tile Loaded ** ")
+            ufm().show(f" ** Block Loaded ** ")
 
     def gui(self,**kwargs):
         if self.base is None:

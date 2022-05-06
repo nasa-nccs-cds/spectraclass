@@ -28,6 +28,7 @@ class TileServiceBasemap(SCSingletonConfigurable):
         self.layer: str = None
         self.basemap: TileServiceImage = None
         self.wmts: WMTSRasterSource = None
+        self.figsize = 6.0
         self._block_selection = kwargs.get( 'block_selection', False )
 
 
@@ -35,18 +36,25 @@ class TileServiceBasemap(SCSingletonConfigurable):
     #     crs = kwargs.get( 'crs', self.crs )
     #     self.gax.set_extent( xr + yr, crs=crs )
 
+    def set_figsize( self, xlim: Tuple[float,float], ylim: Tuple[float,float] ):
+        dx, dy = abs(xlim[1]-xlim[0]), abs(ylim[1]-ylim[0])
+        fsizes = (self.fig_size * (dx / dy), self.fig_size) if (dy > dx) else (self.fig_size, self.fig_size * (dy / dx) )
+        self.figure.set_figwidth( fsizes[0] )
+        self.figure.set_figheight(fsizes[1])
+
     @exception_handled
     def setup_plot( self, title: str, xlim: Tuple[float,float], ylim: Tuple[float,float], **kwargs ):
         standalone = kwargs.pop( 'standalone', False )
         if not standalone: plt.ioff()
         fig_index = kwargs.pop('index',100)
-        fig_size = kwargs.pop('size', (6, 6))
+        self.fig_size = kwargs.pop('size', 6.0)
         use_basemap = kwargs.pop('basemap', True)
         parallel = kwargs.pop('parallel', True)
         use_slider = kwargs.pop( 'slider', True )
-        self.figure: Figure = plt.figure( fig_index, figsize=fig_size )
+        self.figure: Figure = plt.figure( fig_index )
         self.figure.canvas.mpl_connect('motion_notify_event', self.on_move)
         self.figure.suptitle( title, color="yellow" )
+        self.set_figsize( xlim, ylim )
         if not standalone: plt.ion()
 
         if use_slider:
@@ -81,11 +89,12 @@ class TileServiceBasemap(SCSingletonConfigurable):
         self.figure.canvas.draw_idle()
 
     def set_extent(self, extent: List[float] ):
-        self.set_bounds( [extent[0],extent[1]], [extent[2],extent[3]] )
+        self.set_bounds( (extent[0],extent[1]), (extent[2],extent[3]) )
 
-    def set_bounds(self, xrange: List[float], yrange: List[float] ):
-        self.gax.set_xbound(*xrange)
-        self.gax.set_ybound(*yrange)
+    def set_bounds(self, xlim: Tuple[float,float], ylim: Tuple[float,float] ):
+        self.gax.set_xbound(*xlim)
+        self.gax.set_ybound(*ylim)
+        self.set_figsize( xlim, ylim )
         if self._block_selection: self.basemap.update_blocks()
 
     def set_alpha(self, alpha ):

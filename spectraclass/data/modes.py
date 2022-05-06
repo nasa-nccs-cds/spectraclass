@@ -2,7 +2,7 @@ import numpy as np
 from typing import List, Optional, Dict, Tuple, Union
 import ipywidgets as ipw
 import os, glob, sys
-import netCDF4 as nc
+from pathlib import Path
 import ipywidgets as ip
 from os import path
 from collections import OrderedDict
@@ -25,10 +25,12 @@ class ModeDataManager(SCSingletonConfigurable):
     VALID_BANDS = None
     application: SpectraclassController = None
 
-    image_names = tl.List( default_value=["NONE"] ).tag(config=True ,sync=True)
-    dset_name = tl.Unicode("").tag(config=True)
-    cache_dir = tl.Unicode( path.expanduser("~/Development/Cache")).tag(config=True)
-    data_dir = tl.Unicode( path.expanduser("~/Development/Data")).tag(config=True)
+    image_names = tl.List( default_value=[] ).tag( config=True, sync=True, cache=False )
+    images_glob = tl.Unicode(default_value="").tag( config=True, sync=True, cache=False )
+    dset_name = tl.Unicode( "" ).tag(config=True)
+    cache_dir = tl.Unicode( "" ).tag(config=True)
+    data_dir = tl.Unicode( "" ).tag(config=True)
+    ext = tl.Unicode( ".tif" ).tag(config=True)
     class_file = tl.Unicode("NONE").tag(config=True, sync=True)
 
     model_dims = tl.Int(32).tag(config=True, sync=True)
@@ -49,10 +51,31 @@ class ModeDataManager(SCSingletonConfigurable):
         self._dataset_prefix: str = ""
         self._file_selector = None
         self._active_image = 0
+        self.generate_image_list()
+
+    @property
+    def extension(self):
+        return self.ext
+
+    @property
+    def default_images_glob(self):
+        return "*" + self.extension
+
+    def generate_image_list(self):
+        if len( self.image_names ) == 0:
+            iglob = f"{self.data_dir}/{(self.images_glob if self.images_glob else self.default_images_glob)}"
+            image_path_list = glob.glob( iglob )
+            self.image_names = [ self.extract_image_name( image_path ) for image_path in image_path_list ]
+            lgm().log( f"Generate image names from glob '{iglob}': {self.image_names}")
 
     def set_current_image(self, image_index: int ):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         lgm().log( f"Setting active_image[{self._active_image}]: {self.image_name}")
         self._active_image = image_index
+        tm().tile.initialize()
+
+    def extract_image_name(self, image_path: str ) -> str:
+        return Path(image_path).stem
 
     @property
     def num_images(self):
@@ -73,7 +96,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def file_selector(self):
         if self._file_selector is None:
             lgm().log( f"Creating file_selector, options={self.image_names}, value={self.image_names[0]}")
-            self._file_selector =  ip.Select( options=self.image_names, value=self.image_name, layout=ipw.Layout(width='600px') )
+            self._file_selector =  ip.Select( options=self.image_names, value=self.image_names[0], layout=ipw.Layout(width='600px') )
             self._file_selector.observe( self.on_image_change, names=['value'] )
         return self._file_selector
 
@@ -125,6 +148,12 @@ class ModeDataManager(SCSingletonConfigurable):
         raise NotImplementedError()
 
     def prepare_inputs(self, **kwargs ) -> Dict[Tuple,int]:
+        raise NotImplementedError()
+
+    def generate_metadata(self, **kwargs ):
+        raise NotImplementedError()
+
+    def process_block(self, block  ) -> xa.Dataset:
         raise NotImplementedError()
 
     def update_extent(self):
@@ -241,21 +270,23 @@ class ModeDataManager(SCSingletonConfigurable):
 
     @exception_handled
     def loadDataset(self, **kwargs) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         if self.dsid() not in self.datasets:
             lgm().log(f"Load dataset {self.dsid()}, current datasets = {self.datasets.keys()}")
-            xdataset: xa.Dataset = self.loadDataFile(**kwargs)
+            xdataset: Optional[xa.Dataset] = self.loadDataFile(**kwargs)
+            if xdataset is None:
+                xdataset = self.process_block( tm().getBlock() )
             if len(xdataset.variables.keys()) == 0:
                 lgm().log(f"Warning: Attempt to Load empty dataset {self.dataFile( **kwargs )}", print=True)
                 return None
             else:
-                lgm().log(f" ---> Opening Dataset {self.dsid()} from file {xdataset.attrs['data_file']}")
+                lgm().log(f" ---> Opening Dataset {self.dsid()}")
                 dvars: Dict[str,Union[xa.DataArray,List,Dict]] = self.dset_subsample( xdataset, dsid=self.dsid(), **kwargs )
                 attrs = xdataset.attrs.copy()
                 raw_data = dvars['samples']
                 lgm().log( f" -----> reduction: shape = {dvars['reduction'].shape}, #NULL={np.count_nonzero(np.isnan(dvars['reduction'].values))}")
                 lgm().log( f" -----> point_data: shape = {raw_data.shape}, #NULL={np.count_nonzero(np.isnan(raw_data.values))}")
                 dvars['plot-x'] = dvars['bands'] if ('bands'in dvars) else dvars['band']
-                dvars['plot-mx'] = dvars['model']
                 dvars['plot-mx'] = dvars['model']
                 attrs['dsid'] = self.dsid()
                 attrs['type'] = 'spectra'
@@ -275,7 +306,7 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def leafletRasterPath( self, **kwargs ) -> str:
         from spectraclass.data.base import DataManager, dm
-        return f"files/spectraclass/datasets/{self.MODE}/{dm().name}/{self.dsid(**kwargs)}.tif"
+        return f"files/spectraclass/datasets/{self.MODE}/{dm().name}/{self.dsid(**kwargs)}{self.ext}"
 
     def dataFile( self, **kwargs ):
         raise NotImplementedError( "Attempt to call virtual method")
@@ -284,18 +315,18 @@ class ModeDataManager(SCSingletonConfigurable):
         return path.isfile( self.dataFile() )
 
     def loadDataFile( self, **kwargs ) -> Optional[xa.Dataset]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        ufm().show(f" Loading Tile {tm().block_index}")
         dFile = self.dataFile( **kwargs )
+        dataset: Optional[xa.Dataset] = None
         if path.isfile( dFile ):
-            dataset: xa.Dataset = xa.open_dataset( dFile, concat_characters=True )
+            dataset = xa.open_dataset( dFile, concat_characters=True )
             dataset.attrs['data_file'] = dFile
             vars = [ f"{vid}{var.dims}" for (vid,var) in dataset.variables.items()]
             coords = [f"{cid}{coord.shape}" for (cid, coord) in dataset.coords.items()]
             lgm().log( f"#GID: loadDataFile: {dFile}, coords={coords}, vars={vars}" )
             lgm().log( f"#GID:  --> coords={coords}")
             lgm().log( f"#GID:  --> vars={vars}")
-        else:
-            ufm().show( f"This file/tile needs to be preprocesed.", "red" )
-            raise Exception( f"Missing data file: {dFile}" )
         return dataset
 
     def filterCommonPrefix(self, paths: List[str])-> Tuple[str,List[str]]:

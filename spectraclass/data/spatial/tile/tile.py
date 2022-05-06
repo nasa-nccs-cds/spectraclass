@@ -29,6 +29,9 @@ class DataContainer:
     def __init__(self, **kwargs):
         super(DataContainer, self).__init__()
         self._data_projected = kwargs.get( 'data_projected', False )
+        self.initialize()
+
+    def initialize(self):
         self._extent: List[float] = None
         self._transform: List[float] = None
         self._ptransform: ProjectiveTransform = None
@@ -36,9 +39,6 @@ class DataContainer:
         self._transformer: Transformer = None
         self._xlim = None
         self._ylim = None
-
-    def reset(self):
-        self._data = None
 
     @property
     def transformer(self) -> Transformer:
@@ -96,7 +96,7 @@ class DataContainer:
         return [ self.ycoord[0], self.ycoord[-1] ]
 
     @property
-    def xlim(self) -> List[float]:
+    def xlim(self) -> Tuple[float,float]:
         if self._xlim is None:
             xc: np.ndarray = self.xcoord
             dx = (xc[-1]-xc[0])/(xc.size-1)
@@ -104,7 +104,7 @@ class DataContainer:
         return self._xlim
 
     @property
-    def ylim(self) -> List[float]:
+    def ylim(self) -> Tuple[float,float]:
         if self._ylim is None:
             yc: np.ndarray = self.ycoord
             dy = (yc[-1]-yc[0])/(yc.size-1)
@@ -129,7 +129,29 @@ class Tile(DataContainer):
         super(Tile, self).__init__(**kwargs)
         self._blocks = {}
         self._index = tile_index
+        self._metadata: Dict = None
         self.subsampling: int =  kwargs.get('subsample',1)
+
+    @property
+    def metadata(self) -> Dict:
+        if self._metadata is None:
+            self.init_metadata()
+        return self._metadata
+
+    @property
+    def block_sizes(self) -> Dict[ Tuple[int,int], int ]:
+        return self.metadata['block_size']
+
+    def block_nvalid(self, block_coords: Tuple[int,int] ) -> int:
+        return self.block_sizes.get( tuple(block_coords), 0 )
+
+    def get_valid_block_coords(self, block_coords: Tuple[int,int] ) -> Tuple[int,int]:
+        from spectraclass.data.base import DataManager, dm
+        if self.block_nvalid(block_coords) > 0: return block_coords
+        for (coords,nvalid) in self.block_sizes.items():
+            if nvalid > 0: return coords
+        lgm().log( f"No valid blocks in tile.\nMetadata File: {dm().metadata_file}\nBlock sizes: {self.block_sizes}")
+        raise Exception( "No valid blocks in tile")
 
     def _get_data(self) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager
@@ -139,24 +161,174 @@ class Tile(DataContainer):
     def name(self) -> str:
         return self.data.attrs['tilename']
 
-    def getBlock(self, ix: int, iy: int, **kwargs ) -> Optional["Block"]:
+    def getDataBlock(self, ix: int, iy: int, **kwargs ) -> Optional["Block"]:
         if (ix,iy) in self._blocks: return self._blocks[ (ix,iy) ]
         return self._blocks.setdefault( (ix,iy), Block( self, ix, iy, self._index, **kwargs ) )
 
+    @log_timing
     def getBlocks(self, **kwargs ) -> List["Block"]:
-        from spectraclass.data.spatial.tile.manager import TileManager
-        tm = TileManager.instance()
-        return [ self.getBlock( ix, iy, **kwargs ) for ix in range(0,tm.block_dims[0]) for iy in range(0,tm.block_dims[1]) ]
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        lgm().log( f"getBlocks: tile_shape[x,y]={tm().tile_shape},  block_dims[x,y]={tm().block_dims}, raster_shape={tm().tile.data.shape}")
+        return [ self.getDataBlock( ix, iy, **kwargs ) for ix in range(0,tm().block_dims[0]) for iy in range(0,tm().block_dims[1]) ]
+
+    def init_metadata(self):
+        from spectraclass.data.base import DataManager, dm
+        if not dm().hasMetadata(): self.saveMetadata()
+        self._metadata = self.loadMetadata()
+
+    def loadMetadata(self) -> Dict:
+        from spectraclass.data.base import DataManager, dm
+        file_path = dm().metadata_file
+        mdata = {}
+        try:
+            with open( file_path, "r" ) as mdfile:
+                print(f"Loading metadata from file: {file_path}")
+                block_sizes = {}  # { (1,1): 244284, (0,0): 134321 }
+                for line in mdfile.readlines():
+                    try:
+                        toks = line.split("=")
+                        if toks[0].startswith('nvalid'):
+                            bstok = toks[0].split("-")
+                            block_sizes[ (int(bstok[1]), int(bstok[2])) ] = int( toks[1] )
+                        else:
+                            mdata[toks[0]] = "=".join(toks[1:])
+                    except Exception as err:
+                        lgm().log( f"LoadMetadata: Error '{err}' reading line '{line}'" )
+                mdata[ 'block_size' ] = block_sizes
+        except Exception as err:
+            lgm().log( f"Warning: can't read config file '{file_path}': {err}\n")
+        return mdata
+
+    @log_timing
+    def band_data(self, iband: int ) -> np.ndarray:
+        return self.data[ iband, :, : ].to_numpy().squeeze()
+
+    @log_timing
+    def block_slice_data(self, iband: int, xbounds: Tuple[int,int], ybounds: Tuple[int,int] ) -> np.ndarray:
+        return self.data[ iband, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ].to_numpy().squeeze()
+
+    # @log_timing
+    # def saveMetadata_preread( self ):
+    #     from spectraclass.data.base import DataManager, dm
+    #     file_path = dm().metadata_file
+    #     block_data: Dict[Tuple,int] = {}
+    #     blocks: List["Block"] = self.getBlocks()
+    #     lgm().log(f"------------ saveMetadata: raster shape = {self.data.shape}" )
+    #     raster_band: np.ndarray = self.band_data( 0 )
+    #     nodata = self.data.attrs.get('_FillValue')
+    #     for block in blocks:
+    #         xbounds, ybounds = block.getBounds()
+    #         raster_slice: np.ndarray = raster_band[ ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
+    #         lgm().log( f"   * READ raster slice[{block.block_coords}], xbounds={xbounds}, ybounds={ybounds}, slice shape={raster_slice.shape}, nodata val = {nodata}")
+    #         if not np.isnan(nodata):
+    #             raster_slice[ raster_slice == nodata ] = np.nan
+    #         nodata_mask = np.isnan( raster_slice )
+    #         block_data[ block.block_coords ] = np.count_nonzero(nodata_mask)
+    #
+    #     os.makedirs( os.path.dirname(file_path), exist_ok=True )
+    #     try:
+    #         with open( file_path, "w" ) as mdfile:
+    #             for (k,v) in self.data.attrs.items():
+    #                 mdfile.write( f"{k}={v}\n" )
+    #             for bcoords, bsize in block_data.items():
+    #                 mdfile.write( f"{self.bsizekey(bcoords)}={bsize}\n" )
+    #         lgm().log(f" ---> Writing metadata file: {file_path}", print=True)
+    #     except Exception as err:
+    #         lgm().log(f" ---> ERROR Writing metadata file at {file_path}: {err}", print=True)
+    #         if os.path.isfile(file_path): os.remove(file_path)
+
+    @log_timing
+    def saveMetadata( self ):
+        from spectraclass.data.base import DataManager, dm
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        t0 = time.time()
+        file_path = dm().metadata_file
+        if tm().reprocess or not os.path.isfile(file_path):
+            block_data: Dict[Tuple,int] = {}
+            blocks: List["Block"] = self.getBlocks()
+            print( f"Generating metadata: {dm().modal.image_name}.mdata.txt" )
+            nodata = tm().tile.data.attrs.get('_FillValue')
+            for block in blocks:
+                xbounds, ybounds = block.getBounds()
+                try:
+                    raster_slice: np.ndarray = tm().tile.data[ 0, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ].to_numpy().squeeze().astype(np.float32)
+                    if not np.isnan(nodata):
+                        lgm().log(f"----> processing raster block, shape = {raster_slice.shape}, dtype={raster_slice.dtype}, nodata={nodata}")
+                        raster_slice[ raster_slice == nodata ] = np.nan
+                    valid_mask = ~np.isnan( raster_slice )
+                    block_data[ block.block_coords ] = np.count_nonzero(valid_mask)
+                except Exception as err:
+                    lgm().exception( f"Error processing block{block.block_coords}: xbounds={xbounds}, ybounds={ybounds}, base shape = {tm().tile.data.shape}")
+            os.makedirs( os.path.dirname(file_path), exist_ok=True )
+            try:
+                with open( file_path, "w" ) as mdfile:
+                    for (k,v) in self.data.attrs.items():
+                        mdfile.write( f"{k}={v}\n" )
+                    for bcoords, bsize in block_data.items():
+                        mdfile.write( f"{self.bsizekey(bcoords)}={bsize}\n" )
+                lgm().log(f" ---> Writing metadata, time = {(time.time()-t0)/60} min", print=True)
+            except Exception as err:
+                lgm().log(f" ---> ERROR Writing metadata file at {file_path}: {err}", print=True)
+                if os.path.isfile(file_path): os.remove(file_path)
+        else:
+            print(f"Skipping existing: {dm().modal.image_name}.mdata.txt" )
+
+#     @log_timing
+#     def saveMetadata_parallel( self ):
+#         from multiprocessing import cpu_count, get_context, Pool
+#         from spectraclass.data.base import DataManager, dm
+#         file_path = dm().metadata_file
+#         block_data: Dict[Tuple,int] = {}
+#         blocks: List["Block"] = self.getBlocks()
+#         lgm().log(f"------------ saveMetadata: raster shape = {self.data.shape}" )
+#         nodata = self.data.attrs.get('_FillValue')
+#
+# #        with get_context("spawn").Pool(processes=nproc) as p:
+# #            image_tiles = p.map(image_processor, image_ids)
+#
+#         for block in blocks:
+#             xbounds, ybounds = block.getBounds()
+#             raster_slice: np.ndarray = self.block_slice_data( 0, xbounds, ybounds )
+#             lgm().log( f"   * READ raster slice[{block.block_coords}], xbounds={xbounds}, ybounds={ybounds}, slice shape={raster_slice.shape}")
+#             if not np.isnan(nodata):
+#                 raster_slice[ raster_slice == nodata ] = np.nan
+#             nodata_mask = np.isnan( raster_slice )
+#             block_data[ block.block_coords ] = np.count_nonzero(nodata_mask)
+#
+#         os.makedirs( os.path.dirname(file_path), exist_ok=True )
+#         try:
+#             with open( file_path, "w" ) as mdfile:
+#                 for (k,v) in self.data.attrs.items():
+#                     mdfile.write( f"{k}={v}\n" )
+#                 for bcoords, bsize in block_data.items():
+#                     mdfile.write( f"{self.bsizekey(bcoords)}={bsize}\n" )
+#             lgm().log(f" ---> Writing metadata file: {file_path}", print=True)
+#         except Exception as err:
+#             lgm().log(f" ---> ERROR Writing metadata file at {file_path}: {err}", print=True)
+#             if os.path.isfile(file_path): os.remove(file_path)
+
+    def bsizekey(self, bcoords: Tuple[int,int] ) -> str:
+        return f"nvalid-{bcoords[0]}-{bcoords[1]}"
+
+    def bskey2coords(self, bskey: str ) -> Tuple[int,int]:
+        toks = bskey.split("-")
+        return ( int(toks[1]), int(toks[2]) )
 
 class ThresholdRecord:
 
-    def __init__(self, fdata: xa.DataArray ):
+    def __init__(self, fdata: xa.DataArray, block_coords: Tuple[int,int], image_index: int ):
         self._tmask: xa.DataArray = None
+        self._block_coords: Tuple[int,int] = block_coords
+        self._image_index: int = image_index
         self.thresholds: Tuple[float,float] = (0.0,1.0)
         self.fixed: bool = False
         self.needs_update = [ True, True ]
         self.fdata: xa.DataArray = fdata
         self._drange = None
+
+    def applicable(self, block_coords: Tuple[int,int] ) -> bool:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        return ( self._image_index == tm().image_index ) and ( self._block_coords == block_coords )
 
     @property
     def tmask(self) -> Optional[xa.DataArray]:
@@ -206,7 +378,7 @@ class Block(DataContainer):
         self._model_data: xa.DataArray = None
         self.config = kwargs
         self._trecs: Tuple[ Dict[int,ThresholdRecord], Dict[int,ThresholdRecord] ] = ( {}, {} )
-        self.block_coords = (ix,iy)
+        self.block_coords: Tuple[int,int] = (ix,iy)
         self.tile_index = itile
  #       self.validate_parameters()
         self._index_array: xa.DataArray = None
@@ -217,7 +389,7 @@ class Block(DataContainer):
         self._point_coords: Optional[Dict[str,np.ndarray]] = None
         self._point_mask: Optional[np.ndarray] = None
         self._raster_mask: Optional[np.ndarray] = None
-        lgm().log(f"CREATE Block: ix={ix}, iy={iy}")
+ #       lgm().log(f"CREATE Block: ix={ix}, iy={iy}, dfile={dm().modal.dataFile(block=self, index=self.tile_index)}")
 
     def set_thresholds(self, bUseModel: bool, iFrame: int, thresholds: Tuple[float,float] ) -> bool:
         trec: ThresholdRecord = self.threshold_record( bUseModel, iFrame )
@@ -226,21 +398,22 @@ class Block(DataContainer):
         lgm().log(f"#IA: MASK[{iFrame}].set_thresholds---> nmasked pixels = {np.count_nonzero(mask)} ")
         self._tmask = None
         self._index_array = None
-        self.tile.reset()
+        self.tile.initialize()
         return initialized
 
     def threshold_record(self, model_data: bool, iFrame: int ) -> ThresholdRecord:
         from spectraclass.data.base import dm
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         trecs: Dict[int,ThresholdRecord] = self._trecs[ int(model_data) ]
         if iFrame in trecs: return trecs[ iFrame ]
         fdata: xa.DataArray = self.points2raster( dm().getModelData() ) if model_data else self.data
-        return trecs.setdefault( iFrame,  ThresholdRecord( fdata[iFrame] ) )
+        return trecs.setdefault( iFrame,  ThresholdRecord( fdata[iFrame], self.block_coords, tm().image_index ) )
 
     def get_mask_list(self, current_frame = -1 ) -> Tuple[ List[str], str ]:
         mask_list, types, value = [], ["band", "model" ], None
         for ttype, trecs in zip(types,self._trecs):
             for iFrame, trec in trecs.items():
-                if trec.tmask is not None:
+                if trec.applicable(self.block_coords) and (trec.tmask is not None):
                     mask_name = f"{ttype}:{iFrame}"
                     mask_list.append( mask_name )
                     if iFrame == current_frame:
@@ -290,25 +463,61 @@ class Block(DataContainer):
 
     @log_timing
     def _get_data( self ) -> xa.DataArray:
-        from spectraclass.data.base import DataManager, dm
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        from spectraclass.gui.control import UserFeedbackManager, ufm
-        block_data_file = dm().modal.dataFile( block=self, index=self.tile_index )
-        if path.isfile( block_data_file ):
-            dataset: Optional[xa.Dataset] = dm().modal.loadDataFile(block=self, index=self.tile_index )
-            raw_raster = dataset["raw"]
-            if raw_raster.size == 0: ufm().show( "This block does not appear to have any data.", "red" )
-        else:
+        raw_raster: Optional[xa.DataArray] = self.load_block_raster()
+        if raw_raster is None:
             if self.tile.data is None: return None
             xbounds, ybounds = self.getBounds()
             raster_slice = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
             raw_raster = raster_slice if (raster_slice.size == 0) else TileManager.process_tile_data( raster_slice )
+            lgm().log(f"BLOCK{self.block_coords}: load-slice ybounds={ybounds}, xbounds={xbounds}, raster shape={raw_raster.shape}")
         block_raster = self._apply_mask( raw_raster )
         block_raster.attrs['block_coords'] = self.block_coords
+        block_raster.attrs['tile_shape'] = tm().tile.data.shape
+        block_raster.attrs['block_dims'] = tm().block_dims
+        block_raster.attrs['tile_size']  = tm().tile_size
         block_raster.attrs['dsid'] = self.dsid()
         block_raster.attrs['file_name'] = self.file_name
         block_raster.name = self.file_name
         return block_raster
+
+    @property
+    def data_file(self):
+        from spectraclass.data.base import DataManager, dm
+        return dm().modal.dataFile( block=self, index=self.tile_index )
+
+    @log_timing
+    def has_data_samples(self) -> bool:
+        file_exists = path.isfile(self.data_file)
+        if file_exists:
+            with xa.open_dataset(self.data_file) as dataset:
+                nsamples = 0 if (len( dataset.coords ) == 0) else dataset.coords['samples'].size
+                lgm().log( f" BLOCK{self.block_coords} data_samples={nsamples}")
+                file_exists = (nsamples > 0)
+        return file_exists
+
+    def has_data_file(self, non_empty=False ) -> bool:
+        file_exists = path.isfile(self.data_file)
+        if non_empty and file_exists:
+            return self.has_data_samples()
+        return file_exists
+
+    @log_timing
+    def load_block_raster(self) -> Optional[xa.DataArray]:
+        from spectraclass.data.base import DataManager, dm
+        from spectraclass.gui.control import UserFeedbackManager, ufm
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        raw_raster: Optional[xa.DataArray] = None
+        if self.has_data_file():
+            dataset: xa.Dataset = dm().modal.loadDataFile( block=self, index=self.tile_index )
+            raw_raster = tm().mask_nodata( dataset["raw"] )
+            lgm().log( f" ---> load_block_raster{self.block_coords}: raw data attrs = {dataset['raw'].attrs.keys()}" )
+            for aid, aval in dataset.attrs.items():
+                if aid not in raw_raster.attrs:
+                    raw_raster.attrs[aid] = aval
+            lgm().log(f"BLOCK{self.block_coords}->get_data: load-datafile raster shape={raw_raster.shape}")
+            if raw_raster.size == 0: ufm().show( "This block does not appear to have any data.", "red" )
+        return raw_raster
 
     @property
     def model_data(self):
@@ -364,8 +573,11 @@ class Block(DataContainer):
         from spectraclass.data.spatial.tile.manager import tm
         bsize = tm().block_size
         x0, y0 = self.block_coords[0]*bsize, self.block_coords[1]*bsize
-        return ( x0, x0+bsize ), ( y0, y0+bsize )
+        bounds = ( x0, x0+bsize ), ( y0, y0+bsize )
+        lgm().log( f"GET BLOCK{self.block_coords} BOUNDS: dx={bounds[0]}, dy={bounds[1]}")
+        return bounds
 
+    @log_timing
     def getPointData( self ) -> Tuple[xa.DataArray,Dict]:
         if self._point_data is None:
             self._point_data, pmask, rmask =  self.raster2points( self.data )

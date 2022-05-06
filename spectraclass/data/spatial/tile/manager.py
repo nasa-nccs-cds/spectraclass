@@ -1,10 +1,11 @@
 from skimage.transform import ProjectiveTransform
 import numpy as np
+import codecs
 import xarray as xa
 import shapely.vectorized as svect
 from typing import List, Union, Tuple, Optional, Dict
 from pyproj import Proj
-from spectraclass.data.base import DataManager, DataType
+from spectraclass.data.base import DataManager, dm, DataType
 from spectraclass.util.logs import LogManager, lgm, log_timing
 import os, math, pickle, time
 import cartopy.crs as ccrs
@@ -25,9 +26,11 @@ def tm() -> "TileManager":
 
 class TileManager(SCSingletonConfigurable):
 
-    block_size = tl.Int(250).tag(config=True, sync=True)
-    block_index = tl.Tuple( default_value=(0,0) ).tag(config=True, sync=True)
-    mask_class = tl.Int(0).tag(config=True, sync=True)
+    block_size = tl.Int(250).tag( config=True, sync=True )
+    block_index = tl.Tuple( default_value=(0,0) ).tag( config=True, sync=True )
+    mask_class = tl.Int(0).tag( config=True, sync=True )
+    autoprocess = tl.Bool(True).tag( config=True, sync=True )
+    reprocess = tl.Bool(False).tag( config=True, sync=True )
     image_attrs = {}
     ESPG = 3857
     crs = ccrs.epsg(ESPG) # "+a=6378137.0 +b=6378137.0 +nadgrids=@null +proj=merc +lon_0=0.0 +x_0=0.0 +y_0=0.0 +units=m +no_defs"
@@ -39,13 +42,20 @@ class TileManager(SCSingletonConfigurable):
         self._idxtiles: Dict[int, Tile] = {}
         self.cacheTileData = True
         self._block_dims = None
-        self._tile_metadata = None
         self._tile_size = None
         self._tile_shape = None
 
+    @classmethod
+    def encode( cls, obj ) -> str:
+        return codecs.encode(pickle.dumps(obj), "base64").decode()
+
+    @classmethod
+    def decode( cls, pickled: str ):
+        if pickled: return pickle.loads(codecs.decode(pickled.encode(), "base64"))
+
     @property
     def block_shape(self):
-        block = self.getBlock()
+        block = self.getBlock( bindex=(0,0) )
         return block.shape
 
     @tl.observe('block_index')
@@ -80,11 +90,11 @@ class TileManager(SCSingletonConfigurable):
     def transform(self):
         return self.tile.transform
 
-    @property
-    def tile_metadata(self):
-        if self._tile_metadata is None:
-            self._tile_metadata = self.loadMetadata()
-        return self._tile_metadata
+    # @property
+    # def tile_metadata(self):
+    #     if self._tile_metadata is None:
+    #         self._tile_metadata = self.loadMetadata()
+    #     return self._tile_metadata
 
     @classmethod
     def reproject_to_latlon( cls, x, y ):
@@ -93,49 +103,51 @@ class TileManager(SCSingletonConfigurable):
     @property
     def block_dims(self) -> Tuple[int,int]:
         if self._block_dims is None:
-            self._block_dims = [ math.ceil(self.tile_shape[i]/self.block_shape[i]) for i in (0,1) ]
+            self._block_dims = [ math.ceil(self.tile_shape[i]/self.block_size) for i in (0,1) ]
         return self._block_dims
 
     @property
     def tile_size(self) -> Tuple[int,int]:
         if self._tile_size is None:
-            self._tile_size = [ (self.block_dims[i] * self.block_shape[i]) for i in (0,1) ]
+            self._tile_size = [ ( self.block_dims[i] * self.block_size ) for i in (0,1) ]
         return self._tile_size
 
     @property
     def tile_shape(self) -> Tuple[int,int]:
         if self._tile_shape is None:
-            idata: xa.DataArray = self.getTileData()
-            self._tile_shape = [ idata.shape[-1], idata.shape[-2] ]
+            self._tile_shape = [ self.tile.data.shape[-1], self.tile.data.shape[-2] ]
         return self._tile_shape
 
     @property
     def image_name(self):
-        return DataManager.instance().modal.image_name
+        return dm().modal.image_name
 
     def get_image_name( self, **kwargs ):
         image_index = kwargs.get('index', DataManager.instance().modal._active_image )
-        return DataManager.instance().modal.image_names[ image_index ]
+        return dm().modal.image_names[ image_index ]
 
     @property
     def image_index(self) -> int:
-        return DataManager.instance().modal.image_index
+        return dm().modal.image_index
 
     @property
     def block_coords(self) -> Tuple:
         return tuple(self.block_index)
 
     def setBlock( self, block_index ):
-        self.block_index = block_index
+        if block_index != self.block_index:
+            self.block_index = block_index
+            dm().loadCurrentProject( 'setBlock', True )
 
     @exception_handled
     def getBlock( self, **kwargs ) -> Block:
         bindex = kwargs.get( 'bindex' )
         tindex = kwargs.get( 'tindex' )
         if (bindex is None) and ('block' in kwargs): bindex = kwargs['block'].block_coords
-        if bindex is not None: self.block_index = bindex
+        init_bindex = self.block_index if (bindex is None) else bindex
+        self.block_index = self.tile.get_valid_block_coords( init_bindex )
         tile = self.tile if (tindex is None) else self.get_tile( tindex )
-        return tile.getBlock( self.block_index[0], self.block_index[1] )
+        return tile.getDataBlock( self.block_index[0], self.block_index[1] )
 
     @exception_handled
     def getMask(self) -> Optional[np.ndarray]:
@@ -190,7 +202,8 @@ class TileManager(SCSingletonConfigurable):
         return marker
 
     def getTileFileName(self, with_extension = True ) -> str:
-        return self.image_name + ".tif" if with_extension else self.image_name
+        ext = dm().modal.ext
+        return self.image_name + ext if with_extension else self.image_name
 
     def tileName( self, **kwargs ) -> str:
         return self.get_image_name( **kwargs )
@@ -218,43 +231,11 @@ class TileManager(SCSingletonConfigurable):
         result = tile_data.rio.reproject(cls.crs)
         result.attrs['wkt'] = result.spatial_ref.crs_wkt
         result.attrs['long_name'] = tile_data.attrs.get('long_name', None)
+        if '_FillValue' in result.attrs:
+           nodata = result.attrs['_FillValue']
+           result = result if np.isnan(nodata) else result.where(result != nodata, np.nan)
         lgm().log(f"Completed process_tile_data in ( {time.time()-t1:.1f}, {t1-t0:.1f} ) sec")
         return result
-
-    def loadMetadata(self) -> Dict:
-        file_path = DataManager.instance().modal.getMetadataFilePath()
-        mdata = {}
-        try:
-            with open( file_path, "r" ) as mdfile:
-                print(f"Loading metadata from file: {file_path}")
-                block_sizes = {}  # { (1,1): 244284, (0,0): 134321 }
-                for line in mdfile.readlines():
-                    try:
-                        toks = line.split("=")
-                        if toks[0].startswith('block_size'):
-                            bstok = toks[0].split("-")
-                            block_sizes[ (int(bstok[1]), int(bstok[2])) ] = int( toks[1] )
-                        else:
-                            mdata[toks[0]] = "=".join(toks[1:])
-                    except Exception as err:
-                        lgm().log( f"LoadMetadata: Error '{err}' reading line '{line}'" )
-                mdata[ 'block_size' ] = block_sizes
-        except Exception as err:
-            lgm().log( f"Warning: can't read config file '{file_path}': {err}\n")
-        return mdata
-
-    @exception_handled
-    def saveMetadata( self, block_data: Dict[Tuple,int] ):
-        file_path = DataManager.instance().modal.getMetadataFilePath()
-        print( f"Writing metadata file: {file_path}")
-        with open( file_path, "w" ) as mdfile:
-            mdfile.write( f"tile_shape={self.tile.data.shape}\n" )
-            mdfile.write( f"block_dims={self.block_dims}\n" )
-            mdfile.write( f"tile_size={self.tile_size}\n" )
-            for (aid,aiv) in self.tile.data.attrs.items():
-                mdfile.write(f"{aid}={aiv}\n")
-            for bcoords, bsize in block_data.items():
-                mdfile.write(f"block_size-{bcoords[0]}-{bcoords[1]}={bsize}\n")
 
 #     def getPointData( self ) -> Tuple[xa.DataArray,xa.DataArray]:
 #         from spectraclass.data.spatial.manager import SpatialDataManager
@@ -290,4 +271,4 @@ class TileManager(SCSingletonConfigurable):
     @classmethod
     def mask_nodata(self, raster: xa.DataArray) -> xa.DataArray:
         nodata_value = raster.attrs.get('data_ignore_value', -9999)
-        return raster.where(raster != nodata_value, float('nan'))
+        return raster.where(raster != nodata_value, float('nan') )
