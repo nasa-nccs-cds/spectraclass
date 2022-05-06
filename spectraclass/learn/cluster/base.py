@@ -15,7 +15,7 @@ class  ClusterBase(TransformerMixin,ClusterMixin,BaseEstimator):
 
     def rescale(self, index: int, sval: float ) -> xa.DataArray:
         lgm().log( f"Cluster[{index}].rescale: value = {sval}")
-        self.cscale[ index ] = sval
+        self.cscale[ 0, index ] = sval
         return self.cluster_data
 
     def cluster( self, data: xa.DataArray, y=None ) -> np.ndarray:

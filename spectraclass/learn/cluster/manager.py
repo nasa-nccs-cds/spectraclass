@@ -156,12 +156,12 @@ class ClusterManager(SCSingletonConfigurable):
         self.run_cluster_model( data )
         return self.get_cluster_map()
 
+    @exception_handled
     def get_cluster_map( self, layer: bool = False ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         if self._cluster_raster is None:
             block = tm().getBlock()
             self._cluster_raster: xa.DataArray = block.points2raster( self._cluster_points ).squeeze()
-            lgm().log( f"Computing clusters raster, shape = {self._cluster_raster.shape}")
         self._cluster_raster.attrs['cmap'] = self.get_colormap( layer )
         return self._cluster_raster
 
@@ -239,6 +239,7 @@ class ClusterManager(SCSingletonConfigurable):
             tuning_sliders.append( tuning_slider )
         return  ipw.VBox( tuning_sliders, layout=ipw.Layout( width="600px", border='2px solid firebrick' ) )
 
+    @exception_handled
     def tune_cluster(self, icluster: int, change: Dict ):
         from spectraclass.gui.spatial.map import MapManager, mm
         self.clear()

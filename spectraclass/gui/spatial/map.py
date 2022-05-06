@@ -297,9 +297,8 @@ class MapManager(SCSingletonConfigurable):
 
             self.update_canvas()
 
-    @log_timing
+    @exception_handled
     def plot_cluster_image(self, clusters: xa.DataArray = None ):
-        lgm().log( f"  plot clusters image, shape = {clusters.shape}" )
         try: self.clusters_image.remove()
         except Exception: pass
         self.clusters_image = clusters.plot.imshow( ax=self.base.gax, cmap=clusters.cmap, add_colorbar=False )

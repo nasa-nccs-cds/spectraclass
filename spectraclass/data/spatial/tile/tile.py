@@ -422,25 +422,19 @@ class Block(DataContainer):
 
     @exception_handled
     def get_threshold_mask( self, raster=False, reduced=True ) -> np.ndarray:
-        lgm().log( f"#IA: get_threshold_mask[B-{hex(id(self))}] (raster={raster}) ************************************** **************************************" )
         if self._tmask is None:
-            lgm().log( f"#IA: ***************> ntrecs={[len(trecs.keys()) for trecs in self._trecs]}")
             ntmask = None
             for trecs in self._trecs:
                 for iFrame, trec in trecs.items():
-                    lgm().log( f"#IA: ***************> Merging Frame-{iFrame} Threshold Mask, shape={shp(trec.tmask)}, nz={nz(trec.tmask)}" )
                     if trec.tmask is not None:
                         ntmask = trec.tmask if (ntmask is None) else (ntmask | trec.tmask)
             if ntmask is not None:
                 self._tmask = ~ntmask
-                lgm().log( f"#IA: ***************> Merging [tmask, nz={nz(self._tmask)}] & [rmask, nz={nz(self.raster_mask)}]" )
                 self._tmask = self._tmask & self.raster_mask
         if self._tmask is not None:
-            lgm().log( f"#IA: ***************> MASK--> shape = {shp(self._tmask)}, nz={nz(self._tmask)}" )
             if not raster:
                 ptmask = self._tmask.values.flatten()
                 if reduced: ptmask = ptmask[self._point_mask]
-                lgm().log( f"#IA: ***************> MASK--> ptmask.shape={shp(ptmask)}, nz={nz(ptmask)} " )
                 return ptmask
             return self._tmask.values
 
@@ -664,22 +658,20 @@ class Block(DataContainer):
 
     def points2raster(self, points_data: xa.DataArray ) -> xa.DataArray:
         tmask = self.get_threshold_mask( reduced=False )
-        lgm().log( f"points->raster, points: dims={points_data.dims}, shape={points_data.shape}; data: dims={self.data.dims}, shape={self.data.shape}")
-        lgm().log( f" ---> pmask: shape = {self.mask.shape}, #nonzero = {np.count_nonzero(self.mask)}")
+ #       lgm().log( f"points->raster, points: dims={points_data.dims}, shape={points_data.shape}; data: dims={self.data.dims}, shape={self.data.shape}")
         dims = [points_data.dims[1], self.data.dims[1], self.data.dims[2]]
         coords = [(dims[0], points_data[dims[0]].data), (dims[1], self.data[dims[1]].data), (dims[2], self.data[dims[2]].data)]
         raster_data = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
         pmask = self.mask if (tmask is None) else tmask
         raster_data[ pmask ] = points_data.data
         raster_data = raster_data.transpose().reshape([points_data.shape[1], self.data.shape[1], self.data.shape[2]])
-        lgm().log( f"Generated Raster data, shape={raster_data.shape}, dims={dims}, with mask shape={self.mask.shape}" )
         return xa.DataArray( raster_data, coords, dims, points_data.name, points_data.attrs )
 
     def raster2points( self, base_raster: xa.DataArray ) -> Tuple[ Optional[xa.DataArray], Optional[np.ndarray], Optional[np.ndarray] ]:   #  base_raster dims: [ band, y, x ]
         t0 = time.time()
         if base_raster is None: return (None, None, None)
         rmask = ~np.isnan( base_raster[0].values.squeeze() ) if (base_raster.size > 0) else None
-        lgm().log( f"raster2points: stack spatial dims: {base_raster.dims[-2:]} (last dim varies fastest)" )
+#        lgm().log( f"raster2points: stack spatial dims: {base_raster.dims[-2:]} (last dim varies fastest)" )
         point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
         if '_FillValue' in point_data.attrs:
             nodata = point_data.attrs['_FillValue']
