@@ -63,6 +63,6 @@ class DesisDataManager(SpatialDataManager):
         super(DesisDataManager, self).__init__()
 
     @property
-    def default_images_glob(self):
-        return "*-SPECTRAL_IMAGE" + self.ext
+    def extension(self):
+        return "-SPECTRAL_IMAGE" + self.ext
 

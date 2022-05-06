@@ -54,8 +54,12 @@ class ModeDataManager(SCSingletonConfigurable):
         self.generate_image_list()
 
     @property
+    def extension(self):
+        return self.ext
+
+    @property
     def default_images_glob(self):
-        return "*" + self.ext
+        return "*" + self.extension
 
     def generate_image_list(self):
         if len( self.image_names ) == 0:

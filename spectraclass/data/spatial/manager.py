@@ -330,7 +330,7 @@ class SpatialDataManager(ModeDataManager):
 
     def getFilePath(self) -> str:
         base_dir = dm().modal.data_dir
-        ext = dm().modal.ext
+        ext = dm().modal.extension
         base_file = dm().modal.image_name
         if base_file.endswith(ext):
             return f"{base_dir}/{base_file}"
