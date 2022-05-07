@@ -1,379 +1,451 @@
-from collections import OrderedDict
-from spectraclass.model.labels import LabelsManager, lm
-from spectraclass.model.base import SCSingletonConfigurable, Marker
-from functools import partial
-import numpy.ma as ma
-import traitlets as tl
-from spectraclass.data.spatial.tile.tile import Block
-from .satellite import SatellitePlotManager
-from spectraclass.util.logs import LogManager, lgm, exception_handled
-import types, pandas as pd
 import xarray as xa
 import numpy as np
-from typing import List, Dict, Tuple, Optional
-from spectraclass.data.spatial.manager import SpatialDataManager
-import math, atexit, os, traceback
-import pathlib
-from  ipympl.backend_nbagg import Toolbar
-import matplotlib.pyplot as plt
-from matplotlib.collections import PathCollection
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.lines import Line2D
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
-from matplotlib.image import AxesImage
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
+import logging, os
+from matplotlib.backend_bases import MouseEvent, KeyEvent
+from spectraclass.gui.spatial.widgets.markers import Marker
 from matplotlib.colors import Normalize
+from matplotlib.figure import Figure
+from matplotlib.backend_bases import NavigationToolbar2, _Mode
 from matplotlib.backend_bases import PickEvent, MouseButton  # , NavigationToolbar2
+from functools import partial
+from spectraclass.gui.spatial.widgets.markers import MarkerManager
+from matplotlib.image import AxesImage
 from spectraclass.gui.control import UserFeedbackManager, ufm
-from matplotlib.patches import Rectangle
-from matplotlib.widgets import Button, Slider
+from matplotlib.axes import Axes
+from typing import List, Union, Tuple, Optional, Dict, Callable
+from spectraclass.gui.spatial.basemap import TileServiceBasemap
+from spectraclass.widgets.polygons import PolygonInteractor
+import matplotlib.pyplot as plt
+import ipywidgets as ipw
+import math, atexit, os, traceback, time
+from collections import OrderedDict
+from spectraclass.gui.spatial.widgets.layers import LayersManager, Layer
+from spectraclass.model.labels import LabelsManager, lm
+from matplotlib.image import AxesImage
+from spectraclass.xext.xgeo import XGeo
+from spectraclass.learn.cluster.manager import ClusterSelector
+from spectraclass.widgets.slider import PageSlider
+import traitlets as tl
+from spectraclass.model.base import SCSingletonConfigurable
+from spectraclass.data.spatial.tile.tile import Block, Tile, ThresholdRecord
 
-ROOT_DIR = pathlib.Path(__file__).parent.parent.parent.parent.absolute()
+def mm(**kwargs) -> "MapManager":
+    return MapManager.instance(**kwargs)
 
-def get_color_bounds( color_values: List[float] ) -> List[float]:
-    color_bounds = []
-    for iC, cval in enumerate( color_values ):
-        if iC == 0: color_bounds.append( cval - 0.5 )
-        else: color_bounds.append( (cval + color_values[iC-1])/2.0 )
-    color_bounds.append( color_values[-1] + 0.5 )
-    return color_bounds
+def fs(flist):
+    return [f"{fv:.1f}" for fv in flist]
 
-def dms() -> SpatialDataManager:
-    from spectraclass.data.base import DataManager, dm
-    return dm().modal
-
-def toggle_markers( map: "MapManager", toolbar: Toolbar ):
-    from spectraclass.gui.points import PointCloudManager, pcm
-    map.toggleMarkersVisible()
-    pcm().toggle_marker_visibility()
-
-class PageSlider(Slider):
-
-    def __init__(self, ax: Axes, numpages = 10, valinit=0, valfmt='%1d', **kwargs ):
-        self.facecolor=kwargs.get('facecolor',"yellow")
-        self.activecolor = kwargs.pop('activecolor',"blue" )
-        self.stepcolor = kwargs.pop('stepcolor', "#ff6f6f" )
-        self.on_animcolor = kwargs.pop('on-animcolor', "#006622")
-        self.fontsize = kwargs.pop('fontsize', 10)
-        self.maxIndexedPages = 24
-        self.numpages = numpages
-        self.axes = ax
-
-        super(PageSlider, self).__init__(ax, "", 0, numpages, valinit=valinit, valfmt=valfmt, **kwargs)
-
-        self.poly.set_visible(False)
-        self.vline.set_visible(False)
-        self.pageRects = []
-        indexMod = math.ceil( self.numpages / self.maxIndexedPages )
-        for i in range(numpages):
-            facecolor = self.activecolor if i==valinit else self.facecolor
-            r  = Rectangle((float(i)/numpages, 0), 1./numpages, 1, transform=ax.transAxes, facecolor=facecolor)
-            ax.add_artist(r)
-            self.pageRects.append(r)
-            if i % indexMod == 0:
-                ax.text(float(i)/numpages+0.5/numpages, 0.5, str(i+1), ha="center", va="center", transform=ax.transAxes, fontsize=self.fontsize)
-        self.valtext.set_visible(False)
-
-        divider = make_axes_locatable(ax)
-        bax = divider.append_axes("right", size="5%", pad=0.05)
-        fax = divider.append_axes("right", size="5%", pad=0.05)
-        self.button_back = Button(bax, label='$\u25C1$', color=self.stepcolor, hovercolor=self.activecolor)
-        self.button_forward = Button(fax, label='$\u25B7$', color=self.stepcolor, hovercolor=self.activecolor)
-        self.button_back.label.set_fontsize(self.fontsize)
-        self.button_forward.label.set_fontsize(self.fontsize)
-        self.button_back.on_clicked(self.backward)
-        self.button_forward.on_clicked(self. forward)
-
-    def refesh(self):
-        self.axes.figure.canvas.draw()
-
-    def _update(self, event):
-        super(PageSlider, self)._update(event)
-        i = int(self.val)
-        if i >=self.valmax: return
-        self._colorize(i)
-
-    def _colorize(self, i):
-        for j in range(self.numpages):
-            self.pageRects[j].set_facecolor(self.facecolor)
-        self.pageRects[i].set_facecolor(self.activecolor)
-
-    def forward(self, event=None):
-        current_i = int(self.val)
-        i = current_i+1
-        if i >= self.valmax: i = self.valmin
-        self.set_val(i)
-        self._colorize(i)
-
-    def backward(self, event=None):
-        current_i = int(self.val)
-        i = current_i-1
-        if i < self.valmin: i = self.valmax -1
-        self.set_val(i)
-        self._colorize(i)
-
-def mm() -> "MapManager":
-    is_initialized = MapManager.initialized()
-    mgr = MapManager.instance()
-    if not is_initialized: mgr.observe( mgr.on_overlay_alpha_change, names=["overlay_alpha"] )
-    return mgr
+def svalid( data: np.ndarray):
+    return f"#valid: {np.count_nonzero(~np.isnan(data))}/{data.size}"
 
 class MapManager(SCSingletonConfigurable):
     init_band = tl.Int(10).tag(config=True, sync=True)
-    overlay_alpha = tl.Float(0.5).tag(config=True, sync=True)
+    upper_threshold = tl.Float(1.0).tag(config=True, sync=True)
+    lower_threshold = tl.Float(0.0).tag(config=True, sync=True)
+#    current_band = tl.Int(10).tag(config=False, sync=True)
 
     RIGHT_BUTTON = 3
     MIDDLE_BUTTON = 2
     LEFT_BUTTON = 1
+    colorstretch = 2.0
 
     def __init__( self, **kwargs ):   # class_labels: [ [label, RGBA] ... ]
         super(MapManager, self).__init__()
         self._debug = False
-        self.currentFrame = 0
+        self.base: TileServiceBasemap = None
+        self._currentFrame = 0
         self.block: Block = None
-        self.slider: Optional[PageSlider] = None
-        self.image: Optional[AxesImage] = None
-        self.image_template: Optional[xa.DataArray]  = None
-        self.overlay_image: Optional[AxesImage] = None
-        self._classification_data: Optional[np.ndarray] = None
-        self.use_model_data: bool = False
-        self.labels = None
-        self.transients = []
-        self.plot_axes: Optional[Axes] = None
-        self.marker_plot: Optional[PathCollection] = None
-        self.label_map: Optional[xa.DataArray] = None
-        self.dataLims = {}
-        self.key_mode = None
-        self.currentClass = 0
-        self.nFrames = None
+        self.silent_thresholds = False
         self._adding_marker = False
-        self.figure: Figure = plt.figure(100, figsize = (6, 6))
+        self.points_selection: MarkerManager = None
+        self.cluster_selection: ClusterSelector = None
+        self.region_selection: PolygonInteractor = None
+        self._band_selector: ipw.IntSlider = None
+        self._use_model_data = False
+        self._cidpress = -1
+        self.cspecs=None
+        self._classification_data: xa.DataArray = None
+        self.layers = LayersManager( self.on_layer_change )
+        self.band_slider: PageSlider = None
+        self.model_slider: PageSlider = None
+        self._spectral_image: Optional[AxesImage] = None
+        self.label_map: Optional[xa.DataArray] = None     # Map of classification labels from ML
         self.labels_image: Optional[AxesImage] = None
-        self.flow_iterations = kwargs.get( 'flow_iterations', 1 )
-        self.frame_marker: Optional[Line2D] = None
-        self.control_axes = {}
-        self.setup_plot(**kwargs)
-
-#        google_actions = [[maptype, None, None, partial(self.run_task, self.download_google_map, "Accessing Landsat Image...", maptype, task_context='newfig')] for maptype in ['satellite', 'hybrid', 'terrain', 'roadmap']]
+        self.clusters_image: Optional[AxesImage] = None
+        self.layers.add( 'basemap', 1.0, True)
+        self.layers.add( 'bands', 1.0, True )
+        self.layers.add( 'markers', 0.5, True )
+        self.layers.add( 'labels', 0.5, False )
+        self.layers.add( 'clusters', 0.5, False )
+        self.observe(self.on_threshold_change, names=["lower_threshold", "upper_threshold"])
         self.menu_actions = OrderedDict( Layers = [ [ "Increase Labels Alpha", 'Ctrl+>', None, partial( self.update_image_alpha, "labels", True ) ],
                                                     [ "Decrease Labels Alpha", 'Ctrl+<', None, partial( self.update_image_alpha, "labels", False ) ],
                                                     [ "Increase Band Alpha",   'Alt+>',  None, partial( self.update_image_alpha, "bands", True ) ],
                                                     [ "Decrease Band Alpha",   'Alt+<',  None, partial( self.update_image_alpha, "bands", False ) ] ] )
-
         atexit.register(self.exit)
-        self._update(0)
-
-    def gui(self):
-        self.setBlock()
-        return self.figure.canvas
-
-    def refresh(self):
-        self.setBlock()
-        self.update_canvas()
-
-    @property
-    def toolbar(self):   #     -> NavigationToolbar2:
-        return self.figure.canvas.toolbar
-
-    @property
-    def zeros(self):
-        return self.image_template.copy( data = np.zeros( self.image_template.shape, np.int ) )
-
-    @property
-    def transform(self):
-        return self.block.transform
-
-    def point_coords( self, point_index: int ) -> Dict:
-        block_data, point_data = self.block.getPointData()
-        selected_sample: np.ndarray = point_data[ point_index ].values
-        return dict( y = selected_sample[1], x = selected_sample[0] )
-
-    def mark_point( self, pid: int, transient: bool ):
-        cid, color = lm().selectedColor( not transient )
-        marker = Marker( [pid], cid, labeled=False )
-        self.add_marker( marker )
-
-    def create_mask( self, cid: int ):
-        from spectraclass.data.base import DataManager, dm
-        if self._classification_data is None:
-            ufm().show( "Must generate a classification before creating a mask", "red" )
-        elif cid == 0:
-            ufm().show( "Must choose a class in order to create a mask", "red" )
-        else:
-            data: xa.DataArray = self.block.data
-            mask_data: np.ndarray = np.equal( self._classification_data, np.array(cid).reshape((1,1)) )
-            mask_array = xa.DataArray( mask_data, name=f"mask-{cid}", dims=data.dims[1:], coords= { d:data.coords[d] for d in data.dims[1:] } )
-            output_file = dm().mask_file
-            if os.path.exists( output_file ):
-                mask_dset: xa.Dataset = xa.open_dataset( output_file )
-                mask_dset.update( { mask_array.name: mask_array } )
-                mask_dset.to_netcdf( output_file, format='NETCDF4', engine='netcdf4' )
-            else:
-                mask_array.to_netcdf( output_file, format='NETCDF4', engine='netcdf4' )
-            lgm().log( f"\n\n ###### create mask: {mask_array} \n Saved to file: {output_file}" )
 
     @exception_handled
-    def plot_overlay_image( self, image_data: np.ndarray = None ):
-        if image_data is not None:
-            lgm().log( f" plot image overlay, shape = {image_data.shape}, vrange = {[ image_data.min(), image_data.max() ]}, dtype = {image_data.dtype}" )
-            self._classification_data = image_data
-            self.overlay_image.set_data( image_data )
-        self.overlay_image.set_alpha( self.overlay_alpha )
-        self.update_canvas()
+    def  on_threshold_change( self,  *args  ):
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
+        if not self.silent_thresholds:
+            initialized = self.block.set_thresholds( self._use_model_data, self.currentFrame, (self.lower_threshold, self.upper_threshold) )
+            if initialized: self.update_threshold_list()
+            pcm().reset()
+            self.update_spectral_image()
 
-    def on_overlay_alpha_change(self, *args ):
-        from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
-        self.overlay_image.set_alpha( self.overlay_alpha )
-        lgm().log(f" image overlay set alpha = {self.overlay_alpha}" )
-        self.update_canvas()
-        spm().plot_overlay_image( alpha = self.overlay_alpha )
+    def update_thresholds( self ):
+        self.silent_thresholds = True
+        trec = self.block.threshold_record( self._use_model_data, self.currentFrame )
+        self.upper_threshold = trec.thresholds[1]
+        self.lower_threshold = trec.thresholds[0]
+        self.silent_thresholds = False
+        lgm().log(f"update_thresholds(frame={self.currentFrame}): [{self.lower_threshold},{self.upper_threshold}]")
 
-    def setBlock( self, **kwargs ) -> Block:
-        from spectraclass.data.spatial.tile.manager import TileManager
-        self.clearLabels()
-        reset = kwargs.get( 'reset', False )
-        tm = TileManager.instance()
-        self.block: Block = tm.getBlock()
-        if self.block is not None:
-            self.nFrames = self.data.shape[0]
-            self.band_axis = kwargs.pop('band', 0)
-            self.z_axis_name = self.data.dims[self.band_axis]
-            self.x_axis = kwargs.pop('x', 2)
-            self.x_axis_name = self.data.dims[self.x_axis]
-            self.y_axis = kwargs.pop('y', 1)
-            self.y_axis_name = self.data.dims[self.y_axis]
+    def use_model_data(self, use: bool):
+        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
+        if use != self._use_model_data:
+            self._use_model_data = use
+            if self.base is not None:
+                self.update_slider_visibility()
+                self.update_spectral_image()
+                gpm().use_model_data(use)
 
-            image = self.initPlots(**kwargs)
-            if image is not None:
-                self.add_slider(**kwargs)
-                self.initLabels()
-                self.update_plot_axis_bounds()
-                self.plot_markers_image()
-                self.update_plots()
-                SatellitePlotManager.instance().setBlock(self.block)
+    # @property
+    # def band_selector(self):
+    #     if self._band_selector is None:
+    #         self._band_selector = ipw.IntSlider( self.init_band, 0, self.nFrames(), 1 )
+    #         ipw.jslink( (self._band_selector, 'value'), (self.current_band, 'value') )
+    #     return self._band_selector
+    #
+    # def on_current_band_change(self, *args):
+    #     lgm().log( f' ** on_current_band_change[{self.current_band}]: args={args}' )
+    #     self.update_spectral_image()
 
-        return self.block
+    def getPointData(self, **kwargs ) -> xa.DataArray:
+        from spectraclass.data.base import DataManager, dm
+        current_frame = kwargs.get('current_frame',False)
+        if self._use_model_data:
+            pdata = dm().getModelData()
+        else:
+            pdata, coords = self.block.getPointData()
+        lgm().log( f" MapManage.getPointData: shape = {pdata.shape}, dims = {pdata.dims}")
+        return pdata[:,self.currentFrame] if current_frame else pdata
 
-    def update_plot_axis_bounds( self ):
-        if self.plot_axes is not None:
-            self.plot_axes.set_xlim( self.block.xlim )
-            self.plot_axes.set_ylim( self.block.ylim )
-            SatellitePlotManager.instance().set_axis_limits(self.block.xlim, self.block.ylim)
+    def get_point_coords( self, pid: int ) -> Tuple[float,float]:
+        coords = self.block.gid2coords(pid)
+        return coords['x'], coords['y']
 
+    @property
+    def spectral_image(self) -> Optional[AxesImage]:
+        return self._spectral_image
 
-    # def computeMixingSpace(self, *args, **kwargs):
-    #     labels: xa.DataArray = self.getExtendedLabelPoints()
-    #     umapManager.computeMixingSpace( self.block, labels, **kwargs )
-    #     self.plot_markers_volume()
+    def get_selection_panel(self):
+        self.gui()
+        return ipw.Box([self.selection_label, self.selection])
 
-#     def build_model(self, *args, **kwargs):
-#         if self.block is None:
-#             print( "Workflow violation: Must load a block before building model" )
-#         else:
-#             umapManager: ReductionManager = ReductionManager.instance()
-#             labels: xa.DataArray = self.getExtendedLabelPoints()
-#             umapManager.umap_embedding( labels=labels, **kwargs )
-#
-# #            self.plot_markers_volume()
-#
-#     def learn_classification( self, **kwargs  ):
-#         if self.block is None:
-#             print( "Workflow violation: Must load a block and spread some labels  before learning classification" )
-#         else:
-#             full_labels: xa.DataArray = self.getExtendedLabelPoints()
-#             print( f"Learning Classification, labels shape = {full_labels.shape}, nLabels = {np.count_nonzero( full_labels > 0 )}")
-#             event = dict(event="classify", type="learn", data=self.block, labels=full_labels )
-# #            self.submitEvent( event, EventMode.Gui )
-#
-#     def apply_classification( self, **kwargs ):
-#         print(f"Applying Classification")
-#         event = dict( event="classify", type="apply", data=self.block  )
-# #        self.submitEvent(event, EventMode.Gui )
+    def get_threshold_panel(self):
+        controls, ivals = [], [1.0,0.0]
+        for iC, name in enumerate(['upper','lower']):
+            slider = ipw.FloatSlider( ivals[iC], description=name, min=0.0, max=1.0, step=0.025 )
+            tl.link( (slider, "value"), (self, f'{name}_threshold') )
+            controls.append( slider )
+        self.active_thresholds = ipw.Select( options=[], description='Thresholds:', disabled=False )
+        self.active_thresholds.observe( self.on_active_threshold_selection, names=['value'] )
+        clear_button: ipw.Button = ipw.Button(description="Clear", layout=ipw.Layout(flex='1 1 auto'), border='1px solid dimgrey')
+        clear_button.on_click( self.clear_threshold )
+        return ipw.HBox( [ipw.VBox( controls ), ipw.VBox( [ self.active_thresholds, clear_button ] )] )
+
+    def update_threshold_list(self):
+        options, value = self.block.get_mask_list( self.currentFrame )
+        self.active_thresholds.options = options
+        if value is not None:
+            self.active_thresholds.value = value
+
+    def on_active_threshold_selection( self, *args ):
+        active_threshold = self.active_thresholds.value
+        if active_threshold is not None:
+            [ ttype, sframe ] = active_threshold.split(":")
+            self.use_model_data( ttype == "model" )
+            self.slider.set_val( int( sframe ) )
+            self.update_thresholds()
+            self.active_thresholds.value = None
+
+    def clear_threshold(self, *args ):
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
+        trec = self.block.threshold_record( self._use_model_data, self.currentFrame )
+        trec.clear()
+        self.lower_threshold = 0.0
+        self.upper_threshold = 1.0
+        self.update_spectral_image()
+        pcm().reset()
+
+    def labels_dset(self):
+        return xa.Dataset( self.label_map )
 
     def initLabels(self):
-        nodata_value = -2
-        template = self.block.data[0].squeeze( drop=True )
-        self.labels: xa.DataArray = xa.full_like( template, -1, dtype=np.dtype(np.int32) ).where( template.notnull(), nodata_value )
-        self.labels.attrs['_FillValue'] = nodata_value
-        self.labels.name = f"{self.block.data.name}_labels"
-        self.labels.attrs[ 'long_name' ] = [ "labels" ]
+        self.template = xa.full_like( self.block.data[0].squeeze( drop=True ), 0, dtype=np.dtype(np.int32) ) # .where( template.notnull(), nodata_value )
+        self.label_map: xa.DataArray = self.template
+#        self.label_map.attrs['_FillValue'] = nodata_value
+        self.label_map.name = f"{self.block.data.name}_labels"
+        self.label_map.attrs[ 'long_name' ] =  "labels"
+        self.cspecs = lm().get_labels_colormap()
+        self.labels_image = self.template.plot.imshow( ax=self.base.gax, alpha=self.layers('labels').visibility,
+                                                        cmap=self.cspecs['cmap'], add_colorbar=False, norm=self.cspecs['norm'] )
+        self.init_cluster_image()
 
     def clearLabels( self):
         if self.block is not None:
              self.initLabels()
-             self.plot_markers_image()
+             self.points_selection.plot()
              if self.labels_image is not None:
                 self.labels_image.set_alpha(0.0)
 
-    # def updateLabelsFromMarkers(self):
-    #     lm().clearTransient()
-    #     for marker in lm().markers:
-    #         for pid in marker.pids:
-    #             coords = self.block.pindex2coords(pid)
-    #             index = self.block.coords2indices( coords['y'], coords['x'] )
-    #             try:
-    #                 self.labels[ index['iy'], index['ix'] ] = marker.cid
-    #             except:
-    #                 print( f"Skipping out of bounds label at local row/col coords {index['iy']} {index['ix']}")
-
-    # def getLabeledPointData( self, update = True ) -> xa.DataArray:
-    #     from spectraclass.data.base import DataManager, dm
-    #     if update: self.updateLabelsFromMarkers()
-    #     sdm: SpatialDataManager = dm().modal
-    #     labeledPointData = sdm.raster2points( self.labels )
-    #     return labeledPointData
-    #
-    # def getExtendedLabelPoints( self ) -> xa.DataArray:
-    #     if self.label_map is None: return self.getLabeledPointData( True )
-    #     return SpatialDataManager.raster2points( self.label_map )
-
-    @property
-    def data(self) -> Optional[xa.DataArray]:
-        from spectraclass.data.base import DataManager, dm
-        if self.block is None: return None
-        block_data: xa.DataArray = self.block.data
-        if self.use_model_data:
-            reduced_data: xa.DataArray = dm().getModelData().transpose()
-            dims = [reduced_data.dims[0], block_data.dims[1], block_data.dims[2]]
-            coords = [(dims[0], reduced_data[dims[0]]), (dims[1], block_data[dims[1]]), (dims[2], block_data[dims[2]])]
-            shape = [c[1].size for c in coords]
-            raster_data = reduced_data.data.reshape(shape)
-            return xa.DataArray(raster_data, coords, dims, reduced_data.name, reduced_data.attrs)
-        else:
-            return block_data
-
-    @property
-    def frame_data(self) -> np.ndarray:
-        return self.data[ :, self.currentFrame].flatten().values()
+    def init_cluster_image(self):
+         self.clusters_image = self.template.plot.imshow( ax=self.base.gax, alpha=self.layers('clusters').visibility, add_colorbar=False )
 
     @property
     def toolbarMode(self) -> str:
         return self.toolbar.mode
 
-    @classmethod
-    def time_merge( cls, data_arrays: List[xa.DataArray], **kwargs ) -> xa.DataArray:
-        time_axis = kwargs.get('time',None)
-        frame_indices = range( len(data_arrays) )
-        merge_coord = pd.Index( frame_indices, name=kwargs.get("dim","time") ) if time_axis is None else time_axis
-        result: xa.DataArray =  xa.concat( data_arrays, dim=merge_coord )
-        return result
+    @property
+    def toolbar(self) -> NavigationToolbar2:
+        return self.figure.canvas.toolbar
 
-    def setup_plot(self, **kwargs):
-        self.figure.suptitle("Band Image")
-        self.plot_axes:   Axes = self.figure.add_axes([0.01, 0.07, 0.98, 0.93])  # [left, bottom, width, height]
-        self.plot_axes.xaxis.set_visible( False ); self.plot_axes.yaxis.set_visible( False )
-        self.slider_axes: Axes = self.figure.add_axes([0.01, 0.01, 0.85, 0.05])  # [left, bottom, width, height]
-        self.figure.canvas.toolbar_visible = True
-        self.figure.canvas.header_visible = False
-        lgm().log( f"Canvas class = {self.figure.canvas.__class__}" )
-        lgm().log( f"Canvas.manager class = {self.figure.canvas.manager.__class__}")
-        items = self.figure.canvas.trait_values().items()
-        for k,v in items: lgm().log(f" ** {k}: {v}")
-        toolbar = self.figure.canvas.toolbar
-        tool_items = list(toolbar.toolitems)
-        tool_items.append( ("TM", "Toggle Marker Visibility", "map-marker-alt", "toggle_markers") )                   # icons:  https://fontawesome.com/icons?d=gallery&p=2&m=free
-        toolbar.toolitems = tool_items
-        toolbar.toggle_markers = types.MethodType( partial( toggle_markers, self ), toolbar )
+    @exception_handled
+    def create_selection_panel(self):
+        self.selection_label = ipw.Label( value='Selection Operation:' )
+        self.select_modes = [ 'explore', 'select point', 'select region', 'select cluster' ]
+        self.selection = ipw.RadioButtons(  options=self.select_modes, disabled=False, layout={'width': 'max-content'} )
+        self.selection.observe( self.set_selection_mode, "value" )
+        self.points_selection.set_enabled( False )
+        self.region_selection.set_enabled( False )
+        self.cluster_selection.set_enabled(False)
+
+    @exception_handled
+    def set_selection_mode( self, event: Dict ):
+        smode = event['new']
+        self.set_navigation_enabled(       smode == self.select_modes[0] )
+        self.points_selection.set_enabled( smode == self.select_modes[1] )
+        self.region_selection.set_enabled( smode == self.select_modes[2] )
+        self.cluster_selection.set_enabled(smode == self.select_modes[3] )
+
+    def set_navigation_enabled(self, enabled: bool ):
+        from matplotlib.backend_bases import NavigationToolbar2, _Mode
+        tbar: NavigationToolbar2 = self.toolbar
+        canvas = self.figure.canvas
+        for cid in [tbar._id_press, tbar._id_release, tbar._id_drag, self._cidpress ]: canvas.mpl_disconnect(cid)
+        if enabled:
+            tbar._id_press   = canvas.mpl_connect( 'button_press_event', tbar._zoom_pan_handler )
+            tbar._id_release = canvas.mpl_connect( 'button_release_event', tbar._zoom_pan_handler )
+            tbar._id_drag    = canvas.mpl_connect( 'motion_notify_event', tbar.mouse_move )
+            self._cidpress   = canvas.mpl_connect( 'button_press_event', self.on_button_press )
+
+    @exception_handled
+    def on_button_press(self, event: MouseEvent ):
+        from spectraclass.data.spatial.tile.manager import TileManager
+        if event.inaxes == self.base.gax:
+            c: Dict = self.block.coords2indices( event.ydata, event.xdata )
+    #        lgm().log( f" on_button_press: xydata = {(event.xdata,event.ydata)}, c = {(c['ix'],c['iy'])}, transform = {self.block.transform}")
+            by, bx = TileManager.reproject_to_latlon(self.block.xcoord[c['ix']], self.block.ycoord[c['iy']] )
+            lat,lon = TileManager.reproject_to_latlon( event.xdata, event.ydata )
+            ufm().show( f"[{event.y},{event.x}]: ({lat:.4f},{lon:.4f}), block[{c['iy']},{c['ix']}]: ({by:.4f},{bx:.4f})", color="blue")
+
+    @property
+    def selectionMode(self) -> str:
+        return self.selection.value
+
+    def set_region_class( self, cid: int ):
+        if self.region_selection is not None:
+            self.region_selection.set_class( cid )
+
+    def create_sliders(self):
+        self.band_slider = PageSlider( self.slider_axes(False), self.nFrames(model=False) )
+        self.band_slider_cid = self.band_slider.on_changed(self._update)
+        self.model_slider = PageSlider( self.slider_axes(True), self.nFrames(model=True) )
+        self.model_slider_cid = self.model_slider.on_changed(self._update)
+
+    def one_hot_to_index(self, class_data: xa.DataArray, axis=0) -> xa.DataArray:
+        return class_data.argmax( axis=axis, skipna=True, keep_attrs=True ).squeeze()
+
+    @exception_handled
+    def plot_labels_image(self, classification: xa.DataArray = None ):
+
+        if classification is None:
+            if self._classification_data is not None:
+                self._classification_data = xa.zeros_like( self._classification_data )
+        else:
+            self._classification_data = classification.fillna(0.0).squeeze()
+            if self._classification_data.ndim == 3:
+                self._classification_data = self.one_hot_to_index( self._classification_data )
+
+        if self._classification_data is not None:
+            try:
+                self.labels_image.remove()
+                self.labels_image = None
+            except Exception: pass
+
+            vrange = [ self._classification_data.values.min(), self._classification_data.values.max() ]
+            if self.labels_image is None:
+                alpha, cmap, norm = self.layers.alpha("labels"), self.cspecs['cmap'], self.cspecs['norm']
+                lgm().log(f"  create labels image, shape={self._classification_data.shape}, dims={self._classification_data.dims}, vrange={vrange}, alpha={alpha}  ")
+                self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=alpha, cmap=cmap, norm=norm, add_colorbar=False)
+            else:
+                lgm().log(f"  update labels image, shape={self._classification_data.shape}, vrange={vrange}  ")
+                self.labels_image.set_data( self._classification_data.values )
+                self.labels_image.changed()
+
+            self.update_canvas()
+
+    @exception_handled
+    def plot_cluster_image(self, clusters: xa.DataArray = None ):
+        try: self.clusters_image.remove()
+        except Exception: pass
+        self.clusters_image = clusters.plot.imshow( ax=self.base.gax, cmap=clusters.cmap, add_colorbar=False )
+        self.layers.set_visibility( "clusters", 1.0, True, notify=False )
+        self.update_canvas()
+
+    def layer_managers( self, name: str ) -> List:
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
+        from spectraclass.learn.cluster.manager import  clm
+        if   name == "basemap":   mgrs = [ self.base ]
+        elif name == "labels":    mgrs = [ self.labels_image ]
+        elif name == "clusters":  mgrs = [ self.clusters_image ]
+        elif name == "bands":     mgrs = [ self.spectral_image ]
+        elif name == "markers":   mgrs = [ self.points_selection, self.region_selection, self.cluster_selection, pcm() ]
+        else: raise Exception( f"Unknown Layer: {name}")
+        return mgrs
+
+    def initialized(self) -> bool:
+        return self.points_selection is not None
+
+    def highlight_points(self, pids: List[int], cids: List[int] ):
+        self.points_selection.highlight_points( pids, cids )
+
+    def clear_highlights(self ):
+        self.points_selection.clear_highlights()
+
+    def on_layer_change( self, layer: Layer ):
+        for mgr in self.layer_managers( layer.name ):
+   #         lgm().log( f" **** layer_change[{layer.name}]: {id(mgr)} -> alpha_change[{layer.visibility}]")
+            mgr.set_alpha( layer.visibility )
+        self.update_canvas()
+
+    @property
+    def slider(self) -> PageSlider:
+        return self.model_slider if self._use_model_data else self.band_slider
+
+    @property
+    def currentFrame(self):
+        return self._currentFrame
+
+    @currentFrame.setter
+    def currentFrame(self, value: int ):
+        self._currentFrame = value
+        self.slider.refesh()
+        self.update_thresholds()
+        self.update_spectral_image()
+
+    @exception_handled
+    def _update( self, val ):
+        self.currentFrame = int( self.slider.val )
+
+    def update_image_alpha( self, layer: str, increase: bool, *args, **kwargs ):
+        self.layers(layer).increment( increase )
+
+    def get_color_bounds( self, raster: xa.DataArray ):
+        ave = raster.mean(skipna=True).values
+        std = raster.std(skipna=True).values
+        if std == 0.0:
+            msg =  "This block does not appear to contain any data.  Suggest trying a different tile/block."
+            ufm().show( msg, "red" ); lgm().log( "\n" +  msg + "\n"  )
+        return dict( vmin= ave - std * self.colorstretch, vmax= ave + std * self.colorstretch  )
+
+    @exception_handled
+    def update_spectral_image(self):
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
+        if self.base is not None:
+            fdata: xa.DataArray = self.frame_data
+            if fdata is not None:
+                lgm().log(f"set_color_bounds: full data range = {[np.nanmin(fdata.values),np.nanmax(fdata.values)]}")
+                drange = self.get_color_bounds(fdata)
+                alpha = self.layers('bands').visibility
+                norm = Normalize(**drange)
+                if self._spectral_image is None:
+                    self.base.set_bounds(self.block.xlim, self.block.ylim)
+                    self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=alpha, cmap='jet', norm=norm, add_colorbar=False)
+                else:
+                    self._spectral_image.set_norm( norm )
+                    self._spectral_image.set_data(fdata.values)
+                    self._spectral_image.set_alpha(alpha)
+                with self.base.hold_limits():
+                    self._spectral_image.set_extent(self.block.extent)
+                lgm().log(f"UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
+                self.update_canvas()
+                pcm().update_plot(cdata=fdata, norm=norm)
+            else: lgm().log(f"UPDATE spectral_image: fdata is None")
+        else: lgm().log(f"UPDATE spectral_image: base is None")
+
+
+    def reset_plot(self):
+        from spectraclass.data.base import DataManager, dm
+        self._spectral_image.remove()
+        self._spectral_image = None
+        plot_name = os.path.basename( dm().dsid() )
+        self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame + 1}")
+        self.plot_axes.title.set_fontsize(8)
+        self.setBlock()
+
+    @exception_handled
+    def update_plots(self, new_image=False):
+        from spectraclass.data.base import DataManager, dm
+        if new_image:  dm().modal.update_extent()
+        self.reset_plot()
+        self.update_thresholds()
+        self.update_spectral_image()
+        lgm().log(f" update_plots --> AXIS: xlim={fs(self.plot_axes.get_xlim())}, ylim={fs(self.plot_axes.get_ylim())}")
+
+    def update_canvas(self):
+        self.figure.canvas.draw_idle()
+
+    def nFrames(self, **kwargs ) -> int:
+        from spectraclass.data.base import DataManager, dm
+        use_model = kwargs.get( 'model', self._use_model_data )
+        return dm().getModelData().shape[1] if use_model else self.data.shape[0]
+
+    @property
+    def frame_data(self) -> Optional[xa.DataArray]:
+        if self.currentFrame >= self.nFrames(): return None
+        fdata = self.data[self.currentFrame]
+        vrange = [ np.nanmin(fdata.values), np.nanmax(fdata.values) ]
+        lgm().log( f" ******* frame_data[{self.currentFrame}], shape: {fdata.shape}, {svalid(fdata.values)}, vrange={vrange}, attrs={fdata.attrs.keys()}")
+        tmask: np.ndarray = self.block.get_threshold_mask( raster=True )
+        if tmask is None:
+            lgm().log(f" ---> NO threshold mask")
+        else:
+            mdata = fdata.values.flatten()
+            mdata[(~tmask).flatten()] = np.nan
+            fdata = fdata.copy( data=mdata.reshape(fdata.shape) )
+            lgm().log(f" ---> threshold mask, {svalid(fdata.values)}")
+        return fdata
+
+    def threshold_mask( self, raster=True ) -> np.ndarray:
+        return self.block.get_threshold_mask(raster)
+
+    @property
+    def figure(self) -> Figure:
+        return self.base.figure
+
+    @property
+    def plot_axes(self) -> Axes:
+        return self.base.gax
+
+    def slider_axes(self, use_model = False ) -> Axes:
+        return self.base.msax if use_model else self.base.bsax
+
+    def update_slider_visibility(self):
+        self.base.msax.set_visible( self._use_model_data )
+        self.base.bsax.set_visible( not self._use_model_data )
 
     def invert_yaxis(self):
         self.plot_axes.invert_yaxis()
@@ -387,284 +459,93 @@ class MapManager(SCSingletonConfigurable):
     def get_coord(self,   iCoord: int ) -> np.ndarray:
         return self.data.coords[  self.data.dims[iCoord] ].values
 
-    @exception_handled
-    def create_image(self, **kwargs ) -> AxesImage:
-        self.image_template: xa.DataArray =  self.data[ self.init_band, :, : ]
-        nValid = np.count_nonzero(~np.isnan(self.image_template))
-        lgm().log( f"\n ********* Creating Map Image, nValid={nValid}, data shape = {self.data.shape}, image shape = {self.image_template.shape}, band = {self.init_band}, data range = [ {self.data.min().values}, {self.data.max().values} ]")
-        assert nValid > 0, "No valid pixels in image"
-        colorbar = kwargs.pop( 'colorbar', False )
-        image: AxesImage =  dms().plotRaster( self.image_template, ax=self.plot_axes, colorbar=colorbar, alpha=0.5, **kwargs )
-        self._cidpress = image.figure.canvas.mpl_connect('button_press_event', self.onMouseClick)
-        self._cidrelease = image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
-#        lgm().log( f"TOOLBAR: {image.figure.canvas.manager.toolbar.__class__}" )
-#        image.figure.canvas.manager.toolmanager.add_tool("ToggleSource", ToggleDataSourceMode)
-#        image.figure.canvas.manager.toolbar.add_tool("ToggleSource", 'navigation', 1)
-        self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
-        overlays = kwargs.get( "overlays", {} )
-        for color, overlay in overlays.items():
-            overlay.plot( ax=self.plot_axes, color=color, linewidth=2 )
-        return image
+    def image_update(self):
+        self.block = None
+
+    @property
+    def data(self) -> Optional[xa.DataArray]:
+        from spectraclass.data.base import dm
+        if self.block is None: self.setBlock()
+        return self.block.points2raster( dm().getModelData() ) if self._use_model_data else self.block.data
 
     @exception_handled
-    def create_overlay_image( self ) -> AxesImage:
-        assert self.image is not None, "Must create base image before overlay"
-        overlay_image: AxesImage =  dms().plotRaster( self.image_template, itype='overlay', colorbar=False, alpha=0.0, ax=self.plot_axes, zeros=True )
-        return overlay_image
+    def setBlock( self, block_index: Tuple[int,int] = None, **kwargs ):
+        from spectraclass.data.spatial.tile.manager import tm
+        from spectraclass.learn.cluster.manager import clm
+        from spectraclass.data.base import DataManager, dm
+        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
+        if block_index is not None: tm().setBlock( block_index )
+        self.block: Block = tm().getBlock()
+        if self.block is not None:
+            ufm().show(f" *** Loading Block{self.block.block_coords}")
+            dm().clear_project_cache()
+            pcm().reset()
+            update = kwargs.get( 'update', False )
+            lgm().log(f" -------------------- Loading block: {self.block.block_coords}  -------------------- " )
+            if self.base is not None:
+                self.base.set_bounds(self.block.xlim, self.block.ylim)
+            self.band_axis = kwargs.pop('band', 0)
+            self.z_axis_name = self.data.dims[self.band_axis]
+            self.x_axis = kwargs.pop('x', 2)
+            self.x_axis_name = self.data.dims[self.x_axis]
+            self.y_axis = kwargs.pop('y', 1)
+            self.y_axis_name = self.data.dims[self.y_axis]
+            gpm().refresh()
+            clm().clear()
+            if update:  self.update_plots()
+            ufm().show(f" ** Block Loaded ** ")
 
-    def on_lims_change(self, ax ):
-         if ax == self.plot_axes:
-             (x0, x1) = ax.get_xlim()
-             (y0, y1) = ax.get_ylim()
-             print(f"ZOOM Event: Updated bounds: ({x0},{x1}), ({y0},{y1})")
+    def gui(self,**kwargs):
+        if self.base is None:
+            self.setBlock()
+            self.base = TileServiceBasemap()
+            [x0, x1, y0, y1] = self.block.extent
+            standalone = self.base.setup_plot( "Label Construction", (x0,x1), (y0,y1), index=100, **kwargs )
+            self.init_map()
+            self.region_selection = PolygonInteractor( self.base.gax )
+            self.points_selection = MarkerManager( self.base.gax )
+            self.cluster_selection = ClusterSelector( self.base.gax )
+            self.init_hover()
+            if not standalone:
+                self.create_selection_panel()
+        return self.base.gax.figure.canvas
 
-    def frame_color_pointcloud( self, **kwargs ) -> Optional[xa.DataArray]:
-        from spectraclass.application.controller import app
-        if self.currentFrame >= self.data.shape[0]: return None
-        frame_data: xa.DataArray = self.data[ self.currentFrame ]
-        lgm().log( f" color_pointcloud: currentFrame = {self.currentFrame}, frame data shape = {frame_data.shape}")
-        app().color_pointcloud( frame_data.values.flatten(), **kwargs )
-        return frame_data
+    def mark_point(self, pid: int, **kwargs ) -> Optional[Tuple[float,float]]:
+        point = self.points_selection.mark_point( pid, **kwargs )
+        return point
 
-    @exception_handled
-    def update_plots(self):
-        if self.image is not None:
-            from spectraclass.data.base import DataManager, dm
-            frame_data: xa.DataArray = self.frame_color_pointcloud()
-            if frame_data is not None:
-                self.image.set_data( frame_data.values  )
-                drange = dms().get_color_bounds( frame_data )
-                self.image.set_norm( Normalize( **drange ) )
-                self.image.set_extent( self.block.extent() )
-                plot_name = os.path.basename( dm().dsid() )
-                lgm().log( f" Update Map: data shape = {frame_data.shape}, range = {drange}, extent = {self.block.extent()}")
-                self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame+1}" )
-                self.plot_axes.title.set_fontsize( 8 )
+    def init_hover(self):
+        def format_coord(x, y):
+            return "x: {}, y: {}".format(x, y)
+        self.base.gax.format_coord = format_coord
 
-                if self.overlay_image is not None:
-                    from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
-                    self.clear_overlay_image()
-                    spm().clear_overlay_image()
-                self.update_canvas()
+    def plot_markers_image(self, **kwargs ):
+        self.points_selection.plot( **kwargs )
 
-    def clear_overlay_image(self):
-        self.overlay_image.set_extent(self.block.extent())
-        self.overlay_image.set_alpha(0.0)
-
-    def onMouseRelease(self, event):
-        if event.inaxes ==  self.plot_axes:
-             if   self.toolbarMode == "zoom rect":   self.toolbar.zoom()
-             elif self.toolbarMode == "pan/zoom":    self.toolbar.pan()
-
-        #         for listener in self.navigation_listeners:
-        #             listener.set_axis_limits( self.plot_axes.get_xlim(), self.plot_axes.get_ylim() )
-
-    @exception_handled
-    def onMouseClick(self, event):
-        if event.xdata != None and event.ydata != None:
-            lgm().log(f"\nMouseClick event = {event}")
-            if not self.toolbarMode and (event.inaxes == self.plot_axes) and (self.key_mode == None):
-                rightButton: bool = int(event.button) == self.RIGHT_BUTTON
-                pid = self.block.coords2pindex( event.ydata, event.xdata )
-                if pid >= 0:
-                    cid = lm().current_cid
-                    lgm().log( f"Adding marker for pid = {pid}, cid = {cid}")
-                    ptindices = self.block.pindex2indices(pid)
-                    classification = self.label_map.values[ ptindices['iy'], ptindices['ix'] ] if (self.label_map is not None) else -1
-                    self.add_marker( Marker( [pid], cid, classification = classification ) )
-                    self.dataLims = event.inaxes.dataLim
-                else:
-                    lgm().log(f"Can't add marker, pid = {pid}")
-
-    def set_data_source_mode(self, use_model_data: bool):
-        self.use_model_data = bool
-        lgm().log( f"Update data source: use_model_data = {self.use_model_data}" )
-        fmsg = "Updating data source: " + ( "Using (reduced) model data" if self.use_model_data else "Using (raw) band data"  )
-        ufm().show( fmsg, "yellow" )
-        self.update_plots()
-        ufm().clear()
-
-    def add_marker(self, marker: Marker ):
-        from spectraclass.application.controller import app
-        if not self._adding_marker:
-            self._adding_marker = True
-            if marker is None:
-                lgm().log( "NULL Marker: point select is probably out of bounds.")
-            else:
-                app().add_marker( "map", marker  )
-        self._adding_marker = False
-
-    # def undo_marker_selection(self, **kwargs ):
-    #     if len( self.marker_list ):
-    #         self.marker_list.pop()
-    #         self.update_marker_plots( **kwargs )
-
-    # def spread_labels(self, *args, **kwargs):
-    #     if self.block is None:
-    #         Task.taskNotAvailable( "Workflow violation", "Must load a block and label some points first", **kwargs )
-    #     else:
-    #         print( "Submitting training set" )
-    #         labels: xa.DataArray = self.getLabeledPointData()
-    #         sample_labels: Optional[xa.DataArray] = self.block.flow.spread( labels, self.flow_iterations, **kwargs )
-    #         if sample_labels is not None:
-    #             self.plot_label_map( sample_labels )
-
-#     def plot_label_map( self, sample_labels: xa.DataArray, **kwargs ):
-#         self.label_map: xa.DataArray =  sample_labels.unstack(fill_value=-2).astype(np.int32)
-#         print( f"plot_label_map, labels shape = {self.label_map.shape}")
-#         extent = dms().extent( self.label_map )
-#         label_plot = self.label_map.where( self.label_map >= 0, 0 )
-#         class_alpha = kwargs.get( 'alpha', 0.9 )
-#         if self.labels_image is None:
-#             label_map_colors: List = [ [ ic, label, list(color[0:3]) + [0.0 if (ic == 0) else class_alpha] ] for ic, (label, color) in enumerate( zip( lm().labels, lm().colors ) ) ]
-#             self.labels_image = dms().plotRaster( label_plot, colors=label_map_colors, ax=self.plot_axes, colorbar=False )
-#         else:
-#             self.labels_image.set_data( label_plot.values )
-#             self.labels_image.set_alpha( class_alpha )
-#
-#         self.labels_image.set_extent( extent )
-#         self.update_canvas()
-# #        event = dict( event="gui", type="update" )
-# #        self.submitEvent(event, EventMode.Gui)
-
-    def show_labels(self):
-        if self.labels_image is not None:
-            self.labels_image.set_alpha(1.0)
-            self.update_canvas()
-
-    def toggle_labels(self):
-        if self.labels_image is not None:
-            new_alpha = 1.0 if (self.labels_image.get_alpha() == 0.0) else 0.0
-            self.labels_image.set_alpha( new_alpha )
-            self.update_canvas()
-
-    def get_layer(self, layer_id: str ):
-        if layer_id == "bands": return self.image
-        if layer_id == "labels": return self.labels_image
-        raise Exception( f"Unrecognized layer: {layer_id}")
-
-    def update_image_alpha( self, layer: str, increase: bool, *args, **kwargs ):
-        image = self.get_layer( layer )
-        if image is not None:
-            current = image.get_alpha()
-            if increase:   new_alpha = min( 1.0, current + 0.1 )
-            else:          new_alpha = max( 0.0, current - 0.1 )
-            print( f"Update Image Alpha: {new_alpha}")
-            image.set_alpha( new_alpha )
-            self.figure.canvas.draw_idle()
-
-    # def clear_unlabeled(self):
-    #     if self.marker_list:
-    #         self.marker_list = [ marker for marker in self.marker_list if marker['c'] > 0 ]
-
-    def get_markers( self ) -> Tuple[ List[float], List[float], List[List[float]] ]:
-        ycoords, xcoords, colors, markers = [], [], [], lm().markers
-        lgm().log(f" ** get_markers, #markers = {len(markers)}")
-        for marker in markers:
-            for pid in marker.pids:
-                coords = self.block.pindex2coords( pid )
-                if (coords is not None) and self.block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
-                    ycoords.append( coords['y'] )
-                    xcoords.append( coords['x'] )
-                    colors.append( lm().colors[marker.cid] )
-                else:
-                    lgm().log(f" ** coords[{pid}] out of bounds: {[coords['y'], coords['x']]}, bounds = ( {self.block._ylim}, {self.block._xlim} )")
-                    lgm().log(f" ** Point coords range: {[coords['y'], coords['x']]}")
-                    lgm().log(f" ** Projection bounds: xlim = {self.block.xlim}, ylim = {self.block.ylim} " )
-                    yc = self.block.point_coords['y']; xc = self.block.point_coords['x']
-                    lgm().log(f" ** Coordinates bounds: xrange = {[xc.min(),xc.max()]}, yrange = {[yc.min(),yc.max()]} ")
-        return ycoords, xcoords, colors
-
-    # def get_class_markers( self, **kwargs ) -> Dict[ int, List[int] ]:
-    #     class_markers = {}
-    #     for marker in lm().getMarkers():
-    #         pids = class_markers.setdefault( marker.cid, [] )
-    #         pids.extend( marker.pids )
-    #     return class_markers
-
-    @exception_handled
-    def plot_markers_image( self ):
-        if self.marker_plot:
-            ycoords, xcoords, colors = self.get_markers()
-            lgm().log(f" ** plot markers image, nmarkers = {len(ycoords)}")
-            if len(ycoords) > 0:
-                self.marker_plot.set_offsets(np.c_[xcoords, ycoords])
-                self.marker_plot.set_facecolor(colors)
-            else:
-                offsets = np.ma.column_stack([[], []])
-                self.marker_plot.set_offsets(offsets)
-            self.update_canvas()
-
-    # def plot_markers_volume(self, **kwargs):
-    #     class_markers = self.get_class_markers( **kwargs )
-    #     for cid, pids in class_markers.items():
-    #         lm().mark_points( np.array(pids), cid )
-    #         pcm().update_marked_points( cid )
-
-    def update_canvas(self):
-        lgm().log( "update_canvas" )
-        self.figure.canvas.draw_idle()
-
-    def mpl_pick_marker( self, event: PickEvent ):
-        rightButton: bool = event.mouseevent.button == MouseButton.RIGHT
-        if ( event.name == "pick_event" ) and ( event.artist == self.marker_plot ) and rightButton: #  and ( self.key_mode == Qt.Key_Shift ):
-            self.delete_marker( event.mouseevent.ydata, event.mouseevent.xdata )
-            self.update_plots()
-
-    def delete_marker(self, y, x ):
-        pindex = self.block.coords2pindex( y, x )
-        lm().deletePid( pindex )
-
-    def initPlots(self, **kwargs) -> Optional[AxesImage]:
-        if self.image is None:
-            self.image = self.create_image(**kwargs)
-            self.overlay_image = self.create_overlay_image()
-            if self.image is not None: self.initMarkersPlot()
-        return self.image
-
-    def clearMarkersPlot( self ):
-        offsets = np.ma.column_stack([[], []])
-        self.marker_plot.set_offsets( offsets )
-        self.plot_markers_image()
-
-    def toggleMarkersVisible(self ):
-        if self.marker_plot:
-            new_alpha = 1.0 if (self.marker_plot.get_alpha() == 0.0) else 0.0
-            self.marker_plot.set_alpha( new_alpha )
-            self.update_canvas()
-
-    def initMarkersPlot(self):
-        print( "Init Markers Plot")
-        self.marker_plot: PathCollection = self.plot_axes.scatter([], [], s=50, zorder=3, alpha=1, picker=True)
-        self.marker_plot.set_edgecolor([0, 0, 0])
-        self.marker_plot.set_linewidth(2)
-        self.figure.canvas.mpl_connect('pick_event', self.mpl_pick_marker)
-        self.plot_markers_image()
-
-    def add_slider(self,  **kwargs ):
-        if self.slider is None:
-            self.slider = PageSlider( self.slider_axes, self.nFrames )
-            self.slider_cid = self.slider.on_changed(self._update)
-
-    def wait_for_key_press(self):
-        keyboardClick = False
-        while keyboardClick != True:
-            keyboardClick = plt.waitforbuttonpress()
-
-    def _update( self, val ):
-        if self.slider is not None:
-            tval = self.slider.val
-            self.currentFrame = int( tval )
-            lgm().log(f"Slider Update, frame = {self.currentFrame}")
-            ufm().show( f"Loading frame {self.currentFrame}", "yellow" )
-            self.update_plots()
-            ufm().clear()
-
-    def show(self):
-        plt.show()
+    def init_map(self):
+        self.update_spectral_image()
+        self.create_sliders()
+        self.initLabels()
+        self._cidpress = self.figure.canvas.mpl_connect('button_press_event', self.on_button_press)
+     #   self._cidrelease = self._spectral_image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
+     #   self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
 
     def __del__(self):
         self.exit()
 
     def exit(self):
         pass
+
+if __name__ == '__main__':
+    from spectraclass.data.base import DataManager, dm
+    dmgr: DataManager = DataManager.initialize("demo2", 'desis')
+    dmgr.loadCurrentProject("main")
+    classes = [('Class-1', "cyan"), ('Class-2', "green"), ('Class-3', "magenta"), ('Class-4', "blue")]
+    lm().setLabels(classes)
+
+    mm = MapManager()
+    panel = mm.gui()
+    plt.show( )
+
+

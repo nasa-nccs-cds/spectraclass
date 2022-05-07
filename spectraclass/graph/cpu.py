@@ -1,4 +1,4 @@
-from pynndescent import NNDescent
+from spectraclass.ext.pynndescent import NNDescent
 import numpy as np
 from .manager import ActivationFlow, afm
 import xarray as xa
@@ -24,7 +24,7 @@ def getFilteredLabels( labels: np.ndarray ) -> np.ndarray:
 @nb.njit( fastmath=True,
     locals={
         "iN": nb.types.int32,
-        "pid": nb.types.int32,
+        "polyId": nb.types.int32,
         "pid1": nb.types.int64,
         "I": nb.types.Array(nb.types.int64, 2, 'C'),
         "label_spec": nb.types.Array(nb.types.int32, 1, 'A'),
@@ -86,15 +86,27 @@ class cpActivationFlow(ActivationFlow):
         else:
             lgm().log("No data available for this block")
 
-    def getGraph(self):
+    def getGraph(self, nodes = None ):
+        if nodes is not None:
+            self.setNodeData( nodes )
+            self._knn_graph = None
         if self._knn_graph is None:
             n_trees =  5 + int(round((self.nodes.shape[0]) ** 0.5 / 20.0))
             n_iters =  max(5, 2 * int(round(np.log2(self.nodes.shape[0]))))
             kwargs = dict( n_trees=n_trees, n_iters=n_iters, n_neighbors=self.nneighbors, max_candidates=60, verbose=True, metric = self.metric )
             if self.metric == "minkowski": kwargs['metric_kwds'] = dict( p=self.p )
-            lgm().log(f"Computing NN-Graph with parms= {kwargs}")
+            lgm().log(f"Computing NN-Graph[{id(self)}] with parms= {kwargs}, nodes shape = {self.nodes.shape}, #NULL={np.count_nonzero(np.isnan(self.nodes.values))}")
             self._knn_graph = NNDescent( self.nodes.values, **kwargs )
         return self._knn_graph
+
+    def getEdgeIndex(self) -> Tuple[np.ndarray,np.ndarray]:
+        graph: NNDescent = self.getGraph()
+        dI: np.ndarray = graph.neighbor_graph[0]  # shape [nsamples,n_neighbors]
+        n_neighbors = dI.shape[1]
+        n_samples = dI.shape[0]
+        sIf = np.vstack([np.arange(0, n_samples)] * n_neighbors).transpose().flatten()
+        dIf = dI.flatten()
+        return (sIf, dIf)
 
     def spread( self, sample_data: np.ndarray, nIter: int = 1, **kwargs ) -> Optional[bool]:
         sample_mask = sample_data == 0
@@ -102,6 +114,7 @@ class cpActivationFlow(ActivationFlow):
         label_count = np.count_nonzero(self.C)
         if label_count == 0:
             ufm().show( "Workflow violation: Must label some points before this algorithm can be applied", "red" )
+            lgm().log(" ----> No Labeled points in spread()")
             return None
         P_init = np.full( self.C.shape, float('inf'), dtype=np.float32 )
         self.P = np.where( sample_mask, P_init, 0.0 )

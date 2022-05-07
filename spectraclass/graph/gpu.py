@@ -3,6 +3,7 @@ import numpy.ma as ma
 from .manager import ActivationFlow
 import xarray as xa
 import numba
+from spectraclass.util.logs import LogManager, lgm
 import cudf, cuml, cupy, cupyx, cugraph
 from cupyx.scipy.sparse import csr_matrix
 from cugraph.traversal.sssp import shortest_path
@@ -35,7 +36,7 @@ class gpActivationFlow(ActivationFlow):
     def setNodeData(self, node_data: xa.DataArray, **kwargs ):
         input_data = node_data.values
         reset = kwargs.get( 'reset', False )
-        print( f"{self.__class__.__name__}[{hex(id(self))}].setNodeData: input shape = {input_data.shape}" )
+        lgm().log( f"{self.__class__.__name__}[{hex(id(self))}].setNodeData: input shape = {input_data.shape}" )
         if reset or (self.I is None):
             if (input_data.size > 0):
                 t0 = time.time()
@@ -50,20 +51,23 @@ class gpActivationFlow(ActivationFlow):
 
                 self.nodes = cudf.DataFrame( input_data )
                 self.n_samples = input_data.shape[0]
-                print( f"NearestNeighbors{input_data.shape}: input nodes = {self.nodes.head(10)}")
+                lgm().log( f"NearestNeighbors{input_data.shape}: input nodes = {self.nodes.head(10)}")
                 self.nnd = NearestNeighbors( n_neighbors=self.nneighbors, metric=self.metric, p=self.p )
                 self.nnd.fit( input_data )
                 self.D, self.I = self.nnd.kneighbors( self.nodes, return_distance=True)
                 dt = (time.time()-t0)
-                print( f"Computed NN Graph with {self.nneighbors} neighbors and {input_data.shape[0]} verts in {dt} sec ({dt/60} min)")
-                print( f"  ---> Indices shape = {self.I.shape}, Distances shape = {self.D.shape}\n Indices = {self.I.head(10)} "  )
+                lgm().log( f"Computed NN Graph with {self.nneighbors} neighbors and {input_data.shape[0]} verts in {dt} sec ({dt/60} min)")
+                lgm().log( f"  ---> Indices shape = {self.I.shape}, Distances shape = {self.D.shape}\n Indices = {self.I.head(10)} "  )
             else:
-                print( "No data available for this block")
+                lgm().log( "No data available for this block")
 
-    def getGraph(self) -> csr_matrix:
-        return self.getConnectionMatrix()
+    def getGraph(self, nodes=None) -> csr_matrix:
+        return self.getConnectionMatrix(nodes)
 
-    def getConnectionMatrix(self) -> csr_matrix:
+    def getConnectionMatrix(self, nodes=None) -> csr_matrix:
+        if nodes is not None:
+            self.setNodeData( nodes )
+            self._knn_graph = None
         if self._knn_graph is None:
             distances = cupy.ravel(cupy.fromDlpack( self.D.to_dlpack()) )
             indices = cupy.ravel(cupy.fromDlpack( self.I.to_dlpack()) )
@@ -71,7 +75,7 @@ class gpActivationFlow(ActivationFlow):
             n_nonzero = n_samples * self.nneighbors
             rowptr = cupy.arange( 0, n_nonzero + 1, self.nneighbors )
             self._knn_graph = cupyx.scipy.sparse.csr_matrix((distances, indices, rowptr), shape=(n_samples, n_samples))
-            print(f"Completed KNN, sparse graph shape = {self._knn_graph.shape}")
+            lgm().log(f"Completed KNN, sparse graph shape = {self._knn_graph.shape}")
         return self._knn_graph
 
     def get_offset_series( self ):
@@ -82,34 +86,37 @@ class gpActivationFlow(ActivationFlow):
     def cuIndices(self):
         indices = cupy.fromDlpack(self.I.to_dlpack())
         iseries =  cupy.ravel(indices)
-        print( f" cuIndices: shape = {indices.shape}, avals = {indices[0:10]}")
+        lgm().log( f" cuIndices: shape = {indices.shape}, avals = {indices[0:10]}")
         return iseries
 
     def spread( self, sample_data: np.ndarray, nIter: int = 1, **kwargs ) -> Optional[bool]:
         converged = True
         t0 = time.time()
         source_pid: int = sample_data[0]
+        offsets = self.get_offset_series()
 
-        print( f" ActivationFlow:  ")
-        print(f" --> I.shape = {self.I.shape}")
-        print(f" --> I = {self.I.head(10)}")
-        print(f" --> D = {self.D.head(10)}")
+        lgm().log( f" ActivationFlow:  ")
+        lgm().log(f" --> I.shape = {self.I.shape}")
+        lgm().log(f" --> D.shape = {self.D.shape}")
+        lgm().log(f" --> offsets.shape = {offsets.shape}")
+        lgm().log(f" --> I = {self.I.head(10)}")
+        lgm().log(f" --> D = {self.D.head(10)}")
+        lgm().log(f" --> offsets = {offsets.head(10)}")
 
-        offsets   = self.get_offset_series()
         distances = cupy.ravel( cupy.fromDlpack( self.D.to_dlpack() ) )
         indices   = cupy.ravel( cupy.fromDlpack( self.I.to_dlpack() ) )
 
-        print(f" --> offsets.ravel = {offsets[0:25]}")
-        print(f" --> I.ravel = {indices[0:25]}")
-        print( f" offsets:   {offsets[0:20]}")
-        print( f" distances: {distances[0:20]}")
-        print( f" indices:   {indices[0:20]}")
+        lgm().log(f" --> offsets.ravel = {offsets[0:25]}")
+        lgm().log(f" --> I.ravel = {indices[0:25]}")
+        lgm().log( f" offsets:   {offsets[0:20]}")
+        lgm().log( f" distances: {distances[0:20]}")
+        lgm().log( f" indices:   {indices[0:20]}")
 
         input_cudf = cudf.DataFrame( dict(source=cudf.Series( offsets ), destination=cudf.Series( indices ), distances=cudf.Series( distances ) ) )
         G = cugraph.Graph()
         G.from_cudf_edgelist( input_cudf, source='source', destination='destination', edge_attr='distances', renumber=False )
         self.P = shortest_path( G, source_pid ).sort_values('distance')
-        print(f"Completed spread algorithm in time {time.time() - t0} sec, source = {source_pid}, result {self.P.__class__} = {self.P.head(20)}")
+        lgm().log(f"Completed spread algorithm in time {time.time() - t0} sec, source = {source_pid}, result {self.P.__class__} = {self.P.head(20)}")
         self.reset = False
         return converged
 

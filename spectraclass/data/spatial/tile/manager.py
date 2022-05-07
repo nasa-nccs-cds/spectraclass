@@ -1,14 +1,20 @@
 from skimage.transform import ProjectiveTransform
 import numpy as np
+import codecs
 import xarray as xa
+import shapely.vectorized as svect
 from typing import List, Union, Tuple, Optional, Dict
-from pyproj import Proj, transform
-from spectraclass.data.base import DataManager, DataType
-from spectraclass.util.logs import LogManager, lgm
-import os, math, pickle
-import traitlets.config as tlc
+from pyproj import Proj
+from spectraclass.data.base import DataManager, dm, DataType
+from spectraclass.util.logs import LogManager, lgm, log_timing
+import os, math, pickle, time
+import cartopy.crs as ccrs
+from spectraclass.util.logs import lgm, exception_handled
+from spectraclass.widgets.polygon import PolyRec
 import traitlets as tl
-from spectraclass.model.base import SCSingletonConfigurable, Marker
+from spectraclass.model.base import SCSingletonConfigurable
+from spectraclass.gui.spatial.widgets.markers import Marker
+from pyproj import Transformer
 from .tile import Tile, Block
 
 def get_rounded_dims( master_shape: List[int], subset_shape: List[int] ) -> List[int]:
@@ -20,39 +26,131 @@ def tm() -> "TileManager":
 
 class TileManager(SCSingletonConfigurable):
 
-    tile_size = tl.Int(1000).tag(config=True, sync=True)
-    tile_index = tl.List(tl.Int, (0, 0), 2, 2).tag(config=True, sync=True)
-    block_size = tl.Int(250).tag(config=True, sync=True)
-    block_index = tl.List(tl.Int, (0, 0), 2, 2).tag(config=True, sync=True)
-    mask_class = tl.Int(0).tag(config=True, sync=True)
+    block_size = tl.Int(250).tag( config=True, sync=True )
+    block_index = tl.Tuple( default_value=(0,0) ).tag( config=True, sync=True )
+    mask_class = tl.Int(0).tag( config=True, sync=True )
+    autoprocess = tl.Bool(True).tag( config=True, sync=True )
+    reprocess = tl.Bool(False).tag( config=True, sync=True )
     image_attrs = {}
+    ESPG = 3857
+    crs = ccrs.epsg(ESPG) # "+a=6378137.0 +b=6378137.0 +nadgrids=@null +proj=merc +lon_0=0.0 +x_0=0.0 +y_0=0.0 +units=m +no_defs"
+    geotrans = Transformer.from_crs( f'epsg:{ESPG}', f'epsg:4326' )
 
     def __init__(self):
         super(TileManager, self).__init__()
-        self._tiles: Dict[List, Tile] = {}
+        self._tiles: Dict[str,Tile] = {}
+        self._idxtiles: Dict[int, Tile] = {}
         self.cacheTileData = True
-        self.tile_dims = None
-        self.tile_shape = [ self.tile_size ] * 2
-        self.block_shape = [ self.block_size ] * 2
-        self.block_dims = [ self.tile_size//self.block_size ] * 2
-        self._tile_data = None
+        self._block_dims = None
+        self._tile_size = None
+        self._tile_shape = None
+
+    @classmethod
+    def encode( cls, obj ) -> str:
+        return codecs.encode(pickle.dumps(obj), "base64").decode()
+
+    @classmethod
+    def decode( cls, pickled: str ):
+        if pickled: return pickle.loads(codecs.decode(pickled.encode(), "base64"))
+
+    @property
+    def block_shape(self):
+        block = self.getBlock( bindex=(0,0) )
+        return block.shape
+
+    @tl.observe('block_index')
+    def _block_index_changed(self, change):
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
+        pcm().refresh()
+
+    @property
+    def tile(self) -> Tile:
+        if self.image_name in self._tiles: return self._tiles[self.image_name]
+        new_tile = Tile( self.image_index )
+        self._idxtiles[ self.image_index ] = new_tile
+        return self._tiles.setdefault( self.image_name, new_tile )
+
+    def get_tile( self, tile_index: int ):
+        if tile_index in self._idxtiles: return self._idxtiles[tile_index]
+        new_tile = Tile( tile_index )
+        self._idxtiles[ tile_index ] = new_tile
+        return self._tiles.setdefault( self.get_image_name(index=tile_index), new_tile )
+
+    def tile_grid_offset(self, tile_index: int ) -> int:
+        offset = 0
+        for itile in range( tile_index ):
+            offset = offset + self.get_tile( itile ).grid_size
+        return offset
+
+    @property
+    def extent(self):
+        return self.tile.extent
+
+    @property
+    def transform(self):
+        return self.tile.transform
+
+    # @property
+    # def tile_metadata(self):
+    #     if self._tile_metadata is None:
+    #         self._tile_metadata = self.loadMetadata()
+    #     return self._tile_metadata
+
+    @classmethod
+    def reproject_to_latlon( cls, x, y ):
+        return cls.geotrans.transform(  x, y )
+
+    @property
+    def block_dims(self) -> Tuple[int,int]:
+        if self._block_dims is None:
+            self._block_dims = [ math.ceil(self.tile_shape[i]/self.block_size) for i in (0,1) ]
+        return self._block_dims
+
+    @property
+    def tile_size(self) -> Tuple[int,int]:
+        if self._tile_size is None:
+            self._tile_size = [ ( self.block_dims[i] * self.block_size ) for i in (0,1) ]
+        return self._tile_size
+
+    @property
+    def tile_shape(self) -> Tuple[int,int]:
+        if self._tile_shape is None:
+            self._tile_shape = [ self.tile.data.shape[-1], self.tile.data.shape[-2] ]
+        return self._tile_shape
 
     @property
     def image_name(self):
-        return DataManager.instance().modal.image_name
+        return dm().modal.image_name
+
+    def get_image_name( self, **kwargs ):
+        image_index = kwargs.get('index', DataManager.instance().modal._active_image )
+        return dm().modal.image_names[ image_index ]
 
     @property
-    def iy(self):
-        return self.tile_index[0]
+    def image_index(self) -> int:
+        return dm().modal.image_index
 
     @property
-    def ix(self):
-        return self.tile_index[1]
+    def block_coords(self) -> Tuple:
+        return tuple(self.block_index)
 
-    def getBlock(self) -> Block:
-        return self.tile.getBlock( self.block_index[0], self.block_index[1] )
+    def setBlock( self, block_index ):
+        if block_index != self.block_index:
+            self.block_index = block_index
+            dm().loadCurrentProject( 'setBlock', True )
 
-    def getMask(self) -> Optional[xa.DataArray]:
+    @exception_handled
+    def getBlock( self, **kwargs ) -> Block:
+        bindex = kwargs.get( 'bindex' )
+        tindex = kwargs.get( 'tindex' )
+        if (bindex is None) and ('block' in kwargs): bindex = kwargs['block'].block_coords
+        init_bindex = self.block_index if (bindex is None) else bindex
+        self.block_index = self.tile.get_valid_block_coords( init_bindex )
+        tile = self.tile if (tindex is None) else self.get_tile( tindex )
+        return tile.getDataBlock( self.block_index[0], self.block_index[1] )
+
+    @exception_handled
+    def getMask(self) -> Optional[np.ndarray]:
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.control import UserFeedbackManager, ufm
         if self.mask_class < 1: return None
@@ -66,7 +164,7 @@ class TileManager(SCSingletonConfigurable):
         if mask is None:
             ufm().show( f"The mask for class {self.mask_class} has not yet been generated.", "red")
             lgm().log( f"Can't apply mask for class {self.mask_class} because it has not yet been generated. Mask file: {mask_file}" )
-        return mask
+        return mask.values if (mask is not None) else None
 
 
     def get_marker(self, lon: float, lat: float, cid: int =-1, **kwargs ) -> Marker:
@@ -74,132 +172,103 @@ class TileManager(SCSingletonConfigurable):
         block = self.getBlock()
         proj = Proj( block.data.attrs.get( 'wkt', block.data.spatial_ref.crs_wkt ) )
         x, y = proj( lon, lat )
-        pid = block.coords2pindex( y, x )
-        assert pid >= 0, f"Marker selection error, no points for coord: {[y, x]}"
+        gid,ix,iy = block.coords2gid(y, x)
+        assert gid >= 0, f"Marker selection error, no points for coord[{ix},{iy}]: {[x,y]}"
         ic = cid if (cid >= 0) else lm().current_cid
-        return Marker( [pid], ic, **kwargs )
+        return Marker( "marker", [gid], ic, **kwargs )
 
-    @property
-    def tile(self) -> Tile:
-        return self._tiles.setdefault(tuple(self.tile_index), Tile())
-
-    def getTileBounds(self ) -> Tuple[ Tuple[int ,int], Tuple[int ,int] ]:
-        y0, x0 = self.iy *self.tile_shape[0], self.ix *self.tile_shape[1]
-        return ( y0, y0 +self.tile_shape[0] ), ( x0, x0 +self.tile_shape[1] )
-
-    def set_tile_data_attributes(self, data: xa.DataArray):
-        tr0 = data.transform
-        iy0, ix0 =  self.tile_index[0] * self.tile_shape[0], self.tile_index[1] * self.tile_shape[1]
-        y0, x0 = tr0[5] + iy0 * tr0[4], tr0[2] + ix0 * tr0[0]
-        data.attrs['transform'] = [ tr0[0], tr0[1], x0, tr0[3], tr0[4], y0  ]
-        data.attrs['tile_coords'] = self.tile_index
+    @exception_handled
+    @log_timing
+    def get_region_marker(self, prec: PolyRec, cid: int = -1 ) -> Marker:
+        from spectraclass.data.spatial.tile.tile import Block, Tile
+        from spectraclass.model.labels import LabelsManager, lm
+        from shapely.geometry import Polygon
+        if cid == -1: cid = lm().current_cid
+        block: Block = self.getBlock()
+#        idx2pid: np.ndarray = block.index_array.values.flatten()
+        raster:  xa.DataArray = block.data[0].squeeze()
+        X, Y = raster.x.values, raster.y.values
+        try:
+            polygon = Polygon(prec.poly.get_xy())
+            MX, MY = np.meshgrid(X, Y)
+            PID: np.ndarray = np.array(range(raster.size))
+            mask: np.ndarray = svect.contains( polygon, MX, MY ).flatten()
+            pids = PID[mask] # idx2pid[ PID[mask] ]
+            marker = Marker( "label", pids[ pids > -1 ].tolist(), cid )
+            lgm().log( f"Poly selection-> Create marker[{marker.size}], cid = {cid}")
+        except Exception as err:
+            lgm().log( f"Error getting region marker, returning empty marker: {err}")
+            marker = Marker( "label", [], cid )
+        return marker
 
     def getTileFileName(self, with_extension = True ) -> str:
-        tile_file_name = f"{self.image_name}.{self.fmt(self.tile_shape)}_{self.fmt(self.tile_index)}"
-        return tile_file_name + ".tif" if with_extension else tile_file_name
+        ext = dm().modal.ext
+        return self.image_name + ext if with_extension else self.image_name
 
-    def tileName( self, base_name: str = None ) -> str:
-        base = self.image_name if base_name is None else base_name
-        return f"{base}.{self.fmt(self.tile_shape)}_{self.fmt(self.tile_index)}"
+    def tileName( self, **kwargs ) -> str:
+        return self.get_image_name( **kwargs )
 
     def fmt(self, value) -> str:
         return str(value).strip("([])").replace(",", "-").replace(" ", "")
 
-    def setTilesPerImage( self, image_specs = None ):
-        ishape = image_specs['shape'] if image_specs else [ self.tile_size, self.tile_size ]
-        self.tile_dims = get_rounded_dims( ishape, [self.tile_size ] *2 )
-        self.tile_shape = get_rounded_dims( ishape, self.tile_dims )
-        self.block_dims = get_rounded_dims( self.tile_shape, [ self.block_size ]* 2)
-        self.block_shape = get_rounded_dims(self.tile_shape, self.block_dims)
-
     def getTileData(self) -> xa.DataArray:
-        if self._tile_data is None:
-            try:                    tile_data: xa.DataArray = self._readTileFile()
-            except AssertionError:  tile_data = self._getTileDataFromImage()
-            tile_data = self.mask_nodata(tile_data)
-            init_shape = [*tile_data.shape]
-            valid_bands = DataManager.instance().valid_bands()
-            if valid_bands is not None:
-                dataslices = [tile_data.isel(band=slice(valid_band[0], valid_band[1])) for valid_band in valid_bands]
-                tile_data = xa.concat(dataslices, dim="band")
-                lgm().log( f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
-            result = self.rescale(tile_data)
-            self._tile_data = result
-        return self._tile_data
+         return self._readTileFile()
 
-    def getPointData( self ) -> Tuple[xa.DataArray,xa.DataArray]:
-        from spectraclass.data.spatial.manager import SpatialDataManager
-        tile_data: xa.DataArray = self.getTileData()
-        result: xa.DataArray =  SpatialDataManager.raster2points( tile_data )
-        point_coords: xa.DataArray = result.samples
-        point_data = result.assign_coords( samples = np.arange( 0, point_coords.shape[0] ) )
-#        samples_axis = spectra.coords['samples']
-        point_data.attrs['type'] = 'tile'
-        point_data.attrs['dsid'] = result.attrs['dsid']
-        return ( point_data, point_coords)
-
-    def rescale(self, raster: xa.DataArray, **kwargs ) -> xa.DataArray:
-        norm_type = kwargs.get( 'norm', 'spectral' )
-        refresh = kwargs.get('refresh', False )
-        if norm_type == "none":
-            result = raster
-        else:
-            if norm_type == "spatial":
-                norm: xa.DataArray = self._computeSpatialNorm( raster, refresh )
-            else:          # 'spectral'
-                norm: xa.DataArray = raster.mean( dim=['band'], skipna=True )
-            result =  raster / norm
-            result.attrs = raster.attrs
+    @classmethod
+    def process_tile_data( cls, tile_data: xa.DataArray ) -> xa.DataArray:
+        t0 = time.time()
+        tile_data = cls.mask_nodata(tile_data)
+        init_shape = [*tile_data.shape]
+        valid_bands = DataManager.instance().valid_bands()
+        if valid_bands is not None:
+            band_names = tile_data.attrs.get('bands', None)
+            dataslices = [tile_data.isel(band=slice(valid_band[0], valid_band[1])) for valid_band in valid_bands]
+            tile_data = xa.concat(dataslices, dim="band")
+            if isinstance(band_names, (list, tuple)):
+                tile_data.attrs['bands'] = sum( [list(band_names[valid_band[0]:valid_band[1]]) for valid_band in valid_bands], [])
+            lgm().log( f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
+        t1 = time.time()
+        result = tile_data.rio.reproject(cls.crs)
+        result.attrs['wkt'] = result.spatial_ref.crs_wkt
+        result.attrs['long_name'] = tile_data.attrs.get('long_name', None)
+        if '_FillValue' in result.attrs:
+           nodata = result.attrs['_FillValue']
+           result = result if np.isnan(nodata) else result.where(result != nodata, np.nan)
+        lgm().log(f"Completed process_tile_data in ( {time.time()-t1:.1f}, {t1-t0:.1f} ) sec")
         return result
 
-    @property
-    def normFileName( self ) -> str:
-        return f"global_norm.pkl"
+#     def getPointData( self ) -> Tuple[xa.DataArray,xa.DataArray]:
+#         from spectraclass.data.spatial.manager import SpatialDataManager
+#         tile_data: xa.DataArray = self.getTileData()
+#         result: xa.DataArray =  SpatialDataManager.raster2points( tile_data )
+#         point_coords: xa.DataArray = result.samples
+#         point_data = result.assign_coords( samples = np.arange( 0, point_coords.shape[0] ) )
+# #        samples_axis = spectra.coords['samples']
+#         point_data.attrs['type'] = 'tile'
+#         point_data.attrs['dsid'] = result.attrs['dsid']
+#         return ( point_data, point_coords)
 
     def get_block_transform( self, iy, ix ) -> ProjectiveTransform:
-        tr0 = self.tile.data.attrs['transform']
+        tr0 = self.transform
         iy0, ix0 = iy * self.block_shape[0], ix * self.block_shape[1]
         y0, x0 = tr0[5] + iy0 * tr0[4], tr0[2] + ix0 * tr0[0]
         tr1 = [ tr0[0], tr0[1], x0, tr0[3], tr0[4], y0, 0, 0, 1  ]
-        lgm().log( f"Tile transform: {tr0}, Block transform: {tr1}, tile indices = [{self.tile_index}], block indices = [ {iy}, {ix} ]" )
+        lgm().log( f"Tile transform: {tr0}, Block transform: {tr1}, block indices = [ {iy}, {ix} ]" )
         return  ProjectiveTransform( np.array(tr1).reshape(3, 3) )
 
-    def _computeSpatialNorm(self, tile_raster: xa.DataArray, refresh=False) -> xa.DataArray:
-        norm_file = os.path.join(self.data_cache, self.normFileName)
-        if not refresh and os.path.isfile(norm_file):
-            lgm().log(f"Loading norm from global norm file {norm_file}")
-            return xa.DataArray.from_dict(pickle.load(open(norm_file, 'rb')))
-        else:
-            lgm().log(f"Computing norm and saving to global norm file {norm_file}")
-            norm: xa.DataArray = tile_raster.mean(dim=['x', 'y'], skipna=True)
-            pickle.dump(norm.to_dict(), open(norm_file, 'wb'))
-            return norm
-
-    def _getTileDataFromImage(self) -> xa.DataArray:
-        tm = TileManager.instance()
-        tm.setTilesPerImage()
-        full_input_bands: xa.DataArray = DataManager.instance().modal.readGeotiff(False)
-        ybounds, xbounds = tm.getTileBounds()
-        tile_raster = full_input_bands[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1]]
-        tile_raster.attrs['tilename'] = tm.tileName()
-        tile_raster.attrs['image'] = self.image_name
-        tile_raster.attrs['image_shape'] = full_input_bands.shape
-        self.image_attrs[self.image_name] = dict(shape=full_input_bands.shape[-2:], attrs=full_input_bands.attrs)
-        tm.set_tile_data_attributes(tile_raster)
-        if self.cacheTileData: DataManager.instance().modal.writeGeotiff( tile_raster )
-        return tile_raster
-
     def _readTileFile(self) -> xa.DataArray:
-        assert self.cacheTileData, "Tile file not cached."
-        image_specs = self.image_attrs.get(self.image_name, None)
-        TileManager.instance().setTilesPerImage(image_specs)
-        tile_raster: xa.DataArray = DataManager.instance().modal.readGeotiff(True)
+        from spectraclass.gui.control import UserFeedbackManager, ufm
+        tm = TileManager.instance()
+        tile_raster: xa.DataArray = DataManager.instance().modal.readSpectralData()
         if tile_raster is not None:
             tile_raster.name = self.tileName()
-            tile_raster.attrs['tilename'] = self.tileName()
+            tile_raster.attrs['tilename'] = tm.tileName()
+            tile_raster.attrs['image'] = self.image_name
+            tile_raster.attrs['image_shape'] = tile_raster.shape
+            self.image_attrs[self.image_name] = dict( shape=tile_raster.shape[-2:], attrs=tile_raster.attrs )
         return tile_raster
 
     @classmethod
     def mask_nodata(self, raster: xa.DataArray) -> xa.DataArray:
         nodata_value = raster.attrs.get('data_ignore_value', -9999)
-        return raster.where(raster != nodata_value, float('nan'))
+        return raster.where(raster != nodata_value, float('nan') )

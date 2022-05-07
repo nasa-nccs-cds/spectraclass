@@ -4,6 +4,7 @@ from typing import List, Union, Tuple, Optional, Dict
 import os, time, threading, traceback
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable
+from spectraclass.util.logs import LogManager, lgm
 
 def afm() -> "ActivationFlowManager":
     return ActivationFlowManager.instance()
@@ -25,7 +26,10 @@ class ActivationFlow():
     def spread( self, sample_data: np.ndarray, nIter: int = 1, **kwargs ) -> Optional[bool]:
         raise NotImplementedError()
 
-    def getGraph(self):
+    def getGraph(self, nodes=None):
+        raise NotImplementedError()
+
+    def getEdgeIndex(self) -> Tuple[np.ndarray,np.ndarray]:
         raise NotImplementedError()
 
     @classmethod
@@ -50,13 +54,17 @@ class ActivationFlowManager(SCSingletonConfigurable):
         self.instances = {}
         self.condition = threading.Condition()
 
-    def getActivationFlow( self ) -> Optional["ActivationFlow"]:
-        from spectraclass.data.base import DataManager
-        point_data: xa.DataArray = DataManager.instance().getModelData()
+    def reset(self):
+        self.instances = {}
+
+    def getActivationFlow( self, reset = False ) -> Optional["ActivationFlow"]:
+        from spectraclass.data.base import DataManager, dm
+        if reset: self.reset()
+        point_data: xa.DataArray = dm().getModelData()
         result = None
         if point_data is not None:
             dsid = point_data.attrs.get('dsid','global')
-            print( f"Get Activation flow for dsid {dsid}")
+            lgm().log( f"Get Activation flow for dsid {dsid}" )
             self.condition.acquire()
             try:
                 result = self.instances.get( dsid, None )
@@ -68,8 +76,7 @@ class ActivationFlowManager(SCSingletonConfigurable):
                     self.instances[dsid] = result
                 self.condition.notifyAll()
             except Exception as err:
-                print( f"Error in getting ActivationFlow: {err}")
-                traceback.print_exc()
+                lgm().exception( f"Error in getting ActivationFlow: {err}")
             finally:
                 self.condition.release()
         return result

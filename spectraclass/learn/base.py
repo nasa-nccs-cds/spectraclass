@@ -1,113 +1,20 @@
 import xarray as xa
 import time, traceback, abc
+from sklearn.model_selection import train_test_split
 import numpy as np
-import scipy, sklearn
+import os
+from datetime import datetime
+import tensorflow as tf
+from tensorflow.keras.models import Model
 from typing import List, Tuple, Optional, Dict
 from ..model.labels import LabelsManager
 import traitlets as tl
 import traitlets.config as tlc
+import ipywidgets as ipw
 from spectraclass.gui.control import UserFeedbackManager, ufm
-from spectraclass.util.logs import LogManager, lgm, exception_handled
-from spectraclass.model.base import SCSingletonConfigurable
-
-def cm():
-    return ClassificationManager.instance()
-
-class Cluster:
-
-    def __init__(self, cid, **kwargs):
-        self.cid = cid
-        self._members = []
-        self.metrics = {}
-
-    def addMember(self, example: np.ndarray ):
-        self._members.append( example )
-        self.metrics = {}
-
-    @property
-    def members(self) -> np.ndarray:
-        return np.vstack(self._members)
-
-    @property
-    def mean(self):
-        if "mean" not in self.metrics.keys():
-            self.metrics["mean"] = self.members.mean(0)
-        return self.metrics["mean"]
-
-    @property
-    def std(self):
-        if "std" not in self.metrics.keys():
-            self.metrics["std"] = self.members.std(0)
-        return self.metrics["std"]
-
-    @property
-    def cov(self):
-        if "cov" not in self.metrics.keys():
-            self.metrics["cov"] = np.cov( self.members.transpose() )
-        return self.metrics["cov"]
-
-    @property
-    def cor(self):
-        if "cor" not in self.metrics.keys():
-            self.metrics["cor"] = np.corrcoef( self.members.transpose() )
-        return self.metrics["cor"]
-
-    @property
-    def icov(self):
-        if "icov" not in self.metrics.keys():
-            self.metrics["icov"] = scipy.linalg.pinv(self.cov)
-        return self.metrics["icov"]
-
-    @property
-    def icor(self):
-        if "icor" not in self.metrics.keys():
-            self.metrics["icor"] = scipy.linalg.pinv(self.cor)
-        return self.metrics["icor"]
-
-class ClassificationManager(SCSingletonConfigurable):
-    mid = tl.Unicode("svc").tag(config=True, sync=True)
-
-    def __init__(self,  **kwargs ):
-        super(ClassificationManager, self).__init__(**kwargs)
-        self._models: Dict[str,LearningModel] = {}
-        self.import_models()
-
-    def import_models(self):
-        from .svc import SVCLearningModel
-        self._models['svc'] = SVCLearningModel()
-
-    @property
-    def mids(self):
-        return [ m.mid for m in self._models.values() ]
-
-    def addModel(self, mid: str, model: "LearningModel" ):
-        self._models[ mid ] = model
-
-    def gui(self):
-        mids = self.mids
-        # model = base.createComboSelector( "Model: ", mids, "dev/model", "cluster" )
-        # distanceMetric = base.createComboSelector("Distance.Metric: ", ["mahal","euclid"], "dev/distance/metric", "mahal")
-        # distanceMethod = base.createComboSelector("Distance.Method: ", ["centroid","nearest"], "dev/distance/method", "centroid")
-        # return base.createGroupBox("dev", [model, distanceMetric, distanceMethod ] )
-
-    @property
-    def model(self) -> "LearningModel":
-        model: LearningModel = self._models[ self.mid ]
-        return model
-
-    @exception_handled
-    def learn_classification( self, filtered_point_data: np.ndarray, filtered_labels: np.ndarray, **kwargs  ):
-        self.model.learn_classification( filtered_point_data, filtered_labels, **kwargs  )
-        ufm().show( "Classification Mapping learned" )
-
-    @exception_handled
-    def apply_classification( self, embedding: xa.DataArray, **kwargs ) -> xa.DataArray:
-        try:
-            sample_labels: xa.DataArray = self.model.apply_classification( embedding, **kwargs  )
-            return sample_labels
-        except sklearn.exceptions.NotFittedError:
-            ufm().show( "Must learn a mapping before applying a classification", "red")
-
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras import datasets, layers, models
 
 class LearningModel:
 
@@ -117,6 +24,26 @@ class LearningModel:
         self.config = kwargs
         self._keys = []
 
+    @property
+    def model_dir(self):
+        from spectraclass.data.base import dm
+        from spectraclass.data.spatial.tile.manager import tm
+        mdir = os.path.join( dm().cache_dir, "models", tm().tileName() )
+        os.makedirs( mdir, 0o777, exist_ok=True)
+        return mdir
+
+    @property
+    def model_file(self):
+        mname = datetime.now().strftime(f"%Y.%j_%H.%M.%S.tf")
+        return os.path.join( self.model_dir, mname )
+
+    def list_models(self) -> Dict[str,str]:
+        models = {}
+        for mfile in os.listdir(self.model_dir):
+            if mfile.endswith('.tf'):
+                models[ os.path.splitext(mfile)[0] ] = os.path.join( self.model_dir, mfile)
+        return models
+
     def setKeys(self, keys: List[str] ):
         self._keys = keys
 
@@ -124,25 +51,83 @@ class LearningModel:
     def score(self) -> Optional[np.ndarray]:
         return self._score
 
-    def learn_classification( self, point_data: np.ndarray, labels: np.ndarray, **kwargs  ):
+    @exception_handled
+    def learn_classification( self, point_data: np.ndarray, class_data: np.ndarray, **kwargs ):
+        from spectraclass.model.labels import LabelsManager, lm
         t1 = time.time()
-        if np.count_nonzero( labels > 0 ) == 0:
+        if np.count_nonzero( class_data > 0 ) == 0:
             ufm().show( "Must label some points before learning the classification" )
             return None
-        self.fit( point_data, labels, **kwargs )
-        print(f"Learned mapping with {labels.shape[0]} labels in {time.time()-t1} sec.")
+        lgm().log(f"Learning mapping with shapes: point_data{point_data.shape}, class_data{class_data.shape}")
+        self.fit( point_data, class_data, **kwargs )
+        lgm().log(f"Completed learning in {time.time() - t1} sec.")
 
-    def fit(self, data: np.ndarray, labels: np.ndarray, **kwargs):
+
+    @classmethod
+    def index_to_one_hot( cls, class_data: np.ndarray ) -> np.ndarray:
+        from spectraclass.model.labels import lm
+        return to_categorical( class_data, lm().nLabels )
+
+    @classmethod
+    def one_hot_to_index(cls, class_data: np.ndarray) -> np.ndarray:
+        return np.argmax( class_data, axis=0  ).squeeze()
+
+    def fit(self, data: np.ndarray, class_data: np.ndarray, **kwargs):
         raise Exception( "abstract method LearningModel.fit called")
 
+    @exception_handled
     def apply_classification( self, data: xa.DataArray, **kwargs ) -> xa.DataArray:
         t1 = time.time()
         prediction: np.ndarray = self.predict( data.values, **kwargs )
-        print(f"Applied classication with input shape {data.shape[0]} in {time.time() - t1} sec.")
-        return xa.DataArray( prediction, dims=['samples'], coords=dict( samples=data.coords['samples'] ) )
+        if prediction.ndim == 1: prediction = prediction.reshape( [ prediction.size, 1 ] )
+        lgm().log(f"Applied classication with input shape {data.shape[0]} in {time.time() - t1} sec.")
+        return xa.DataArray( prediction,  dims=['samples','classes'],
+                             coords=dict( samples=data.coords['samples'], classes=range(prediction.shape[1]) ) )
 
     def predict( self, data: np.ndarray, **kwargs ):
         raise Exception( "abstract method LearningModel.predict called")
+
+    def save( self, **kwargs ):
+        raise Exception( "abstract method LearningModel.save called")
+
+    def load( self, name, **kwargs ):
+        raise Exception( "abstract method LearningModel.load called")
+
+class KerasModelWrapper(LearningModel):
+
+    def __init__(self, name: str,  model: models.Model, **kwargs ):
+        LearningModel.__init__( self, name,  **kwargs )
+        opt = str(kwargs.pop('opt', 'adam')).lower()
+        loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
+        self._model: models.Model = model
+        self._model.compile(optimizer=opt, loss=loss,  metrics=['accuracy'], **kwargs )
+
+    def predict( self, data: np.ndarray, **kwargs ) -> np.ndarray:
+        return self._model.predict( data, **kwargs )
+
+    def save( self, **kwargs ) -> str:
+        mfile = self.model_file
+        lgm().log( f'KerasModelWrapper: save weights -> {mfile}' )
+        self._model.save( mfile, save_format="tf", **kwargs )
+        return os.path.splitext( os.path.basename(mfile) )[0]
+
+    @exception_handled
+    def load( self, model_name: str, **kwargs ):
+        file_path = os.path.join( self.model_dir, f"{model_name}.tf" )
+        lgm().log( f'KerasModelWrapper: loading model -> {file_path}' )
+        self._model = models.load_model( file_path, **kwargs )
+
+    def fit(self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
+        nepochs = kwargs.pop( 'nepochs', 25 )
+        test_size = kwargs.pop( 'test_size', 0.0 )
+        if class_data.ndim == 1:
+            class_data = self.index_to_one_hot( class_data )
+        if test_size > 0.0:
+            tx, vx, ty, vy = train_test_split( data, class_data, test_size=test_size )
+            self._model.fit( tx, ty, epochs=nepochs, validation_data=(vx,vy), **kwargs )
+        else:
+            lgm().log( f"model.fit, shapes: point_data{data.shape}, class_data{class_data.shape} " )
+            self._model.fit( data, class_data, epochs=nepochs, **kwargs )
 
 
 

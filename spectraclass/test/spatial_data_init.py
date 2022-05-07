@@ -1,6 +1,5 @@
+import xarray as xa
+import cartopy.crs as ccrs
 from spectraclass.data.base import DataManager
-
-dm: DataManager = DataManager.initialize( "demo4", 'swift' )
-dm.prepare_inputs()
-dm.save_config()
-
+from spectraclass.data.spatial.tile.manager import TileManager, tm
+from spectraclass.data.spatial.tile.tile import Block, Tile

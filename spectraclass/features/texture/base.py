@@ -1,6 +1,6 @@
 import math, time, random, numpy as np
 from typing import List, Optional, Dict, Type, Tuple
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 
 class TextureHandler:
 

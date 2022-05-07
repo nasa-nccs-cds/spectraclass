@@ -1,8 +1,14 @@
+import warnings
+warnings.simplefilter("ignore", FutureWarning)
 import numpy as np
-from typing import List, Optional, Dict, Type
+import ipywidgets as ipw
+from typing import List, Union, Tuple, Optional, Dict, Type
 import os, warnings
+import tensorflow as tf
 from enum import Enum
 import ipywidgets as ip
+from spectraclass.gui.control import UserFeedbackManager, ufm
+from spectraclass.application.controller import SpectraclassController
 import xarray as xa
 import traitlets as tl
 from inspect import isclass
@@ -12,8 +18,8 @@ from importlib import import_module
 from spectraclass.model.base import SCSingletonConfigurable
 from traitlets.config.loader import load_pyconfig_files
 from .modes import ModeDataManager
-from spectraclass.util.logs import LogManager, lgm, exception_handled
-from traitlets.config.loader import Config
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
+from traitlets.config.loader import Config, PyFileConfigLoader
 import threading, time, logging, sys
 
 class DataType(Enum):
@@ -42,56 +48,104 @@ def register_modes():
 
 class DataManager(SCSingletonConfigurable):
     proc_type = tl.Unicode('cpu').tag(config=True)
-    _mode_data_managers_: Dict[str,Type[ModeDataManager]] = {}
+    use_model_data = tl.Bool(False).tag(config=True, sync=True)
+    _mode_data_managers_: Dict = {}
 
     def __init__(self):
-        self._config: Config = None
         self.config_files = []
-        self.config_dir = None
         self.name = None
         self._mode_data_manager_: ModeDataManager = None
+        self._project_data: xa.Dataset = None
         super(DataManager, self).__init__()
         self._wGui = None
         self._lock = threading.Lock()
+        self.observe( self.on_control_change, names=["use_model_data"] )
 
     def _contingent_configuration_(self):
         pass
 
+    def getXarray( self, id: str, xcoords: Dict, xdims: Dict, **kwargs ) -> xa.DataArray:
+        np_data: np.ndarray = self.getInputFileData( id )
+        dims, coords = [], {}
+        for iD, iS in enumerate( np_data.shape ):
+            dim = xdims.get(iS,f"dim{iD}")
+            dims.append( dim )
+            if dim in xcoords:
+                coords[dim] = xcoords[dim]
+            else:
+                xdims[iS] = dim
+                xcoords[dim] = np.arange(iS)
+        result =  xa.DataArray( np_data, dims=dims, coords=coords, name=id, attrs={**kwargs, 'name': id} )
+        lgm().log(f"Creating Xarray[{id}], shape={result.shape}, dims={dims}, dtype={result.dtype}, data strides={np_data.strides}")
+        return result
+
+    def clear_project_cache(self):
+        self._project_data = None
+
+    def on_control_change(self, change: Dict ):
+        from spectraclass.gui.spatial.map import MapManager, mm
+        lgm().log( f"on_control_change: {change}")
+        if change.get('name', None) == 'use_model_data':
+            use_model_data = bool( change['new'] )
+            mm().use_model_data( use_model_data )
+
+    def getClassMap(self)-> Optional[xa.DataArray]:
+        return self.modal.getClassMap()
+
     @property
     def sysconfig(self) -> Config:
-        if self._config is None: raise TypeError( "DataManager not initialized" )
-        return self._config
+        return self.config
 
     @classmethod
     def initialize(cls, name: str, mode: str ):
+#        try: tf.enable_eager_execution()
+#        except: pass
+        name = name.lower()
+        mode = mode.lower()
+        lgm().init_logging( name, mode )
         dataManager = cls.instance()
         dataManager._configure_( name, mode )
-        lgm().init_logging(name, mode)
         if mode.lower() not in cls._mode_data_managers_: raise Exception( f"Mode {mode} is not defined, available modes = {cls._mode_data_managers_.keys()}")
-        dataManager._mode_data_manager_ = cls._mode_data_managers_[ mode.lower() ].instance()
+        dataManager._mode_data_manager_ = cls._mode_data_managers_[ mode ].instance()
         lgm().log("Logging configured")
         return dataManager
 
-    def app(self):
+    def hasMetadata(self):
+        return os.path.isfile( self.metadata_file )
+
+    def preprocess_data(self):
+        if not self.modal.hasBlockData() or not self.hasMetadata():
+            self.prepare_inputs( )
+            self.save_config()
+
+    def app(self) -> SpectraclassController:
         return self.modal.application.instance()
+
+    @property
+    def defaults_dir(self):
+        sc_dir = os.path.dirname( os.path.dirname( os.path.realpath("__file__") ) )
+        return os.path.join( sc_dir, "defaults" )
 
     def _configure_(self, name: str, mode: str ):
         self.name = name
-        cfg_file = self.config_file( name, mode )
-        if os.path.isfile(cfg_file):
-            (self.config_dir, fname) = os.path.split(cfg_file)
-            self.config_files = [ fname ]
-            print(f"Loading config files: {self.config_files} from dir {self.config_dir}")
-            self._config = load_pyconfig_files(self.config_files, self.config_dir)
-            self.update_config( self._config )
-        else:
-            print(f"Configuration error: '{cfg_file}' is not a file.")
+        self.config_files.append( ( self.defaults_dir, "config.py" ) )
+        self.config_files.append( ( self.config_dir(  mode ), f"{name}.py" ) )
+        for ( cfg_dir, fname) in self.config_files:
+            cfg_file = os.path.join( cfg_dir, fname )
+            if os.path.isfile(cfg_file):
+                lgm().log( f"Using config file: '{cfg_file}'", print=True )
+                loader = PyFileConfigLoader( fname, path=cfg_dir )
+                self.update_config( loader.load_config() )
+            else:
+                lgm().log(f" ---> Config file not found: {cfg_file}")
 
     def getCurrentConfig(self):
-        config_dict = {}
-        for cfg_file in self.config_files:
-            scope = dm().name # cfg_file.split(".")[0]
-            config_dict[ scope ] = load_pyconfig_files( [cfg_file], self.config_dir )
+        cfg = Config()
+        config_dict = { dm().name: cfg }
+        for ( cfg_dir, fname ) in self.config_files:
+            if os.path.isfile( os.path.join( cfg_dir, fname ) ):
+                loader = PyFileConfigLoader( fname, path=cfg_dir )
+                cfg.merge( loader.load_config() )
         return config_dict
 
     @property
@@ -100,16 +154,15 @@ class DataManager(SCSingletonConfigurable):
         os.makedirs( output_dir, exist_ok=True)
         return os.path.join( output_dir, f"{self.dsid()}-masks.nc" )
 
+    @exception_handled
     def save_config( self ):
         from spectraclass.gui.spatial.map import MapManager, mm
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.reduction.embedding import ReductionManager, rm
         from spectraclass.features.texture.manager import TextureManager, texm
-        from spectraclass.gui.points import PointCloudManager, pcm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, lm
-        from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
-        afm(), lm(), spm(), pcm(), mm(), texm(), rm(), tm()
+        afm(), lm(), pcm(), mm(), texm(), rm()
         conf_dict = self.generate_config_file()
         for scope, trait_classes in conf_dict.items():
             cfg_file = os.path.realpath( self.config_file( scope, self.mode ) )
@@ -130,7 +183,7 @@ class DataManager(SCSingletonConfigurable):
             lgm().log(f"Config file written")
 
     def generate_config_file(self) -> Dict:
-        #        print( f"Generate config file, classes = {[inst.__class__ for inst in cls.config_instances]}")
+        #        print( f"Generate config file, _classes = {[inst.__class__ for inst in cls.config_instances]}")
         trait_map = self.getCurrentConfig()
         for inst in self.config_instances:
             self.add_trait_values(trait_map, inst)
@@ -142,7 +195,7 @@ class DataManager(SCSingletonConfigurable):
 
     @classmethod
     def register_mode(cls, manager_type: Type[ModeDataManager] ):
-        print( f"DataManager registering ModeDataManager[{manager_type.MODE.lower()}]: {manager_type}")
+#        print( f"DataManager registering ModeDataManager[{manager_type.MODE.lower()}]: {manager_type}")
         cls._mode_data_managers_[ manager_type.MODE.lower() ] = manager_type
 
     @classmethod
@@ -150,6 +203,12 @@ class DataManager(SCSingletonConfigurable):
         config_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "config",  mode )
         if not os.path.isdir( config_dir ): os.makedirs( config_dir, mode = 0o777 )
         return os.path.join( config_dir, name + ".py" )
+
+    @classmethod
+    def config_dir( cls, mode:str ) -> str :
+        config_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "config",  mode )
+        if not os.path.isdir( config_dir ): os.makedirs( config_dir, mode = 0o777 )
+        return config_dir
 
     @property
     def mode(self) -> str:
@@ -161,10 +220,17 @@ class DataManager(SCSingletonConfigurable):
 
     @property
     def cache_dir(self) -> str:
-        return os.path.join( self.modal.cache_dir, self.name, self.modal.MODE )
+        return os.path.join( self.modal.cache_dir, "spectraclass", self.modal.MODE, self.name )
+
+    @property
+    def metadata_file(self) -> str:
+        return f"{self.cache_dir}/{self.modal.image_name}.mdata.txt"
 
     def dsid(self, **kwargs ) -> str:
         return self._mode_data_manager_.dsid( **kwargs )
+
+    def set_dsid(self, dsid: str ) -> str:
+        return self._mode_data_manager_.set_dsid( dsid )
 
     @property
     def project_name(self) -> str:
@@ -175,40 +241,82 @@ class DataManager(SCSingletonConfigurable):
         return self._mode_data_manager_.metavars
 
     def gui( self ) -> ip.Tab():
-        from spectraclass.gui.unstructured.application import Spectraclass
+        from spectraclass.application.controller import SpectraclassController
         if self._wGui is None:
-            Spectraclass.set_spectraclass_theme()
-            self._wGui = self._mode_data_manager_.gui()
+            SpectraclassController.set_spectraclass_theme()
+            mode_gui = self._mode_data_manager_.gui()
+            self._wGui = ipw.Tab()
+            self._wGui.set_title( 0, "blocks" )
+            self._wGui.set_title( 1, "images" )
+            self._wGui.children = [ mode_gui, dm().control_panel() ]
         return self._wGui
+
+    def control_panel(self) -> ip.VBox:
+        title = ipw.Label( value="Images", width='500px' )
+        file_selector = dm().modal.file_selector
+        use_model_data = ip.Checkbox( value=False, description = "View Model Data", layout=ipw.Layout( width='500px' ) )
+        tl.link( (use_model_data, "value"), (self, 'use_model_data') )
+        return ip.VBox( [ title, file_selector, use_model_data ], layout=ipw.Layout(flex='1 1 auto') )
 
     def getInputFileData(self, vname: str = None, **kwargs ) -> np.ndarray:
         return self._mode_data_manager_.getInputFileData( vname, **kwargs )
 
-    def loadCurrentProject(self, caller_id: str ) -> xa.Dataset:
+    def loadCurrentProject(self, caller_id: str = "main", clear = False ) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
         lgm().log( f" DataManager: loadCurrentProject: {caller_id}" )
-        project_data = self._mode_data_manager_.loadCurrentProject()
-        assert project_data is not None, "Project initialization failed- check log file for details"
-        lgm().log(f"Loaded project data:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
-        return project_data
+        if clear: self._project_data = None
+        if self._mode_data_manager_ is not None:
+            if self._project_data is None:
+                self._project_data = self._mode_data_manager_.loadCurrentProject()
+                assert self._project_data is not None, "Project initialization failed- check log file for details"
+                ns = self._project_data['samples'].size
+                lgm().log(f"LOAD TILE[{self.dsid()}]: #samples = {ns} ")
+                if ns == 0: ufm().show( "This tile contains no data","red")
+                self.save_config()
+            return self._project_data
 
-    def loadProject(self, dsid: str ) -> xa.Dataset:
-        self._mode_data_manager_.setDatasetId(dsid)
-        project_data = self._mode_data_manager_.loadCurrentProject()
-        lgm().log(f"Loaded project data:  {[f'{k}:{v.shape}' for (k,v) in project_data.variables.items()]}")
-        return project_data
+    def loadProject(self, dsid: str = None ) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
+        if dsid is not None: self.set_dsid( dsid )
+        self._project_data = None
+        return self._mode_data_manager_.loadCurrentProject()
 
     @exception_handled
-    def prepare_inputs( self, *args, **kwargs ) -> xa.Dataset:
-        return self._mode_data_manager_.prepare_inputs( *args, **kwargs )
+    def prepare_inputs( self, **kwargs ):
+        self._mode_data_manager_.prepare_inputs( **kwargs )
+
+    @exception_handled
+    def generate_metadata( self, **kwargs ):
+        self._mode_data_manager_.generate_metadata( **kwargs )
+        self.save_config()
+
+    @exception_handled
+    def process_block( self, block ) -> xa.Dataset:
+        return self._mode_data_manager_.process_block( block )
+
+    @exception_handled
+    def getSpectralData( self, **kwargs ) -> Optional[xa.DataArray]:
+        return self._mode_data_manager_.getSpectralData( **kwargs )
+
+    @exception_handled
+    def getModelData(self, **kwargs) -> Optional[xa.DataArray]:
+        raw_model_data = self.getRawModelData()
+        if raw_model_data is not None:
+            return self._mode_data_manager_.getModelData( raw_model_data, **kwargs )
 
     def valid_bands(self) -> Optional[List]:
         return self._mode_data_manager_.valid_bands()
 
-    def getModelData(self) -> xa.DataArray:
-        project_dataset: xa.Dataset = self.loadCurrentProject("getModelData")
-        model_data: xa.DataArray = project_dataset['reduction']
-        model_data.attrs['dsid'] = project_dataset.attrs['dsid']
-        return model_data
+    def getRawModelData(self) -> Optional[xa.DataArray]:
+        project_dataset: Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ] = self.loadCurrentProject("getModelData")
+        if project_dataset is not None:
+            model_data: xa.DataArray = project_dataset['reduction']
+            attrs = project_dataset['attrs']
+            model_data.attrs['dsid'] = attrs['dsid']
+            return model_data
+
+    def getSpatialDims(self) -> Dict[str,int]:
+        project_dataset: Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ] = self.loadCurrentProject("getModelData")
+        raw_data: xa.DataArray = project_dataset['raw']
+        return dict( ny = raw_data.shape[1], nx = raw_data.shape[2] )
 
     def loadMatlabDataFile(self, file_path: str ):
         from scipy.io import loadmat

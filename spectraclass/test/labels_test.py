@@ -1,6 +1,6 @@
 from spectraclass.data.base import DataManager
 from spectraclass.gui.spatial.application import Spectraclass
-from spectraclass.gui.points import PointCloudManager
+from gui.SCRAP.points import PointCloudManager
 
 app = Spectraclass.instance()
 dm: DataManager = app.configure("demo1",'aviris')

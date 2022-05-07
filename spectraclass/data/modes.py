@@ -1,14 +1,17 @@
 import numpy as np
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict, Tuple, Union
+import ipywidgets as ipw
 import os, glob, sys
+from pathlib import Path
 import ipywidgets as ip
+from os import path
 from collections import OrderedDict
 from pathlib import Path
 from spectraclass.gui.control import UserFeedbackManager, ufm
-from spectraclass.util.logs import LogManager, lgm, exception_handled
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import xarray as xa
 import traitlets as tl
-from spectraclass.model.base import SCSingletonConfigurable, Marker
+from spectraclass.model.base import SCSingletonConfigurable
 
 def invert( X: np.ndarray ) -> np.ndarray:
     return X.max() - X
@@ -22,14 +25,17 @@ class ModeDataManager(SCSingletonConfigurable):
     VALID_BANDS = None
     application: SpectraclassController = None
 
-    image_name = tl.Unicode("NONE").tag(config=True ,sync=True)
-    cache_dir = tl.Unicode(os.path.expanduser("~/Development/Cache")).tag(config=True)
-    data_dir = tl.Unicode(os.path.expanduser("~/Development/Data")).tag(config=True)
+    image_names = tl.List( default_value=[] ).tag( config=True, sync=True, cache=False )
+    images_glob = tl.Unicode(default_value="").tag( config=True, sync=True, cache=False )
+    dset_name = tl.Unicode( "" ).tag(config=True)
+    cache_dir = tl.Unicode( "" ).tag(config=True)
+    data_dir = tl.Unicode( "" ).tag(config=True)
+    ext = tl.Unicode( ".tif" ).tag(config=True)
+    class_file = tl.Unicode("NONE").tag(config=True, sync=True)
 
     model_dims = tl.Int(32).tag(config=True, sync=True)
-    subsample = tl.Int(1).tag(config=True, sync=True)
+    subsample_index = tl.Int(1).tag(config=True, sync=True)
     reduce_method = tl.Unicode("Autoencoder").tag(config=True, sync=True)
-    reduce_scope = tl.Unicode("block").tag(config=True, sync=True)
     reduce_nepochs = tl.Int(5).tag(config=True, sync=True)
     reduce_sparsity = tl.Float( 0.0 ).tag(config=True,sync=True)
 
@@ -38,10 +44,68 @@ class ModeDataManager(SCSingletonConfigurable):
         assert self.MODE, f"Attempt to instantiate intermediate SingletonConfigurable class: {self.__class__}"
         self.datasets = {}
         self._model_dims_selector: ip.SelectionSlider = None
+        self._samples_axis = None
         self._subsample_selector: ip.SelectionSlider = None
-        self._progress = None
+        self._progress: ip.FloatProgress = None
         self._dset_selection: ip.Select = None
-        self._dataset_prefix = ""
+        self._dataset_prefix: str = ""
+        self._file_selector = None
+        self._active_image = 0
+        self.generate_image_list()
+
+    @property
+    def extension(self):
+        return self.ext
+
+    @property
+    def default_images_glob(self):
+        return "*" + self.extension
+
+    def generate_image_list(self):
+        if len( self.image_names ) == 0:
+            iglob = f"{self.data_dir}/{(self.images_glob if self.images_glob else self.default_images_glob)}"
+            image_path_list = glob.glob( iglob )
+            self.image_names = [ self.extract_image_name( image_path ) for image_path in image_path_list ]
+            lgm().log( f"Generate image names from glob '{iglob}': {self.image_names}")
+
+    def set_current_image(self, image_index: int ):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        lgm().log( f"Setting active_image[{self._active_image}]: {self.image_name}")
+        self._active_image = image_index
+        tm().tile.initialize()
+
+    def extract_image_name(self, image_path: str ) -> str:
+        return Path(image_path).stem
+
+    @property
+    def num_images(self):
+        return len( self.image_names )
+
+    @property
+    def image_index(self) -> int:
+        return self._active_image
+
+    @property
+    def image_name(self):
+        return self.image_names[self._active_image]
+
+    def get_image_name( self, image_index: int ):
+        return self.image_names[ image_index ]
+
+    @property
+    def file_selector(self):
+        if self._file_selector is None:
+            lgm().log( f"Creating file_selector, options={self.image_names}, value={self.image_names[0]}")
+            self._file_selector =  ip.Select( options=self.image_names, value=self.image_names[0], layout=ipw.Layout(width='600px') )
+            self._file_selector.observe( self.on_image_change, names=['value'] )
+        return self._file_selector
+
+    def on_image_change( self, event: Dict ):
+        from spectraclass.data.base import DataManager, dm
+        from spectraclass.gui.spatial.map import MapManager, mm
+        self._active_image = self.file_selector.index
+        dm().clear_project_cache()
+        mm().update_plots(True)
 
     @property
     def mode(self):
@@ -62,17 +126,8 @@ class ModeDataManager(SCSingletonConfigurable):
     def valid_bands(self) -> Optional[List]:
         return self.VALID_BANDS
 
-    @classmethod
-    def getXarray(cls, id: str, xcoords: Dict, subsample: int, xdims: OrderedDict, **kwargs) -> xa.DataArray:
-        from .base import DataManager
-        np_data: np.ndarray = DataManager.instance().getInputFileData(id)
-        dims, coords = [], {}
-        for iS in np_data.shape:
-            coord_name = xdims[iS]
-            dims.append(coord_name)
-            coords[coord_name] = xcoords[coord_name]
-        attrs = {**kwargs, 'name': id}
-        return xa.DataArray(np_data, dims=dims, coords=coords, name=id, attrs=attrs)
+    def getClassMap(self) -> Optional[xa.DataArray]:
+        raise NotImplementedError()
 
     def set_progress(self, pval: float):
         if self._progress is not None:
@@ -81,7 +136,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def update_gui_parameters(self):
         if self._model_dims_selector is not None:
             self.model_dims = self._model_dims_selector.value
-            self.subsample = self._subsample_selector.value
+            self.subsample_index = self._subsample_selector.value
 
     def setDatasetId(self,str):
         raise NotImplementedError()
@@ -89,7 +144,19 @@ class ModeDataManager(SCSingletonConfigurable):
     def dsid(self, **kwargs) -> str:
         raise NotImplementedError()
 
-    def prepare_inputs(self, *args, **kwargs):
+    def set_dsid(self, dsid: str ) -> str:
+        raise NotImplementedError()
+
+    def prepare_inputs(self, **kwargs ) -> Dict[Tuple,int]:
+        raise NotImplementedError()
+
+    def generate_metadata(self, **kwargs ):
+        raise NotImplementedError()
+
+    def process_block(self, block  ) -> xa.Dataset:
+        raise NotImplementedError()
+
+    def update_extent(self):
         raise NotImplementedError()
 
     def updateDatasetList(self):
@@ -103,11 +170,10 @@ class ModeDataManager(SCSingletonConfigurable):
     @exception_handled
     def select_dataset(self,*args):
         from spectraclass.data.base import DataManager, dm
-        if dm().dsid() != self.selected_dataset:
-            ufm().show( "Loading new data block")
-            lgm().log( f"Loading dataset '{self.selected_dataset}', current dataset = '{dm().dsid()}', mdmgr id = {id(self)}")
-            dm().loadProject( self.selected_dataset )
-            ufm().clear()
+        ufm().show( "Loading new data block")
+        lgm().log( f"Loading dataset '{self.selected_dataset}', current dataset = '{dm().dsid()}', mdmgr id = {id(self)}")
+        dm().loadProject( self.selected_dataset )
+        ufm().clear()
         dm().refresh_all()
 
     def getSelectionPanel(self) -> ip.HBox:
@@ -157,7 +223,7 @@ class ModeDataManager(SCSingletonConfigurable):
 
         self._subsample_selector: ip.SelectionSlider = ip.SelectionSlider(options=range(1, 101),
                                                                           description='Subsample:',
-                                                                          value=self.subsample,
+                                                                          value=self.subsample_index,
                                                                           layout=ip.Layout(width="auto"),
                                                                           continuous_update=True,
                                                                           orientation='horizontal', readout=True,
@@ -171,43 +237,96 @@ class ModeDataManager(SCSingletonConfigurable):
                                          layout=ip.Layout(width="100%", height="100%"), border='2px solid firebrick')
         return creationPanel
 
-    def gui(self) -> ip.HBox:
+    def gui( self, **kwargs ):
         return self.getSelectionPanel()
 
     def getInputFileData( self, vname: str = None, **kwargs ) -> np.ndarray:
         raise NotImplementedError()
 
+    def getSpectralData( self, **kwargs ) -> Optional[xa.DataArray]:
+        raise NotImplementedError()
+
+    def getModelData(self, raw_model_data: xa.DataArray, **kwargs) -> Optional[xa.DataArray]:
+        return raw_model_data
+
+    def dset_subsample(self, xdataset, **kwargs) -> Dict[str,Union[xa.DataArray,List]]:
+        vnames = xdataset.variables.keys()
+        dvars = {}
+        for vname in vnames:
+            result = variable = xdataset[vname]
+            if (self.subsample_index > 1) and (len(variable.dims) >= 1) and (variable.dims[0] == 'samples'):
+                if str(variable.dtype) in ["string","object"]:
+                    result = variable.values.tolist()
+                    result = result[::self.subsample_index]
+                else:
+                    result = variable[::self.subsample_index] if (variable.ndim == 1) else variable[ ::self.subsample_index, :]
+                    result.attrs.update(kwargs)
+            dvars[vname] = result
+            lgm().log(f" -----> VAR {vname}{result.dims}: shape = {result.shape}")
+            if vname in [ 'norm', 'embedding' ]:
+                dvars['spectra'] = result
+                dvars['plot-y'] = result
+        return dvars
+
     @exception_handled
-    def loadDataset(self, **kwargs) -> xa.Dataset:
-        lgm().log(f"Load dataset {self.dsid()}, current datasets = {self.datasets.keys()}")
+    def loadDataset(self, **kwargs) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         if self.dsid() not in self.datasets:
-            dataset: xa.Dataset = self.loadDataFile(**kwargs)
-            vnames = dataset.variables.keys()
-            vshapes = [f"{vname}{dataset.variables[vname].shape}" for vname in vnames ]
-            lgm().log(f" ---> Opened Dataset {self.dsid()} from file {dataset.attrs['data_file']}\n\t -> variables: {' '.join(vshapes)}")
-            if 'plot-x' not in vnames:
-                raw_data: xa.DataArray = dataset['norm']      # point data ( shape = [ nsamples, nbands ] )
-                dataset['plot-y'] = raw_data
-                dataset['plot-x'] = np.arange(0,raw_data.shape[1])
-            dataset.attrs['dsid'] = self.dsid()
-            dataset.attrs['type'] = 'spectra'
-            self.datasets[ self.dsid() ] = dataset
+            lgm().log(f"Load dataset {self.dsid()}, current datasets = {self.datasets.keys()}")
+            xdataset: Optional[xa.Dataset] = self.loadDataFile(**kwargs)
+            if xdataset is None:
+                xdataset = self.process_block( tm().getBlock() )
+            if len(xdataset.variables.keys()) == 0:
+                lgm().log(f"Warning: Attempt to Load empty dataset {self.dataFile( **kwargs )}", print=True)
+                return None
+            else:
+                lgm().log(f" ---> Opening Dataset {self.dsid()}")
+                dvars: Dict[str,Union[xa.DataArray,List,Dict]] = self.dset_subsample( xdataset, dsid=self.dsid(), **kwargs )
+                attrs = xdataset.attrs.copy()
+                raw_data = dvars['samples']
+                lgm().log( f" -----> reduction: shape = {dvars['reduction'].shape}, #NULL={np.count_nonzero(np.isnan(dvars['reduction'].values))}")
+                lgm().log( f" -----> point_data: shape = {raw_data.shape}, #NULL={np.count_nonzero(np.isnan(raw_data.values))}")
+                dvars['plot-x'] = dvars['bands'] if ('bands'in dvars) else dvars['band']
+                dvars['plot-mx'] = dvars['model']
+                attrs['dsid'] = self.dsid()
+                attrs['type'] = 'spectra'
+                dvars['attrs'] = attrs
+                self.datasets[ self.dsid() ] = dvars
         return self.datasets[ self.dsid() ]
 
     def blockFilePath( self, **kwargs ) -> str:
-        return os.path.join(self.datasetDir, self.dsid(**kwargs) + ".nc")
+        ext = kwargs.get('ext','nc')
+        return path.join(self.datasetDir, self.dsid(**kwargs) + "." + ext )
 
-    def loadDataFile( self, **kwargs ) -> xa.Dataset:
+    def removeDataset(self):
+        for f in os.listdir(self.datasetDir):
+            file = os.path.join(self.datasetDir, f)
+            if path.isfile( file ):
+                os.remove( file )
+
+    def leafletRasterPath( self, **kwargs ) -> str:
         from spectraclass.data.base import DataManager, dm
-        data_file = os.path.join( self.datasetDir, self.dsid(**kwargs) + ".nc" )
-        try:
-            dataset: xa.Dataset = xa.open_dataset( data_file )
-        except FileNotFoundError:
-            print( "Preparing input" )
-            dm().prepare_inputs()
-            dm().save_config()
-            dataset: xa.Dataset = xa.open_dataset( data_file )
-        dataset.attrs['data_file'] = data_file
+        return f"files/spectraclass/datasets/{self.MODE}/{dm().name}/{self.dsid(**kwargs)}{self.ext}"
+
+    def dataFile( self, **kwargs ):
+        raise NotImplementedError( "Attempt to call virtual method")
+
+    def hasBlockData(self) -> bool:
+        return path.isfile( self.dataFile() )
+
+    def loadDataFile( self, **kwargs ) -> Optional[xa.Dataset]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        ufm().show(f" Loading Tile {tm().block_index}")
+        dFile = self.dataFile( **kwargs )
+        dataset: Optional[xa.Dataset] = None
+        if path.isfile( dFile ):
+            dataset = xa.open_dataset( dFile, concat_characters=True )
+            dataset.attrs['data_file'] = dFile
+            vars = [ f"{vid}{var.dims}" for (vid,var) in dataset.variables.items()]
+            coords = [f"{cid}{coord.shape}" for (cid, coord) in dataset.coords.items()]
+            lgm().log( f"#GID: loadDataFile: {dFile}, coords={coords}, vars={vars}" )
+            lgm().log( f"#GID:  --> coords={coords}")
+            lgm().log( f"#GID:  --> vars={vars}")
         return dataset
 
     def filterCommonPrefix(self, paths: List[str])-> Tuple[str,List[str]]:
@@ -219,20 +338,20 @@ class ModeDataManager(SCSingletonConfigurable):
         return longest_pre, [ p[plen:] for p in paths ]
 
     def getDatasetList( self ) -> Tuple[str,List[str]]:
-        dset_glob = os.path.expanduser(f"{self.datasetDir}/*.nc")
+        dset_glob = path.expanduser(f"{self.datasetDir}/*.nc")
         lgm().log(f"  Listing datasets from glob: '{dset_glob}' ")
-        files = list(filter(os.path.isfile, glob.glob(dset_glob)))
-        files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+        files = list(filter( path.isfile, glob.glob(dset_glob)))
+        files.sort(key=lambda x: path.getmtime(x), reverse=True)
         filenames = [Path(f).stem for f in files]
         return self.filterCommonPrefix( filenames )
 
-    def loadCurrentProject(self) -> xa.Dataset:
+    def loadCurrentProject(self) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
         return self.loadDataset( )
 
     @property
     def datasetDir(self):
         from spectraclass.data.base import DataManager, dm
-        dsdir = os.path.join( self.cache_dir, "spectraclass", self.MODE, dm().name )
+        dsdir = path.join( self.cache_dir, "spectraclass", dm().mode )
         os.makedirs(dsdir, 0o777, exist_ok=True)
         return dsdir
 

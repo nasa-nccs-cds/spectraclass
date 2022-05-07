@@ -11,19 +11,19 @@ except ImportError:
     # sklearn.externals.joblib is deprecated in 0.21, will be removed in 0.23
     from sklearn.externals import joblib
 import numpy as np
-import xarray as xa
 import scipy.sparse
 import scipy.sparse.csgraph
-import umap.distances as dist
-import umap.sparse as sparse
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
+import spectraclass.ext.umap.distances as dist
+import spectraclass.ext.umap.sparse as sparse
 import numba
-from umap.utils import ( tau_rand_int, ts)
+from spectraclass.ext.umap.utils import ( tau_rand_int, ts)
 from .base import UMAP
-from umap.spectral import spectral_layout
-from umap.layouts import ( optimize_layout_generic, optimize_layout_inverse )
-from pynndescent.distances import named_distances as pynn_named_distances
-from pynndescent.sparse import sparse_named_distances as pynn_sparse_named_distances
-from pynndescent import NNDescent
+from spectraclass.ext.umap.spectral import spectral_layout
+from spectraclass.ext.umap.layouts import ( optimize_layout_generic, optimize_layout_inverse )
+from spectraclass.ext.pynndescent.distances import named_distances as pynn_named_distances
+from spectraclass.ext.pynndescent.sparse import sparse_named_distances as pynn_sparse_named_distances
+from spectraclass.ext.pynndescent import NNDescent
 _HAVE_PYNNDESCENT = True
 
 locale.setlocale(locale.LC_NUMERIC, "C")
@@ -467,10 +467,9 @@ def fuzzy_simplicial_set(
         knn_dists, float(n_neighbors), local_connectivity=float(local_connectivity),
     )
 
-    rows, cols, vals = compute_membership_strengths(
-        knn_indices, knn_dists, sigmas, rhos
-    )
+    rows, cols, vals = compute_membership_strengths( knn_indices, knn_dists, sigmas, rhos )
 
+    lgm().log( f"  EMBED: (vshape, (rmax, cmax)) = ({vals.shape}, ({rows.max()}, {cols.max()})), X shape = ({X.shape[0]}, {X.shape[0]})")
     result = scipy.sparse.coo_matrix(
         (vals, (rows, cols)), shape=(X.shape[0], X.shape[0])
     )
@@ -1015,7 +1014,7 @@ def optimize_layout_euclidean(
     embedding: array of shape (n_samples, n_components)
         The optimized embedding.
     """
-    from spectraclass.gui.points import  PointCloudManager
+    from spectraclass.gui.pointcloud import  PointCloudManager
     dim = head_embedding.shape[1]
     move_other = head_embedding.shape[0] == tail_embedding.shape[0]
     alpha = initial_alpha
@@ -1028,9 +1027,9 @@ def optimize_layout_euclidean(
         pass
     else:
       print( f" >>> Embed n_epochs={n_epochs}, alpha={alpha} ")
-      plot_update_period = n_epochs//3
+      plot_step = 3
       for n in range(n_epochs):
-        if ( dim == 3 ) and ( ((n % plot_update_period) == 0) or (n==1) ): pcm.update_points( head_embedding )
+        if (dim==3) and (n>0) and (n%plot_step==0): pcm.update_plot( points=head_embedding )
         optimize_fn(
             head_embedding,
             tail_embedding,
@@ -1056,7 +1055,6 @@ def optimize_layout_euclidean(
         if verbose and n % int(n_epochs / 10) == 0:
             print("\tcompleted ", n, " / ", n_epochs, "epochs")
 
-    pcm.update_points( head_embedding )
     return head_embedding
 
 @numba.njit()
@@ -1151,10 +1149,11 @@ class cpUMAP(UMAP):
         else:
             if isinstance(self.init, np.ndarray):
                 init = check_array(self.init, dtype=np.float32, accept_sparse=False)
-                print(f"Running umap[{self.n_components}] with init array, input shape = {self._raw_data.shape}")
+                lgm().log(f"Running umap[{self.n_components}] with init array, input shape = {self._raw_data.shape}")
             else:
                 init = self.init
-                print(f"Running umap[{self.n_components}] with init {init}, input shape = {self._raw_data.shape}")
+                lgm().log(f"Running umap[{self.n_components}] with init {init}, input shape = {self._raw_data.shape}")
+#                lgm().trace( "COMPUTING UMAP" )
 
         self._initial_alpha = self.learning_rate
         self._validate_parameters()

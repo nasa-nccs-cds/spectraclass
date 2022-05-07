@@ -70,7 +70,7 @@ class XExtension(object):
         return [ transform[1], -transform[5] ]
 
     def getTransform(self):
-        transform = self._obj.attrs.get("transform")
+        transform = self._obj.attrs.get('transform')
         if transform is None:
             y_arr = self._obj.coords[ self.y_coord ]
             x_arr = self._obj.coords[ self.x_coord ]

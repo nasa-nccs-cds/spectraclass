@@ -1,4 +1,5 @@
 from spectraclass.data.base import DataManager
+from typing import List, Union, Tuple, Optional, Dict, Callable
 import sys
 
 if len(sys.argv) != 3:
@@ -9,6 +10,6 @@ else:
     project: str = sys.argv[2]    #   e.g. 'demo1', 'demo2', 'demo3', or 'demo4'
 
     dm: DataManager = DataManager.initialize( project, mode )
-    dm.prepare_inputs()
-    dm.save_config()
+    dm.prepare_inputs( reprocess=False )
+
 

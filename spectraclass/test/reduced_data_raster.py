@@ -2,7 +2,6 @@ from spectraclass.data.base import DataManager
 from spectraclass.gui.spatial.application import Spectraclass
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.data.spatial.tile.tile import Block
-from spectraclass.gui.spatial.satellite import SatellitePlotManager, spm
 import xarray as xa
 
 dm: DataManager = DataManager.initialize("demo1",'keelin')
