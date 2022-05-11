@@ -471,6 +471,12 @@ class MapManager(SCSingletonConfigurable):
         if self.block is None: self.setBlock()
         return self.block.points2raster( dm().getModelData() ) if use_model else self.block.data
 
+    def getModelData(self, raster: bool ):
+        from spectraclass.data.base import dm
+        if self.block is None: self.setBlock()
+        point_data = dm().getModelData()
+        return self.block.points2raster(  point_data ) if raster else point_data
+
     @exception_handled
     def setBlock( self, block_index: Tuple[int,int] = None, **kwargs ):
         from spectraclass.data.spatial.tile.manager import tm

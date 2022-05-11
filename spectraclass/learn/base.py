@@ -51,15 +51,31 @@ class LearningModel:
     def score(self) -> Optional[np.ndarray]:
         return self._score
 
+    def get_training_set(self, **kwargs ) -> Tuple[np.ndarray,np.ndarray]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.model.labels import LabelsManager, Action, lm
+        label_data = lm().getTrainingLabels()
+        training_data, training_labels = None, None
+        for ( (tindex, bindex, cid), pids ) in label_data.items():
+            model_data: xa.DataArray = tm().getBlock( tindex=tindex, bindex=bindex ).model_data
+            training_mask: np.ndarray = np.isin( model_data.samples.values, pids )
+            tdata: np.ndarray = model_data.values[ training_mask ]
+            lgm().log( f"Adding training data: tindex={tindex},  bindex={bindex},  cid={cid},  #pids={pids.size} ")
+            tlabels: np.ndarray = np.full( [pids.size], cid )
+            training_data   = tdata   if (training_data   is None) else np.append( training_data,   tdata,   axis=0 )
+            training_labels = tlabels if (training_labels is None) else np.append( training_labels, tlabels, axis=0 )
+        lgm().log(f"SHAPES--> training_data: {training_data.shape}, training_labels: {training_labels.shape}" )
+        return ( training_data, training_labels )
+
     @exception_handled
-    def learn_classification( self, point_data: np.ndarray, class_data: np.ndarray, **kwargs ):
-        from spectraclass.model.labels import LabelsManager, lm
+    def learn_classification( self,**kwargs ):
+        training_data, training_labels = self.get_training_set( **kwargs )
         t1 = time.time()
-        if np.count_nonzero( class_data > 0 ) == 0:
+        if np.count_nonzero( training_labels > 0 ) == 0:
             ufm().show( "Must label some points before learning the classification" )
             return None
-        lgm().log(f"Learning mapping with shapes: point_data{point_data.shape}, class_data{class_data.shape}")
-        self.fit( point_data, class_data, **kwargs )
+        lgm().log(f"Learning mapping with shapes: spectral_data{training_data.shape}, class_data{training_labels.shape}")
+        self.fit( training_data, training_labels, **kwargs )
         lgm().log(f"Completed learning in {time.time() - t1} sec.")
 
 

@@ -55,15 +55,17 @@ class ModeDataManager(SCSingletonConfigurable):
 
     @property
     def extension(self):
-        return self.ext
+        from spectraclass.data.base import DataManager, dm
+        return dm().modal.ext
 
     @property
     def default_images_glob(self):
         return "*" + self.extension
 
     def generate_image_list(self):
+        from spectraclass.data.base import DataManager, dm
         if len( self.image_names ) == 0:
-            iglob = f"{self.data_dir}/{(self.images_glob if self.images_glob else self.default_images_glob)}"
+            iglob = f"{dm().modal.data_dir}/{(dm().modal.images_glob if dm().modal.images_glob else self.default_images_glob)}"
             image_path_list = glob.glob( iglob )
             self.image_names = [ self.extract_image_name( image_path ) for image_path in image_path_list ]
             lgm().log( f"Generate image names from glob '{iglob}': {self.image_names}")

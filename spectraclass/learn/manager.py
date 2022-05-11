@@ -260,10 +260,8 @@ class ClassificationManager(SCSingletonConfigurable):
         self.model.load( model_name, **kwargs )
 
     @exception_handled
-    def learn_classification( self, filtered_point_data: np.ndarray, filtered_labels: np.ndarray, **kwargs  ):
-        lrng = [ filtered_labels.min(),filtered_labels.max() ]
-        lgm().log( f"learn_classification-> point_data: shape={filtered_point_data.shape}; labels: shape={filtered_labels.shape}, range={lrng}")
-        self.model.learn_classification( filtered_point_data, filtered_labels, **kwargs  )
+    def learn_classification( self, **kwargs  ):
+        self.model.learn_classification( **kwargs  )
 
     @exception_handled
     def apply_classification( self, embedding: xa.DataArray, **kwargs ) -> xa.DataArray:

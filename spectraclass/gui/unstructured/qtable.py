@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import ipywidgets as ipw
 from spectraclass.widgets.buttons import ToggleButton
-from spectraclass.data.base import dm
+x
 import traitlets as tl
 from spectraclass.model.labels import LabelsManager
 from spectraclass.model.base import SCSingletonConfigurable

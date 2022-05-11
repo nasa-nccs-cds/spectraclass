@@ -66,5 +66,6 @@ class DesisDataManager(SpatialDataManager):
 
     @property
     def extension(self):
-        return "-SPECTRAL_IMAGE" + self.ext
+        from spectraclass.data.base import DataManager, dm
+        return "-SPECTRAL_IMAGE" + dm().modal.ext
 
