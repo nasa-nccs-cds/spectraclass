@@ -66,6 +66,9 @@ class ClusterManager(SCSingletonConfigurable):
     def update_model(self):
         self._models[ self.mid ] = self.create_model( self.mid )
 
+    def add_model(self, mid: str, clusterer: ClusterBase ):
+        self._models[ mid ] = clusterer
+
     def update_colors(self, ncolors: int):
         hsv = np.full( [ncolors,3], 1.0 )
         hsv[:,0] = np.linspace( 0.0, 1.0, ncolors+1 )[:ncolors]
