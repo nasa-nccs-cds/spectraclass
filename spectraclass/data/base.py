@@ -265,7 +265,9 @@ class DataManager(SCSingletonConfigurable):
         lgm().log( f" DataManager: loadCurrentProject: {caller_id}" )
         if clear: self._project_data = None
         if self._mode_data_manager_ is not None:
+            lgm().log(f" DataManager: loadCurrentProject: mode_data_manager" )
             if self._project_data is None:
+                lgm().log(f" DataManager: loadCurrentProject: project_data")
                 self._project_data = self._mode_data_manager_.loadCurrentProject()
                 assert self._project_data is not None, "Project initialization failed- check log file for details"
                 ns = self._project_data['samples'].size
