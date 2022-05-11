@@ -253,7 +253,7 @@ class DataManager(SCSingletonConfigurable):
 
     def control_panel(self) -> ip.VBox:
         title = ipw.Label( value="Images", width='500px' )
-        file_selector = dm().modal.file_selector
+        file_selector = dm().modal.set_file_selection_observer( dm().modal.on_image_change )
         use_model_data = ip.Checkbox( value=False, description = "View Model Data", layout=ipw.Layout( width='500px' ) )
         tl.link( (use_model_data, "value"), (self, 'use_model_data') )
         return ip.VBox( [ title, file_selector, use_model_data ], layout=ipw.Layout(flex='1 1 auto') )

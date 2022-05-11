@@ -106,8 +106,11 @@ class ModeDataManager(SCSingletonConfigurable):
         if self._file_selector is None:
             lgm().log( f"Creating file_selector, options={self.image_names}, value={self.image_names[0]}")
             self._file_selector =  ip.Select( options=self.image_names, value=self.image_names[0], layout=ipw.Layout(width='600px') )
-            self._file_selector.observe( self.on_image_change, names=['value'] )
         return self._file_selector
+
+    def set_file_selection_observer( self, observer ):
+        self.file_selector.observe( observer, names=['value'] )
+        return self.file_selector
 
     def on_image_change( self, event: Dict ):
         from spectraclass.data.base import DataManager, dm
