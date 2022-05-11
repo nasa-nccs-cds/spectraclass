@@ -329,9 +329,9 @@ class SpatialDataManager(ModeDataManager):
         return os.path.join( self.datasetDir, file_name + f"-m{self.model_dims}.nc" )
 
     def getFilePath(self) -> str:
-        base_dir = dm().modal.data_dir
-        ext = dm().modal.extension
-        base_file = dm().modal.image_name
+        base_dir = ModeDataManager.data_dir
+        ext = ModeDataManager.extension
+        base_file = self.image_name
         if base_file.endswith(ext):
             return f"{base_dir}/{base_file}"
         else:
@@ -383,7 +383,7 @@ class SpatialDataManager(ModeDataManager):
         return toXA( vnames[0], gtarray, file_extension, True )
 
     def getClassMap(self) -> Optional[xa.DataArray]:
-        class_file_path = os.path.join( self.data_dir, self.class_file )
+        class_file_path = os.path.join( ModeDataManager.data_dir, self.class_file )
         if not os.path.isfile(class_file_path): return None
         print( f"\nReading class file: {class_file_path}\n")
         return self.readDataFile( class_file_path )
