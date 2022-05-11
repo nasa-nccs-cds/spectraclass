@@ -329,8 +329,8 @@ class SpatialDataManager(ModeDataManager):
         return os.path.join( self.datasetDir, file_name + f"-m{self.model_dims}.nc" )
 
     def getFilePath(self) -> str:
-        base_dir = ModeDataManager.data_dir
-        ext = ModeDataManager.extension
+        base_dir = self.data_dir
+        ext = self.extension
         base_file = self.image_name
         if base_file.endswith(ext):
             return f"{base_dir}/{base_file}"
