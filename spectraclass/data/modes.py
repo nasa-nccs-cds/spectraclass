@@ -276,7 +276,7 @@ class ModeDataManager(SCSingletonConfigurable):
     @exception_handled
     def loadDataset(self, **kwargs) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        lgm().log(f"Load dataset...")
+        lgm().log(f"Load dataset, current = {self.datasets.keys()}")
         if self.dsid() not in self.datasets:
             lgm().log(f"Load dataset {self.dsid()}, current datasets = {self.datasets.keys()}")
             xdataset: Optional[xa.Dataset] = self.loadDataFile(**kwargs)

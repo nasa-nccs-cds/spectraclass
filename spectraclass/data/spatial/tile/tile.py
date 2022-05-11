@@ -162,6 +162,7 @@ class Tile(DataContainer):
         return self.data.attrs['tilename']
 
     def getDataBlock(self, ix: int, iy: int, **kwargs ) -> Optional["Block"]:
+        lgm().log(  f"getDataBlock: coords[x,y]={(ix,iy)}")
         if (ix,iy) in self._blocks: return self._blocks[ (ix,iy) ]
         return self._blocks.setdefault( (ix,iy), Block( self, ix, iy, self._index, **kwargs ) )
 
