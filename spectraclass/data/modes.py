@@ -25,7 +25,7 @@ class ModeDataManager(SCSingletonConfigurable):
     VALID_BANDS = None
     application: SpectraclassController = None
 
-    image_names = tl.List( default_value=[] ).tag( config=True, sync=True, cache=False )
+    _image_names = tl.List( default_value=[] ).tag( config=True, sync=True, cache=False )
     images_glob = tl.Unicode(default_value="").tag( config=True, sync=True, cache=False )
     dset_name = tl.Unicode( "" ).tag(config=True)
     cache_dir = tl.Unicode( "" ).tag(config=True)
@@ -51,22 +51,25 @@ class ModeDataManager(SCSingletonConfigurable):
         self._dataset_prefix: str = ""
         self._file_selector = None
         self._active_image = 0
+
+    @property
+    def image_names(self) -> List[str]:
         self.generate_image_list()
+        return self._image_names
 
     @property
     def extension(self):
-        from spectraclass.data.base import DataManager, dm
-        return dm().modal.ext
+        return self.ext
 
     @property
     def default_images_glob(self):
         return "*" + self.extension
 
     def generate_image_list(self):
-        if len( self.image_names ) == 0:
-            iglob = f"{ModeDataManager.data_dir}/{(ModeDataManager.images_glob if ModeDataManager.images_glob else self.default_images_glob)}"
+        if len( self._image_names ) == 0:
+            iglob = f"{self.data_dir}/{(self.images_glob if self.images_glob else self.default_images_glob)}"
             image_path_list = glob.glob( iglob )
-            self.image_names = [ self.extract_image_name( image_path ) for image_path in image_path_list ]
+            self._image_names = [ self.extract_image_name( image_path ) for image_path in image_path_list ]
             lgm().log( f"Generate image names from glob '{iglob}': {self.image_names}")
 
     def set_current_image(self, image_index: int ):
@@ -75,7 +78,8 @@ class ModeDataManager(SCSingletonConfigurable):
         self._active_image = image_index
         tm().tile.initialize()
 
-    def extract_image_name(self, image_path: str ) -> str:
+    @classmethod
+    def extract_image_name( cls, image_path: str ) -> str:
         return Path(image_path).stem
 
     @property
