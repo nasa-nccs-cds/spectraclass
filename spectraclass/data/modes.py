@@ -65,12 +65,16 @@ class ModeDataManager(SCSingletonConfigurable):
     def default_images_glob(self):
         return "*" + self.extension
 
+    @exception_handled
     def generate_image_list(self):
         if len( self._image_names ) == 0:
+            lgm().log(f"generate_image_list")
             iglob = f"{self.data_dir}/{(self.images_glob if self.images_glob else self.default_images_glob)}"
+            lgm().log(f" ---> glob: '{iglob}'")
             image_path_list = glob.glob( iglob )
+            lgm().log(f" ---> FOUND {len(image_path_list)} paths")
             self._image_names = [ self.extract_image_name( image_path ) for image_path in image_path_list ]
-            lgm().log( f"Generate image names from glob '{iglob}': {self.image_names}")
+            lgm().log( f" ---> IMAGE LIST: {self.image_names}")
 
     def set_current_image(self, image_index: int ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
