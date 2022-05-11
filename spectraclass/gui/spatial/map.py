@@ -464,9 +464,12 @@ class MapManager(SCSingletonConfigurable):
 
     @property
     def data(self) -> Optional[xa.DataArray]:
+        return self.getRasterData( self._use_model_data )
+
+    def getRasterData(self, use_model: bool ) -> Optional[xa.DataArray]:
         from spectraclass.data.base import dm
         if self.block is None: self.setBlock()
-        return self.block.points2raster( dm().getModelData() ) if self._use_model_data else self.block.data
+        return self.block.points2raster( dm().getModelData() ) if use_model else self.block.data
 
     @exception_handled
     def setBlock( self, block_index: Tuple[int,int] = None, **kwargs ):

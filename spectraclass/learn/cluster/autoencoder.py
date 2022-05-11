@@ -32,7 +32,6 @@ class AutoEncoderCluster(ClusterBase):
 
     def _update_nclusters( self ):
         self.compute_reduction()
-        self.cscale = np.full( [1, self._n_clusters], 0.5 )
 
 
 

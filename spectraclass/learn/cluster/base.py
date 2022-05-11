@@ -22,7 +22,7 @@ class  ClusterBase(TransformerMixin,ClusterMixin,BaseEstimator):
         raise NotImplementedError( "Call to abstract method of base class: ClusterBase.fit_predict")
 
     def _update_nclusters( self ):
-        raise NotImplementedError( "Call to abstract method of base class: ClusterBase._update_nclusters")
+        pass
 
     @property
     def n_clusters(self) -> int:
@@ -31,6 +31,7 @@ class  ClusterBase(TransformerMixin,ClusterMixin,BaseEstimator):
     @n_clusters.setter
     def n_clusters( self, value: int ):
         self._n_clusters = value
+        self.cscale = np.full([1, self._n_clusters], 0.5)
         self._update_nclusters()
 
 

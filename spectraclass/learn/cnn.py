@@ -17,7 +17,7 @@ from tensorflow.keras import datasets, layers, models
 class CNN:
 
     @classmethod
-    def build( cls, input_shape: List[int], **kwargs ) -> models.Sequential:    # (batch, channels, height, width)
+    def build( cls, input_shape: List[int], nclasses: int, **kwargs ) -> models.Sequential:    # (batch, channels, height, width)
         ks = kwargs.get('kernel_size',3)
         model = models.Sequential()
         model.add(layers.Conv2D(32, (ks,ks), activation='relu', input_shape=input_shape, data_format="channels_first"))
@@ -25,5 +25,7 @@ class CNN:
         model.add(layers.Conv2D(64, (3, 3), activation='relu'))
         model.add(layers.Flatten(data_format="channels_first") )
         model.add(layers.Dense(64, activation='relu'))
-        model.add(layers.Dense(10))
+        model.add( layers.Dense( nclasses, activation='linear' ) )
+        activation = tf.keras.layers.Softmax( axis=-1, **kwargs )
+        model.add( layers.Dense( nclasses, activation=activation ))
         return model

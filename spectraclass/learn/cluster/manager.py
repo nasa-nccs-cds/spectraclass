@@ -50,7 +50,7 @@ class ClusterManager(SCSingletonConfigurable):
     def __init__(self, **kwargs ):
         super(ClusterManager, self).__init__(**kwargs)
         self._ncluster_options = range( 2, 30 )
-        self._mid_options = [ "kmeans", "autoencoder", "umap" ] # "hierarchical" "DBSCAN", "spectral" ]
+        self._mid_options = [ "kmeans", "fuzzy cmeans", "autoencoder" ] # , "umap" ] # "hierarchical" "DBSCAN", "spectral" ]
         self._cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
         self._marked_colors: Dict[Tuple,Tuple[float,float,float]] = {}
@@ -78,6 +78,7 @@ class ClusterManager(SCSingletonConfigurable):
 
     def create_model(self, mid: str ) -> ClusterBase:
         from .autoencoder import AutoEncoderCluster
+        from .fcm import FCM
         from  .kmeans import KMeansCluster
         nclusters = self._ncluster_selector.value
         self.update_colors( nclusters )
@@ -87,6 +88,8 @@ class ClusterManager(SCSingletonConfigurable):
             return KMeansCluster( nclusters, **params )
         if mid == "autoencoder":
             return AutoEncoderCluster( nclusters )
+        if mid == "fuzzy cmeans":
+            return FCM( nclusters )
 
         # elif mid == "hierarchical":
         #     return cluster.AgglomerativeClustering( linkage="ward", n_clusters=nclusters ) # , connectivity= )

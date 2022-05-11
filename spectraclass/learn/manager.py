@@ -169,6 +169,9 @@ class ClassificationManager(SCSingletonConfigurable):
     def mids(self) -> List[str]:
         return list(self._models.keys())
 
+    def addModel(self, name: str, model: LearningModel ):
+        self._models[ name ] = model
+
     @exception_handled
     def create_selection_panel(self, **kwargs ):
         default = kwargs.get( 'default', self.mids[0] )
@@ -184,10 +187,7 @@ class ClassificationManager(SCSingletonConfigurable):
         from .svc import SVCLearningModel
         self._models['mlp'] = self.create_default_mlp()
         self._models['svc'] = SVCLearningModel()
- #       self._models['cnn'] = self.create_default_cnn()
-
-    def create_default_cnn(self) -> "LearningModel":
-        pass
+  #      self._models['cnn'] = self.create_default_cnn()
 
     def create_default_mlp(self) -> "LearningModel":
         from .mlp import MLP
@@ -195,6 +195,13 @@ class ClassificationManager(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         from .base import KerasModelWrapper
         return KerasModelWrapper( "mlp", MLP.build( dm().modal.model_dims, lm().nLabels ) )
+
+    def create_default_cnn(self) -> "LearningModel":
+        from .cnn import CNN
+        from spectraclass.model.labels import lm
+        from spectraclass.data.base import DataManager, dm
+        from .base import KerasModelWrapper
+        return KerasModelWrapper( "cnn", CNN.build( dm().modal.model_dims, lm().nLabels ) )
 
     def addLearningModel(self, mid: str, model: "LearningModel" ):
         self._models[ mid ] = model
