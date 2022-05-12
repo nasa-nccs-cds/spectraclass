@@ -367,8 +367,11 @@ class SpatialDataManager(ModeDataManager):
         lgm().log( f"Completed Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}", print=True )
         gt = [ float(sval) for sval in input_bands.spatial_ref.GeoTransform.split() ]
         input_bands.attrs['transform'] = [ gt[1], gt[2], gt[0], gt[4], gt[5], gt[3] ]
-        lgm().log("ATTRIBUTES:")
-        for (k,v) in input_bands.attrs.items(): lgm().log(f" ** {k}: {v}" )
+        lgm().log(f" --> transform: {input_bands.attrs['transform']}")
+        lgm().log(f" --> coord shapes:")
+        for (k, v) in input_bands.coords.items(): lgm().log(f"     ** {k}: {v.shape}, range: {(v.values.min(),v.values.max())}")
+#        lgm().log("ATTRIBUTES:")
+#        for (k,v) in input_bands.attrs.items(): lgm().log(f" ** {k}: {v}" )
         return input_bands
 
     def readMatlabFile(self, input_file_path: str ) -> xa.DataArray:
