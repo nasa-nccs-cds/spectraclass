@@ -1,7 +1,11 @@
 from spectraclass.data.base import DataManager
 from matplotlib.image import AxesImage
+#import hvplot.xarray
+#import panel as pn
+# from holoviews.core.spaces import DynamicMap
 from matplotlib.backend_bases import PickEvent, MouseEvent
 from matplotlib.axes import Axes
+from spectraclass.gui.spatial.basemap import TileServiceBasemap
 from matplotlib.patches import Rectangle, RegularPolygon, Polygon
 from spectraclass.gui.control import UserFeedbackManager, ufm
 import numpy as np
@@ -27,6 +31,7 @@ class AvirisDatasetManager:
         self.grid_color = kwargs.get("grid_color", 'white')
         self.selection_color = kwargs.get("selection_color", 'black')
         self.grid_alpha = kwargs.get("grid_alpha", 0.5 )
+        self.base = TileServiceBasemap()
         self.slw = kwargs.get("slw", 3)
         self.dm.proc_type = "cpu"
         self._blocks: List[Rectangle] = []
@@ -36,6 +41,7 @@ class AvirisDatasetManager:
         self._nbands = None
         self.band_selector: ipw.IntSlider = None
         self.band_plot: AxesImage = None
+        self.overlay_plot: AxesImage = None
         self._axes: Axes = None
         lgm().log( f"AvirisDatasetManager: Found {self.nimages} images "  )
 
@@ -85,11 +91,13 @@ class AvirisDatasetManager:
         plt.ioff()
         self.update_image()
         self.add_block_selection()
+        self.select_block()
         self.band_selector = ipw.IntSlider( self.init_band, 0, self.nbands, 1 )
         self.band_selector.observe( self.on_band_change, "value" )
         self.dm.modal.set_file_selection_observer( self.on_image_change )
-        control_panel = ipw.VBox( [ufm().gui(), self.dm.modal.file_selector, self.band_selector, self.band_plot.figure.canvas] )
-        widget = ipw.HBox( [ control_panel], layout=ipw.Layout(flex='1 1 auto') )
+        control_panel = ipw.VBox( [ufm().gui(), self.dm.modal.file_selector, self.band_plot.figure.canvas] )
+        overlay_panel = ipw.VBox( [ self.overlay_plot.figure.canvas, self.band_selector ] )
+        widget = ipw.HBox( [ overlay_panel, control_panel ], layout=ipw.Layout(flex='1 1 auto') )
         plt.ion()
         return widget
 
@@ -135,7 +143,7 @@ class AvirisDatasetManager:
         lgm().log(f"  add_block_selection: block_size={block_size}, block_dims={block_dims}, transform={transform} ")
         for tx in range( block_dims[0] ):
             for ty in range( block_dims[1] ):
-                selected = ( (tx,ty) == tm().block_index )
+                selected = ( (tx,ty) == tm().block_index ) or ( self._selected_block is None )
                 ix, iy = tx*block_size, ty*block_size
                 lw = self.slw if ( selected ) else 1
                 color = self.selection_color if ( selected ) else self.grid_color
@@ -144,18 +152,39 @@ class AvirisDatasetManager:
                 r.set_picker( True )
                 self.ax.add_patch( r )
                 self._blocks.append( r )
-                if selected: self._selected_block = r
+                if selected:
+                    self._selected_block = r
+                    tm().block_index = (tx,ty)
 
-    def select_block(self, r: Rectangle ):
-        if r != self._selected_block:
-            lgm().log(f"  ******** Selected block: {r.block_index}  ******** ")
-            if self._selected_block is not None:
-                self._selected_block.set_color( self.grid_color )
-            r.set_linewidth(self.slw)
-            r.set_color( self.selection_color )
-            self._selected_block = r
-            self.ax.figure.canvas.draw_idle()
- #           mm().setBlock( r.block_index, update=True )
+    def highlight_block( self, r: Rectangle ):
+        if r == self._selected_block: return False
+        if self._selected_block is not None:
+            self._selected_block.set_color( self.grid_color )
+        r.set_linewidth(self.slw)
+        r.set_color( self.selection_color )
+        self._selected_block = r
+        self.ax.figure.canvas.draw_idle()
+        return True
+
+    @log_timing
+    def select_block(self, r: Rectangle = None ):
+        from spectraclass.data.spatial.manager import SpatialDataManager
+        if r is None: r = self._selected_block
+        iband = 160
+        if self.highlight_block( r ) or (self.overlay_plot is None):
+            block_data = self.get_data_block( r.block_index )
+            transformed_data: xa.DataArray = block_data.xgeo.reproject( espg=3785 )
+            band_data = transformed_data[iband].squeeze()
+            ext = SpatialDataManager.extent(transformed_data)
+            if self.overlay_plot is None:
+                self.base.setup_plot( "Subtile overlay", ( ext[0], ext[1] ), ( ext[2], ext[3] ) )
+                self.overlay_plot = band_data.plot.imshow(ax=self.base.gax, alpha=1.0, cmap='jet',  add_colorbar=False)
+
+    def get_data_block(self, coords: Tuple[int,int] ) -> xa.DataArray:
+        data_array: xa.DataArray = tm().tile.data
+        bsize = tm().block_size
+        ix, iy = coords[0] * bsize, coords[1] * bsize
+        return data_array[ :, iy:iy+bsize, ix:ix+bsize ]
 
     def on_pick(self, event: PickEvent =None):
         lgm().log( f" Pick Event: type = {type(event)}" )

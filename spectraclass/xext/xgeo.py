@@ -121,10 +121,14 @@ class XGeo(XExtension):
                 dst_crs=dst_crs,
                 resampling=Resampling.nearest)
 
-            lons, _ = transform( src_crs, dst_crs, xaxis, [yaxis[0]]*xaxis.size )
-            _, lats = transform( src_crs, dst_crs, [xaxis[0]]*yaxis.size, yaxis )
+            x, _ = transform( src_crs, dst_crs, xaxis, [yaxis[0]]*xaxis.size )
+            _, y = transform( src_crs, dst_crs, [xaxis[0]]*yaxis.size, yaxis )
+            [ bd, yd, xd ] = self._obj.dims
+            band = self._obj.coords[ bd ]
+#            coords = { bd:band, yd:y, xd:x }
+            coords = {bd: band, yd:range(destination.shape[1]), xd:range(destination.shape[2])}
 
-            result = xr.DataArray( destination, dims=['lat','lon'], coords = dict(lat=lats,lon=lons) )
+            result = xr.DataArray( destination, dims=self._obj.dims, coords =coords )
             result.attrs['transform'] = dst_transform
             result.attrs['crs'] = dst_crs
             return result
