@@ -88,9 +88,6 @@ class XGeo(XExtension):
             src_transform = self._obj.transform[0:6]
             src_sref: osgeo.osr.SpatialReference = self._crs
             source: np.ndarray = self._obj.data
-            xaxis = self._obj.coords[ 'xc' ]
-            yaxis = self._obj.coords[ 'yc' ]
-
             src_crs =  CRS.from_wkt( src_sref.ExportToWkt() )
             dst_crs =  CRS.from_wkt( sref.ExportToWkt() )
             dst_transforms: Tuple[Affine] = calculate_default_transform( src_crs, dst_crs, src_shape[1], src_shape[0],
@@ -100,9 +97,8 @@ class XGeo(XExtension):
                                                          top=src_transform[5])
 
             dst_transform = dst_transforms[0][0:6]
- #           dst_shape = [ dst_transforms[2], dst_transforms[1] ]
             dst_shape = src_shape
-            destination = np.zeros(dst_shape, np.uint8)
+            destination = np.zeros( dst_shape, np.float32 )
 
             print( f" XGEO.reproject-> crs:  {src_crs.__class__} -> {dst_crs.__class__}, transform: {src_transform.__class__} -> {dst_transform.__class__}")
             print(f" -->  src crs:  {src_crs}")
@@ -126,6 +122,7 @@ class XGeo(XExtension):
             [ bd, yd, xd ] = self._obj.dims
             band = self._obj.coords[ bd ]
             coords = {bd:band, yd:y, xd:x}
+            print(f" --> result vrange:  {[np.nanmin(destination),np.nanmax(destination)]}")
 
             result = xr.DataArray( destination, dims=self._obj.dims, coords =coords )
             result.attrs['transform'] = dst_transform

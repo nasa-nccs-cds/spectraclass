@@ -11,5 +11,7 @@ elif location == "desktop":
 else: raise Exception( f"Unknown location: {location}")
 
 widget = AvirisDatasetManager( **mparms )
-block_data = widget.get_data_block( (1,1) )
-transformed_data: xa.DataArray = block_data.xgeo.reproject(espg=3785)
+widget.add_block_selection()
+transformed_data: xa.DataArray = widget.overlay_image_data()
+drange = widget.get_color_bounds(transformed_data)
+print( drange )

@@ -33,9 +33,9 @@ class AvirisDatasetManager:
         self.slw = kwargs.get("slw", 3)
         self.colorstretch = 2.0
         self.dm.proc_type = "cpu"
-        self._blocks: List[Rectangle] = []
+        self._blocks: Dict[Tuple[int,int],Rectangle] = {}
         self._transformed_block_data = None
-        self._selected_block = None
+        self._selected_block: Tuple[int,int] = None
         TileManager.block_size = kwargs.get( 'block_size',  250 )
         self.nimages = len( self.dm.modal.image_names )
         self._nbands = None
@@ -44,6 +44,10 @@ class AvirisDatasetManager:
         self.overlay_plot: AxesImage = None
         self._axes: Axes = None
         lgm().log( f"AvirisDatasetManager: Found {self.nimages} images "  )
+
+    @property
+    def selected_block(self) -> Optional[Rectangle]:
+        return self._blocks.get( self._selected_block )
 
     @property
     def nbands(self) -> int:
@@ -151,7 +155,7 @@ class AvirisDatasetManager:
         lgm().log(f"  add_block_selection: block_size={block_size}, block_dims={block_dims}, transform={transform} ")
         for tx in range( block_dims[0] ):
             for ty in range( block_dims[1] ):
-                selected = ( (tx,ty) == tm().block_index ) or ( self._selected_block is None )
+                selected = ( (tx,ty) == self._selected_block ) or ( self._selected_block is None )
                 ix, iy = tx*block_size, ty*block_size
                 lw = self.slw if ( selected ) else 1
                 color = self.selection_color if ( selected ) else self.grid_color
@@ -159,25 +163,23 @@ class AvirisDatasetManager:
                 setattr( r, 'block_index', (tx,ty) )
                 r.set_picker( True )
                 self.ax.add_patch( r )
-                self._blocks.append( r )
-                if selected:
-                    self._selected_block = r
-                    tm().block_index = (tx,ty)
+                self._blocks[(tx,ty)] = r
+                if selected: self._selected_block = (tx,ty)
 
     def highlight_block( self, r: Rectangle ):
-        if r == self._selected_block: return False
-        if self._selected_block is not None:
-            self._selected_block.set_color( self.grid_color )
+        srec = self.selected_block
+        if r == srec: return False
+        if srec is not None:  srec.set_color( self.grid_color )
         r.set_linewidth(self.slw)
         r.set_color( self.selection_color )
-        self._selected_block = r
+        self._selected_block = r.block_index
         self.ax.figure.canvas.draw_idle()
         return True
 
     @log_timing
     def select_block(self, r: Rectangle = None ):
         from spectraclass.data.spatial.manager import SpatialDataManager
-        if r is None: r = self._selected_block
+        if r is None: r = self.selected_block
         if self.highlight_block( r ) or (self.overlay_plot is None):
             self.clear_block_cache()
             band_data = self.overlay_image_data()
@@ -191,7 +193,7 @@ class AvirisDatasetManager:
 
     def overlay_image_data(self) -> xa.DataArray:
         if self._transformed_block_data is None:
-            block_data = self.get_data_block( self._selected_block.block_index )
+            block_data = self.get_data_block()
             self._transformed_block_data: xa.DataArray = block_data.xgeo.reproject(espg=3785)
         return self._transformed_block_data[self.band_index].squeeze()
 
@@ -199,18 +201,31 @@ class AvirisDatasetManager:
         pass
 
     def get_color_bounds( self, raster: xa.DataArray ):
-        ave = raster.mean(skipna=True).values
-        std = raster.std(skipna=True).values
-        if std == 0.0:
-            msg =  "This block does not appear to contain any data.  Suggest trying a different tile/block."
-            ufm().show( msg, "red" ); lgm().log( "\n" +  msg + "\n"  )
+        ave = np.nanmean( raster.values )
+        std = np.nanstd(  raster.values )
+        nan_mask = np.isnan( raster.values )
+        nnan = np.count_nonzero( nan_mask )
+        lgm().log( f" **get_color_bounds: mean={ave}, std={std}, #nan={nnan}" )
         return dict( vmin= ave - std * self.colorstretch, vmax= ave + std * self.colorstretch  )
 
-    def get_data_block(self, coords: Tuple[int,int] ) -> xa.DataArray:
+    def get_data_block(self, coords: Tuple[int,int] = None ) -> xa.DataArray:
+        if coords is None: coords = self._selected_block
         data_array: xa.DataArray = tm().tile.data
         bsize = tm().block_size
         ix, iy = coords[0] * bsize, coords[1] * bsize
-        return data_array[ :, iy:iy+bsize, ix:ix+bsize ]
+        dblock = data_array[ :, iy:iy+bsize, ix:ix+bsize ]
+        return self.mask_nodata( dblock )
+
+    def mask_nodata(self, data_array: xa.DataArray ) -> xa.DataArray:
+        nodata = data_array.attrs.get('_FillValue')
+        if nodata is not None:
+            nodata_mask: np.ndarray = (data_array.values == nodata).flatten()
+            nnan = np.count_nonzero(nodata_mask)
+            flattened_data = data_array.values.flatten()
+            flattened_data[nodata_mask] = np.nan
+            data_array = data_array.copy( data=flattened_data.reshape(data_array.shape) )
+            print(f" $$$$ mask_nodata, shape={data_array.shape}, size={data_array.size}, #nan={nnan}, %nan={(nnan*100.0)/data_array.size:.1f}%")
+        return data_array
 
     def on_pick(self, event: PickEvent =None):
         lgm().log( f" Pick Event: type = {type(event)}" )
