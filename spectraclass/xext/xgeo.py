@@ -3,7 +3,7 @@ from ..util.configuration import  Region
 from ..util.crs import CRS
 from typing import Dict, List, Tuple
 from osgeo import osr, gdalconst, gdal
-from pyproj import Proj, transform
+from pyproj import Proj, transform, Transformer
 from .grid import GDALGrid
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from shapely.geometry import Polygon
@@ -88,13 +88,11 @@ class XGeo(XExtension):
             src_transform = self._obj.transform[0:6]
             src_sref: osgeo.osr.SpatialReference = self._crs
             source: np.ndarray = self._obj.data
-            xaxis = self._obj.coords[ self._obj.dims[1] ]
-            yaxis = self._obj.coords[ self._obj.dims[0] ]
+            xaxis = self._obj.coords[ 'xc' ]
+            yaxis = self._obj.coords[ 'yc' ]
 
             src_crs =  CRS.from_wkt( src_sref.ExportToWkt() )
             dst_crs =  CRS.from_wkt( sref.ExportToWkt() )
-#            src_crs = CRS.from_proj4( src_sref.ExportToProj4() )
- #           dst_crs =  CRS.from_proj4( sref.ExportToProj4() )
             dst_transforms: Tuple[Affine] = calculate_default_transform( src_crs, dst_crs, src_shape[1], src_shape[0],
                                                          left=src_transform[2],
                                                          bottom=src_transform[5] + src_transform[3]*src_shape[1] + src_transform[4]*src_shape[0],
@@ -121,12 +119,13 @@ class XGeo(XExtension):
                 dst_crs=dst_crs,
                 resampling=Resampling.nearest)
 
-            x, _ = transform( src_crs, dst_crs, xaxis, [yaxis[0]]*xaxis.size )
-            _, y = transform( src_crs, dst_crs, [xaxis[0]]*yaxis.size, yaxis )
+            [ dx, _, x0, _, dy, y0 ] = dst_transform
+            [ ny, nx ]= destination.shape[1:]
+            x = np.linspace( x0, x0+dx*nx, nx )
+            y = np.linspace( y0, y0+dy*ny, ny )
             [ bd, yd, xd ] = self._obj.dims
             band = self._obj.coords[ bd ]
-#            coords = { bd:band, yd:y, xd:x }
-            coords = {bd: band, yd:range(destination.shape[1]), xd:range(destination.shape[2])}
+            coords = {bd:band, yd:y, xd:x}
 
             result = xr.DataArray( destination, dims=self._obj.dims, coords =coords )
             result.attrs['transform'] = dst_transform

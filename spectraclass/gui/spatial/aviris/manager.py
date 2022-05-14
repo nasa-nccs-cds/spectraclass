@@ -1,8 +1,6 @@
 from spectraclass.data.base import DataManager
 from matplotlib.image import AxesImage
-#import hvplot.xarray
-#import panel as pn
-# from holoviews.core.spaces import DynamicMap
+from matplotlib.colors import Normalize
 from matplotlib.backend_bases import PickEvent, MouseEvent
 from matplotlib.axes import Axes
 from spectraclass.gui.spatial.basemap import TileServiceBasemap
@@ -33,8 +31,10 @@ class AvirisDatasetManager:
         self.grid_alpha = kwargs.get("grid_alpha", 0.5 )
         self.base = TileServiceBasemap()
         self.slw = kwargs.get("slw", 3)
+        self.colorstretch = 2.0
         self.dm.proc_type = "cpu"
         self._blocks: List[Rectangle] = []
+        self._transformed_block_data = None
         self._selected_block = None
         TileManager.block_size = kwargs.get( 'block_size',  250 )
         self.nimages = len( self.dm.modal.image_names )
@@ -67,12 +67,16 @@ class AvirisDatasetManager:
     def image_name(self) -> str:
         return self.dm.modal.get_image_name( self.image_index )
 
-    def update_image( self ):
-        self.dm.modal.set_current_image( self.image_index )
+    def get_band_data(self) -> np.ndarray:
         data_array: xa.DataArray = tm().tile.data
         band_array: np.ndarray = data_array[self.band_index].values.squeeze().transpose()
         nodata = data_array.attrs.get('_FillValue')
         band_array[band_array == nodata] = np.nan
+        return band_array
+
+    def update_image( self ):
+        band_array = self.get_band_data()
+        self.dm.modal.set_current_image( self.image_index )
         vmean, vstd = np.nanmean(band_array), np.nanstd( band_array )
         vrange = [ max(vmean-2*vstd, 0.0), vmean+2*vstd ]
         if self.band_plot is None:  self.band_plot = self.ax.imshow( band_array, cmap="jet")
@@ -81,11 +85,15 @@ class AvirisDatasetManager:
 
     def on_image_change( self, event: Dict ):
         ufm().show( f"Loading image {self.image_name}" )
+        self.clear_block_cache()
         self.update_image()
+
+    def clear_block_cache(self):
+        self._transformed_block_data = None
 
     def on_band_change( self, event: Dict ):
         ufm().show( f"Plotting band {self.band_index}" )
-        self.update_image()
+        self.update_overlay_image()
 
     def gui(self):
         plt.ioff()
@@ -170,15 +178,33 @@ class AvirisDatasetManager:
     def select_block(self, r: Rectangle = None ):
         from spectraclass.data.spatial.manager import SpatialDataManager
         if r is None: r = self._selected_block
-        iband = 160
         if self.highlight_block( r ) or (self.overlay_plot is None):
-            block_data = self.get_data_block( r.block_index )
-            transformed_data: xa.DataArray = block_data.xgeo.reproject( espg=3785 )
-            band_data = transformed_data[iband].squeeze()
-            ext = SpatialDataManager.extent(transformed_data)
+            self.clear_block_cache()
+            band_data = self.overlay_image_data()
+            ext = SpatialDataManager.extent( band_data )
+            norm = Normalize(**self.get_color_bounds(band_data))
             if self.overlay_plot is None:
                 self.base.setup_plot( "Subtile overlay", ( ext[0], ext[1] ), ( ext[2], ext[3] ) )
-                self.overlay_plot = band_data.plot.imshow(ax=self.base.gax, alpha=1.0, cmap='jet',  add_colorbar=False)
+                self.overlay_plot = band_data.plot.imshow(ax=self.base.gax, alpha=1.0, cmap='jet', norm=norm, add_colorbar=False)
+            else:
+                pass
+
+    def overlay_image_data(self) -> xa.DataArray:
+        if self._transformed_block_data is None:
+            block_data = self.get_data_block( self._selected_block.block_index )
+            self._transformed_block_data: xa.DataArray = block_data.xgeo.reproject(espg=3785)
+        return self._transformed_block_data[self.band_index].squeeze()
+
+    def update_overlay_image(self):
+        pass
+
+    def get_color_bounds( self, raster: xa.DataArray ):
+        ave = raster.mean(skipna=True).values
+        std = raster.std(skipna=True).values
+        if std == 0.0:
+            msg =  "This block does not appear to contain any data.  Suggest trying a different tile/block."
+            ufm().show( msg, "red" ); lgm().log( "\n" +  msg + "\n"  )
+        return dict( vmin= ave - std * self.colorstretch, vmax= ave + std * self.colorstretch  )
 
     def get_data_block(self, coords: Tuple[int,int] ) -> xa.DataArray:
         data_array: xa.DataArray = tm().tile.data
