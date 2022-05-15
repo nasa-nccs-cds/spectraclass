@@ -49,6 +49,9 @@ class AvirisDatasetManager:
     def selected_block(self) -> Optional[Rectangle]:
         return self._blocks.get( self._selected_block )
 
+    def get_block(self, coords: Tuple[int,int] ) -> Optional[Rectangle]:
+        return self._blocks.get( coords )
+
     @property
     def nbands(self) -> int:
         if self._nbands is None:
@@ -97,7 +100,7 @@ class AvirisDatasetManager:
 
     def on_band_change( self, event: Dict ):
         ufm().show( f"Plotting band {self.band_index}" )
-        self.update_overlay_image()
+        self.update_overlay_band()
 
     def gui(self):
         plt.ioff()
@@ -189,7 +192,9 @@ class AvirisDatasetManager:
                 self.base.setup_plot( "Subtile overlay", ( ext[0], ext[1] ), ( ext[2], ext[3] ) )
                 self.overlay_plot = band_data.plot.imshow(ax=self.base.gax, alpha=1.0, cmap='jet', norm=norm, add_colorbar=False)
             else:
-                pass
+                self.overlay_plot.set_data( band_data.values )
+                self.overlay_plot.figure.canvas.draw_idle()
+
 
     def overlay_image_data(self) -> xa.DataArray:
         if self._transformed_block_data is None:
@@ -197,8 +202,10 @@ class AvirisDatasetManager:
             self._transformed_block_data: xa.DataArray = block_data.xgeo.reproject(espg=3785)
         return self._transformed_block_data[self.band_index].squeeze()
 
-    def update_overlay_image(self):
-        pass
+    def update_overlay_band(self):
+        band_data = self.overlay_image_data()
+        self.overlay_plot.set_data( band_data.values )
+        self.overlay_plot.figure.canvas.draw_idle()
 
     def get_color_bounds( self, raster: xa.DataArray ):
         ave = np.nanmean( raster.values )
