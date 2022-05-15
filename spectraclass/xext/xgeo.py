@@ -1,3 +1,5 @@
+import math
+
 import numpy as np, os
 from ..util.configuration import  Region
 from ..util.crs import CRS
@@ -12,6 +14,7 @@ from .xextension import XExtension
 from affine import Affine
 import rasterio, osgeo
 from rasterio.warp import reproject, Resampling, transform, calculate_default_transform
+sqrt2 = math.sqrt(2.0)
 
 @xr.register_dataarray_accessor('xgeo')
 class XGeo(XExtension):
@@ -90,21 +93,21 @@ class XGeo(XExtension):
             source: np.ndarray = self._obj.data
             src_crs =  CRS.from_wkt( src_sref.ExportToWkt() )
             dst_crs =  CRS.from_wkt( sref.ExportToWkt() )
-            dst_transforms: Tuple[Affine] = calculate_default_transform( src_crs, dst_crs, src_shape[1], src_shape[0],
+            dst_transforms: Tuple[Affine] = calculate_default_transform( src_crs, dst_crs, src_shape[2], src_shape[1],
                                                          left=src_transform[2],
-                                                         bottom=src_transform[5] + src_transform[3]*src_shape[1] + src_transform[4]*src_shape[0],
-                                                         right= src_transform[2] + src_transform[0]*src_shape[1] + src_transform[1]*src_shape[0],
+                                                         bottom=src_transform[5] + src_transform[3]*src_shape[2] + src_transform[4]*src_shape[1],
+                                                         right= src_transform[2] + src_transform[0]*src_shape[2] + src_transform[1]*src_shape[1],
                                                          top=src_transform[5])
 
             dst_transform = dst_transforms[0][0:6]
-            dst_shape = src_shape
+            dst_shape =  [ src_shape[0], math.ceil(src_shape[1]*sqrt2), math.ceil(src_shape[2]*sqrt2)]
             destination = np.zeros( dst_shape, np.float32 )
 
-            print( f" XGEO.reproject-> crs:  {src_crs.__class__} -> {dst_crs.__class__}, transform: {src_transform.__class__} -> {dst_transform.__class__}")
-            print(f" -->  src crs:  {src_crs}")
-            print(f" --> dest crs:  {dst_crs}")
-            print(f" -->  src transform:  {src_transform}")
-            print(f" --> dest transform:  {dst_transform}")
+            lgm().log( f" XGEO.reproject-> crs:  {src_crs.__class__} -> {dst_crs.__class__}, transform: {src_transform.__class__} -> {dst_transform.__class__}")
+            lgm().log(f" -->  src crs:  {src_crs}")
+            lgm().log(f" --> dest crs:  {dst_crs}")
+            lgm().log(f" -->  src transform:  {src_transform}")
+            lgm().log(f" --> dest transform:  {dst_transform}")
 
             reproject(
                 source,
@@ -113,7 +116,8 @@ class XGeo(XExtension):
                 src_crs=src_crs,
                 dst_transform=dst_transform,
                 dst_crs=dst_crs,
-                resampling=Resampling.nearest)
+                resampling=Resampling.nearest,
+                dst_nodata = np.nan)
 
             [ dx, _, x0, _, dy, y0 ] = dst_transform
             [ ny, nx ]= destination.shape[1:]

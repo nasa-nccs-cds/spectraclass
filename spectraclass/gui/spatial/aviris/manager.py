@@ -102,16 +102,23 @@ class AvirisDatasetManager:
         ufm().show( f"Plotting band {self.band_index}" )
         self.update_overlay_band()
 
+    def on_transparency_change( self, event: Dict ):
+        self.overlay_plot.set_alpha( event['new'] )
+        self.overlay_plot.figure.canvas.draw_idle()
+
     def gui(self):
         plt.ioff()
         self.update_image()
         self.add_block_selection()
         self.select_block()
-        self.band_selector = ipw.IntSlider( self.init_band, 0, self.nbands, 1 )
+        self.band_selector = ipw.IntSlider( self.init_band, min=0, max=self.nbands, step=1 )
         self.band_selector.observe( self.on_band_change, "value" )
+        self.alpha_selector = ipw.FloatSlider( 1.0, min=0.0, max=1.0, step=0.1 )
+        self.alpha_selector.observe(self.on_transparency_change, "value")
         self.dm.modal.set_file_selection_observer( self.on_image_change )
         control_panel = ipw.VBox( [ufm().gui(), self.dm.modal.file_selector, self.band_plot.figure.canvas] )
-        overlay_panel = ipw.VBox( [ self.overlay_plot.figure.canvas, self.band_selector ] )
+        image_controls = ipw.VBox( [ ipw.HBox( [ ipw.Label("band"), self.band_selector ] ), ipw.HBox( [ ipw.Label("alpha"), self.alpha_selector ] ) ]  )
+        overlay_panel = ipw.VBox( [ self.overlay_plot.figure.canvas, image_controls ] )
         widget = ipw.HBox( [ overlay_panel, control_panel ], layout=ipw.Layout(flex='1 1 auto') )
         plt.ion()
         return widget
@@ -189,16 +196,22 @@ class AvirisDatasetManager:
             ext = SpatialDataManager.extent( band_data )
             norm = Normalize(**self.get_color_bounds(band_data))
             if self.overlay_plot is None:
-                self.base.setup_plot( "Subtile overlay", ( ext[0], ext[1] ), ( ext[2], ext[3] ) )
+                lgm().log(f"EXT: init_block--> Set bounds: {(ext[0], ext[1])}  {(ext[2], ext[3])}")
+                self.base.setup_plot( "Subtile overlay", ( ext[0], ext[1] ), ( ext[2], ext[3] ), slider=False )
                 self.overlay_plot = band_data.plot.imshow(ax=self.base.gax, alpha=1.0, cmap='jet', norm=norm, add_colorbar=False)
             else:
-                self.overlay_plot.set_data( band_data.values )
+                lgm().log( f"EXT: select_block--> Set bounds: {( ext[0], ext[1] )}  {( ext[2], ext[3] )}")
+                self.base.gax.set_xbound( ext[0], ext[1] )
+                self.base.gax.set_ybound( ext[2], ext[3] )
+                self.base.basemap.set_extent( ext )
+                self.overlay_plot.set_data(band_data.values)
                 self.overlay_plot.figure.canvas.draw_idle()
-
 
     def overlay_image_data(self) -> xa.DataArray:
         if self._transformed_block_data is None:
             block_data = self.get_data_block()
+            x,y = block_data.coords['xc'].values, block_data.coords['yc'].values
+            lgm().log( f"EXT: overlay_image_data: ext=  {(x[0,0],x[-1,-1])}  {(y[0,0],y[-1,-1])} " )
             self._transformed_block_data: xa.DataArray = block_data.xgeo.reproject(espg=3785)
         return self._transformed_block_data[self.band_index].squeeze()
 
@@ -221,6 +234,8 @@ class AvirisDatasetManager:
         bsize = tm().block_size
         ix, iy = coords[0] * bsize, coords[1] * bsize
         dblock = data_array[ :, iy:iy+bsize, ix:ix+bsize ]
+        t0 = dblock.attrs['transform']
+        dblock.attrs['transform'] = [ t0[0], t0[1], t0[2] + ix * t0[0] + iy * t0[1], t0[3], t0[4], t0[5] + ix * t0[3] + iy * t0[4] ]
         return self.mask_nodata( dblock )
 
     def mask_nodata(self, data_array: xa.DataArray ) -> xa.DataArray:
