@@ -89,6 +89,7 @@ class AvirisDatasetManager:
         if self.band_plot is None:  self.band_plot = self.ax.imshow( band_array, cmap="jet")
         else:                       self.band_plot.set_data( band_array )
         self.band_plot.set_clim(*vrange)
+        self.select_block()
 
     @log_timing
     def on_image_change( self, event: Dict ):
@@ -99,10 +100,12 @@ class AvirisDatasetManager:
     def clear_block_cache(self):
         self._transformed_block_data = None
 
+    @log_timing
     def on_band_change( self, event: Dict ):
         ufm().show( f"Plotting band {self.band_index}" )
         self.update_overlay_band()
 
+    @log_timing
     def on_transparency_change( self, event: Dict ):
         self.overlay_plot.set_alpha( event['new'] )
         self.overlay_plot.figure.canvas.draw_idle()
@@ -191,24 +194,23 @@ class AvirisDatasetManager:
     def select_block(self, r: Rectangle = None ):
         from spectraclass.data.spatial.manager import SpatialDataManager
         if r is None: r = self.selected_block
-        if self.highlight_block( r ) or (self.overlay_plot is None):
-            self.clear_block_cache()
-            band_data = self.overlay_image_data()
-            ext = SpatialDataManager.extent( band_data )
-            norm = Normalize(**self.get_color_bounds(band_data))
-            if self.overlay_plot is None:
-                lgm().log(f"EXT: init_block--> Set bounds: {(ext[0], ext[1])}  {(ext[2], ext[3])}")
-                self.base.setup_plot( "Subtile overlay", ( ext[0], ext[1] ), ( ext[2], ext[3] ), slider=False )
-                self.overlay_plot = band_data.plot.imshow(ax=self.base.gax, alpha=1.0, cmap='jet', norm=norm, add_colorbar=False)
-            else:
-                lgm().log( f"EXT: select_block--> Set bounds: {( ext[0], ext[1] )}  {( ext[2], ext[3] )}")
-                self.base.gax.set_xbound( ext[0], ext[1] )
-                self.base.gax.set_ybound( ext[2], ext[3] )
-                self.base.basemap.set_extent( ext )
-                lgm().log(f"EXT: overlay_plot--> set band data: shape={band_data.shape}")
-                self.overlay_plot.set_extent( ext )
-                self.overlay_plot.set_data(band_data.values)
-                self.overlay_plot.figure.canvas.draw_idle()
+        self.clear_block_cache()
+        band_data = self.overlay_image_data()
+        ext = SpatialDataManager.extent( band_data )
+        norm = Normalize(**self.get_color_bounds(band_data))
+        if self.overlay_plot is None:
+            lgm().log(f"EXT: init_block--> Set bounds: {(ext[0], ext[1])}  {(ext[2], ext[3])}")
+            self.base.setup_plot( "Subtile overlay", ( ext[0], ext[1] ), ( ext[2], ext[3] ), slider=False )
+            self.overlay_plot = band_data.plot.imshow(ax=self.base.gax, alpha=1.0, cmap='jet', norm=norm, add_colorbar=False)
+        else:
+            lgm().log( f"EXT: select_block--> Set bounds: {( ext[0], ext[1] )}  {( ext[2], ext[3] )}")
+            self.base.gax.set_xbound( ext[0], ext[1] )
+            self.base.gax.set_ybound( ext[2], ext[3] )
+            self.base.basemap.set_extent( ext )
+            lgm().log(f"EXT: overlay_plot--> set band data: shape={band_data.shape}")
+            self.overlay_plot.set_extent( ext )
+            self.overlay_plot.set_data(band_data.values)
+            self.overlay_plot.figure.canvas.draw_idle()
 
     def overlay_image_data(self) -> xa.DataArray:
         if self._transformed_block_data is None:
