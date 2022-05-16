@@ -181,7 +181,8 @@ class AvirisDatasetManager:
 
     def highlight_block( self, r: Rectangle ):
         srec = self.selected_block
-        if srec is not None:  srec.set_color( self.grid_color )
+        if srec is not None:
+            srec.set_color( self.grid_color )
         r.set_linewidth(self.slw)
         r.set_color( self.selection_color )
         self._selected_block = r.block_index
@@ -191,9 +192,8 @@ class AvirisDatasetManager:
     def select_block(self, r: Rectangle = None ):
         from spectraclass.data.spatial.manager import SpatialDataManager
         if r is not None:
-            self._selected_block = r.block_index
+            self.highlight_block(r)
             self.clear_block_cache()
-            self.highlight_block( r )
         band_data = self.overlay_image_data()
         ext = SpatialDataManager.extent( band_data )
         norm = Normalize(**self.get_color_bounds(band_data))
