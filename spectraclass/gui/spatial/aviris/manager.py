@@ -234,7 +234,7 @@ class AvirisDatasetManager:
         return dict( vmin= ave - std * self.colorstretch, vmax= ave + std * self.colorstretch  )
 
     def get_data_block(self, coords: Tuple[int,int] = None ) -> xa.DataArray:
-        if coords is None: coords = self.selected_block
+        if coords is None: coords = self._selected_block
         data_array: xa.DataArray = tm().tile.data
         bsize = tm().block_size
         ix, iy = coords[0] * bsize, coords[1] * bsize
