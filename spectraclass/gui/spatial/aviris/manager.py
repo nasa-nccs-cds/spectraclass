@@ -195,6 +195,7 @@ class AvirisDatasetManager:
         if r is not None:
             self._selected_block = r.block_index
             self.clear_block_cache()
+            self.highlight_block( r )
         band_data = self.overlay_image_data()
         ext = SpatialDataManager.extent( band_data )
         norm = Normalize(**self.get_color_bounds(band_data))
