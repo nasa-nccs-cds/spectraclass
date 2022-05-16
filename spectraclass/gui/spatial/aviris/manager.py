@@ -192,8 +192,9 @@ class AvirisDatasetManager:
     @log_timing
     def select_block(self, r: Rectangle = None ):
         from spectraclass.data.spatial.manager import SpatialDataManager
-        if r is None: r = self.selected_block
-        self.clear_block_cache()
+        if r is not None:
+            self._selected_block = r.block_index
+            self.clear_block_cache()
         band_data = self.overlay_image_data()
         ext = SpatialDataManager.extent( band_data )
         norm = Normalize(**self.get_color_bounds(band_data))
@@ -202,7 +203,7 @@ class AvirisDatasetManager:
             self.base.setup_plot( "Subtile overlay", ( ext[0], ext[1] ), ( ext[2], ext[3] ), slider=False )
             self.overlay_plot = band_data.plot.imshow(ax=self.base.gax, alpha=1.0, cmap='jet', norm=norm, add_colorbar=False)
         else:
-            lgm().log( f"EXT: select_block--> Set bounds: {( ext[0], ext[1] )}  {( ext[2], ext[3] )}")
+            lgm().log( f"EXT: select_block[{self._selected_block}]--> Set bounds: {( ext[0], ext[1] )}  {( ext[2], ext[3] )}")
             self.base.gax.set_xbound( ext[0], ext[1] )
             self.base.gax.set_ybound( ext[2], ext[3] )
             self.base.basemap.set_extent( ext )
