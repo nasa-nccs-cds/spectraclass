@@ -35,7 +35,7 @@ class AvirisDatasetManager:
         self.dm.proc_type = "cpu"
         self._blocks: Dict[Tuple[int,int],Rectangle] = {}
         self._transformed_block_data = None
-        self._selected_block: Tuple[int,int] = None
+        self._selected_block: Tuple[int,int] = (0,0)
         TileManager.block_size = kwargs.get( 'block_size',  250 )
         self.nimages = len( self.dm.modal.image_names )
         self._nbands = None
@@ -47,8 +47,7 @@ class AvirisDatasetManager:
 
     @property
     def selected_block(self) -> Optional[Rectangle]:
-        coords = (0,0) if ( self._selected_block is None  ) else self._selected_block
-        return self._blocks.get( coords )
+        return self._blocks.get( self._selected_block )
 
     def get_block(self, coords: Tuple[int,int] ) -> Optional[Rectangle]:
         return self._blocks.get( coords )
@@ -170,7 +169,7 @@ class AvirisDatasetManager:
         lgm().log(f"  add_block_selection: block_size={block_size}, block_dims={block_dims}, transform={transform} ")
         for tx in range( block_dims[0] ):
             for ty in range( block_dims[1] ):
-                selected = ( (tx,ty) == self._selected_block ) or ( self._selected_block is None )
+                selected = ( (tx,ty) == self._selected_block )
                 ix, iy = tx*block_size, ty*block_size
                 lw = self.slw if ( selected ) else 1
                 color = self.selection_color if ( selected ) else self.grid_color
@@ -179,7 +178,6 @@ class AvirisDatasetManager:
                 r.set_picker( True )
                 self.ax.add_patch( r )
                 self._blocks[(tx,ty)] = r
-                if selected: self._selected_block = (tx,ty)
 
     def highlight_block( self, r: Rectangle ):
         srec = self.selected_block
