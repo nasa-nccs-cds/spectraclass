@@ -6,7 +6,7 @@ from typing import Dict, List, Tuple, Union, Optional
 class XExtension(object):
     """  This is the base class for xarray extensions """
 
-    StandardAxisNames = { 'x': [ 'x', 'lon' ], 'y': [ 'y', 'lat' ], 't': [ 't', 'time' ] }
+    StandardAxisNames = { 'x': [ 'x', 'xc', 'lon' ], 'y': [ 'y', 'yc', 'lat' ], 't': [ 't', 'time' ] }
 
     def __init__(self, xarray_obj: xr.DataArray):
         self._obj: xr.DataArray = xarray_obj
@@ -39,7 +39,7 @@ class XExtension(object):
 
     def getCoordName( self, axis: str ) -> Optional[str]:
         for cname, coord in self._obj.coords.items():
-            if (str(cname).lower() in self.StandardAxisNames[axis]) or (coord.attrs.get("axis") == axis) or (axis == cname) or axis in coord.dims:
+            if (str(cname).lower() in self.StandardAxisNames[axis]) or (coord.attrs.get("axis") == axis) or (axis == cname):
                 return str(cname)
         return None
 

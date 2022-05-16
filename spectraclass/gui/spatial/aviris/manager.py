@@ -204,16 +204,19 @@ class AvirisDatasetManager:
                 self.base.gax.set_xbound( ext[0], ext[1] )
                 self.base.gax.set_ybound( ext[2], ext[3] )
                 self.base.basemap.set_extent( ext )
+                lgm().log(f"EXT: overlay_plot--> set band data: shape={band_data.shape}")
+                self.overlay_plot.set_extent( ext )
                 self.overlay_plot.set_data(band_data.values)
                 self.overlay_plot.figure.canvas.draw_idle()
 
     def overlay_image_data(self) -> xa.DataArray:
         if self._transformed_block_data is None:
             block_data = self.get_data_block()
-            x,y = block_data.coords['xc'].values, block_data.coords['yc'].values
-            lgm().log( f"EXT: overlay_image_data: ext=  {(x[0,0],x[-1,-1])}  {(y[0,0],y[-1,-1])} " )
             self._transformed_block_data: xa.DataArray = block_data.xgeo.reproject(espg=3785)
-        return self._transformed_block_data[self.band_index].squeeze()
+        result =  self._transformed_block_data[self.band_index].squeeze()
+        nnan = np.count_nonzero(np.isnan(result.values))
+        lgm().log(f"EXT: overlay_image_data, %nan: {(nnan*100.0)/result.size}")
+        return result
 
     def update_overlay_band(self):
         band_data = self.overlay_image_data()

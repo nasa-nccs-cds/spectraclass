@@ -13,7 +13,7 @@ import xarray as xr
 from .xextension import XExtension
 from affine import Affine
 import rasterio, osgeo
-from rasterio.warp import reproject, Resampling, transform, calculate_default_transform
+from rasterio.warp import reproject, Resampling, transform, calculate_default_transform, transform_bounds
 sqrt2 = math.sqrt(2.0)
 
 @xr.register_dataarray_accessor('xgeo')
@@ -79,6 +79,13 @@ class XGeo(XExtension):
         result.attrs['SpatialReference'] = sref
         return result
 
+    def get_dest_transform(self, src_crs, dst_crs, src_shape ):
+        bounds = [np.nanmin(self.xcoords), np.nanmin(self.ycoords), np.nanmax(self.xcoords), np.nanmax(self.ycoords)]
+        (x0, y0, x1, y1) = transform_bounds( src_crs, dst_crs, *bounds )  # 0:left, 1:bottom, 2:right, 3:top
+        dst_shape = [src_shape[0], math.ceil(src_shape[1] * sqrt2), math.ceil(src_shape[2] * sqrt2)]
+        dx, dy = (x1 - x0) / (dst_shape[2] - 1), (y1 - y0) / (dst_shape[1] - 1),
+        return [dx, 0.0, x0, 0.0, -dy, y1]
+
     def reproject( self, **kwargs ) -> xr.DataArray:
         from rasterio.crs import CRS
         sref = osr.SpatialReference()
@@ -93,13 +100,15 @@ class XGeo(XExtension):
             source: np.ndarray = self._obj.data
             src_crs =  CRS.from_wkt( src_sref.ExportToWkt() )
             dst_crs =  CRS.from_wkt( sref.ExportToWkt() )
+
             dst_transforms: Tuple[Affine] = calculate_default_transform( src_crs, dst_crs, src_shape[2], src_shape[1],
                                                          left=src_transform[2],
                                                          bottom=src_transform[5] + src_transform[3]*src_shape[2] + src_transform[4]*src_shape[1],
                                                          right= src_transform[2] + src_transform[0]*src_shape[2] + src_transform[1]*src_shape[1],
                                                          top=src_transform[5])
 
-            dst_transform = dst_transforms[0][0:6]
+            dst_transform = self.get_dest_transform( src_crs, dst_crs, src_shape )
+            dst_transform1 = dst_transforms[0][0:6]
             dst_shape =  [ src_shape[0], math.ceil(src_shape[1]*sqrt2), math.ceil(src_shape[2]*sqrt2)]
             destination = np.zeros( dst_shape, np.float32 )
 
