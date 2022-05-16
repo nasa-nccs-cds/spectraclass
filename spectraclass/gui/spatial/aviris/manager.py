@@ -90,6 +90,7 @@ class AvirisDatasetManager:
         else:                       self.band_plot.set_data( band_array )
         self.band_plot.set_clim(*vrange)
 
+    @log_timing
     def on_image_change( self, event: Dict ):
         ufm().show( f"Loading image {self.image_name}" )
         self.clear_block_cache()
