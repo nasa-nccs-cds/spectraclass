@@ -181,13 +181,11 @@ class AvirisDatasetManager:
 
     def highlight_block( self, r: Rectangle ):
         srec = self.selected_block
-        if r == srec: return False
         if srec is not None:  srec.set_color( self.grid_color )
         r.set_linewidth(self.slw)
         r.set_color( self.selection_color )
         self._selected_block = r.block_index
         self.ax.figure.canvas.draw_idle()
-        return True
 
     @log_timing
     def select_block(self, r: Rectangle = None ):
