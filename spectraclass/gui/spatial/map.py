@@ -129,7 +129,7 @@ class MapManager(SCSingletonConfigurable):
             pdata = dm().getModelData()
         else:
             pdata, coords = self.block.getPointData()
-        lgm().log( f" MapManage.getPointData: shape = {pdata.shape}, dims = {pdata.dims}")
+        lgm().log( f" MapManage.getPointData: shape = {pdata.shape}, dims = {pdata.dims}, frame = {self.currentFrame}")
         return pdata[:,self.currentFrame] if current_frame else pdata
 
     def get_point_coords( self, pid: int ) -> Tuple[float,float]:

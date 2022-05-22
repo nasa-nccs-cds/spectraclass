@@ -133,6 +133,7 @@ class ReductionManager(SCSingletonConfigurable):
         autoencoder: Model = None
         sparsity = kwargs.get( 'sparsity', 0.0)
         model_file = kwargs.get( 'model_file', None )
+        refresh = kwargs.get( 'refresh',True )
         ispecs: List[np.ndarray] = [train_input.data.max(0), train_input.data.min(0), train_input.data.mean(0), train_input.data.std(0)]
         lgm().log(f" autoencoder_reduction: train_input shape = {train_input.shape} ")
         lgm().log(f"   ----> max = { ispecs[0][:64].tolist() } ")
@@ -145,7 +146,7 @@ class ReductionManager(SCSingletonConfigurable):
         if test_inputs is None: test_inputs = [ train_input ]
         for iT, test_input in enumerate(test_inputs):
             try:
-                autoencoder, encoder = self.get_network( train_input.shape[1], model_dims, sparsity=sparsity, refresh=False )
+                autoencoder, encoder = self.get_network( train_input.shape[1], model_dims, sparsity=sparsity, refresh=refresh )
                 autoencoder.fit( train_input.data, train_input.data, epochs=epochs, batch_size=256, shuffle=True )
                 encoded_data: np.ndarray = encoder.predict( test_input.data )
                 reproduced_data: np.ndarray = autoencoder.predict( test_input.data )
