@@ -17,7 +17,7 @@ class AutoEncoderCluster(ClusterBase):
     @property
     def cluster_data(self) -> xa.DataArray:
         lgm().log( f" CLUSTER-AutoEncoder: reduction.shape={self._reduction.shape}, cscale={self.cscale}" )
-        cdata = np.argmax(self._reduction * self.cscale, axis=1, keepdims=True )
+        cdata = np.expand_dims( np.argmax(self._reduction * self.cscale, axis=1 ), 1 )
         return xa.DataArray( cdata, dims=['samples', 'clusters'], name="clusters", coords=dict(samples=self._samples, clusters=[0]), attrs=self._attrs )
 
     def compute_reduction(self):

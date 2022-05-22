@@ -44,7 +44,7 @@ class FCM(ClusterBase):
     @property
     def cluster_data(self) -> xa.DataArray:
         lgm().log( f"FCM.cluster_data: shape = {self._cluster_data}")
-        cdata = np.argmax(self._cluster_data * self.cscale, axis=1, keepdims=True)
+        cdata = np.expand_dims( np.argmax(self._cluster_data * self.cscale, axis=1 ), 1 )
         return xa.DataArray(cdata, dims=['samples', 'clusters'], name="clusters", coords=dict(samples=self._samples, clusters=[0]), attrs=self._attrs)
 
     def cluster( self, data: xa.DataArray, y=None ) -> xa.DataArray:
