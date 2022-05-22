@@ -131,7 +131,6 @@ class ReductionManager(SCSingletonConfigurable):
     def autoencoder_reduction(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], model_dims: int, epochs: int = 100, **kwargs ) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
         from tensorflow.keras.models import Model
         autoencoder: Model = None
-        sparsity = kwargs.get( 'sparsity', 0.0)
         model_file = kwargs.get( 'model_file', None )
         ispecs: List[np.ndarray] = [train_input.data.max(0), train_input.data.min(0), train_input.data.mean(0), train_input.data.std(0)]
         lgm().log(f" autoencoder_reduction: train_input shape = {train_input.shape} ")
@@ -145,7 +144,7 @@ class ReductionManager(SCSingletonConfigurable):
         if test_inputs is None: test_inputs = [ train_input ]
         for iT, test_input in enumerate(test_inputs):
             try:
-                autoencoder, encoder = self.get_network( train_input.shape[1], model_dims, sparsity=sparsity, **kwargs )
+                autoencoder, encoder = self.get_network( train_input.shape[1], model_dims, **kwargs )
                 autoencoder.fit( train_input.data, train_input.data, epochs=epochs, batch_size=256, shuffle=True )
                 encoded_data: np.ndarray = encoder.predict( test_input.data )
                 reproduced_data: np.ndarray = autoencoder.predict( test_input.data )

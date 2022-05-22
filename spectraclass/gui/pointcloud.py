@@ -174,7 +174,8 @@ class PointCloudManager(SCSingletonConfigurable):
         if norm is None:
             vr = mm().get_color_bounds( cdata )
             norm = Normalize( vr['vmin'], vr['vmax'] )
-        lgm().log( f"getColors: norm cdata shape = {cdata.shape}, dims={cdata.dims}, crange={[norm.vmin,norm.vmax]}")
+        nvalid = np.count_nonzero( ~np.isnan( cdata.values ) )
+        lgm().log( f"getColors: norm cdata shape = {cdata.shape}, dims={cdata.dims}, crange={[norm.vmin,norm.vmax]}, nvalid={nvalid}")
         mapper = plt.cm.ScalarMappable( norm = norm, cmap="jet" )
         colors = mapper.to_rgba( cdata.values )[:, :-1] * 255
         if self.pick_point >= 0:

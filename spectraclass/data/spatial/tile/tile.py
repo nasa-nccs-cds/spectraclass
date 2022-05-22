@@ -540,6 +540,7 @@ class Block(DataContainer):
             lgm().log( f"#IA: ~~~~~~~~~~>> shapes-> mask={shp(mask_array)}, data={shp(block_array)}; nz={nz(mask_array)}")
             result = block_array.copy( data=np.where( mask_array, block_array.values, np.nan ) )
             lgm().log( f"#IA: ~~~~~~~~~~>> resulting masked-data shape={shp(result)}; nnan/band={nnan(result.values)//result.shape[0]}")
+            result.attrs['threshold_mask'] = mask_array
         return result
 
     def addTextureBands( self ):
