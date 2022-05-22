@@ -50,7 +50,7 @@ class ReductionManager(SCSingletonConfigurable):
             if test_data is None: test_data = [train_data]
             redm = reduction_method.lower()
             if redm in [ "autoencoder", "aec", "ae" ]:
-                return self.autoencoder_reduction( train_data, test_data, ndim, nepochs, sparsity )
+                return self.autoencoder_reduction( train_data, test_data, ndim, nepochs, sparsity=sparsity )
             elif redm in [ "pca", "ica" ]:
                 return self.ca_reduction( train_data, test_data, ndim, redm )
             else: return [ (td.data,td,td) for td in test_data ]
