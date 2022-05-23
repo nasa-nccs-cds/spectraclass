@@ -175,7 +175,7 @@ class PointCloudManager(SCSingletonConfigurable):
             vr = mm().get_color_bounds( cdata )
             norm = Normalize( vr['vmin'], vr['vmax'] )
         tmask: np.ndarray = mm().block.get_threshold_mask(raster=False)
-        if tmask.shape[0] == cdata.shape[0]:
+        if (tmask is not None) and (tmask.shape[0] == cdata.shape[0]):
             cdata = cdata[ tmask ]
         lgm().log( f"getColors: norm cdata shape = {cdata.shape}, dims={cdata.dims}, crange={[norm.vmin,norm.vmax]}")
         mapper = plt.cm.ScalarMappable( norm = norm, cmap="jet" )
