@@ -274,6 +274,8 @@ class DataManager(SCSingletonConfigurable):
                 if ns == 0: ufm().show( "This tile contains no data","red")
                 self.save_config()
             return self._project_data
+        else:
+            lgm().log("loadCurrentProject: mode_data_manager is None")
 
     def loadProject(self, dsid: str = None ) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
         if dsid is not None: self.set_dsid( dsid )
@@ -302,6 +304,8 @@ class DataManager(SCSingletonConfigurable):
         raw_model_data = self.getRawModelData()
         if raw_model_data is not None:
             return self._mode_data_manager_.getModelData( raw_model_data, **kwargs )
+        else:
+            lgm().log( "getModelData: raw_model_data is None")
 
     def valid_bands(self) -> Optional[List]:
         return self._mode_data_manager_.valid_bands()
@@ -313,6 +317,8 @@ class DataManager(SCSingletonConfigurable):
             attrs = project_dataset['attrs']
             model_data.attrs['dsid'] = attrs['dsid']
             return model_data
+        else:
+            lgm().log("getRawModelData: project_dataset is None")
 
     def getSpatialDims(self) -> Dict[str,int]:
         project_dataset: Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ] = self.loadCurrentProject("getModelData")

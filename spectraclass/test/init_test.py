@@ -1,25 +1,31 @@
 from spectraclass.data.base import DataManager
 from spectraclass.data.base import ModeDataManager
-from spectraclass.data.spatial.tile.manager import TileManager
-from spectraclass.application.controller import SpectraclassController, app
+from spectraclass.data.spatial.tile.manager import TileManager, tm
+from spectraclass.gui.spatial.map import MapManager, mm
 import os
-host = "desktop"
+from typing import List, Union, Tuple, Optional, Dict, Callable
 
-dm: DataManager = DataManager.initialize( "demo2", 'aviris' )
-if (host == "laptop"):
-    dm.modal.data_dir = os.path.expanduser("~/Development/Data/Aviris/processed")
-    dm.modal.cache_dir = os.path.expanduser("/Volumes/archive/Cache")
-else:
+dm: DataManager = DataManager.initialize( "img_mgr", 'aviris' )
+location = "desktop"
+if location == "adapt":
+    dm.modal.cache_dir = "/adapt/nobackup/projects/ilab/cache"
+    dm.modal.data_dir = "/css/above/daac.ornl.gov/daacdata/above/ABoVE_Airborne_AVIRIS_NG/data/"
+elif location == "desktop":
     dm.modal.cache_dir = "/Volumes/Shared/Cache"
-    dm.modal.data_dir = "/Volumes/Shared/Data/Aviris"
+    dm.modal.data_dir = "/Users/tpmaxwel/Development/Data/Aviris"
+else: raise Exception( f"Unknown location: {location}")
 
-dm.modal.image_names = ["20170720t004130"]
+dm.modal.ext =  "_img"
 dm.proc_type = "cpu"
-TileManager.block_size = 256  # 250
+TileManager.block_size = 256     # 250
 ModeDataManager.model_dims = 24  # 16
-TileManager.block_index = [0, 2]
+TileManager.block_index = [0,0]
+
+classes = [ ('Class-1', "cyan"),
+            ('Class-2', "green"),
+            ('Class-3', "magenta"),
+            ('Class-4', "blue")]
 
 dm.loadCurrentProject()
-
-controller: SpectraclassController = app()
-controller.gui()
+tm().setBlock( (1,18) )
+dm.loadCurrentProject()

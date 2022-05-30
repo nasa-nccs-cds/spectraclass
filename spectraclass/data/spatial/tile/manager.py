@@ -217,6 +217,7 @@ class TileManager(SCSingletonConfigurable):
     @classmethod
     def process_tile_data( cls, tile_data: xa.DataArray ) -> xa.DataArray:
         t0 = time.time()
+        tile_data = tile_data.xgeo.reproject(espg=cls.ESPG)
         tile_data = cls.mask_nodata(tile_data)
         init_shape = [*tile_data.shape]
         valid_bands = DataManager.instance().valid_bands()
@@ -228,14 +229,14 @@ class TileManager(SCSingletonConfigurable):
                 tile_data.attrs['bands'] = sum( [list(band_names[valid_band[0]:valid_band[1]]) for valid_band in valid_bands], [])
             lgm().log( f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
         t1 = time.time()
-        result = tile_data.rio.reproject(cls.crs)
-        result.attrs['wkt'] = result.spatial_ref.crs_wkt
-        result.attrs['long_name'] = tile_data.attrs.get('long_name', None)
-        if '_FillValue' in result.attrs:
-           nodata = result.attrs['_FillValue']
-           result = result if np.isnan(nodata) else result.where(result != nodata, np.nan)
+        tile_data.attrs['wkt'] = cls.crs.to_wkt()
+        tile_data.attrs['crs'] = cls.crs.to_string()
+
+        if '_FillValue' in tile_data.attrs:
+           nodata = tile_data.attrs['_FillValue']
+           tile_data = tile_data if np.isnan(nodata) else tile_data.where(tile_data != nodata, np.nan)
         lgm().log(f"Completed process_tile_data in ( {time.time()-t1:.1f}, {t1-t0:.1f} ) sec")
-        return result
+        return tile_data
 
 #     def getPointData( self ) -> Tuple[xa.DataArray,xa.DataArray]:
 #         from spectraclass.data.spatial.manager import SpatialDataManager

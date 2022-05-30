@@ -1,5 +1,6 @@
 from .manager import SpatialDataManager
 from typing import List, Union, Tuple, Optional, Dict, Callable
+from spectraclass.gui.spatial.aviris.manager import AvirisTileSelector
 from pathlib import Path
 import traitlets as tl
 import os, sys
@@ -18,12 +19,21 @@ class AvirisDataManager(SpatialDataManager):
         super(AvirisDataManager, self).__init__()
         self.VALID_BANDS = []
         self._unpack_valid_bands()
+        self.tile_selector: AvirisTileSelector = None
 
     def _unpack_valid_bands(self):
         bv0 = 0
         for ib, bv1 in enumerate(self.valid_aviris_bands):
             if ib % 2 == 1: self.VALID_BANDS.append( [ bv0, bv1 ] )
             bv0 = bv1
+
+    def gui(self):
+        if self.ext == "_img":
+            if self.tile_selector is None:
+                self.tile_selector = AvirisTileSelector()
+            return self.tile_selector.gui()
+        else:
+            return SpatialDataManager.gui( self )
 
     @classmethod
     def extract_image_name( cls, image_path: str ) -> str:

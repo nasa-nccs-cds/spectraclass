@@ -296,9 +296,9 @@ class ModeDataManager(SCSingletonConfigurable):
                 lgm().log(f" ---> Opening Dataset {self.dsid()}")
                 dvars: Dict[str,Union[xa.DataArray,List,Dict]] = self.dset_subsample( xdataset, dsid=self.dsid(), **kwargs )
                 attrs = xdataset.attrs.copy()
-                raw_data = dvars['samples']
+                raw_data = dvars['raw']
                 lgm().log( f" -----> reduction: shape = {dvars['reduction'].shape}, #NULL={np.count_nonzero(np.isnan(dvars['reduction'].values))}")
-                lgm().log( f" -----> point_data: shape = {raw_data.shape}, #NULL={np.count_nonzero(np.isnan(raw_data.values))}")
+                lgm().log( f" -----> point_data: shape = {raw_data.shape}, #NULL={np.count_nonzero(np.isnan(raw_data.values))}/{raw_data.size}")
                 dvars['plot-x'] = dvars['bands'] if ('bands'in dvars) else dvars['band']
                 dvars['plot-mx'] = dvars['model']
                 attrs['dsid'] = self.dsid()

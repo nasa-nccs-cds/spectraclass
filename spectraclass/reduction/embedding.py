@@ -153,7 +153,7 @@ class ReductionManager(SCSingletonConfigurable):
                 if model_file is not None:
                     autoencoder.save( model_file, True, True )
                 if iT == 0:
-                    lgm().log(f" Autoencoder_reduction with sparsity={sparsity}, result: shape = {encoded_data.shape}")
+                    lgm().log(f" Autoencoder_reduction, result shape = {encoded_data.shape}")
                     lgm().log(f" ----> encoder_input: shape = {test_input.shape}, val[5][5] = {test_input.data[:5][:5]} ")
                     lgm().log(f" ----> reproduction: shape = {reproduced_data.shape}, val[5][5] = {reproduced_data[:5][:5]} ")
                     lgm().log(f" ----> encoding: shape = {encoded_data.shape}, val[5][5] = {encoded_data[:5][:5]}, std = {encoded_data.std(0)} ")

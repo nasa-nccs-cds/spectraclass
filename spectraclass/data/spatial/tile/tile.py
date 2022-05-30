@@ -449,12 +449,19 @@ class Block(DataContainer):
         return self._pid_array
 
     def dsid( self ):
-        from spectraclass.data.spatial.tile.manager import TileManager
-        return "-".join( [ TileManager.instance().tileName() ] + [ str(i) for i in self.block_coords ] )
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        return "-".join( [ tm().tileName() ] + [ str(i) for i in self.block_coords ] )
 
     def validate_parameters(self):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         assert ( self.block_coords[0] < tm().block_dims[0] ) and ( self.block_coords[1] < tm().block_dims[1] ), f"Block coordinates {self.block_coords} out of bounds with block dims = {tm().block_dims}"
+
+    def translate_transform(self, transform: List[float] ) -> List[float]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        dx, dy = [ self.block_coords[0]*tm().block_size, self.block_coords[1]*tm().block_size ]
+        x0 = transform[2] + dx * transform[0] + dy * transform[1]
+        y0 = transform[5] + dx * transform[3] + dy * transform[4]
+        return [ transform[0], transform[1], x0, transform[3], transform[4], y0 ]
 
     @log_timing
     def _get_data( self ) -> xa.DataArray:
@@ -464,6 +471,7 @@ class Block(DataContainer):
             if self.tile.data is None: return None
             xbounds, ybounds = self.getBounds()
             raster_slice = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
+            raster_slice.attrs['transform'] = self.translate_transform( raster_slice.attrs['transform'] )
             raw_raster = raster_slice if (raster_slice.size == 0) else TileManager.process_tile_data( raster_slice )
             lgm().log(f"BLOCK{self.block_coords}: load-slice ybounds={ybounds}, xbounds={xbounds}, raster shape={raw_raster.shape}")
         block_raster = self._apply_mask( raw_raster )
@@ -683,8 +691,9 @@ class Block(DataContainer):
         point_index = np.arange( 0, base_raster.shape[-1]*base_raster.shape[-2] )
         filtered_point_data: xa.DataArray = point_data[ pmask, : ] if ( point_data.ndim == 2 ) else point_data[ pmask ]
         filtered_point_data.attrs['dsid'] = base_raster.name
+        nonz = nz(rmask)
         lgm().log( f"raster2points -> [{base_raster.name}]: filtered_point_data shape = {filtered_point_data.shape}" )
-        lgm().log( f"#IA: raster2points:  base_raster{base_raster.dims} shp={base_raster.shape}, rmask shp={shp(rmask)}, nz={nz(rmask)} ")
+        lgm().log( f"#IA: raster2points:  base_raster{base_raster.dims} shp={base_raster.shape}, rmask shp={shp(rmask)}, nz={nonz} ")
         lgm().log( f" ---> mask shape = {pmask.shape}, mask #valid = {np.count_nonzero(pmask)}/{pmask.size}, completed in {time.time()-t0} sec" )
         return filtered_point_data.assign_coords( samples=point_index[ pmask ] ), pmask, rmask
 

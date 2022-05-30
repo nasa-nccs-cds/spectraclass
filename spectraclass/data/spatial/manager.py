@@ -33,6 +33,7 @@ class SpatialDataManager(ModeDataManager):
         from spectraclass.gui.spatial.map import MapManager, mm
         return mm().getPointData( **kwargs )
 
+    @exception_handled
     def getModelData( self, raw_model_data: xa.DataArray, **kwargs) -> Optional[xa.DataArray]:
         from spectraclass.gui.spatial.map import MapManager, mm
         tmask: np.ndarray = mm().threshold_mask(raster=False)
@@ -42,7 +43,7 @@ class SpatialDataManager(ModeDataManager):
         else:
             result = raw_model_data[tmask]
             lgm().log( f"*** MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape}, mask shape = {tmask.shape}")
-            lgm().log( f"#GID: filtered model_data[{result.dims}], shape= {result.shape}, max[samples index] = {result.samples.values.max()}")
+            lgm().log( f"#GID: filtered model_data[{result.dims}], shape= {result.shape}")
             return result
 
     @classmethod
@@ -326,7 +327,7 @@ class SpatialDataManager(ModeDataManager):
         block: Block = kwargs.get('block',None)
         bindex = tm().block_index if (block is None) else block.block_coords
         file_name = f"{tm().tileName(**kwargs)}_b-{tm().block_size}-{bindex[0]}-{bindex[1]}"
-        return os.path.join( self.datasetDir, file_name + f"-m{self.model_dims}.nc" )
+        return os.path.join( self.datasetDir, file_name + f"-m{self.model_dims}{self.ext}.nc" )
 
     def getFilePath(self) -> str:
         base_dir = self.data_dir

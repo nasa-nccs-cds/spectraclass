@@ -101,18 +101,11 @@ class XGeo(XExtension):
             src_crs =  CRS.from_wkt( src_sref.ExportToWkt() )
             dst_crs =  CRS.from_wkt( sref.ExportToWkt() )
 
-            dst_transforms: Tuple[Affine] = calculate_default_transform( src_crs, dst_crs, src_shape[2], src_shape[1],
-                                                         left=src_transform[2],
-                                                         bottom=src_transform[5] + src_transform[3]*src_shape[2] + src_transform[4]*src_shape[1],
-                                                         right= src_transform[2] + src_transform[0]*src_shape[2] + src_transform[1]*src_shape[1],
-                                                         top=src_transform[5])
-
             dst_transform = self.get_dest_transform( src_crs, dst_crs, src_shape )
-            dst_transform1 = dst_transforms[0][0:6]
             dst_shape =  [ src_shape[0], math.ceil(src_shape[1]*sqrt2), math.ceil(src_shape[2]*sqrt2)]
             destination = np.zeros( dst_shape, np.float32 )
 
-            lgm().log( f" XGEO.reproject-> crs:  {src_crs.__class__} -> {dst_crs.__class__}, transform: {src_transform.__class__} -> {dst_transform.__class__}")
+            lgm().log( f" XGEO.reproject-> src_shape:{src_shape} -> dst_shape:{dst_shape}")
             lgm().log(f" -->  src crs:  {src_crs}")
             lgm().log(f" --> dest crs:  {dst_crs}")
             lgm().log(f" -->  src transform:  {src_transform}")
@@ -135,7 +128,8 @@ class XGeo(XExtension):
             [ bd, yd, xd ] = self._obj.dims
             band = self._obj.coords[ bd ]
             coords = {bd:band, yd:y, xd:x}
-            print(f" --> result vrange:  {[np.nanmin(destination),np.nanmax(destination)]}")
+            vrange = [np.nanmin(destination),np.nanmax(destination)]
+            lgm().log(f" --> result vrange:  {vrange}")
 
             result = xr.DataArray( destination, dims=self._obj.dims, coords =coords )
             result.attrs['transform'] = dst_transform

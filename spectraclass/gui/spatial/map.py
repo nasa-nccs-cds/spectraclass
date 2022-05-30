@@ -430,7 +430,7 @@ class MapManager(SCSingletonConfigurable):
         return fdata
 
     def threshold_mask( self, raster=True ) -> np.ndarray:
-        return self.block.get_threshold_mask(raster)
+        return None if (self.block is None) else self.block.get_threshold_mask(raster)
 
     @property
     def figure(self) -> Figure:

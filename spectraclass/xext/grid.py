@@ -182,7 +182,7 @@ class GDALGrid(object):
     def xarray( self, name: str, band: int = -1, masked: bool = True, time_axis = None ) -> xr.DataArray:
         xy_data = self.np_array( band, masked )
         transform = self.geotransform
-        attrs = dict( crs=self.projection.ExportToProj4(), transform=transform )
+        attrs = dict( crs=str(self.projection.ExportToProj4()), transform=transform )
         if transform[2] == 0 and transform[4] == 0: attrs["res"] = [ transform[1], transform[5] ]
         coords = dict( x=self.x_coords, y=self.y_coords )
         dims = [ "y", "x" ]

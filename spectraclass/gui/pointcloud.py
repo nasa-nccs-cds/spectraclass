@@ -146,6 +146,7 @@ class PointCloudManager(SCSingletonConfigurable):
     def empty_pids(self) -> np.ndarray:
         return np.empty(shape=[0], dtype=np.int)
 
+    @exception_handled
     def init_data(self, **kwargs):
         from spectraclass.reduction.embedding import ReductionManager, rm
         from spectraclass.data.base import dm
@@ -162,6 +163,8 @@ class PointCloudManager(SCSingletonConfigurable):
             embedding = rm().umap_init( model_data, nngraph=graph, **kwargs )
             self.xyz = self.normalize(embedding)
             return True
+        else:
+            lgm().log(f"UMAP.init: model_data = None")
 
     def normalize(self, point_data: xa.DataArray) -> xa.DataArray:
         return (point_data - point_data.mean()) * (self.scale / point_data.std())
@@ -184,6 +187,7 @@ class PointCloudManager(SCSingletonConfigurable):
             colors[ self.pick_point ] = [255] * colors.shape[1]
         return colors.astype(np.uint8)
 
+    @exception_handled
     def getGeometry( self, **kwargs ) -> Optional[p3js.BufferGeometry]:
         geometry_data = self.xyz
         if geometry_data is not None:
