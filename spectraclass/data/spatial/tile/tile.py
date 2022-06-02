@@ -154,8 +154,8 @@ class Tile(DataContainer):
         raise Exception( "No valid blocks in tile")
 
     def _get_data(self) -> xa.DataArray:
-        from spectraclass.data.spatial.tile.manager import TileManager
-        return TileManager.instance().getTileData()
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        return tm().getTileData()
 
     @property
     def name(self) -> str:

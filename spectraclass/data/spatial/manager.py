@@ -375,10 +375,10 @@ class SpatialDataManager(ModeDataManager):
         for (k, v) in input_bands.coords.items(): lgm().log(f"     ** {k}: {v.shape}, range: {(v.values.min(),v.values.max())}")
 #        lgm().log("ATTRIBUTES:")
 #        for (k,v) in input_bands.attrs.items(): lgm().log(f" ** {k}: {v}" )
-        nodata = input_bands.attrs.get( '_FillValue' )
-        if (nodata is not None) and not np.isnan( nodata ):
-            input_bands = input_bands.where( input_bands != nodata, np.nan )
-            input_bands.attrs['_FillValue'] = np.nan
+#         nodata = input_bands.attrs.get( '_FillValue' )
+#         if (nodata is not None) and not np.isnan( nodata ):
+#             input_bands = input_bands.where( input_bands != nodata, np.nan )
+#             input_bands.attrs['_FillValue'] = np.nan
         return input_bands
 
     def readMatlabFile(self, input_file_path: str ) -> xa.DataArray:
