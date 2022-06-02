@@ -39,12 +39,14 @@ class SpatialDataManager(ModeDataManager):
         tmask: np.ndarray = mm().threshold_mask(raster=False)
         if tmask is None:
             lgm().log(f"*** MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape},  NO threshold mask")
-            return raw_model_data
+            result =  raw_model_data
         else:
             result = raw_model_data[tmask]
             lgm().log( f"*** MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape}, mask shape = {tmask.shape}")
             lgm().log( f"#GID: filtered model_data[{result.dims}], shape= {result.shape}")
-            return result
+        nnan = np.count_nonzero( np.isnan( result.values.sum(axis=1) ) )
+        lgm().log(f"#GID:getModelData->  nnan-bands = {nnan}/{result.shape[0]}")
+        return result
 
     @classmethod
     def extent(cls, image_data: xa.DataArray ) -> List[float]: # left, right, bottom, top
@@ -73,7 +75,7 @@ class SpatialDataManager(ModeDataManager):
         return result
 
     def pnorm( self, data: xa.DataArray, dim: int = 1 ) -> xa.DataArray:
-        dave, dmag = data.values.mean( dim, keepdims=True ), data.values.std( dim, keepdims=True )
+        dave, dmag = np.nanmean( data.values, keepdims=True, axis=dim ), np.nanstd( data.values, keepdims=True, axis=dim )
         normed_data = (data.values - dave) / dmag
         return data.copy( data=normed_data )
 
@@ -228,6 +230,7 @@ class SpatialDataManager(ModeDataManager):
             blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
 
         if blocks_point_data.size > 0:
+            prange0 = (blocks_point_data.values.min(), blocks_point_data.values.max(), blocks_point_data.values.mean())
             normed_data: xa.DataArray = self.pnorm(blocks_point_data)
             prange = (normed_data.values.min(), normed_data.values.max(), normed_data.values.mean())
             lgm().log( f" Preparing point data with shape {normed_data.shape}, range={prange}, #nan={np.count_nonzero(np.isnan(blocks_point_data))}", print=True)
@@ -372,6 +375,10 @@ class SpatialDataManager(ModeDataManager):
         for (k, v) in input_bands.coords.items(): lgm().log(f"     ** {k}: {v.shape}, range: {(v.values.min(),v.values.max())}")
 #        lgm().log("ATTRIBUTES:")
 #        for (k,v) in input_bands.attrs.items(): lgm().log(f" ** {k}: {v}" )
+        nodata = input_bands.attrs.get( '_FillValue' )
+        if (nodata is not None) and not np.isnan( nodata ):
+            input_bands = input_bands.where( input_bands != nodata, np.nan )
+            input_bands.attrs['_FillValue'] = np.nan
         return input_bands
 
     def readMatlabFile(self, input_file_path: str ) -> xa.DataArray:
