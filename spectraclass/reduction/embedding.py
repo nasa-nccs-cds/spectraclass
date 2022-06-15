@@ -2,6 +2,8 @@ from typing import List, Union, Tuple, Dict
 from typing import List, Union, Tuple, Optional, Dict
 from ..graph.manager import ActivationFlowManager
 from sklearn.decomposition import PCA, FastICA
+from tensorflow.keras.models import Model
+from keras.models import load_model
 import xarray as xa
 import numpy as np, time, traceback
 from ..model.labels import LabelsManager
@@ -45,12 +47,12 @@ class ReductionManager(SCSingletonConfigurable):
         self._encoder = None
 
     @exception_handled
-    def reduce(self, train_data: xa.DataArray, test_data: List[xa.DataArray], reduction_method: str, ndim: int, nepochs: int = 100, sparsity: float = 0.0) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
+    def reduce(self, train_data: xa.DataArray, test_data: List[xa.DataArray], reduction_method: str, ndim: int, nepochs: int = 100, **kwargs ) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
         with xa.set_options(keep_attrs=True):
             if test_data is None: test_data = [train_data]
             redm = reduction_method.lower()
             if redm in [ "autoencoder", "aec", "ae" ]:
-                return self.autoencoder_reduction( train_data, test_data, ndim, nepochs, sparsity=sparsity )
+                return self.autoencoder_reduction( train_data, test_data, ndim, nepochs, **kwargs )
             elif redm in [ "pca", "ica" ]:
                 return self.ca_reduction( train_data, test_data, ndim, redm )
             else: return [ (td.data,td,td) for td in test_data ]
@@ -94,16 +96,25 @@ class ReductionManager(SCSingletonConfigurable):
                 results.append( (reduced_features, reproduction, normed_input ) )
             return results
 
+    def _load_network(self, key: str, model_dims: int, **kwargs ):
+        from spectraclass.data.base import DataManager, dm
+        lgm().log( f"#AEC: LOADING ENCODER from '{dm().cache_dir}/encoder.{model_dims}.{key}'")
+        self._autoencoder = load_model(  f"{dm().cache_dir}/autoencoder.{model_dims}.{key}" )
+        self._encoder =     load_model(  f"{dm().cache_dir}/encoder.{model_dims}.{key}" )
+
     def get_network( self, input_dims: int, model_dims: int, **kwargs ):
         refresh: bool = kwargs.get('refresh', True )
+        key: str = kwargs.get( 'modelkey', "" )
         if (self._autoencoder is None) or refresh:
-            self._build_network( input_dims, model_dims, **kwargs )
-        return self._autoencoder, self._encoder
+            if key:     self._load_network( key, model_dims, **kwargs )
+            else:       self._build_network( input_dims, model_dims, **kwargs )
+        return self._autoencoder, self._encoder, bool(key)
 
     def _build_network( self, input_dims: int, model_dims: int, **kwargs  ):
         from tensorflow.keras.layers import Input, Dense
         from tensorflow.keras.models import Model
         from tensorflow.keras import losses, regularizers
+        lgm().log(f"#AEC: BUILD AEC NETWORK")
         sparsity: float = kwargs.get( 'sparsity', 0.0 )
         reduction_factor = 2
         inputlayer = Input(shape=[input_dims])
@@ -131,7 +142,6 @@ class ReductionManager(SCSingletonConfigurable):
     def autoencoder_reduction(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], model_dims: int, epochs: int = 100, **kwargs ) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
         from tensorflow.keras.models import Model
         autoencoder: Model = None
-        model_file = kwargs.get( 'model_file', None )
         ispecs: List[np.ndarray] = [train_input.data.max(0), train_input.data.min(0), train_input.data.mean(0), train_input.data.std(0)]
         lgm().log(f" autoencoder_reduction: train_input shape = {train_input.shape} ")
         lgm().log(f"   ----> max = { ispecs[0][:64].tolist() } ")
@@ -144,14 +154,14 @@ class ReductionManager(SCSingletonConfigurable):
         if test_inputs is None: test_inputs = [ train_input ]
         for iT, test_input in enumerate(test_inputs):
             try:
-                autoencoder, encoder = self.get_network( train_input.shape[1], model_dims, **kwargs )
-                autoencoder.fit( train_input.data, train_input.data, epochs=epochs, batch_size=256, shuffle=True )
+                autoencoder, encoder, prebuilt = self.get_network( train_input.shape[1], model_dims, **kwargs )
+                if not prebuilt:
+                    lgm().log(f"#AEC: TRAIN AEC NETWORK")
+                    autoencoder.fit( train_input.data, train_input.data, epochs=epochs, batch_size=256, shuffle=True )
                 encoded_data: np.ndarray = encoder.predict( test_input.data )
                 reproduced_data: np.ndarray = autoencoder.predict( test_input.data )
                 reproduction: xa.DataArray = test_input.copy( data=reproduced_data )
                 results.append( (encoded_data, reproduction, test_input ) )
-                if model_file is not None:
-                    autoencoder.save( model_file, True, True )
                 if iT == 0:
                     lgm().log(f" Autoencoder_reduction, result shape = {encoded_data.shape}")
                     lgm().log(f" ----> encoder_input: shape = {test_input.shape}, val[5][5] = {test_input.data[:5][:5]} ")

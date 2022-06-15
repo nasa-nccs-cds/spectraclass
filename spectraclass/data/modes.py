@@ -38,6 +38,7 @@ class ModeDataManager(SCSingletonConfigurable):
     reduce_method = tl.Unicode("Autoencoder").tag(config=True, sync=True)
     reduce_nepochs = tl.Int(5).tag(config=True, sync=True)
     reduce_sparsity = tl.Float( 0.0 ).tag(config=True,sync=True)
+    modelkey = tl.Unicode("").tag(config=True, sync=True)
 
     def __init__(self, ):
         super(ModeDataManager,self).__init__()
@@ -74,7 +75,7 @@ class ModeDataManager(SCSingletonConfigurable):
             image_path_list = glob.glob( iglob )
             lgm().log(f" ---> FOUND {len(image_path_list)} paths")
             self._image_names = [ self.extract_image_name( image_path ) for image_path in image_path_list ]
-            lgm().log( f" ---> IMAGE LIST: {self.image_names}")
+            lgm().log( f" ---> IMAGE LIST: {self._image_names}")
 
     def set_current_image(self, image_index: int ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm

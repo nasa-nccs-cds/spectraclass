@@ -135,11 +135,13 @@ class TileServiceImage(AxesImage):
             self.cache = self.raster_source.fetch_raster( self.projection, extent=[x1, x2, y1, y2], target_resolution=(window_extent.width, window_extent.height))
             self.current_extent = [x1, y1, x2, y2]
 
-        for img, extent in self.cache:
-            self.set_data(img)
-            with self.hold_limits():
-                self.set_extent(extent)
-            super().draw(renderer, *args, **kwargs)
+        if self.cache is not None:
+            for img, extent in self.cache:
+                self.set_data(img)
+                with self.hold_limits():
+                    self.set_extent(extent)
+
+        super().draw(renderer, *args, **kwargs)
 
     def can_composite(self):
         return False

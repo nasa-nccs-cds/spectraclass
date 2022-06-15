@@ -14,6 +14,7 @@ def pnorm( data: xa.DataArray, dim: int = 1 ) -> xa.DataArray:
 
 dm: DataManager = DataManager.initialize( 'img_mgr', "aviris" )
 autoencoder: Model = None
+block: Block = None
 encoder: Model = None
 model_dims = 24
 nepochs = 1
@@ -23,7 +24,6 @@ key = "0000"
 for image_index in range(dm.modal.num_images):
     dm.modal.set_current_image(image_index)
     print( f"Preprocessing data blocks{tm().block_dims} for image {dm.modal.image_name}" )
-    base_file_path = f"{dm.cache_dir}/{dm.modal.image_name}"
 
     for iter in range(niter):
         for block in tm().tile.getBlocks():
@@ -38,9 +38,9 @@ for image_index in range(dm.modal.num_images):
                 print(f" Trained autoencoder in {time.time()-t0} sec")
             block.initialize()
 
-    autoencoder.save( f"{base_file_path}.autoencoder.{key}" )
-    encoder.save(f"{base_file_path}.encoder.{key}")
-    print( f"Completed, saved model to '{base_file_path}.*encoder.{key}'")
+    autoencoder.save( f"{dm.cache_dir}/autoencoder.{model_dims}.{key}" )
+    encoder.save(     f"{dm.cache_dir}/encoder.{model_dims}.{key}" )
+    print( f"Completed, saved model to '{dm.cache_dir}/*encoder.{key}'")
 
 
 

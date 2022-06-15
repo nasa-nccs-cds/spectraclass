@@ -82,7 +82,7 @@ class SpatialDataManager(ModeDataManager):
     def reduce(self, data: xa.DataArray):
         if self.reduce_method and (self.reduce_method.lower() != "none"):
             normed_data = self.pnorm( data )
-            reduced_spectra, reproduction, _ = rm().reduce( normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, self.reduce_sparsity )[0]
+            reduced_spectra, reproduction, _ = rm().reduce( normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, modelkey=self.modelkey )[0]
             coords = dict( samples=data.coords['samples'], band=np.arange( self.model_dims )  )
             return xa.DataArray( reduced_spectra, dims=['samples', 'band'], coords=coords )
         return data
@@ -234,7 +234,7 @@ class SpatialDataManager(ModeDataManager):
             normed_data: xa.DataArray = self.pnorm(blocks_point_data)
             prange = (normed_data.values.min(), normed_data.values.max(), normed_data.values.mean())
             lgm().log( f" Preparing point data with shape {normed_data.shape}, range={prange}, #nan={np.count_nonzero(np.isnan(blocks_point_data))}", print=True)
-            blocks_reduction = rm().reduce(normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs,  self.reduce_sparsity)
+            blocks_reduction = rm().reduce(normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, modelkey=self.modelkey)
         else:
             em2 = np.empty(shape=[0, self.model_dims], dtype=np.float)
             reduced_spectra = xa.DataArray(em2, dims=('samples', 'model'), coords=dict(samples=ea1, model=np.arange(self.model_dims)))

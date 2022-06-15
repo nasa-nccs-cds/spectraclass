@@ -373,15 +373,16 @@ class Block(DataContainer):
 
     def __init__(self, tile: Tile, ix: int, iy: int, itile: int, **kwargs ):
         super(Block, self).__init__( data_projected=True, **kwargs )
+        self.initialize_data()
         self.tile: Tile = tile
-        self.init_task = None
-        self._tmask: xa.DataArray = None
-        self._model_data: xa.DataArray = None
         self.config = kwargs
         self._trecs: Tuple[ Dict[int,ThresholdRecord], Dict[int,ThresholdRecord] ] = ( {}, {} )
         self.block_coords: Tuple[int,int] = (ix,iy)
         self.tile_index = itile
- #       self.validate_parameters()
+
+    def initialize_data(self):
+        self.initialize()
+        self.init_task = None
         self._index_array: xa.DataArray = None
         self._pid_array: np.ndarray = None
         self._flow = None
@@ -390,7 +391,8 @@ class Block(DataContainer):
         self._point_coords: Optional[Dict[str,np.ndarray]] = None
         self._point_mask: Optional[np.ndarray] = None
         self._raster_mask: Optional[np.ndarray] = None
- #       lgm().log(f"CREATE Block: ix={ix}, iy={iy}, dfile={dm().modal.dataFile(block=self, index=self.tile_index)}")
+        self._tmask: xa.DataArray = None
+        self._model_data: xa.DataArray = None
 
     def set_thresholds(self, bUseModel: bool, iFrame: int, thresholds: Tuple[float,float] ) -> bool:
         trec: ThresholdRecord = self.threshold_record( bUseModel, iFrame )
