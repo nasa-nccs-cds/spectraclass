@@ -45,14 +45,15 @@ class ReductionManager(SCSingletonConfigurable):
         self._samples_coord = None
         self._autoencoder = None
         self._encoder = None
+        self.vae = None
 
     @exception_handled
     def reduce(self, train_data: xa.DataArray, test_data: List[xa.DataArray], reduction_method: str, ndim: int, nepochs: int = 100, **kwargs ) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
         with xa.set_options(keep_attrs=True):
             if test_data is None: test_data = [train_data]
             redm = reduction_method.lower()
-            if redm in [ "autoencoder", "aec", "ae" ]:
-                return self.autoencoder_reduction( train_data, test_data, ndim, nepochs, **kwargs )
+            if redm in [ "autoencoder", "aec", "ae", "vae" ]:
+                return self.autoencoder_reduction( train_data, test_data, ndim, nepochs, vae=(redm=="vae"), **kwargs )
             elif redm in [ "pca", "ica" ]:
                 return self.ca_reduction( train_data, test_data, ndim, redm )
             else: return [ (td.data,td,td) for td in test_data ]
@@ -105,12 +106,15 @@ class ReductionManager(SCSingletonConfigurable):
     def get_network( self, input_dims: int, model_dims: int, **kwargs ):
         refresh: bool = kwargs.get('refresh', True )
         key: str = kwargs.get( 'modelkey', "" )
+        self.vae = kwargs.get( 'vae', False )
         if (self._autoencoder is None) or refresh:
             if key:     self._load_network( key, model_dims, **kwargs )
-            else:       self._build_network( input_dims, model_dims, **kwargs )
+            else:
+                if self.vae:  self._build_vae_model(  input_dims, model_dims, **kwargs )
+                else:         self._build_ae_model( input_dims, model_dims, **kwargs )
         return self._autoencoder, self._encoder, bool(key)
 
-    def _build_network( self, input_dims: int, model_dims: int, **kwargs  ):
+    def _build_ae_model(self, input_dims: int, model_dims: int, **kwargs):
         from tensorflow.keras.layers import Input, Dense
         from tensorflow.keras.models import Model
         from tensorflow.keras import losses, regularizers
@@ -139,6 +143,91 @@ class ReductionManager(SCSingletonConfigurable):
         self._autoencoder.compile( loss=self.loss, optimizer=optimizer )
         self.log = lgm().log(f" BUILD Autoencoder network: input_dims = {input_dims} ")
 
+    def vae_loss(self, inputs, outputs, n_features, z_mean, z_log):
+        from tensorflow.keras import backend as K
+        from keras.losses import mse, binary_crossentropy
+        """ Loss = Recreation loss + Kullback-Leibler loss
+        for probability function divergence (ELBO).
+        gamma > 1 and capacity != 0 for beta-VAE
+        """
+        gamma = 1.0
+        capacity = 0.0
+        reconstruction_loss = mse( inputs, outputs )
+        reconstruction_loss *= n_features
+        kl_loss = 1 + z_log - K.square(z_mean) - K.exp(z_log)
+        kl_loss = -0.5 * K.sum(kl_loss, axis=-1)
+        kl_loss = gamma * K.abs( kl_loss - capacity )
+        return K.mean(reconstruction_loss + kl_loss)
+
+    def sampling(self, args):
+        from tensorflow.keras import backend as K
+        """Reparametrisation by sampling from Gaussian, N(0,I)
+        To sample from epsilon = Norm(0,I) instead of from likelihood Q(z|X)
+        with latent variables z: z = z_mean + sqrt(var) * epsilon
+
+        Parameters
+        ----------
+        args : tensor
+            Mean and log of variance of Q(z|X).
+
+        Returns
+        -------
+        z : tensor
+            Sampled latent variable.
+        """
+        z_mean, z_log = args
+        batch = K.shape(z_mean)[0]  # batch size
+        dim = K.int_shape(z_mean)[1]  # latent dimension
+        epsilon = K.random_normal(shape=(batch, dim))  # mean=0, std=1.0
+        return z_mean + K.exp(0.5 * z_log) * epsilon
+
+    def _build_vae_model(self, input_dims: int, model_dims: int, **kwargs ):
+        from tensorflow.keras.layers import Input, Dense, Dropout, Lambda
+        from tensorflow.keras.models import Model
+        from tensorflow.keras.regularizers import l2
+        hidden_activation = "tanh"
+        output_activation = 'linear'
+        optimizer = 'adam'  # 'rmsprop'
+        reduction_factor = 2.0
+        verbose = 1
+        dropout_rate = 0.1
+        l2_regularizer = 0.1
+        inputs = Input(shape=(input_dims,))
+        layer = Dense(input_dims, activation=hidden_activation)(inputs)
+        layer_dims = int(round(input_dims / reduction_factor))
+        while layer_dims > model_dims:
+            layer = Dense(layer_dims, activation=hidden_activation, activity_regularizer=l2(l2_regularizer))(layer)
+            layer = Dropout(dropout_rate)(layer)
+            layer_dims = int(round(layer_dims / reduction_factor))
+
+        z_mean = Dense(model_dims)(layer)
+        z_log = Dense(model_dims)(layer)
+        z = Lambda(self.sampling, output_shape=(model_dims,))([z_mean, z_log])
+
+        self._encoder = Model(inputs, [z_mean, z_log, z])
+        if verbose >= 1: self._encoder.summary()
+
+        latent_inputs = Input(shape=(model_dims,))
+        layer = Dense(model_dims, activation=hidden_activation)(latent_inputs)
+        layer_dims = int(round(model_dims * reduction_factor))
+        while layer_dims < input_dims:
+            layer = Dense(layer_dims, activation=hidden_activation)(layer)
+            layer = Dropout(dropout_rate)(layer)
+            layer_dims = int(round(layer_dims * reduction_factor))
+
+        outputs = Dense(input_dims, activation=output_activation)(layer)
+
+        self._decoder = Model(latent_inputs, outputs)
+        if verbose >= 1: self._decoder.summary()
+
+        outputs = self._decoder(self._encoder(inputs)[2])
+        self._autoencoder = Model(inputs, outputs)
+        self._autoencoder.add_loss( self.vae_loss( inputs, outputs, input_dims, z_mean, z_log ) )
+        self._autoencoder.compile(optimizer=optimizer)
+        if verbose >= 1: self._autoencoder.summary()
+        self.log = lgm().log(f" BUILD Autoencoder network: input_dims = {input_dims} ")
+
+
     def autoencoder_reduction(self, train_input: xa.DataArray, test_inputs: Optional[List[xa.DataArray]], model_dims: int, epochs: int = 100, **kwargs ) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
         from tensorflow.keras.models import Model
         autoencoder: Model = None
@@ -156,9 +245,10 @@ class ReductionManager(SCSingletonConfigurable):
             try:
                 autoencoder, encoder, prebuilt = self.get_network( train_input.shape[1], model_dims, **kwargs )
                 if not prebuilt:
-                    lgm().log(f"#AEC: TRAIN AEC NETWORK")
+                    lgm().log(f"#AEC: TRAIN AEC NETWORK, VAE={self.vae}")
                     autoencoder.fit( train_input.data, train_input.data, epochs=epochs, batch_size=256, shuffle=True )
-                encoded_data: np.ndarray = encoder.predict( test_input.data )
+                encoder_results = encoder.predict( test_input.data )
+                encoded_data: np.ndarray = encoder_results[0] if self.vae else encoder_results
                 reproduced_data: np.ndarray = autoencoder.predict( test_input.data )
                 reproduction: xa.DataArray = test_input.copy( data=reproduced_data )
                 results.append( (encoded_data, reproduction, test_input ) )

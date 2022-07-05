@@ -15,26 +15,30 @@ def pnorm( data: xa.DataArray, dim: int = 1 ) -> xa.DataArray:
 dm: DataManager = DataManager.initialize( 'img_mgr', "aviris" )
 autoencoder: Model = None
 encoder: Model = None
-model_dims = 24
-nepochs = 1
-niter = 2
+model_dims = 16
+niter = 100
+vae = False
 key = "0000"
 
 for image_index in range(dm.modal.num_images):
     dm.modal.set_current_image(image_index)
     print( f"Preprocessing data blocks{tm().block_dims} for image {dm.modal.image_name}" )
     base_file_path = f"{dm.cache_dir}/{dm.modal.image_name}"
+    blocks = tm().tile.getBlocks()
+    nblocks = len( blocks )
 
+    initial_epoch = 0
     for iter in range(niter):
-        for block in tm().tile.getBlocks():
+        for bi, block in enumerate(blocks):
             t0 = time.time()
             point_data, grid = block.getPointData()
             if point_data.shape[0] > 0:
                 norm_data = pnorm( point_data )
                 print(f"\nITER[{iter}]: Processing block{block.block_coords}, data shape = {point_data.shape}")
                 if autoencoder is None:
-                    autoencoder, encoder, prebuilt = rm().get_network( norm_data.shape[1], model_dims )
-                autoencoder.fit( norm_data.data, norm_data.data, epochs=nepochs, batch_size=256, shuffle=True )
+                    autoencoder, encoder, prebuilt = rm().get_network( norm_data.shape[1], model_dims, vae=vae )
+                nepochs = iter*nblocks + bi
+                autoencoder.fit( norm_data.data, norm_data.data, initial_epoch=nepochs-1, epochs=nepochs, shuffle=True )
                 print(f" Trained autoencoder in {time.time()-t0} sec")
             block.initialize()
 

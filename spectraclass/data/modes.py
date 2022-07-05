@@ -35,7 +35,7 @@ class ModeDataManager(SCSingletonConfigurable):
 
     model_dims = tl.Int(32).tag(config=True, sync=True)
     subsample_index = tl.Int(1).tag(config=True, sync=True)
-    reduce_method = tl.Unicode("Autoencoder").tag(config=True, sync=True)
+    reduce_method = tl.Unicode("vae").tag(config=True, sync=True)
     reduce_nepochs = tl.Int(5).tag(config=True, sync=True)
     reduce_sparsity = tl.Float( 0.0 ).tag(config=True,sync=True)
     modelkey = tl.Unicode("").tag(config=True, sync=True)

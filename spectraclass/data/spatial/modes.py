@@ -24,8 +24,9 @@ class AvirisDataManager(SpatialDataManager):
     def _unpack_valid_bands(self):
         bv0 = 0
         for ib, bv1 in enumerate(self.valid_aviris_bands):
-            if ib % 2 == 1: self.VALID_BANDS.append( [ bv0, bv1 ] )
-            bv0 = bv1
+            if isinstance(bv1, (list, tuple)): self.VALID_BANDS.append( bv1 )
+            elif ib % 2 == 1: self.VALID_BANDS.append( [ bv0, bv1 ] )
+            else: bv0 = bv1
 
     def gui(self):
         if self.ext == "_img":
