@@ -1,5 +1,5 @@
-from keras.models import *
-from keras.layers import *
+from tensorflow.keras.models import *
+from tensorflow.keras.layers import *
 from .encoder import vanilla_encoder
 IMAGE_ORDERING = 'channels_first'
 from .util import get_segmentation_model

@@ -3,7 +3,7 @@ from typing import List, Union, Tuple, Optional, Dict
 from ..graph.manager import ActivationFlowManager
 from sklearn.decomposition import PCA, FastICA
 from tensorflow.keras.models import Model
-from keras.models import load_model
+from tensorflow.keras.models import load_model
 import xarray as xa
 import numpy as np, time, traceback
 from ..model.labels import LabelsManager
@@ -145,7 +145,7 @@ class ReductionManager(SCSingletonConfigurable):
 
     def vae_loss(self, inputs, outputs, n_features, z_mean, z_log):
         from tensorflow.keras import backend as K
-        from keras.losses import mse, binary_crossentropy
+        from tensorflow.keras.losses import mse, binary_crossentropy
         """ Loss = Recreation loss + Kullback-Leibler loss
         for probability function divergence (ELBO).
         gamma > 1 and capacity != 0 for beta-VAE
