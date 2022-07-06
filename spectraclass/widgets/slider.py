@@ -15,7 +15,7 @@ class PageSlider(Slider):
         self.numpages = numpages
         self.axes = ax
 
-        super(PageSlider, self).__init__(ax, "", 0, numpages, valinit=valinit, valfmt=valfmt, **kwargs)
+        super(PageSlider, self).__init__(ax, "", 0, numpages, valinit=valinit, valfmt=valfmt, dragging=False, valstep=1.0, **kwargs)
 
         self.poly.set_visible(False)
         self.vline.set_visible(False)
@@ -44,11 +44,11 @@ class PageSlider(Slider):
     def refesh(self):
         self.axes.figure.canvas.draw()
 
-    def _update(self, event):
-        super(PageSlider, self)._update(event)
-        i = int(self.val)
-        if i >=self.valmax: return
-        self._colorize(i)
+    # def _update(self, event):
+    #     super(PageSlider, self)._update(event)
+    #     i = int(self.val)
+    #     if i >=self.valmax: return
+    #     self._colorize(i)
 
     def _colorize(self, i):
         for j in range(self.numpages):
@@ -60,11 +60,11 @@ class PageSlider(Slider):
         i = current_i+1
         if i >= self.valmax: i = self.valmin
         self.set_val(i)
-        self._colorize(i)
+#        self._colorize(i)
 
     def backward(self, event=None):
         current_i = int(self.val)
         i = current_i-1
         if i < self.valmin: i = self.valmax -1
         self.set_val(i)
-        self._colorize(i)
+#        self._colorize(i)
