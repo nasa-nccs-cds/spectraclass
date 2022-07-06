@@ -226,7 +226,7 @@ class SpectraclassController(SCSingletonConfigurable):
             if self.pcm_active: pcm().color_by_value( flow.get_distances(), distance=True )
             ufm().show("Done Coloring by Distance")
 
-    @log_timing
+    @exception_handled
     def add_marker(self, source: str, marker: Marker):
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm

@@ -19,14 +19,9 @@ class PageSlider(Slider):
 
         self.poly.set_visible(False)
         self.vline.set_visible(False)
-        self.pageRects = []
         if self.numpages > 0:
             indexMod = max( self.numpages // 10, 1 )
             for i in range(numpages):
-                facecolor = self.activecolor if i==valinit else self.facecolor
-                r  = Rectangle((float(i)/numpages, 0), 1./numpages, 1, transform=ax.transAxes, facecolor=facecolor)
-                ax.add_artist(r)
-                self.pageRects.append(r)
                 if i % indexMod == 0:
                     ax.text(float(i)/numpages+0.5/numpages, 0.5, str(i+1), ha="center", va="center", transform=ax.transAxes, fontsize=self.fontsize)
         self.valtext.set_visible(False)
@@ -44,27 +39,15 @@ class PageSlider(Slider):
     def refesh(self):
         self.axes.figure.canvas.draw()
 
-    # def _update(self, event):
-    #     super(PageSlider, self)._update(event)
-    #     i = int(self.val)
-    #     if i >=self.valmax: return
-    #     self._colorize(i)
-
-    def _colorize(self, i):
-        for j in range(self.numpages):
-            self.pageRects[j].set_facecolor(self.facecolor)
-        self.pageRects[i].set_facecolor(self.activecolor)
-
     def forward(self, event=None):
         current_i = int(self.val)
         i = current_i+1
         if i >= self.valmax: i = self.valmin
         self.set_val(i)
-#        self._colorize(i)
 
     def backward(self, event=None):
         current_i = int(self.val)
         i = current_i-1
         if i < self.valmin: i = self.valmax -1
         self.set_val(i)
-#        self._colorize(i)
+

@@ -178,6 +178,7 @@ class LabelsManager(SCSingletonConfigurable):
     def addMarker(self, marker: Marker ):
         self.clearTransientMarkers(marker)
         self._markers.append( marker )
+        lgm().log(f"LabelsManager.addMarker: cid={marker.cid}, #pids={len(marker.pids)}")
 
     def popMarker(self, mtype: str = None ) -> Optional[Marker]:
         for iM in range( len(self._markers)-1, -1, -1 ):
