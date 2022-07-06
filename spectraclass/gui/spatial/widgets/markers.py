@@ -24,7 +24,7 @@ class Marker:
     @property
     def active(self) -> bool:
         from spectraclass.data.spatial.tile.manager import tm
-        return (self.block_index == tm().block_index) and (self.image_index == self.image_index)
+        return (self.block_index == tm().block_index) and (self.image_index == tm().image_index)
 
     @property
     def pids(self) -> np.ndarray:

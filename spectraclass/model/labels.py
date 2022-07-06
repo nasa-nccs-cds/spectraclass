@@ -176,9 +176,10 @@ class LabelsManager(SCSingletonConfigurable):
         return self._label_maps[-1]
 
     def addMarker(self, marker: Marker ):
+        from spectraclass.data.spatial.tile.manager import tm
         self.clearTransientMarkers(marker)
         self._markers.append( marker )
-        lgm().log(f"LabelsManager.addMarker: cid={marker.cid}, #pids={len(marker.pids)}")
+        lgm().log(f"LabelsManager[{tm().image_index}].addMarker: cid={marker.cid}, #pids={len(marker.pids)}, active = {marker.active}, block={marker.block_index}, image={marker.image_index}" )
 
     def popMarker(self, mtype: str = None ) -> Optional[Marker]:
         for iM in range( len(self._markers)-1, -1, -1 ):
