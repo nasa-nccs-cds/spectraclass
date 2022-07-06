@@ -291,6 +291,7 @@ class LabelsManager(SCSingletonConfigurable):
         self._init_labels_data()
 
     def refresh(self):
+        lgm().log( "CLEAR ALL MARKERS")
         self.clearMarkers()
 
     def deletePids(self, pids: List[int] ):
@@ -314,6 +315,7 @@ class LabelsManager(SCSingletonConfigurable):
     def clearMarker( self, m ):
         for marker in reversed(self._markers):
             if m == marker:
+                lgm().log(f"LM: Removing marker: {m}")
                 self._markers.remove( marker )
                 return
 
