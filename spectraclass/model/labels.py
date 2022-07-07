@@ -179,7 +179,7 @@ class LabelsManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import tm
         self.clearTransientMarkers(marker)
         self._markers.append( marker )
-        lgm().log(f"LabelsManager[{tm().image_index}].addMarker: cid={marker.cid}, #pids={len(marker.pids)}, active = {marker.active}, block={marker.block_index}, image={marker.image_index}" )
+        lgm().log(f"LabelsManager[{tm().image_index}:{tm().block_index}].addMarker: cid={marker.cid}, #pids={len(marker.pids)}, active = {marker.active}, block={marker.block_index}, image={marker.image_index}" )
 
     def popMarker(self, mtype: str = None ) -> Optional[Marker]:
         for iM in range( len(self._markers)-1, -1, -1 ):
@@ -368,7 +368,7 @@ class LabelsManager(SCSingletonConfigurable):
         xcmap: xa.DataArray = block.classmap()
         cmap = xcmap.values
         fcmap = np.ravel( cmap )
-        lgm().log( f" GENERATE LABEL MAP: {len(self.markers)} markers")
+        lgm().log( f" *GENERATE LABEL MAP: {len(self.markers)} markers")
         for marker in self.markers:
             if (mtype is None) or (marker.type == mtype):
                 if marker.mask is not None:
@@ -385,7 +385,7 @@ class LabelsManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block = kwargs.get( 'block', tm().getBlock() )
         cmap: xa.DataArray = block.classmap()
-        lgm().log( f" GENERATE LABEL MAP: {len(self.markers)} markers")
+        lgm().log( f" **GENERATE LABEL MAP: {len(self.markers)} markers")
         for marker in self.markers:
             if marker.type not in ["cluster"]:
                 lgm().log( f"update_label_map->MARKER[{marker.type}]: Setting {len(marker.pids)} labels for cid = {marker.cid}" )

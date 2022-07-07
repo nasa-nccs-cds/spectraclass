@@ -270,7 +270,6 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def plot_labels_image(self, classification: xa.DataArray = None ):
-
         if classification is None:
             if self._classification_data is not None:
                 self._classification_data = xa.zeros_like( self._classification_data )
