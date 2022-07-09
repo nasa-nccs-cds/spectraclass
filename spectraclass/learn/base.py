@@ -11,6 +11,7 @@ from ..model.labels import LabelsManager
 import traitlets as tl
 import traitlets.config as tlc
 import ipywidgets as ipw
+import copy
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from tensorflow.keras.utils import to_categorical
@@ -23,6 +24,9 @@ class LearningModel:
         self._score: Optional[np.ndarray] = None
         self.config = kwargs
         self._keys = []
+
+    def clear(self):
+        raise Exception( "abstract method LearningModel.clear called")
 
     @property
     def model_dir(self):
@@ -113,10 +117,12 @@ class KerasModelWrapper(LearningModel):
 
     def __init__(self, name: str,  model: models.Model, **kwargs ):
         LearningModel.__init__( self, name,  **kwargs )
-        opt = str(kwargs.pop('opt', 'adam')).lower()
-        loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
+        self.opt = str(kwargs.pop('opt', 'adam')).lower()
+        self.loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
+        self.parms = kwargs
         self._model: models.Model = model
-        self._model.compile(optimizer=opt, loss=loss,  metrics=['accuracy'], **kwargs )
+        self._model.compile(optimizer=self.opt, loss=self.loss,  metrics=['accuracy'], **kwargs )
+        self._init_model = copy.deepcopy(model)
 
     def predict( self, data: np.ndarray, **kwargs ) -> np.ndarray:
         return self._model.predict( data, **kwargs )
@@ -132,6 +138,10 @@ class KerasModelWrapper(LearningModel):
         file_path = os.path.join( self.model_dir, f"{model_name}.tf" )
         lgm().log( f'KerasModelWrapper: loading model -> {file_path}' )
         self._model = models.load_model( file_path, **kwargs )
+
+    def clear(self):
+        self._model = self._init_model
+        self._model.compile(optimizer=self.opt, loss=self.loss,  metrics=['accuracy'], **self.parms )
 
     def fit(self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
         nepochs = kwargs.pop( 'nepochs', 25 )

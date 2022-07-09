@@ -31,6 +31,11 @@ class PolyRec:
         ax.add_line( self.line )
         self.indx = -1
 
+    def remove(self):
+        self.poly.remove()
+        self.line.remove()
+        self.canvas.draw_idle()
+
     def set_alpha(self, alpha: float ):
         self.poly.set_alpha( alpha )
 
@@ -62,7 +67,6 @@ class PolyRec:
         self.poly.set_xy( np.row_stack( [ self.poly.xy, np.array( [x, y] ) ] ) )
         lgm().log(f"POLY: insert point={[x, y]}, points = {self.poly.xy.tolist()}")
         self.poly.pchanged()
-         # () #.draw()
         self.draw()
 
     def complete( self ):

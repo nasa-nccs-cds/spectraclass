@@ -103,11 +103,12 @@ class mplGraphPlot(LinePlot):
         if m.size > 0:
             self.clearTransients()
             if len(m.pids) == 1:    self.plot_line( m.pids[0], m.cid )
-            else:                   self.plot_lines( m.pids, m.cid )
+            else:                   self.plot_lines( m.pids.tolist(), m.cid )
 
     @log_timing
     def plot_line(self, pid: int, cid: int ):
         from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.gui.control import UserFeedbackManager, ufm
         selected: bool = (self.selected_pid >= 0)
         selection = (pid == self.selected_pid)
         alpha = (1.0 if selection else 0.2) if selected else 1.0
@@ -115,23 +116,33 @@ class mplGraphPlot(LinePlot):
         lw = 2.0 if selection else 1.0
         lrec = LineRec(None, pid, cid)
         self.lrecs[pid] = lrec
-        lines = self.ax.plot( self.lx(lrec.pid), self.ly(lrec.pid), picker=True, pickradius=2, color=color, alpha=alpha, linewidth=lw )
-        lrec.line = lines[0]
-        if (not self._use_model) and (self.ry.size > 0):
-            self.rlines.extend( self.ax.plot( self.lx(lrec.pid), self.lry(lrec.pid), color="grey" ) )
-        self.ax.figure.canvas.draw_idle()
+        x,y = self.lx(lrec.pid), self.ly(lrec.pid)
+        if y is not None:
+            lines = self.ax.plot( x,y, picker=True, pickradius=2, color=color, alpha=alpha, linewidth=lw )
+            lrec.line = lines[0]
+            if (not self._use_model) and (self.ry.size > 0):
+                self.rlines.extend( self.ax.plot( x, self.lry(lrec.pid), color="grey" ) )
+            self.ax.figure.canvas.draw_idle()
+        else:
+            ufm().show(f"Points out of bounds","red")
+
 
     @log_timing
     def plot_lines(self, mpids: List[int], cid: int ):
         from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.gui.control import UserFeedbackManager, ufm
         color = lm().graph_colors[cid]
         skip_index = max( len(mpids)//self._max_graph_group_size, 1 )
         pids = mpids[::skip_index]
-        lrecs = [ LineRec(None, pid, cid) for pid in pids ]
-        for lrec in lrecs: self.lrecs[lrec.pid] = lrec
-        lines = self.ax.plot( self.lx(pids), self.ly(pids), picker=True, pickradius=2, color=color, alpha=0.2, linewidth=1.0 )
-        self.ax.figure.canvas.draw_idle()
-        for (lrec, line) in zip(lrecs, lines): lrec.line = line
+        x,y = self.lx(pids), self.ly(pids)
+        if y is not None:
+            lrecs = [ LineRec(None, pid, cid) for pid in pids ]
+            for lrec in lrecs: self.lrecs[lrec.pid] = lrec
+            lines = self.ax.plot( x, y, picker=True, pickradius=2, color=color, alpha=0.2, linewidth=1.0 )
+            self.ax.figure.canvas.draw_idle()
+            for (lrec, line) in zip(lrecs, lines): lrec.line = line
+        else:
+            ufm().show(f"Points out of bounds","red")
 
     @exception_handled
     def get_plotspecs(self):

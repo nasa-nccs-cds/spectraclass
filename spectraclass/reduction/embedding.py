@@ -48,10 +48,10 @@ class ReductionManager(SCSingletonConfigurable):
         self.vae = None
 
     @exception_handled
-    def reduce(self, train_data: xa.DataArray, test_data: List[xa.DataArray], reduction_method: str, ndim: int, nepochs: int = 100, **kwargs ) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
+    def reduce(self, train_data: xa.DataArray, test_data: List[xa.DataArray], reduction_method: Optional[str], ndim: int, nepochs: int = 100, **kwargs ) -> List[Tuple[np.ndarray, xa.DataArray, xa.DataArray]]:
         with xa.set_options(keep_attrs=True):
             if test_data is None: test_data = [train_data]
-            redm = reduction_method.lower()
+            redm = str(reduction_method).lower()
             if redm in [ "autoencoder", "aec", "ae", "vae" ]:
                 return self.autoencoder_reduction( train_data, test_data, ndim, nepochs, vae=(redm=="vae"), **kwargs )
             elif redm in [ "pca", "ica" ]:

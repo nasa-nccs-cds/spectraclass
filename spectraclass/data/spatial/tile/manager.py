@@ -24,6 +24,10 @@ def get_rounded_dims( master_shape: List[int], subset_shape: List[int] ) -> List
 def tm() -> "TileManager":
     return TileManager.instance()
 
+class PointsOutOfBoundsException(Exception):
+    def __str__(self):
+        return "Points out of bounds"
+
 class TileManager(SCSingletonConfigurable):
 
     block_size = tl.Int(250).tag( config=True, sync=True )
@@ -139,6 +143,15 @@ class TileManager(SCSingletonConfigurable):
             self.block_index = block_index
             dm().loadCurrentProject( 'setBlock', True )
 
+    def in_bounds( self, pids: List[int] ) -> bool:
+        try:
+            project_data: Dict[str,Union[xa.DataArray,List,Dict]] = dm().loadCurrentProject( 'in_bounds' )
+            point_data: xa.DataArray = project_data["plot-y"]
+            result = point_data.sel( dict(samples=pids) ).values
+            return True
+        except KeyError:
+            return False
+
     @exception_handled
     def getBlock( self, **kwargs ) -> Block:
         bindex = kwargs.get( 'bindex' )
@@ -179,26 +192,31 @@ class TileManager(SCSingletonConfigurable):
 
     @exception_handled
     @log_timing
-    def get_region_marker(self, prec: PolyRec, cid: int = -1 ) -> Marker:
+    def get_region_marker(self, prec: PolyRec, cid: int = -1 ) -> Optional[Marker]:
         from spectraclass.data.spatial.tile.tile import Block, Tile
         from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.gui.control import UserFeedbackManager, ufm
         from shapely.geometry import Polygon
+        marker = None
         if cid == -1: cid = lm().current_cid
         block: Block = self.getBlock()
-#        idx2pid: np.ndarray = block.index_array.values.flatten()
         raster:  xa.DataArray = block.data[0].squeeze()
         X, Y = raster.x.values, raster.y.values
         try:
+#            xy = prec.poly.get_xy()
+#            [yi,xi] = block.multi_coords2indices( xy[:,1], xy[:,0] )
             polygon = Polygon(prec.poly.get_xy())
             MX, MY = np.meshgrid(X, Y)
             PID: np.ndarray = np.array(range(raster.size))
             mask: np.ndarray = svect.contains( polygon, MX, MY ).flatten()
-            pids = PID[mask] # idx2pid[ PID[mask] ]
-            marker = Marker( "label", pids[ pids > -1 ].tolist(), cid )
+            mask_pids = PID[mask] # idx2pid[ PID[mask] ]
+            pids = mask_pids[ mask_pids > -1 ].tolist()
+            if not self.in_bounds( pids ): raise PointsOutOfBoundsException()
+            marker = Marker( "label", pids, cid )
             lgm().log( f"Poly selection-> Create marker[{marker.size}], cid = {cid}")
         except Exception as err:
             lgm().log( f"Error getting region marker, returning empty marker: {err}")
-            marker = Marker( "label", [], cid )
+            ufm().show( str(err), "red" )
         return marker
 
     def getTileFileName(self, with_extension = True ) -> str:

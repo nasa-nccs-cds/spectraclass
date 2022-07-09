@@ -30,6 +30,11 @@ class PolygonInteractor:
         self.poly_index = 0
         self.cids = []
 
+    def clear(self):
+        for poly in self.polys: poly.remove()
+        self.polys = []
+        self.draw()
+
     def set_alpha(self, alpha: float ):
         for poly in self.polys:
             poly.set_alpha( alpha )
@@ -85,8 +90,7 @@ class PolygonInteractor:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         if self.prec is not None:
             self.polys.remove( self.prec )
-            self.prec.poly.remove()
-            self.prec.line.remove()
+            self.prec.remove()
             marker = tm().get_region_marker( self.prec )
             if marker is not None:
                 gpm().remove_marker(marker)
@@ -100,13 +104,19 @@ class PolygonInteractor:
         self.prec.complete()
         self.creating = False
         lgm().log( f"POLY->close: points = {self.prec.poly.get_xy().tolist()}")
-        self.draw()
         marker = tm().get_region_marker( self.prec )
-        app().add_marker( "map", marker )
+        if marker is None:
+            self.polys.remove(self.prec)
+            self.prec.remove()
+        else:
+            app().add_marker( "map", marker )
+        self.draw()
         self.prec = None
 
     @exception_handled
     def on_button_press(self, event: MouseEvent ):
+        from spectraclass.gui.control import UserFeedbackManager, ufm
+        ufm().clear()
         if self.enabled and (event.inaxes is not None):
             x, y = event.xdata, event.ydata
             lgm().log( f"POLYINTER: button {event.button} press: enabled={self.enabled}, creating={self.creating}, point={[x,y]}")

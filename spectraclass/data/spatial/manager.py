@@ -80,7 +80,7 @@ class SpatialDataManager(ModeDataManager):
         return data.copy( data=normed_data )
 
     def reduce(self, data: xa.DataArray):
-        if self.reduce_method and (self.reduce_method.lower() != "none"):
+        if self.reduce_method and (self.reduce_method.lower() != "none") and (self.model_dims>0):
             normed_data = self.pnorm( data )
             reduced_spectra, reproduction, _ = rm().reduce( normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, modelkey=self.modelkey )[0]
             coords = dict( samples=data.coords['samples'], band=np.arange( self.model_dims )  )
@@ -90,7 +90,8 @@ class SpatialDataManager(ModeDataManager):
     def dsid(self, **kwargs) -> str:
         from spectraclass.data.spatial.tile.manager import tm
         block = kwargs.get( 'block', tm().getBlock() )
-        reduction_method = f"raw" if self.reduce_method.lower() == "none" else f"{self.reduce_method}-{self.model_dims}"
+        rmeth = str(self.reduce_method).lower()
+        reduction_method = f"raw" if (rmeth == "none") else f"{self.reduce_method}-{self.model_dims}"
         file_name_base = "-".join( [block.file_name, reduction_method] )
         return f"{file_name_base}-ss{self.subsample_index}" if self.subsample_index > 1 else file_name_base
 

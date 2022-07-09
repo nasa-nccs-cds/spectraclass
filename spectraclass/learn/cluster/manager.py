@@ -44,12 +44,14 @@ class ClusterMagnitudeWidget(ipw.HBox):
 
 class ClusterManager(SCSingletonConfigurable):
     modelid = tl.Unicode("kmeans").tag(config=True, sync=True)
+    use_model_data = tl.Bool(False).tag(config=True, sync=True)
     nclusters = tl.Int(5).tag(config=True, sync=True)
     random_state = tl.Int(0).tag(config=True, sync=True)
 
     def __init__(self, **kwargs ):
         super(ClusterManager, self).__init__(**kwargs)
-        self._ncluster_options = range( 2, 30 )
+        self._max_culsters = 15
+        self._ncluster_options = range( 2, self._max_culsters )
         self._mid_options = [ "kmeans", "fuzzy cmeans", "autoencoder" ] # , "umap" ] # "hierarchical" "DBSCAN", "spectral" ]
         self._cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
@@ -84,7 +86,7 @@ class ClusterManager(SCSingletonConfigurable):
         from .fcm import FCM
         from  .kmeans import KMeansCluster
         nclusters = self._ncluster_selector.value
-        self.update_colors( nclusters )
+        self.update_colors( self._max_culsters )
         lgm().log( f"Creating {mid} model with {nclusters} clusters")
         if mid == "kmeans":
             params = dict(  random_state= self.random_state, batch_size= 256 * cpu_count() )
@@ -237,9 +239,9 @@ class ClusterManager(SCSingletonConfigurable):
 
     @exception_handled
     def tuning_gui(self) -> ipw.DOMWidget:
-        nclusters = self._ncluster_selector.value
+        nclusters = 10 # self._ncluster_selector.value
         tuning_sliders= []
-        for icluster in range(nclusters):
+        for icluster in range( self._max_culsters ):
             tuning_slider = ClusterMagnitudeWidget( icluster )
             tuning_slider.on_change( self.tune_cluster )
             tuning_sliders.append( tuning_slider )
@@ -270,6 +272,9 @@ class ClusterSelector:
         lgm().log( f"ClusterSelector: set enabled = {enable}")
         self.enabled = enable
 
+    def clear(self):
+        clm().clear()
+
     @exception_handled
     def on_button_press(self, event: MouseEvent ):
         from spectraclass.gui.spatial.map import MapManager, mm
@@ -289,6 +294,6 @@ class ClusterSelector:
                     marker: Marker = clm().mark_cluster(gid, cid, icluster)
                     app().add_marker( "cluster", marker )
                     mm().plot_cluster_image( clm().get_cluster_map() )
-                    labels_image: xa.DataArray = lm().get_label_map()
-                    mm().plot_labels_image( labels_image )
+#                    labels_image: xa.DataArray = lm().get_label_map()
+#                    mm().plot_markers_image()
 #                    lm().addAction( "cluster", "application", cid=cid )

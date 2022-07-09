@@ -107,7 +107,10 @@ class DataManager(SCSingletonConfigurable):
             lgm().init_logging(name, mode)
             dataManager._configure_( name, mode )
             if mode.lower() not in cls._mode_data_managers_: raise Exception( f"Mode {mode} is not defined, available modes = {cls._mode_data_managers_.keys()}")
-            dataManager._mode_data_manager_ = cls._mode_data_managers_[ mode ].instance()
+            mdm = cls._mode_data_managers_[ mode ].instance()
+            dataManager._mode_data_manager_ = mdm
+            if str(mdm.reduce_method).lower() == "none": mdm.model_dims = 0
+            if mdm.model_dims == 0:  mdm.reduce_method = "none"
             lgm().log("Logging configured")
         return dataManager
 
@@ -255,9 +258,12 @@ class DataManager(SCSingletonConfigurable):
     def control_panel(self) -> ip.VBox:
         title = ipw.Label( value="Images", width='500px' )
         file_selector = dm().modal.set_file_selection_observer( dm().modal.on_image_change )
-        use_model_data = ip.Checkbox( value=False, description = "View Model Data", layout=ipw.Layout( width='500px' ) )
-        tl.link( (use_model_data, "value"), (self, 'use_model_data') )
-        return ip.VBox( [ title, file_selector, use_model_data ], layout=ipw.Layout(flex='1 1 auto') )
+        controls = [ title, file_selector ]
+        if self.modal.model_dims > 0:
+            use_model_data = ip.Checkbox( value=False, description = "View Model Data", layout=ipw.Layout( width='500px' ) )
+            tl.link( (use_model_data, "value"), (self, 'use_model_data') )
+            controls.append( use_model_data )
+        return ip.VBox( controls, layout=ipw.Layout(flex='1 1 auto') )
 
     def getInputFileData(self, vname: str = None, **kwargs ) -> np.ndarray:
         return self._mode_data_manager_.getInputFileData( vname, **kwargs )

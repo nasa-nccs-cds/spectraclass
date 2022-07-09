@@ -243,7 +243,11 @@ class ClassificationManager(SCSingletonConfigurable):
 
     def gui(self):
         if self.selection is None: self.create_selection_panel()
-        return ipw.HBox( [self.selection_label, self.selection] )
+        clear_button = ipw.Button(description='Clear History', border='1px solid gray')
+        clear_button.layout = ipw.Layout(width='auto', flex="1 0 auto")
+        clear_button.on_click( self.model.clear_history )
+        buttonbox = ipw.VBox( [clear_button] )
+        return ipw.HBox( [self.selection_label, self.selection, buttonbox ] )
         # distanceMetric = base.createComboSelector("Distance.Metric: ", ["mahal","euclid"], "dev/distance/metric", "mahal")
         # distanceMethod = base.createComboSelector("Distance.Method: ", ["centroid","nearest"], "dev/distance/method", "centroid")
         # return base.createGroupBox("dev", [model, distanceMetric, distanceMethod ] )

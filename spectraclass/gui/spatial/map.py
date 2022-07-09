@@ -85,6 +85,10 @@ class MapManager(SCSingletonConfigurable):
                                                     [ "Decrease Band Alpha",   'Alt+<',  None, partial( self.update_image_alpha, "bands", False ) ] ] )
         atexit.register(self.exit)
 
+    def clearMarkers(self):
+        for selector in [ self.points_selection, self.cluster_selection, self.region_selection ]:
+            selector.clear()
+
     @exception_handled
     def  on_threshold_change( self,  *args  ):
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
@@ -249,7 +253,9 @@ class MapManager(SCSingletonConfigurable):
     #        lgm().log( f" on_button_press: xydata = {(event.xdata,event.ydata)}, c = {(c['ix'],c['iy'])}, transform = {self.block.transform}")
             by, bx = TileManager.reproject_to_latlon(self.block.xcoord[c['ix']], self.block.ycoord[c['iy']] )
             lat,lon = TileManager.reproject_to_latlon( event.xdata, event.ydata )
-            ufm().show( f"[{event.y},{event.x}]: ({lat:.4f},{lon:.4f}), block[{c['iy']},{c['ix']}]: ({by:.4f},{bx:.4f})", color="blue")
+            msg = f"[{event.y},{event.x}]: ({lat:.4f},{lon:.4f}), block[{c['iy']},{c['ix']}]: ({by:.4f},{bx:.4f})"
+            ufm().show( msg, color="blue")
+            lgm().log(f" on_button_press: {msg}" )
 
     @property
     def selectionMode(self) -> str:

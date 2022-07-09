@@ -12,14 +12,21 @@ from .base import LearningModel
 class SVCLearningModel(LearningModel):
 
     def __init__(self, **kwargs ):
-        norm = kwargs.pop( 'norm', True )
-        tol = kwargs.pop( 'tol', 1e-5 )
+        self.norm = kwargs.pop( 'norm', True )
+        self.tol = kwargs.pop( 'tol', 1e-5 )
+        self.kernel = kwargs.pop('kernel', "linear" ) # curve rbf linear
         LearningModel.__init__(self, "svc",  **kwargs )
+        self.parms  = kwargs
         self._score: Optional[np.ndarray] = None
-#        model = LinearSVC( tol=tol, dual=False, fit_intercept=False, **kwargs )
-        model = SVC( tol=tol, kernel="linear", probability=True, **kwargs ) # curve rbf linear
-        if norm: self.svc = make_pipeline( StandardScaler(), model  )
-        else:    self.svc = model
+        self.create_model()
+
+    def create_model(self):
+        model = SVC( tol=self.tol, kernel=self.kernel, probability=True, **self.parms )
+        if self.norm: self.svc = make_pipeline( StandardScaler(), model  )
+        else:  self.svc = model
+
+    def clear(self):
+        self.create_model()
 
     def fit( self, X: np.ndarray, y: np.ndarray, **kwargs ):       # X[n_samples, n_features], y[n_samples]
         t0 = time.time()

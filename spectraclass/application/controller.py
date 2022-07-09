@@ -95,6 +95,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.spatial.map import MapManager, mm
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> CLEAR ")
         lm().clearMarkers()
+        mm().clearMarkers()
         gpm().clear()
         lm().clear_classification()
         if self.pcm_active: pcm().clear()
@@ -154,8 +155,8 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.model.labels import LabelsManager, Action, lm
         ufm().show(f"Creating clusters using {clm().mid}... ")
-        embedding: xa.DataArray = dm().getModelData()
-        cluster_image: xa.DataArray = clm().cluster( embedding )
+        cluster_inuput: xa.DataArray = dm().getModelData() if clm().use_model_data else dm().getSpectralData()
+        cluster_image: xa.DataArray = clm().cluster( cluster_inuput )
         mm().plot_cluster_image( cluster_image )
         ufm().show(f"Clustering completed")
 

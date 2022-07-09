@@ -29,11 +29,11 @@ def sel( array: xa.DataArray, pids: Union[int,List[int],np.ndarray,xa.DataArray]
 
 class LinePlot(ABC):
 
-    _x: np.ndarray = None
-    _mx: np.ndarray = None
-    _ploty: np.ndarray = None
-    _rploty: np.ndarray = None
-    _mploty: np.ndarray = None
+    _x: xa.DataArray = None
+    _mx: xa.DataArray = None
+    _ploty: xa.DataArray = None
+    _rploty: xa.DataArray = None
+    _mploty: xa.DataArray = None
     _mdata: List[np.ndarray] = None
     _use_model = False
 
@@ -88,14 +88,27 @@ class LinePlot(ABC):
         return np.array( data ) if isinstance(data, list) else data.values
 
 
-    def lx(self, pids: Union[int,List[int]] ) -> xa.DataArray:
-        xv = self._mx if self._use_model else self._x
-        if xv.ndim == 1:   return  xv
+    def lx( self, pids: Union[int,List[int]] ) -> np.ndarray:
+        xv: xa.DataArray = self._mx if self._use_model else self._x
+        if xv.ndim == 1:   return  xv.values
         else:              return  sel( xv, pids ).squeeze()
 
-    def ly(self, pids: Union[int,List[int]] ) -> np.ndarray:
-        ydata = self._mploty if self._use_model else self._ploty
-        return self.normalize( sel( ydata, pids ) ).squeeze().transpose()
+    def ly( self, pids: Union[int,List[int]] ) -> Optional[np.ndarray]:
+        try:
+            ydata: xa.DataArray = self._mploty if self._use_model else self._ploty
+            return self.normalize( sel( ydata, pids ) ).squeeze().transpose()
+        except KeyError:
+            return None
+
+    def in_bounds( pids: List[int] ) -> bool:
+        try:
+            project_data: Dict[str,Union[xa.DataArray,List,Dict]] = DataManager.instance().loadCurrentProject("labels")
+            point_data: xa.DataArray = project_data["plot-y"]
+            result = point_data.sel( dict(samples=pids) ).values
+            return True
+        except KeyError:
+            return False
+
 
     def lry(self, pid ) -> np.ndarray:
         return self.normalize( sel( self._rploty, pid ) ).squeeze()
