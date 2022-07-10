@@ -34,6 +34,8 @@ class PointCloudManager(SCSingletonConfigurable):
         self.points: p3js.Points = None
         self.marker_points: Optional[p3js.Points] = None
         self.marker_pids = {}
+        self.probe_points: Optional[p3js.Points] = None
+        self.probe_pids = {}
         self.scene: p3js.Scene = None
         self.renderer: p3js.Renderer = None
         self.raycaster = p3js.Raycaster()
@@ -57,8 +59,8 @@ class PointCloudManager(SCSingletonConfigurable):
         self.marker_spheres: Dict[int, p3js.Mesh] = {}
         self.scene_controls = {}
         self.marker_material = p3js.PointsMaterial( vertexColors='VertexColors', transparent=True ) # , size=5.0, opacity=1.0 )
+        self.probe_material = p3js.PointsMaterial( vertexColors='VertexColors', transparent=True ) # , size=5.0, opacity=1.0 )
         self.opacity_control = None
-        self.transient_markers = []
         self.voxelizer: Voxelizer = None
 
     def set_alpha(self, opacity: float ):
@@ -66,22 +68,19 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @exception_handled
     def clear_transients(self):
-        for pid in self.transient_markers:
-            if pid in self.marker_pids:
-                self.marker_pids.pop(pid)
-        self.transient_markers = []
+        self.probe_pids = {}
 
     @exception_handled
     def mark_point( self, pid: int, cid: int ):
-        self.marker_pids[pid] = cid
-        if cid == 0: self.transient_markers.append(pid)
+        if cid == 0:    self.probe_pids[pid] = cid
+        else:           self.marker_pids[pid] = cid
         return pid
 
     @exception_handled
     def unmark_point( self, pid: int ) -> int:
         marked_pid = self.marker_pids.pop(pid, -1)
-        if (marked_pid == 0) and (marked_pid in self.transient_markers):
-            self.transient_markers.remove( marked_pid )
+        if marked_pid == -1:
+            marked_pid = self.probe_pids.pop(pid, -1)
         return marked_pid
 
     def update_marked_points( self, page_selection: np.ndarray, index: np.ndarray, cid: int ):
@@ -122,6 +121,14 @@ class PointCloudManager(SCSingletonConfigurable):
             self.renderer.controls = self.renderer.controls + [self.marker_picker]
         else:
             self.marker_points.geometry = self.getMarkerGeometry()
+
+        if self.probe_points is None:
+            self.probe_points = p3js.Points( geometry=self.getMarkerGeometry( probes=True ), material=self.probe_material )
+            self.scene.add( [self.probe_points] )
+            ipw.jslink((self.scene_controls['probe.material.size'],   'value'),  (self.probe_points.material, 'size') )
+            ipw.jslink((self.scene_controls['probe.material.opacity'], 'value'), (self.probe_points.material, 'opacity') )
+        else:
+            self.probe_points.geometry = self.getMarkerGeometry( probes=True )
 
     @property
     def xyz(self)-> xa.DataArray:
@@ -198,9 +205,11 @@ class PointCloudManager(SCSingletonConfigurable):
             return p3js.BufferGeometry( attributes=attrs )
 
     @exception_handled
-    def getMarkerGeometry( self ) -> p3js.BufferGeometry:
-        colors = lm().get_rgb_colors( list(self.marker_pids.values()) )
-        idxs = np.array( list(self.marker_pids.keys()) )
+    def getMarkerGeometry( self, **kwargs ) -> p3js.BufferGeometry:
+        probes = kwargs.get('probes',False)
+        pids = list( self.probe_pids.values() if probes else self.marker_pids.values() )
+        colors = lm().get_rgb_colors( pids, probes )
+        idxs = np.array( list( self.probe_pids.keys() if probes else self.marker_pids.keys() ) )
         if idxs.size == 0:
             positions = np.empty( shape=[0,3], dtype=np.int )
         else:
@@ -222,6 +231,8 @@ class PointCloudManager(SCSingletonConfigurable):
         self.scene_controls['point.material.opacity']  = ipw.FloatSlider( value=1.0, min=0.0, max=1.0, step=0.01 )
         self.scene_controls['marker.material.size']    = ipw.FloatSlider( value=0.05 * self.scale, min=0.0, max=0.1 * self.scale, step=0.001 * self.scale )
         self.scene_controls['marker.material.opacity'] = ipw.FloatSlider( value=1.0, min=0.0, max=1.0, step=0.01 )
+        self.scene_controls['probe.material.size']    = ipw.FloatSlider( value=0.05 * self.scale, min=0.0, max=0.2 * self.scale, step=0.001 * self.scale )
+        self.scene_controls['probe.material.opacity'] = ipw.FloatSlider( value=1.0, min=0.0, max=1.0, step=0.01 )
         self.scene_controls['window.scene.background'] = ipw.ColorPicker( value="black" )
         ipw.jslink( (self.scene_controls['point.material.size'],     'value'),   ( self.points.material, 'size' ) )
         ipw.jslink( (self.scene_controls['point.material.opacity'],  'value'),   ( self.points.material, 'opacity' ) )
@@ -283,6 +294,8 @@ class PointCloudManager(SCSingletonConfigurable):
                 self.points.geometry = geometry
                 if self.marker_points is not None:
                     self.marker_points.geometry = self.getMarkerGeometry()
+                if self.probe_points is not None:
+                    self.probe_points.geometry = self.getMarkerGeometry(probes=True)
 
     def clear(self):
         self.update_plot()

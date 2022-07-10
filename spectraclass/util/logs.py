@@ -27,7 +27,9 @@ def log_timing(f):
             result = f(*args, **kw)
             te = time.time()
             try:     cname = f.__self__.__class__.__name__
-            except:  cname = ""
+            except Exception as err:
+                lgm().log( f'Class name exception in wrap {f}: {err}' )
+                cname = ""
             lgm().log( f'EXEC {cname}.{f.__name__} took: {te-ts:3.4f} sec' )
             return result
         except:

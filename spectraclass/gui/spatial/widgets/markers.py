@@ -22,6 +22,10 @@ class Marker:
         self._mask: Optional[np.ndarray] = kwargs.get( 'mask', None )
 
     @property
+    def block_coords(self) -> Tuple:
+        return tuple(self.block_index)
+
+    @property
     def active(self) -> bool:
         from spectraclass.data.spatial.tile.manager import tm
         return (self.block_index == tm().block_index) and (self.image_index == tm().image_index)
@@ -169,6 +173,8 @@ class MarkerManager( PointsInteractor ):
             else:
                 app().add_marker("map", marker)
                 self._markers[ marker.pids[0] ] = marker
+        else:
+            lgm().log("Dropping marker add: already adding_marker.")
         self._adding_marker = False
 
     def remove( self, pid: int ):
@@ -200,8 +206,8 @@ class MarkerManager( PointsInteractor ):
                 self.delete_marker( event.xdata, event.ydata )
             elif int(event.button) == self.LEFT_BUTTON:
                 gid,ix,iy = self.block.coords2gid(event.ydata, event.xdata)
-                lgm().log(f"on_button_press --> selected gid = {gid}, button = {event.button}")
-                ufm().show( f"event[{event.xdata:.2f},{event.ydata:.2f}]: ({ix},{iy}) -> {gid}")
+                lgm().log(f"MarkerManager.on_button_press --> selected gid = {gid}, button = {event.button}")
+                ufm().show( f" event[{event.xdata:.2f},{event.ydata:.2f}]: ({ix},{iy}) -> {gid}" )
                 self.mark_point( gid, point=(event.xdata,event.ydata) )
             self.plot()
 

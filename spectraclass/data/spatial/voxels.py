@@ -65,7 +65,7 @@ class Voxelizer:
             pid = lindices[ dist.argmin() ]
         lgm().log(f" *** PCM.on_pick: pid={pid}, vid={vid}, point={point}")
         lgm().log(f"    PCM-->indices: size={self.indices.size}, range={[self.indices.min(),self.indices.max()]}")
-        return -1
+        return pid
 
     # def pick_point(self, ray: np.ndarray, tolerance: float  ):
     #     t0 = time.time()

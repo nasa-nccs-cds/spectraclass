@@ -230,6 +230,7 @@ class SpectraclassController(SCSingletonConfigurable):
     @exception_handled
     def add_marker(self, source: str, marker: Marker):
         from spectraclass.model.labels import LabelsManager, Action, lm
+        from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
         if marker is not None:

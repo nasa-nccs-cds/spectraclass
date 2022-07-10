@@ -117,11 +117,11 @@ class LabelsManager(SCSingletonConfigurable):
     def current_color(self) -> str:
         return self._colors[ self._selected_class ]
 
-    def get_rgb_color( self, cid: int ) -> Tuple[float,float,float]:
-        return colors.to_rgb( self._colors[ cid ] )
+    def get_rgb_color( self, cid: int, probe: bool = False ) -> Tuple[float,float,float]:
+        return (1.0,1.0,1.0) if probe else colors.to_rgb( self._colors[ cid ] )
 
-    def get_rgb_colors(self, cids: List[int] ) -> np.ndarray:
-        cdata = np.array( [ self.get_rgb_color(cid) for cid in cids ] ) * 255.0
+    def get_rgb_colors(self, cids: List[int], probe: bool = False ) -> np.ndarray:
+        cdata = np.array( [ self.get_rgb_color(cid,probe) for cid in cids ] ) * 255.0
         return cdata.astype(np.uint8)
 
     def set_selected_class(self, iclass, *args ):
@@ -267,7 +267,7 @@ class LabelsManager(SCSingletonConfigurable):
     def getTrainingLabels(self) -> Dict[ Tuple, np.ndarray ]:
         label_data = {}
         for marker in self._markers:
-            key = ( marker.image_index, marker.block_index, marker.cid )
+            key = ( marker.image_index, marker.block_coords, marker.cid )
             label_data[key] = marker.pids if (key not in label_data) else np.append( label_data[key], marker.pids, axis=0 )
         return label_data
 
