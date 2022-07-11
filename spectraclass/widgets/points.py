@@ -31,6 +31,9 @@ class PointsInteractor:
         self.highlights: PathCollection = self.ax.scatter([], [], s=100, zorder=100, alpha=0.75, marker="X", color="white" )
         self.highlights.set_linewidth(1)
         self.highlights.set_edgecolor( "black" )
+        self.probes: PathCollection = self.ax.scatter([], [], s=50, zorder=5, alpha=1.0, color="white" )
+        self.probes.set_edgecolor([0, 0, 0])
+        self.probes.set_linewidth(2)
         self._cidkey, self._cidmouse = -1, -1
         self.plot()
 
@@ -41,7 +44,7 @@ class PointsInteractor:
     def clear_highlights(self ):
         self.plot( clear_highlights = True )
 
-    def get_points( self ) -> Tuple[ List[float], List[float], List[str] ]:
+    def get_points( self, probes: bool = False ) -> Tuple[ List[float], List[float], List[str] ]:
         lgm().log( f"Attempt to call unimplemented method PointsInteractor.get_points")
         return [], [], []
 
@@ -54,13 +57,20 @@ class PointsInteractor:
 
     @log_timing
     def plot( self, **kwargs ):
-        ycoords, xcoords, colors = self.get_points()
+        ycoords, xcoords, colors = self.get_points( probes=False )
         if len(ycoords) > 0:
             self.points.set_offsets(np.c_[xcoords, ycoords])
             self.points.set_facecolor(colors)
         else:
             offsets = np.ma.column_stack([[], []])
             self.points.set_offsets(offsets)
+
+        ycoords, xcoords, _ = self.get_points( probes=True )
+        if len(ycoords) > 0:
+            self.probes.set_offsets(np.c_[xcoords, ycoords])
+        else:
+            offsets = np.ma.column_stack([[], []])
+            self.probes.set_offsets(offsets)
 
         if kwargs.get('clear_highlights', False): self._highlight_points = []
         ycoords, xcoords, cids = self.get_highlight_points()
@@ -76,6 +86,7 @@ class PointsInteractor:
         offsets = np.ma.column_stack([[], []])
         self.points.set_offsets( offsets )
         self.highlights.set_offsets(offsets)
+        self.probes.set_offsets(offsets)
         self.plot()
 
     def toggleVisible(self):

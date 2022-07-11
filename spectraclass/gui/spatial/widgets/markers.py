@@ -103,9 +103,11 @@ class MarkerManager( PointsInteractor ):
         super(MarkerManager, self).__init__( ax )
         self._adding_marker = False
         self._markers = {}
+        self._probes = {}
 
     def clear(self):
         self._markers = {}
+        self._probes = {}
 
     @property
     def block(self) -> Block:
@@ -134,11 +136,12 @@ class MarkerManager( PointsInteractor ):
                 cids.append( cid )
         return ( ycoords, xcoords, cids )
 
-    def get_points( self ) -> Tuple[ List[float], List[float], List[str] ]:
+    def get_points( self, probes: bool = False  ) -> Tuple[ List[float], List[float], List[str] ]:
         from spectraclass.model.labels import LabelsManager, lm
         ycoords, xcoords, colors, markers = [], [], [], lm().markers
         for marker in markers:
-            if marker.type == "marker":
+            valid =  (marker.cid == 0) if probes else (marker.cid > 0)
+            if (marker.type == "marker") and valid:
                 point = marker['point']
                 if point is not None:
                #     lgm().log(f" ** get_points, point = {marker.pids}")
@@ -154,7 +157,6 @@ class MarkerManager( PointsInteractor ):
                             xcoords.append( coords['x'] )
                             colors.append( lm().colors[marker.cid] )
         return ycoords, xcoords, colors
-
 
     # def on_pick( self, event: PickEvent ):
     #     rightButton: bool = event.mouseevent.button == MouseButton.RIGHT
