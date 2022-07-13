@@ -386,6 +386,7 @@ class LabelsManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block = kwargs.get( 'block', tm().getBlock() )
         mtype = kwargs.get( 'type' )
+        projected = kwargs.get( 'projected', True )
         xcmap: xa.DataArray = block.classmap()
         cmap = xcmap.values
         fcmap = np.ravel( cmap )
@@ -397,8 +398,11 @@ class LabelsManager(SCSingletonConfigurable):
                 else:
                     lgm().log( f" Setting {len(marker.pids)} labels for cid = {marker.cid}" )
                     for pid in marker.pids:
-                        idx = block.gid2indices(pid)
-                        cmap[ idx['iy'], idx['ix'] ] = marker.cid
+                        if projected:
+                            idx = block.gid2indices(pid)
+                            cmap[ idx['iy'], idx['ix'] ] = marker.cid
+                        else:
+                            pass
         return xcmap.copy(data=cmap)
 
     @log_timing

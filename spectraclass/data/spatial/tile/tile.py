@@ -465,6 +465,12 @@ class Block(DataContainer):
         y0 = transform[5] + dx * transform[3] + dy * transform[4]
         return [ transform[0], transform[1], x0, transform[3], transform[4], y0 ]
 
+    def get_raw_data(self) -> xa.DataArray:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        (xbounds, ybounds), tile_data = self.getBounds(), self.tile.data
+        raster_slice = tile_data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1]]
+        return raster_slice if (raster_slice.size == 0) else TileManager.filter_invalid_data( raster_slice )
+
     @log_timing
     def _get_data( self ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm

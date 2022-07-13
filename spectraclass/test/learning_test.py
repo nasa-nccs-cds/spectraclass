@@ -43,7 +43,7 @@ dm.loadCurrentProject()
 lm().setLabels(classes)
 
 block: Block = tm().getBlock()
-bdata: xa.DataArray = block.data.transpose('y','x','band')
+bdata: xa.DataArray = block.data.transpose('y','x','band').fillna(0.0)
 
 labels_dset: xa.Dataset = xa.open_dataset( labels_file )
 labels_name = f"labels-{image_index}-{TileManager.block_index[0]}-{TileManager.block_index[1]}"
@@ -53,7 +53,7 @@ print( f"Build CNN, input shape = {bdata.shape}" )
 cnn =  CNN.build( bdata.shape, nfeatures, lm().nLabels )
 model = KerasModelWrapper("cnn",cnn)
 input_batch: np.ndarray = bdata.expand_dims('batch',0).values
-# result = model.apply( input_batch )
+result = model.apply( input_batch )
 y = np.expand_dims( LearningModel.index_to_one_hot( labels_array.values.flatten() ), 0 )
 model.fit( input_batch, y )
 

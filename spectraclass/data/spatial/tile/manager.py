@@ -233,12 +233,10 @@ class TileManager(SCSingletonConfigurable):
          return self._readTileFile()
 
     @classmethod
-    def process_tile_data( cls, tile_data: xa.DataArray ) -> xa.DataArray:
-        t0 = time.time()
-        tile_data = tile_data.xgeo.reproject(espg=cls.ESPG)
+    def filter_invalid_data( cls, tile_data: xa.DataArray ) -> xa.DataArray:
         tile_data = cls.mask_nodata(tile_data)
-        init_shape = [*tile_data.shape]
         valid_bands = DataManager.instance().valid_bands()
+        init_shape = [*tile_data.shape]
         if valid_bands is not None:
             band_names = tile_data.attrs.get('bands', None)
             dataslices = [tile_data.isel(band=slice(valid_band[0], valid_band[1])) for valid_band in valid_bands]
@@ -246,15 +244,17 @@ class TileManager(SCSingletonConfigurable):
             if isinstance(band_names, (list, tuple)):
                 tile_data.attrs['bands'] = sum( [list(band_names[valid_band[0]:valid_band[1]]) for valid_band in valid_bands], [])
             lgm().log( f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
-        t1 = time.time()
+        if '_FillValue' in tile_data.attrs:
+            nodata = tile_data.attrs['_FillValue']
+            tile_data = tile_data if np.isnan(nodata) else tile_data.where(tile_data != nodata, np.nan)
+        return tile_data
+
+    @classmethod
+    def process_tile_data( cls, tile_data: xa.DataArray ) -> xa.DataArray:
+        tile_data = tile_data.xgeo.reproject(espg=cls.ESPG)
         tile_data.attrs['wkt'] = cls.crs.to_wkt()
         tile_data.attrs['crs'] = cls.crs.to_string()
-
-        if '_FillValue' in tile_data.attrs:
-           nodata = tile_data.attrs['_FillValue']
-           tile_data = tile_data if np.isnan(nodata) else tile_data.where(tile_data != nodata, np.nan)
-        lgm().log(f"Completed process_tile_data in ( {time.time()-t1:.1f}, {t1-t0:.1f} ) sec")
-        return tile_data
+        return cls.filter_invalid_data( tile_data )
 
 #     def getPointData( self ) -> Tuple[xa.DataArray,xa.DataArray]:
 #         from spectraclass.data.spatial.manager import SpatialDataManager
