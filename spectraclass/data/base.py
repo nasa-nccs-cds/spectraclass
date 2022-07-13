@@ -158,6 +158,12 @@ class DataManager(SCSingletonConfigurable):
         os.makedirs( output_dir, exist_ok=True)
         return os.path.join( output_dir, f"{self.dsid()}-masks.nc" )
 
+    @property
+    def labels_file(self ) -> str:
+        output_dir = os.path.join( self.cache_dir, "labels")
+        os.makedirs( output_dir, exist_ok=True)
+        return os.path.join( output_dir, f"{self.dsid()}-labels.nc" )
+
     @exception_handled
     def save_config( self ):
         from spectraclass.gui.spatial.map import MapManager, mm

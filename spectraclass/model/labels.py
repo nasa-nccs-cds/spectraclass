@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Set
 from spectraclass.data.spatial.tile.tile import Block
-import collections.abc
+import os, collections.abc
 from functools import partial
 from matplotlib import colors
 import ipywidgets as ipw
@@ -275,6 +275,19 @@ class LabelsManager(SCSingletonConfigurable):
         self.updateLabels()
         return self._labels_data.copy()
 
+    def saveLabelData( self, *args, **kwargs ) -> xa.Dataset:
+        from spectraclass.gui.control import UserFeedbackManager, ufm
+        from spectraclass.data.base import DataManager, dm
+        data_arrays = {}
+        labeled_blocks: List[Block] = self.getLabeledBlocks()
+        for block in labeled_blocks:
+            lname = f"labels-{block.tile_index}-{block.block_coords[0]}-{block.block_coords[1]}"
+            data_arrays[ lname ] = self.get_label_map( block=block )
+        label_dset = xa.Dataset( data_arrays )
+        label_dset.to_netcdf( dm().labels_file )
+        ufm().show( f"Saving labels to file: {dm().labels_file}")
+        return label_dset
+
     @classmethod
     def getSortedLabels(self, labels_dset: xa.Dataset ) -> Tuple[np.ndarray,np.ndarray]:
         labels: np.ndarray = labels_dset['C'].values
@@ -336,6 +349,14 @@ class LabelsManager(SCSingletonConfigurable):
         for m in self.markers:
             if (m.cid > 0): pids.extend( m.pids )
         return pids
+
+    def getLabeledBlocks(self) -> List[Block]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        blocks = []
+        for m in self.markers:
+            tile = tm().get_tile( m.image_index )
+            blocks.append( tile.getDataBlock( m.block_index[0], m.block_index[1] ) )
+        return blocks
 
     def getLabelMap( self, update_directory_table = False ) -> Dict[int,Set[int]]:
         from spectraclass.gui.unstructured.table import tbm

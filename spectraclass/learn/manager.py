@@ -157,6 +157,7 @@ class Cluster:
 
 class ClassificationManager(SCSingletonConfigurable):
     mid = tl.Unicode("mlp").tag(config=True, sync=True)
+    nfeatures =  tl.Int(32).tag(config=True, sync=True)
 
     def __init__(self,  **kwargs ):
         super(ClassificationManager, self).__init__(**kwargs)
@@ -174,11 +175,9 @@ class ClassificationManager(SCSingletonConfigurable):
 
     @exception_handled
     def create_selection_panel(self, **kwargs ):
-        default = kwargs.get( 'default', self.mids[0] )
         self.selection_label = ipw.Label(value='Learning Model:')
-        self.selection = ipw.RadioButtons(  options=self.mids, disabled=False, layout={'width': 'max-content'}, value=default )
+        self.selection = ipw.RadioButtons(  options=self.mids, disabled=False, layout={'width': 'max-content'}, value=self.mid )
         self.selection.observe( self.set_model_callback, "value" )
-        self.mid = default
 
     def set_model_callback(self, event: Dict ):
         self.mid = event['new']
@@ -186,8 +185,8 @@ class ClassificationManager(SCSingletonConfigurable):
     def import_models(self):
         from .svc import SVCLearningModel
         self._models['mlp'] = self.create_default_mlp()
+ #       self._models['cnn'] = self.create_default_cnn()
         self._models['svc'] = SVCLearningModel()
-  #      self._models['cnn'] = self.create_default_cnn()
 
     def create_default_mlp(self) -> "LearningModel":
         from .mlp import MLP
@@ -199,9 +198,8 @@ class ClassificationManager(SCSingletonConfigurable):
     def create_default_cnn(self) -> "LearningModel":
         from .cnn import CNN
         from spectraclass.model.labels import lm
-        from spectraclass.data.base import DataManager, dm
         from .base import KerasModelWrapper
-        return KerasModelWrapper( "cnn", CNN.build( dm().modal.model_dims, lm().nLabels ) )
+        return KerasModelWrapper( "cnn", CNN.build( self.nfeatures, lm().nLabels ) )
 
     def addLearningModel(self, mid: str, model: "LearningModel" ):
         self._models[ mid ] = model
@@ -242,11 +240,18 @@ class ClassificationManager(SCSingletonConfigurable):
                 self.model_table.delete( model_index[0] )
 
     def gui(self):
+        from spectraclass.model.labels import LabelsManager, lm
         if self.selection is None: self.create_selection_panel()
+
         clear_button = ipw.Button(description='Clear History', border='1px solid gray')
         clear_button.layout = ipw.Layout(width='auto', flex="1 0 auto")
         clear_button.on_click( self.model.clear )
-        buttonbox = ipw.VBox( [clear_button] )
+
+        save_button = ipw.Button(description='Save Labels', border='1px solid gray')
+        save_button.layout = ipw.Layout(width='auto', flex="1 0 auto")
+        save_button.on_click( lm().saveLabelData )
+
+        buttonbox = ipw.VBox( [clear_button,save_button] )
         return ipw.HBox( [self.selection_label, self.selection, buttonbox ] )
         # distanceMetric = base.createComboSelector("Distance.Metric: ", ["mahal","euclid"], "dev/distance/metric", "mahal")
         # distanceMethod = base.createComboSelector("Distance.Method: ", ["centroid","nearest"], "dev/distance/method", "centroid")

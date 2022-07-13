@@ -5,7 +5,7 @@ import numpy as np
 import scipy, sklearn
 from tensorflow.keras.models import Model
 from typing import List, Tuple, Optional, Dict
-from ..model.labels import LabelsManager
+from model.labels import LabelsManager
 import traitlets as tl
 import traitlets.config as tlc
 import ipywidgets as ipw

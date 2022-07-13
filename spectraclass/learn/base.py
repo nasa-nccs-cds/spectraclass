@@ -119,6 +119,7 @@ class KerasModelWrapper(LearningModel):
         LearningModel.__init__( self, name,  **kwargs )
         self.opt = str(kwargs.pop('opt', 'adam')).lower()
         self.loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
+        self.spatial = kwargs.get( 'spatial', False )
         self.parms = kwargs
         self._model: models.Model = model
         self._model.compile(optimizer=self.opt, loss=self.loss,  metrics=['accuracy'], **kwargs )
@@ -126,6 +127,9 @@ class KerasModelWrapper(LearningModel):
 
     def predict( self, data: np.ndarray, **kwargs ) -> np.ndarray:
         return self._model.predict( data, **kwargs )
+
+    def apply( self, data: np.ndarray, **kwargs ) -> np.ndarray:
+        return self._model( data, **kwargs )
 
     def save( self, **kwargs ) -> str:
         mfile = self.model_file
@@ -154,6 +158,4 @@ class KerasModelWrapper(LearningModel):
         else:
             lgm().log( f"model.fit, shapes: point_data{data.shape}, class_data{class_data.shape} " )
             self._model.fit( data, class_data, epochs=nepochs, **kwargs )
-
-
 
