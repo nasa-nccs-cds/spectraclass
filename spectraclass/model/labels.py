@@ -271,19 +271,28 @@ class LabelsManager(SCSingletonConfigurable):
             label_data[key] = marker.pids if (key not in label_data) else np.append( label_data[key], marker.pids, axis=0 )
         return label_data
 
+    def getTrainingBlocks(self) -> List[Block]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        block_data = { ( marker.image_index, marker.block_coords ) for marker in self._markers }
+        return [ tm().getBlock(tindex=tindex, bindex=bindex) for (tindex,bindex) in block_data ]
+
     def getLabelsArray(self) -> xa.DataArray:
         self.updateLabels()
         return self._labels_data.copy()
 
-    def saveLabelData( self, *args, **kwargs ) -> xa.Dataset:
-        from spectraclass.gui.control import UserFeedbackManager, ufm
-        from spectraclass.data.base import DataManager, dm
+    def getLabelDataset(self) -> xa.Dataset:
         data_arrays = {}
         labeled_blocks: List[Block] = self.getLabeledBlocks()
         for block in labeled_blocks:
             lname = f"labels-{block.tile_index}-{block.block_coords[0]}-{block.block_coords[1]}"
             data_arrays[ lname ] = self.get_label_map( block=block )
         label_dset = xa.Dataset( data_arrays )
+        return label_dset
+
+    def saveLabelData( self, *args, **kwargs ) -> xa.Dataset:
+        from spectraclass.gui.control import UserFeedbackManager, ufm
+        from spectraclass.data.base import DataManager, dm
+        label_dset = self.getLabelDataset()
         label_dset.to_netcdf( dm().labels_file )
         ufm().show( f"Saving labels to file: {dm().labels_file}")
         return label_dset

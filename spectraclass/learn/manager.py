@@ -185,7 +185,7 @@ class ClassificationManager(SCSingletonConfigurable):
     def import_models(self):
         from .svc import SVCLearningModel
         self._models['mlp'] = self.create_default_mlp()
- #       self._models['cnn'] = self.create_default_cnn()
+        self._models['cnn'] = self.create_default_cnn()
         self._models['svc'] = SVCLearningModel()
 
     def create_default_mlp(self) -> "LearningModel":
@@ -196,10 +196,8 @@ class ClassificationManager(SCSingletonConfigurable):
         return KerasModelWrapper( "mlp", MLP.build( dm().modal.model_dims, lm().nLabels ) )
 
     def create_default_cnn(self) -> "LearningModel":
-        from .cnn import CNN
-        from spectraclass.model.labels import lm
-        from .base import KerasModelWrapper
-        return KerasModelWrapper( "cnn", CNN.build( self.nfeatures, lm().nLabels ) )
+        from .cnn import CNNLearningModel
+        return CNNLearningModel( 'cnn', self.nfeatures )
 
     def addLearningModel(self, mid: str, model: "LearningModel" ):
         self._models[ mid ] = model

@@ -69,6 +69,7 @@ cnn =  CNN.build( bdata.shape, nfeatures, lm().nLabels )
 model = KerasModelWrapper("cnn",cnn)
 input_batch: np.ndarray = bdata.expand_dims('batch',0).values
 preresult: np.ndarray = model.predict( input_batch ).squeeze()
+
 y = np.expand_dims( LearningModel.index_to_one_hot( labels ), 0 )
 sample_weights: np.ndarray = get_sample_weights( labels, lm().nLabels )
 model.fit( input_batch, y, sample_weight=sample_weights, nepochs=nepochs )
