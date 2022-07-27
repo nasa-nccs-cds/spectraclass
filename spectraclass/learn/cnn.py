@@ -2,7 +2,7 @@ import xarray as xa
 import time, traceback, abc, os, copy
 import numpy as np
 from spectraclass.data.spatial.tile.tile import Block
-import scipy, sklearn
+from sklearn.exceptions import NotFittedError
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.models import Model
 from tensorflow.keras import Input
@@ -64,9 +64,38 @@ class CNNLearningModel(KerasModelWrapper):
 
     def get_training_set(self, block: Block, **kwargs ) -> Tuple[np.ndarray,np.ndarray]:
         from spectraclass.model.labels import LabelsManager, Action, lm
+        from spectraclass.learn.base import LearningModel
         label_map: xa.DataArray  = lm().get_label_map( block=block )
-        tdata: np.ndarray = block.data.transpose('y', 'x', 'band').fillna(0.0).expand_dims('batch', 0).values
-        return ( tdata, label_map.values )
+        training_data: np.ndarray = block.data.transpose('y', 'x', 'band').fillna(0.0).expand_dims('batch', 0).values
+        training_labels = np.expand_dims( LearningModel.index_to_one_hot( label_map.values.flatten() ), 0 )
+        return ( training_data, training_labels )
+
+    def get_input_data(self) -> xa.DataArray:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        block: Block = tm().getBlock()
+        input_data: xa.DataArray = block.data.transpose('y', 'x', 'band').fillna(0.0).expand_dims('batch', 0)
+        return input_data
+
+    @exception_handled
+    def apply_classification( self, **kwargs ) -> xa.DataArray:
+        try:
+            from spectraclass.gui.pointcloud import PointCloudManager, pcm
+            from spectraclass.data.spatial.tile.manager import TileManager, tm
+            from spectraclass.gui.spatial.map import MapManager, mm
+            from spectraclass.model.labels import LabelsManager, Action, lm
+            input_data: xa.DataArray = self.get_input_data()
+            prediction: np.ndarray = self.predict( input_data.values, **kwargs )
+            classifcation: np.ndarray = prediction.reshape( [input_data.shape[1], input_data.shape[2], prediction.shape[-1]] )
+            lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> CLASSIFY, result shape = {classifcation.shape}, vrange = [{prediction.min()}, {prediction.max()}] ")
+            classification = xa.DataArray(  classifcation.argmax( axis=2 ).squeeze(),
+                                            dims=['y', 'x' ],
+                                            coords=dict( y= input_data.coords['y'],
+                                                         x= input_data.coords['x'] ) )
+            mm().plot_labels_image( classification )
+            lm().addAction("classify", "application")
+            return classification
+        except NotFittedError:
+            ufm().show( "Must learn a mapping before applying a classification", "red")
 
     @exception_handled
     def learn_classification( self,**kwargs ):
@@ -79,5 +108,5 @@ class CNNLearningModel(KerasModelWrapper):
             if np.count_nonzero( training_labels > 0 ) > 0:
                 lgm().log(f"Learning mapping with shapes: spectral_data{training_data.shape}, class_data{training_labels.shape}")
                 self.fit( training_data, training_labels, **kwargs )
-        lgm().log(f"Completed learning in {time.time() - t1} sec.")
+        lgm().log(f"Completed CNN learning in {time.time() - t1} sec.")
 

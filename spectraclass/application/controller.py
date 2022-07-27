@@ -97,7 +97,6 @@ class SpectraclassController(SCSingletonConfigurable):
         lm().clearMarkers()
         mm().clearMarkers()
         gpm().clear()
-        lm().clear_classification()
         if self.pcm_active: pcm().clear()
         mm().plot_labels_image()
 
@@ -125,46 +124,29 @@ class SpectraclassController(SCSingletonConfigurable):
                 lgm().log(f"undo_action-> pop marker: {marker}")
                 mm().plot_labels_image( lm().get_label_map() )
             if action.type == "classify":
-                lm().clear_classification()
                 mm().plot_labels_image( lm().get_label_map() )
 
-    @log_timing
     def classify(self) -> xa.DataArray:
         from spectraclass.learn.manager import ClassificationManager, cm
-        from spectraclass.gui.pointcloud import PointCloudManager, pcm
-        from spectraclass.data.base import DataManager, dm
-        from spectraclass.gui.spatial.map import MapManager, mm
-        from spectraclass.model.labels import LabelsManager, Action, lm
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        ufm().show(" Applying Classification Mapping ")
-        lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> CLASSIFY ")
-        block = tm().getBlock()
-        embedding: xa.DataArray = dm().getModelData()
-        classification: xa.DataArray = cm().apply_classification( embedding )
-        overlay_image: xa.DataArray = block.points2raster( classification )
-        mm().plot_labels_image( overlay_image )
-        lm().addAction("classify", "application")
-        lm().set_classification( np.argmax( classification.values, axis=1 ) )
-        ufm().show("Classification Complete")
-        return classification
+        ufm().show("Applying Classification Mapping... ")
+        result = cm().apply_classification()
+        ufm().show( "Classification Mapping applied" )
+        return result
 
     @log_timing
     def cluster(self):
         from spectraclass.learn.cluster.manager import clm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.spatial.map import MapManager, mm
-        from spectraclass.model.labels import LabelsManager, Action, lm
         ufm().show(f"Creating clusters using {clm().mid}... ")
         cluster_inuput: xa.DataArray = dm().getModelData() if clm().use_model_data else dm().getSpectralData()
         cluster_image: xa.DataArray = clm().cluster( cluster_inuput )
         mm().plot_cluster_image( cluster_image )
         ufm().show(f"Clustering completed")
 
-    @log_timing
     def learn(self):
         from spectraclass.learn.manager import ClassificationManager, cm
         ufm().show("Learning Classification Mapping... ")
-        lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> LEARN ")
         cm().learn_classification()
         ufm().show( "Classification Mapping learned" )
 

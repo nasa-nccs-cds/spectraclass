@@ -88,7 +88,6 @@ class LabelsManager(SCSingletonConfigurable):
         self._nodata_value = -1
         self._optype = None
         self.template = None
-        self._classification: np.ndarray = None
         self.n_spread_iters = 1
         self.wSelectedClass: ipw.HBox = None
 #        self.get_rgb_colors = np.vectorize(self.get_rgb_color)
@@ -289,6 +288,23 @@ class LabelsManager(SCSingletonConfigurable):
         label_dset = xa.Dataset( data_arrays )
         return label_dset
 
+    @exception_handled
+    def loadLabelData( self, labels_dset: Union[str,bool] ):
+        from spectraclass.data.base import DataManager, dm
+        if isinstance(labels_dset, str): dm().labels_dset = labels_dset
+        lgm().log( f'Loading labels file: {dm().labels_file}', print=True )
+        labels_dset: xa.Dataset = xa.open_dataset( dm().labels_file )
+        for (vid, labels_var) in labels_dset.data_vars.items():
+            ( _, image_idx, bidx0, bidx1 ) = vid.split('-')
+            point_index = np.arange(0, labels_var.shape[-1] * labels_var.shape[-2])
+            lgm().log(f'Loading labels for image-{image_idx}: block={(bidx0,bidx1)} ')
+            for cid in range( 1, lm().nLabels ):
+                label_mask = (labels_var == cid).values.flatten()
+                if np.count_nonzero( label_mask ) > 0:
+                    pids = point_index[ label_mask ]
+                    marker = Marker( 'marker', pids, cid, block_index=(int(bidx0),int(bidx1)), image_index=int(image_idx) )
+                    self.addMarker( marker )
+
     def saveLabelData( self, *args, **kwargs ) -> xa.Dataset:
         from spectraclass.gui.control import UserFeedbackManager, ufm
         from spectraclass.data.base import DataManager, dm
@@ -390,7 +406,6 @@ class LabelsManager(SCSingletonConfigurable):
             label_map[m.cid] = pids.union( set(m.pids) )
         return label_map
 
-    @log_timing
     def get_label_map( self, **kwargs ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block = kwargs.get( 'block', tm().getBlock() )
@@ -461,11 +476,14 @@ class LabelsManager(SCSingletonConfigurable):
 
     def setLabels(self, labels: List[Tuple[str, str]], **kwargs):
         unlabeled_color = kwargs.get( 'unlabeled', "white" )
+        load_existing = kwargs.get('load',False)
         label_list = [ ('Unlabeled', unlabeled_color ) ] + labels
         for ( label, color ) in labels:
             if color.lower() == unlabeled_color: raise Exception( f"{unlabeled_color} is a reserved color")
         self._colors = [ item[1] for item in label_list ]
         self._labels = [ item[0] for item in label_list ]
+        if load_existing:
+            self.loadLabelData( load_existing )
 
     def getSeedPointMask(self) -> xa.DataArray:
         from spectraclass.gui.control import UserFeedbackManager, ufm

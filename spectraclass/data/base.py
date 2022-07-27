@@ -48,6 +48,7 @@ def register_modes():
 
 class DataManager(SCSingletonConfigurable):
     proc_type = tl.Unicode('cpu').tag(config=True)
+    labels_dset = tl.Unicode('labels').tag(config=True)
     use_model_data = tl.Bool(False).tag(config=True, sync=True)
     _mode_data_managers_: Dict = {}
 
@@ -162,7 +163,7 @@ class DataManager(SCSingletonConfigurable):
     def labels_file(self ) -> str:
         output_dir = os.path.join( self.cache_dir, "labels")
         os.makedirs( output_dir, exist_ok=True)
-        return os.path.join( output_dir, f"{self.dsid()}-labels.nc" )
+        return os.path.join( output_dir, f"{self.dsid()}-{self.labels_dset}.nc" )
 
     @exception_handled
     def save_config( self ):

@@ -268,14 +268,12 @@ class ClassificationManager(SCSingletonConfigurable):
 
     @exception_handled
     def learn_classification( self, **kwargs  ):
+        lgm().log( f"learn_classification: MODEL = {self.mid} ")
         self.model.learn_classification( **kwargs  )
 
     @exception_handled
-    def apply_classification( self, embedding: xa.DataArray, **kwargs ) -> xa.DataArray:
-        try:
-            ufm().show("Applying Classification... ")
-            sample_labels: xa.DataArray = self.model.apply_classification( embedding, **kwargs  )
-            return sample_labels
-        except sklearn.exceptions.NotFittedError:
-            ufm().show( "Must learn a mapping before applying a classification", "red")
+    def apply_classification( self, **kwargs  ):
+        lgm().log( f"apply_classification: MODEL = {self.mid} ")
+        self.model.apply_classification( **kwargs  )
+
 

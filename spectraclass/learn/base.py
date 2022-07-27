@@ -1,6 +1,7 @@
 import xarray as xa
 import time, traceback, abc
 from sklearn.model_selection import train_test_split
+from sklearn.exceptions import NotFittedError
 import numpy as np
 import os
 from datetime import datetime
@@ -95,14 +96,31 @@ class LearningModel:
     def fit(self, data: np.ndarray, class_data: np.ndarray, **kwargs):
         raise Exception( "abstract method LearningModel.fit called")
 
+    def get_input_data(self) -> xa.DataArray:
+        from spectraclass.data.base import DataManager, dm
+        embedding: xa.DataArray = dm().getModelData()
+        return embedding
+
     @exception_handled
-    def apply_classification( self, data: xa.DataArray, **kwargs ) -> xa.DataArray:
-        t1 = time.time()
-        prediction: np.ndarray = self.predict( data.values, **kwargs )
-        if prediction.ndim == 1: prediction = prediction.reshape( [ prediction.size, 1 ] )
-        lgm().log(f"Applied classication with input shape {data.shape[0]} in {time.time() - t1} sec.")
-        return xa.DataArray( prediction,  dims=['samples','classes'],
-                             coords=dict( samples=data.coords['samples'], classes=range(prediction.shape[1]) ) )
+    def apply_classification( self, **kwargs ) -> xa.DataArray:
+        try:
+            from spectraclass.gui.pointcloud import PointCloudManager, pcm
+            from spectraclass.data.spatial.tile.manager import TileManager, tm
+            from spectraclass.gui.spatial.map import MapManager, mm
+            from spectraclass.model.labels import LabelsManager, Action, lm
+            lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> CLASSIFY ")
+            block = tm().getBlock()
+            input_data: xa.DataArray = self.get_input_data()
+            prediction: np.ndarray = self.predict( input_data.values, **kwargs )
+            classification = xa.DataArray(prediction, dims=['samples', 'classes'], coords=dict(samples=input_data.coords['samples'], classes=range(prediction.shape[1])))
+            if classification.ndim == 1: classification = classification.reshape([classification.size, 1])
+            overlay_image: xa.DataArray = block.points2raster(classification)
+            mm().plot_labels_image(overlay_image)
+            lm().addAction("classify", "application")
+     #       lm().set_classification( np.argmax(prediction, axis=1) )
+            return classification
+        except NotFittedError:
+            ufm().show( "Must learn a mapping before applying a classification", "red")
 
     def predict( self, data: np.ndarray, **kwargs ):
         raise Exception( "abstract method LearningModel.predict called")
