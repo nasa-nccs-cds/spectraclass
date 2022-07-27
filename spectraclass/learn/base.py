@@ -56,7 +56,7 @@ class LearningModel:
     def score(self) -> Optional[np.ndarray]:
         return self._score
 
-    def get_training_set(self, **kwargs ) -> Tuple[np.ndarray,np.ndarray]:
+    def get_training_set(self, **kwargs ) -> Tuple[np.ndarray,np.ndarray,Optional[np.ndarray]]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.model.labels import LabelsManager, Action, lm
         label_data = lm().getTrainingLabels()
@@ -70,19 +70,18 @@ class LearningModel:
             training_data   = tdata   if (training_data   is None) else np.append( training_data,   tdata,   axis=0 )
             training_labels = tlabels if (training_labels is None) else np.append( training_labels, tlabels, axis=0 )
         lgm().log(f"SHAPES--> training_data: {training_data.shape}, training_labels: {training_labels.shape}" )
-        return ( training_data, training_labels )
+        return ( training_data, training_labels, None )
 
     @exception_handled
     def learn_classification( self,**kwargs ):
-        training_data, training_labels = self.get_training_set( **kwargs )
+        training_data, training_labels, sample_weight = self.get_training_set( **kwargs )
         t1 = time.time()
         if np.count_nonzero( training_labels > 0 ) == 0:
             ufm().show( "Must label some points before learning the classification" )
             return None
         lgm().log(f"Learning mapping with shapes: spectral_data{training_data.shape}, class_data{training_labels.shape}")
-        self.fit( training_data, training_labels, **kwargs )
+        self.fit( training_data, training_labels, sample_weight=sample_weight, **kwargs )
         lgm().log(f"Completed learning in {time.time() - t1} sec.")
-
 
     @classmethod
     def index_to_one_hot( cls, class_data: np.ndarray ) -> np.ndarray:
@@ -125,22 +124,28 @@ class LearningModel:
     def predict( self, data: np.ndarray, **kwargs ):
         raise Exception( "abstract method LearningModel.predict called")
 
-    def save( self, **kwargs ):
-        raise Exception( "abstract method LearningModel.save called")
+    def save( self, **kwargs ) -> str:
+        mfile = self.model_file
+        lgm().log( f'SamplesModelWrapper: save weights -> {mfile}' )
+        self._model.save( mfile, save_format="tf", **kwargs )
+        return os.path.splitext( os.path.basename(mfile) )[0]
 
-    def load( self, name, **kwargs ):
-        raise Exception( "abstract method LearningModel.load called")
+    @exception_handled
+    def load( self, model_name: str, **kwargs ):
+        file_path = os.path.join( self.model_dir, f"{model_name}.tf" )
+        lgm().log( f'SamplesModelWrapper: loading model -> {file_path}' )
+        self._model = models.load_model( file_path, **kwargs )
 
-class KerasModelWrapper(LearningModel):
+class SamplesModelWrapper(LearningModel):
 
-    def __init__(self, name: str,  model: models.Model, **kwargs ):
+    def __init__( self, name: str,  model: models.Model, **kwargs ):
         LearningModel.__init__( self, name,  **kwargs )
         self.opt = str(kwargs.pop('opt', 'adam')).lower()
         self.loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
         self.spatial = kwargs.get( 'spatial', False )
         self.parms = kwargs
         self._model: models.Model = model
-        self._model.compile(optimizer=self.opt, loss=self.loss,  metrics=['accuracy'], **kwargs )
+        self._model.compile( optimizer=self.opt, loss=self.loss,  metrics=['accuracy'], **kwargs )
         self._init_model = copy.deepcopy(model)
 
     def predict( self, data: np.ndarray, **kwargs ) -> np.ndarray:
@@ -148,18 +153,6 @@ class KerasModelWrapper(LearningModel):
 
     def apply( self, data: np.ndarray, **kwargs ) -> np.ndarray:
         return self._model( data, **kwargs )
-
-    def save( self, **kwargs ) -> str:
-        mfile = self.model_file
-        lgm().log( f'KerasModelWrapper: save weights -> {mfile}' )
-        self._model.save( mfile, save_format="tf", **kwargs )
-        return os.path.splitext( os.path.basename(mfile) )[0]
-
-    @exception_handled
-    def load( self, model_name: str, **kwargs ):
-        file_path = os.path.join( self.model_dir, f"{model_name}.tf" )
-        lgm().log( f'KerasModelWrapper: loading model -> {file_path}' )
-        self._model = models.load_model( file_path, **kwargs )
 
     def clear(self):
         self._model = self._init_model

@@ -293,7 +293,7 @@ class MapManager(SCSingletonConfigurable):
             vrange = [ self._classification_data.values.min(), self._classification_data.values.max() ]
             if self.labels_image is None:
                 alpha, cmap, norm = self.layers.alpha("labels"), self.cspecs['cmap'], self.cspecs['norm']
-                lgm().log(f"  create labels image, shape={self._classification_data.shape}, dims={self._classification_data.dims}, vrange={vrange}, alpha={alpha}  ")
+                lgm().log(f"  create labels image, shape={self._classification_data.shape}, dims={self._classification_data.dims}, vrange={vrange}, cmap={cmap}, norm={norm}  ")
                 self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=alpha, cmap=cmap, norm=norm, add_colorbar=False)
             else:
                 lgm().log(f"  update labels image, shape={self._classification_data.shape}, vrange={vrange}  ")

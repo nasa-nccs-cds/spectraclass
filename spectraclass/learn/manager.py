@@ -13,7 +13,7 @@ import ipywidgets as ipw
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from spectraclass.model.base import SCSingletonConfigurable
-from .base import LearningModel, KerasModelWrapper
+from .base import LearningModel, SamplesModelWrapper
 
 def cm():
     return ClassificationManager.instance()
@@ -192,18 +192,20 @@ class ClassificationManager(SCSingletonConfigurable):
         from .mlp import MLP
         from spectraclass.model.labels import lm
         from spectraclass.data.base import DataManager, dm
-        from .base import KerasModelWrapper
-        return KerasModelWrapper( "mlp", MLP.build( dm().modal.model_dims, lm().nLabels ) )
+        from .base import SamplesModelWrapper
+        return SamplesModelWrapper("mlp", MLP.build(dm().modal.model_dims, lm().nLabels))
 
     def create_default_cnn(self) -> "LearningModel":
-        from .cnn import CNNLearningModel
-        return CNNLearningModel( 'cnn', self.nfeatures )
+        from spectraclass.learn.models.spatial import SpatialModelWrapper
+        from spectraclass.learn.cnn import CNN
+        model = CNN.build(  self.nfeatures )
+        return SpatialModelWrapper( 'cnn', model )
 
     def addLearningModel(self, mid: str, model: "LearningModel" ):
         self._models[ mid ] = model
 
     def addNNModel(self, mid: str, model: Model, **kwargs):
-        self._models[ mid ] = KerasModelWrapper(mid, model, **kwargs)
+        self._models[ mid ] = SamplesModelWrapper(mid, model, **kwargs)
 
     def get_control_button(self, task: str ) -> ipw.Button:
         button = ipw.Button(description=task, border='1px solid gray')
