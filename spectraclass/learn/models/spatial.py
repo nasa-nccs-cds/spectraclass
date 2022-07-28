@@ -102,7 +102,7 @@ class SpatialModelWrapper(LearningModel):
 
     def fit( self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
         test_size = kwargs.pop( 'test_size', 0.0 )
-        args = dict( epochs=kwargs.pop( 'nepochs', 25 ), callbacks=self.callbacks, verbose=2, **kwargs )
+        args = dict( epochs=kwargs.pop( 'nepochs', 35 ), callbacks=self.callbacks, verbose=2, **kwargs )
         if test_size > 0.0:
             tx, vx, ty, vy = train_test_split( data, class_data, test_size=test_size )
             self._model.fit( tx, ty, validation_data=(vx,vy), **args )

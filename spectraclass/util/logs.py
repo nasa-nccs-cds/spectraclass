@@ -71,7 +71,7 @@ class LogManager(SCSingletonConfigurable):
         if self._keras_logger is None:
             log_file = f'{self.log_dir}/{self._name}{self._lid}.keras.csv'
             self.log( f"Logging keras output to '{log_file}'")
-            self._keras_logger = CSVLogger( log_file, separator = " \t" )
+            self._keras_logger = CSVLogger( log_file, "\t" )
         return self._keras_logger
 
     @property
