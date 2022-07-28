@@ -13,6 +13,7 @@ from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.learn.base import LearningModel
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from tensorflow.keras import datasets, layers, models
+from tensorflow.keras.callbacks import Callback
 
 class SpatialModelWrapper(LearningModel):
 
@@ -21,6 +22,8 @@ class SpatialModelWrapper(LearningModel):
         self.opt = str(kwargs.pop('opt', 'adam')).lower()
         self.loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
         self.parms = kwargs
+        self.callbacks: List[Callback] = kwargs.pop( 'callbacks', [] )
+        self.callbacks.append( lgm().get_keras_logger() )
         self._model: models.Model = model
         self._model.compile( self.opt, self.loss,  metrics=['accuracy'], **kwargs )
         self._init_model = copy.deepcopy(model)
@@ -99,7 +102,7 @@ class SpatialModelWrapper(LearningModel):
 
     def fit( self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
         test_size = kwargs.pop( 'test_size', 0.0 )
-        args = dict( epochs=kwargs.pop( 'nepochs', 25 ), **kwargs )
+        args = dict( epochs=kwargs.pop( 'nepochs', 25 ), callbacks=self.callbacks, verbose=2, **kwargs )
         if test_size > 0.0:
             tx, vx, ty, vy = train_test_split( data, class_data, test_size=test_size )
             self._model.fit( tx, ty, validation_data=(vx,vy), **args )

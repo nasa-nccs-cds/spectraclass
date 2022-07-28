@@ -38,8 +38,8 @@ class SamplesModelWrapper(LearningModel):
             class_data = self.index_to_one_hot( class_data )
         if test_size > 0.0:
             tx, vx, ty, vy = train_test_split( data, class_data, test_size=test_size )
-            self._model.fit( tx, ty, epochs=nepochs, validation_data=(vx,vy), **kwargs )
+            self._model.fit( tx, ty, epochs=nepochs, validation_data=(vx,vy), verbose=True, **kwargs )
         else:
             lgm().log( f"model.fit, shapes: point_data{data.shape}, class_data{class_data.shape} " )
-            self._model.fit( data, class_data, epochs=nepochs, **kwargs )
+            self._model.fit( data, class_data, epochs=nepochs, verbose=True, **kwargs )
 

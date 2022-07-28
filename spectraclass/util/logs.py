@@ -2,6 +2,7 @@ import numpy as np
 from typing import List, Optional, Dict, Type
 import os, datetime
 from enum import Enum
+from keras.callbacks import CSVLogger
 from functools import wraps
 from time import time
 from datetime import datetime
@@ -41,8 +42,11 @@ class LogManager(SCSingletonConfigurable):
     def __init__(self):
         super(LogManager, self).__init__()
         self._wGui = None
+        self._name = None
+        self._lid = None
         self._level = logging.INFO
         self._log_file = None
+        self._keras_logger = None
         self.log_dir = None
 
     @classmethod
@@ -56,10 +60,19 @@ class LogManager(SCSingletonConfigurable):
         self.log_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "logging", mode )
         os.makedirs( self.log_dir, 0o777, exist_ok=True )
         overwrite = kwargs.get( 'overwrite', True )
-        lid = "" if overwrite else f"-{os.getpid()}"
-        log_file = f'{self.log_dir}/{name}{lid}.log'
+        self._name = name
+        self._lid = "" if overwrite else f"-{os.getpid()}"
+        log_file = f'{self.log_dir}/{name}{self._lid}.log'
         self._log_file = open( log_file, 'w' )
         print( f"Opening log file:  '{log_file}'" )
+
+
+    def get_keras_logger(self) -> CSVLogger:
+        if self._keras_logger is None:
+            log_file = f'{self.log_dir}/{self._name}{self._lid}.keras.csv'
+            self.log( f"Logging keras output to '{log_file}'")
+            self._keras_logger = CSVLogger( log_file, separator = " \t" )
+        return self._keras_logger
 
     @property
     def ctime(self):
