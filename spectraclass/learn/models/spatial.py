@@ -25,6 +25,11 @@ class SpatialModelWrapper(LearningModel):
         self._model.compile( self.opt, self.loss,  metrics=['accuracy'], **kwargs )
         self._init_model = copy.deepcopy(model)
 
+    @classmethod
+    def flatten( cls, shape, nfeatures ):
+        if   len( shape ) == 4: return [ shape[0], shape[1]*shape[2], nfeatures ]
+        elif len( shape ) == 3: return [ shape[0] * shape[1], nfeatures ]
+
     def get_sample_weight( self, labels: np.ndarray ) -> np.ndarray:
         sample_weights: np.ndarray = np.where((labels == 0), 0.0, 1.0)
         return np.expand_dims(sample_weights, 0)
@@ -52,6 +57,12 @@ class SpatialModelWrapper(LearningModel):
         block: Block = tm().getBlock()
         input_data: xa.DataArray = block.data.transpose('y', 'x', 'band').fillna(0.0).expand_dims('batch', 0)
         return input_data
+
+    @classmethod
+    def get_input_shape(cls) -> Tuple[int,...]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        block: Block = tm().getBlock()
+        return block.data.transpose( 'y', 'x', 'band' ).shape
 
     @exception_handled
     def apply_classification( self, **kwargs ) -> xa.DataArray:

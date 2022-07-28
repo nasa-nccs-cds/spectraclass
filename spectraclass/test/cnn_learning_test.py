@@ -9,7 +9,7 @@ from spectraclass.learn.manager import ClassificationManager, cm
 from spectraclass.learn.cnn import CNN
 from spectraclass.model.labels import lm
 import numpy as np
-from spectraclass.learn.base import SamplesModelWrapper, LearningModel
+from learn.models.samples import SamplesModelWrapper
 from spectraclass.learn.base import LearningModel
 import os, xarray as xa
 from typing import List, Union, Tuple, Optional, Dict, Callable

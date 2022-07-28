@@ -1,18 +1,11 @@
 import xarray as xa
 import time, traceback, abc
-from sklearn.model_selection import train_test_split
 from sklearn.exceptions import NotFittedError
 import numpy as np
 import os
 from datetime import datetime
-import tensorflow as tf
 from tensorflow.keras.models import Model
 from typing import List, Tuple, Optional, Dict
-from ..model.labels import LabelsManager
-import traitlets as tl
-import traitlets.config as tlc
-import ipywidgets as ipw
-import copy
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from tensorflow.keras.utils import to_categorical
@@ -20,7 +13,7 @@ from tensorflow.keras import datasets, layers, models
 
 class LearningModel:
 
-    def __init__(self, name: str,  **kwargs ):
+    def __init__(self, name: str, **kwargs ):
         self.mid =  name
         self._score: Optional[np.ndarray] = None
         self.config = kwargs
@@ -135,38 +128,3 @@ class LearningModel:
         file_path = os.path.join( self.model_dir, f"{model_name}.tf" )
         lgm().log( f'SamplesModelWrapper: loading model -> {file_path}' )
         self._model = models.load_model( file_path, **kwargs )
-
-class SamplesModelWrapper(LearningModel):
-
-    def __init__( self, name: str,  model: models.Model, **kwargs ):
-        LearningModel.__init__( self, name,  **kwargs )
-        self.opt = str(kwargs.pop('opt', 'adam')).lower()
-        self.loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
-        self.spatial = kwargs.get( 'spatial', False )
-        self.parms = kwargs
-        self._model: models.Model = model
-        self._model.compile( optimizer=self.opt, loss=self.loss,  metrics=['accuracy'], **kwargs )
-        self._init_model = copy.deepcopy(model)
-
-    def predict( self, data: np.ndarray, **kwargs ) -> np.ndarray:
-        return self._model.predict( data, **kwargs )
-
-    def apply( self, data: np.ndarray, **kwargs ) -> np.ndarray:
-        return self._model( data, **kwargs )
-
-    def clear(self):
-        self._model = self._init_model
-        self._model.compile(optimizer=self.opt, loss=self.loss,  metrics=['accuracy'], **self.parms )
-
-    def fit(self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
-        nepochs = kwargs.pop( 'nepochs', 25 )
-        test_size = kwargs.pop( 'test_size', 0.0 )
-        if class_data.ndim == 1:
-            class_data = self.index_to_one_hot( class_data )
-        if test_size > 0.0:
-            tx, vx, ty, vy = train_test_split( data, class_data, test_size=test_size )
-            self._model.fit( tx, ty, epochs=nepochs, validation_data=(vx,vy), **kwargs )
-        else:
-            lgm().log( f"model.fit, shapes: point_data{data.shape}, class_data{class_data.shape} " )
-            self._model.fit( data, class_data, epochs=nepochs, **kwargs )
-
