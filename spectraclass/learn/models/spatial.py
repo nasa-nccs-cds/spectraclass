@@ -3,30 +3,22 @@ import time, traceback, abc, os, copy
 import numpy as np
 from spectraclass.data.spatial.tile.tile import Block
 from sklearn.exceptions import NotFittedError
-from sklearn.model_selection import train_test_split
 from tensorflow.keras.models import Model
 from tensorflow.keras import Input
 from typing import List, Tuple, Optional, Dict
 import traitlets as tl
 import traitlets.config as tlc
 from spectraclass.gui.control import UserFeedbackManager, ufm
-from spectraclass.learn.base import LearningModel
+from spectraclass.learn.base import KerasLearningModel
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from tensorflow.keras import datasets, layers, models
-from tensorflow.keras.callbacks import Callback
 
-class SpatialModelWrapper(LearningModel):
+class SpatialModelWrapper(KerasLearningModel):
 
     def __init__(self, name: str,  model: models.Model, **kwargs ):
-        LearningModel.__init__( self, name,  **kwargs )
-        self.opt = str(kwargs.pop('opt', 'adam')).lower()
-        self.loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
-        self.parms = kwargs
-        self.callbacks: List[Callback] = kwargs.pop( 'callbacks', [] )
-        self.callbacks.append( lgm().get_keras_logger() )
-        self._model: models.Model = model
-        self._model.compile( self.opt, self.loss,  metrics=['accuracy'], **kwargs )
-        self._init_model = copy.deepcopy(model)
+        KerasLearningModel.__init__( self, name,  model, kwargs.pop('callbacks'), **kwargs )
+
+
 
     @classmethod
     def flatten( cls, shape, nfeatures ):
@@ -99,15 +91,6 @@ class SpatialModelWrapper(LearningModel):
                 lgm().log(f"Learning mapping with shapes: spectral_data{training_data.shape}, class_data{training_labels.shape}, sample_weight{sample_weight.shape}")
                 self.fit( training_data, training_labels, sample_weight=sample_weight, **kwargs )
         lgm().log(f"Completed Spatial learning in {time.time() - t1} sec.")
-
-    def fit( self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
-        test_size = kwargs.pop( 'test_size', 0.0 )
-        args = dict( epochs=kwargs.pop( 'nepochs', 35 ), callbacks=self.callbacks, verbose=2, **kwargs )
-        if test_size > 0.0:
-            tx, vx, ty, vy = train_test_split( data, class_data, test_size=test_size )
-            self._model.fit( tx, ty, validation_data=(vx,vy), **args )
-        else:
-            self._model.fit( data, class_data, **args )
 
     def predict( self, data: np.ndarray, **kwargs ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm

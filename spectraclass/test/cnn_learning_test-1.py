@@ -4,12 +4,12 @@ import matplotlib.pyplot as plt
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.data.spatial.modes import AvirisDataManager
 from spectraclass.data.spatial.tile.tile import Block, Tile
+from spectraclass.learn.base import KerasLearningModel
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.learn.manager import ClassificationManager, cm
 from spectraclass.learn.cnn import CNN
 from spectraclass.model.labels import lm
 import numpy as np
-from learn.models.samples import SamplesModelWrapper
 from spectraclass.learn.base import LearningModel
 import os, xarray as xa
 from typing import List, Union, Tuple, Optional, Dict, Callable
@@ -66,7 +66,7 @@ labels: np.ndarray = labels_array.values.flatten()
 
 print( f"Build CNN, input shape = {bdata.shape}" )
 cnn =  CNN.build( bdata.shape, nfeatures, lm().nLabels )
-model = SamplesModelWrapper("cnn", cnn)
+model = KerasModelWrapper("cnn", cnn)
 input_batch: np.ndarray = bdata.expand_dims('batch',0).values
 preresult: np.ndarray = model.predict( input_batch ).squeeze()
 

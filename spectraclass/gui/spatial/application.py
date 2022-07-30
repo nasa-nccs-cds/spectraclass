@@ -13,7 +13,6 @@ class Spectraclass(SpectraclassController):
     def gui( self, **kwargs ):
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         from spectraclass.data.base import DataManager, dm
-        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
         from spectraclass.gui.spatial.map import MapManager, mm
         print( f"Initializing GUI using controller {str(self.__class__)}")
@@ -21,8 +20,8 @@ class Spectraclass(SpectraclassController):
         embed: bool = kwargs.pop('embed',False)
         self.set_spectraclass_theme()
         css_border = '1px solid blue'
-        plot_collapsibles = ipw.Accordion( children = [ dm().gui(), pm().gui(), pcm().gui() ], layout=ipw.Layout(width='100%'))
-        for iT, title in enumerate(['data', 'controls', 'embedding' ]): plot_collapsibles.set_title(iT, title)
+        plot_collapsibles = ipw.Accordion( children = [ dm().gui(), pm().gui(), self.create_viz_tabs() ], layout=ipw.Layout(width='100%'))
+        for iT, title in enumerate(['data', 'controls', 'visualization' ]): plot_collapsibles.set_title(iT, title)
         plot_collapsibles.selected_index = 1
         plot = ipw.VBox([ ufm().gui(), plot_collapsibles, gpm().gui() ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
         smap = mm().gui( basemap=basemap )
@@ -30,6 +29,19 @@ class Spectraclass(SpectraclassController):
         gui = ipw.HBox( [control, plot ], layout=ipw.Layout( width='100%' ) )
         if embed: self.embed()
         return gui
+
+    def create_viz_tabs(self):
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
+        from spectraclass.gui.custom.visuals import cviz
+        wTab = ipw.Tab()
+        tabNames = [ "embedding" ]
+        children = [ pcm().gui() ]
+        for vname in cviz().names: tabNames.append(vname)
+        for viz in cviz().guis: children.append(viz)
+        for iT, title in enumerate(tabNames):
+            wTab.set_title(iT, title)
+        wTab.children = children
+        return wTab
 
     def mark(self):
         super(Spectraclass, self).mark()

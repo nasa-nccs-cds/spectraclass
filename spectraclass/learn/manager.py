@@ -195,8 +195,8 @@ class ClassificationManager(SCSingletonConfigurable):
         self._models[ mid ] = model
 
     def addNNModel(self, mid: str, model: Model, **kwargs):
-        from .models.samples import SamplesModelWrapper
-        self._models[ mid ] = SamplesModelWrapper(mid, model, **kwargs)
+        from spectraclass.learn.base import KerasLearningModel
+        self._models[ mid ] = KerasLearningModel(mid, model, **kwargs)
 
     def addNetwork(self, network ):
         self._models[ network.name ] = network.build()

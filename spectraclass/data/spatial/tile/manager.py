@@ -139,8 +139,8 @@ class TileManager(SCSingletonConfigurable):
         return tuple(self.block_index)
 
     def setBlock( self, block_index ):
-        if block_index != self.block_index:
-            self.block_index = block_index
+        if tuple(block_index) != self.block_index:
+            self.block_index = tuple(block_index)
             dm().loadCurrentProject( 'setBlock', True )
 
     def in_bounds( self, pids: List[int] ) -> bool:

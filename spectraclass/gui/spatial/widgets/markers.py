@@ -28,7 +28,15 @@ class Marker:
     @property
     def active(self) -> bool:
         from spectraclass.data.spatial.tile.manager import tm
-        return (self.block_index == tm().block_index) and (self.image_index == tm().image_index)
+        return (self.block_coords == tm().block_index) and (self.image_index == tm().image_index)
+
+    def relevant(self, mtype: str ) -> bool:
+        from spectraclass.data.spatial.tile.manager import tm
+        rv = self.active and ((mtype is None) or (self.type == mtype))
+        if not self.active:
+            lgm().log( f"Rejecting inactive marker[{self.type}]:")
+            lgm().log( f"block_index: {self.block_index} <-> {tm().block_index},  image_index: {self.image_index} <-> {tm().image_index}" )
+        return rv
 
     @property
     def pids(self) -> np.ndarray:

@@ -305,9 +305,10 @@ class LabelsManager(SCSingletonConfigurable):
                     marker = Marker( 'marker', pids, cid, block_index=(int(bidx0),int(bidx1)), image_index=int(image_idx) )
                     self.addMarker( marker )
 
-    def saveLabelData( self, *args, **kwargs ) -> xa.Dataset:
+    def saveLabelData( self, lid: str = None, **kwargs ) -> xa.Dataset:
         from spectraclass.gui.control import UserFeedbackManager, ufm
         from spectraclass.data.base import DataManager, dm
+        if lid is not None: dm().labels_dset = lid
         label_dset = self.getLabelDataset()
         label_dset.to_netcdf( dm().labels_file )
         ufm().show( f"Saving labels to file: {dm().labels_file}")
@@ -352,6 +353,7 @@ class LabelsManager(SCSingletonConfigurable):
 
     def clearMarker( self, m ):
         for marker in reversed(self._markers):
+            lgm().log(f"clearMarker test: {marker} <-> {m}")
             if m == marker:
                 lgm().log(f"LM: Removing marker: {m}")
                 self._markers.remove( marker )
@@ -414,9 +416,10 @@ class LabelsManager(SCSingletonConfigurable):
         xcmap: xa.DataArray = block.classmap()
         cmap = xcmap.values
         fcmap = np.ravel( cmap )
-        lgm().log( f" *GENERATE LABEL MAP: {len(self.markers)} markers")
-        for marker in self.markers:
-            if (mtype is None) or (marker.type == mtype):
+        markers = self.getMarkers()
+        lgm().log( f" *GET LABEL MAP: {len(markers)} markers")
+        for marker in markers:
+            if marker.relevant(mtype):
                 if marker.mask is not None:
                     fcmap[ marker.mask.flatten() ] = marker.cid
                 else:
@@ -434,7 +437,7 @@ class LabelsManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block = kwargs.get( 'block', tm().getBlock() )
         cmap: xa.DataArray = block.classmap()
-        lgm().log( f" **GENERATE LABEL MAP: {len(self.markers)} markers")
+        lgm().log( f" **UPDATE LABEL MAP: {len(self.markers)} markers")
         for marker in self.markers:
             if marker.type not in ["cluster"]:
                 lgm().log( f"update_label_map->MARKER[{marker.type}]: Setting {len(marker.pids)} labels for cid = {marker.cid}" )

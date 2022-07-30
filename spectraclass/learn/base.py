@@ -2,7 +2,8 @@ import xarray as xa
 import time, traceback, abc
 from sklearn.exceptions import NotFittedError
 import numpy as np
-import os
+import os, copy
+from sklearn.model_selection import train_test_split
 from datetime import datetime
 from tensorflow.keras.models import Model
 from typing import List, Tuple, Optional, Dict
@@ -10,10 +11,11 @@ from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras import datasets, layers, models
+from tensorflow.keras.callbacks import Callback
 
 class LearningModel:
 
-    def __init__(self, name: str, **kwargs ):
+    def __init__(self, name: str,  **kwargs ):
         self.mid =  name
         self._score: Optional[np.ndarray] = None
         self.config = kwargs
@@ -85,7 +87,7 @@ class LearningModel:
     def one_hot_to_index(cls, class_data: np.ndarray) -> np.ndarray:
         return np.argmax( class_data, axis=0  ).squeeze()
 
-    def fit(self, data: np.ndarray, class_data: np.ndarray, **kwargs):
+    def fit( self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
         raise Exception( "abstract method LearningModel.fit called")
 
     def get_input_data(self) -> xa.DataArray:
@@ -119,12 +121,47 @@ class LearningModel:
 
     def save( self, **kwargs ) -> str:
         mfile = self.model_file
-        lgm().log( f'SamplesModelWrapper: save weights -> {mfile}' )
+        lgm().log( f'KerasModelWrapper: save weights -> {mfile}' )
         self._model.save( mfile, save_format="tf", **kwargs )
         return os.path.splitext( os.path.basename(mfile) )[0]
 
     @exception_handled
     def load( self, model_name: str, **kwargs ):
         file_path = os.path.join( self.model_dir, f"{model_name}.tf" )
-        lgm().log( f'SamplesModelWrapper: loading model -> {file_path}' )
+        lgm().log( f'KerasModelWrapper: loading model -> {file_path}' )
         self._model = models.load_model( file_path, **kwargs )
+
+
+class KerasLearningModel(LearningModel):
+
+    def __init__(self, name: str, model: Model, callbacks: List[Callback] = None,  **kwargs ):
+        LearningModel.__init__(self,name,**kwargs)
+        self.callbacks: List[Callback] = callbacks if callbacks else []
+        self.callbacks.append( lgm().get_keras_logger() )
+        self.opt = str(kwargs.pop('opt', 'adam')).lower()
+        self.loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
+        self._model: models.Model = model
+        self._model.compile( optimizer=self.opt, loss=self.loss,  metrics=['accuracy'], **kwargs )
+        self._init_model = copy.deepcopy(model)
+
+    def fit( self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
+        test_size = kwargs.pop( 'test_size', 0.0 )
+        args = dict( epochs=kwargs.pop( 'nepochs', 35 ), callbacks=self.callbacks, verbose=2, **kwargs )
+        if class_data.ndim == 1:
+            class_data = self.index_to_one_hot( class_data )
+        if test_size > 0.0:
+            tx, vx, ty, vy = train_test_split( data, class_data, test_size=test_size )
+            self._model.fit( tx, ty, validation_data=(vx,vy), **args )
+        else:
+            self._model.fit( data, class_data, **args )
+
+
+    def predict( self, data: np.ndarray, **kwargs ) -> np.ndarray:
+        return self._model.predict( data, **kwargs )
+
+    def apply( self, data: np.ndarray, **kwargs ) -> np.ndarray:
+        return self._model( data, **kwargs )
+
+    def clear(self):
+        self._model = self._init_model
+        self._model.compile(optimizer=self.opt, loss=self.loss,  metrics=['accuracy'], **self.config )
