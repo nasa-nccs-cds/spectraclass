@@ -223,6 +223,7 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def createPoints( self, **kwargs ):
         points_geometry = self.getGeometry( **kwargs )
+        assert not points_geometry is None, "Initialization error, please check log file for details"
         points_material = p3js.PointsMaterial( vertexColors='VertexColors', transparent=True )
         self.points = p3js.Points( geometry=points_geometry, material=points_material )
 

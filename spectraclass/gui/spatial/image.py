@@ -87,7 +87,7 @@ class TileServiceImage(AxesImage):
                     xc, yc = x0 + width*tx, y0+height*ty
                     status = 'selected' if selected else ( 'cached' if cached else 'existing' )
                     lw = 2 if ( selected or cached ) else 1
-                    alpha = self.base_alpha * ( nvalid/max_nvalid )
+                    alpha = min( self.base_alpha * ( nvalid/max_nvalid ), 1.0 )
                     r = Rectangle( (xc,yc), width, height, fill=False, edgecolor=self.block_colors[status], lw=lw, alpha=alpha )
                     setattr( r, 'block_index', (tx,ty) )
                     r.set_picker( True )
