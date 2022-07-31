@@ -326,9 +326,13 @@ class DataManager(SCSingletonConfigurable):
     def getRawModelData(self) -> Optional[xa.DataArray]:
         project_dataset: Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ] = self.loadCurrentProject("getModelData")
         if project_dataset is not None:
-            model_data: xa.DataArray = project_dataset['reduction']
-            attrs = project_dataset['attrs']
-            model_data.attrs['dsid'] = attrs['dsid']
+            model_data: Optional[xa.DataArray] = project_dataset.get('reduction')
+            if model_data is None:
+                lgm().log("getRawModelData: model_data is None")
+            else:
+                lgm().log(f"getRawModelData: shape = {model_data.shape}")
+                attrs = project_dataset['attrs']
+                model_data.attrs['dsid'] = attrs['dsid']
             return model_data
         else:
             lgm().log("getRawModelData: project_dataset is None")
