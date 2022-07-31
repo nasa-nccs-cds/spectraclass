@@ -187,8 +187,8 @@ class ClassificationManager(SCSingletonConfigurable):
         from .svc import SVCLearningModel
         from .mlp import MLP
         from spectraclass.data.base import DataManager, dm
-        self.addNetwork( MLP( 'mlp-0', nfeatures=dm().modal.model_dims) )
-        self.addNetwork( CNN( 'cnn-0', nfeatures=self.nfeatures ) )
+        self.addNetwork( MLP( 'mlp', nfeatures=dm().modal.model_dims) )
+        self.addNetwork( CNN( 'cnn', nfeatures=self.nfeatures ) )
         self._models['svc'] = SVCLearningModel()
 
     def addLearningModel(self, mid: str, model: LearningModel ):
