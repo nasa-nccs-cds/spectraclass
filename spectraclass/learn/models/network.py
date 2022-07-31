@@ -29,14 +29,13 @@ class Network:
     def build( self, **kwargs ) -> "LearningModel":
         from .spatial import SpatialModelWrapper
         from spectraclass.learn.base import KerasLearningModel
-        match self._type:
-            case ModelType.SPATIAL:
+        if self._type == ModelType.SPATIAL:
                 model, bparms = self._build_model(  **self._parms, **kwargs )
                 return SpatialModelWrapper( self._name, model, callbacks=[NetworkCallback(self)], **bparms )
-            case ModelType.SAMPLES:
+        if self._type == ModelType.SAMPLES:
                 model, bparms = self._build_model( **self._parms, **kwargs )
                 return KerasLearningModel( self._name, model, callbacks=[NetworkCallback(self)], **bparms )
-            case ModelType.CUSTOM:
+        if self._type == ModelType.CUSTOM:
                 return self._learning_model( self._name, callbacks=[NetworkCallback(self)], **self._parms, **kwargs )
 
     def _build_model( self, **kwargs ) -> Tuple[Model,Dict]:
