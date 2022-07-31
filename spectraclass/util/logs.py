@@ -2,7 +2,7 @@ import numpy as np
 from typing import List, Optional, Dict, Type
 import os, datetime
 from enum import Enum
-from keras.callbacks import CSVLogger
+from tensorflow.keras.callbacks import CSVLogger
 from functools import wraps
 from time import time
 from datetime import datetime
