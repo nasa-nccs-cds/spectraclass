@@ -61,7 +61,8 @@ class Marker:
         return self.props.get(key,None)
 
     def __eq__(self, m ):
-        return isinstance( m, Marker ) and ( m.cid == self.cid ) and ( m.pids == self.pids )
+        rv = isinstance( m, Marker ) and ( m.cid == self.cid ) and ( m.pids == self.pids )
+        return rv.all() if isinstance( rv, np.ndarray ) else rv
 
     def __ne__(self, m ):
         return not self.__eq__( m )

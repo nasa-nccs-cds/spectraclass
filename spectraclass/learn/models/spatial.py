@@ -18,8 +18,6 @@ class SpatialModelWrapper(KerasLearningModel):
     def __init__(self, name: str,  model: models.Model, **kwargs ):
         KerasLearningModel.__init__( self, name,  model, kwargs.pop('callbacks'), **kwargs )
 
-
-
     @classmethod
     def flatten( cls, shape, nfeatures ):
         if   len( shape ) == 4: return [ shape[0], shape[1]*shape[2], nfeatures ]
@@ -47,17 +45,19 @@ class SpatialModelWrapper(KerasLearningModel):
         sample_weight = self.get_sample_weight( label_map )
         return ( training_data, training_labels, sample_weight )
 
-    def get_input_data(self) -> xa.DataArray:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        block: Block = tm().getBlock()
-        input_data: xa.DataArray = block.data.transpose('y', 'x', 'band').fillna(0.0).expand_dims('batch', 0)
-        return input_data
+    @classmethod
+    def block_data(cls) -> xa.DataArray:
+        from spectraclass.gui.spatial.map import MapManager, mm
+        rdata: xa.DataArray = mm().data
+        return  rdata.transpose( rdata.dims[1], rdata.dims[2], rdata.dims[0] )
+
+    @classmethod
+    def get_input_data(cls) -> xa.DataArray:
+        return cls.block_data().fillna(0.0).expand_dims('batch', 0)
 
     @classmethod
     def get_input_shape(cls) -> Tuple[int,...]:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        block: Block = tm().getBlock()
-        return block.data.transpose( 'y', 'x', 'band' ).shape
+        return  cls.block_data().shape
 
     @exception_handled
     def apply_classification( self, **kwargs ) -> xa.DataArray:

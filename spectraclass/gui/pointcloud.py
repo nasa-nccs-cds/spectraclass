@@ -107,7 +107,7 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def deleteMarkers( self, pids: List[int] ):
         for pid in pids:
-            self.marker_pids.pop( pid )
+            self.marker_pids.pop( pid, 0 )
         self.update_marker_plot()
 
     def update_marker_plot(self):

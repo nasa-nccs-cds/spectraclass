@@ -1,6 +1,7 @@
 import numpy as np
 from matplotlib.lines import Line2D
 from matplotlib.artist import Artist
+from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.widgets.polygon import PolyRec
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from matplotlib.backend_bases import MouseEvent, KeyEvent
@@ -16,6 +17,7 @@ class PolygonInteractor:
         self.ax = ax
         self.polys: List[PolyRec] = []
         self.prec: PolyRec = None
+        self.markers: Dict[PolyRec, Marker] = {}
         self.enabled = False
         self.editing = False
         self.creating = False
@@ -84,17 +86,15 @@ class PolygonInteractor:
             prec.set_selected(prec.polyId == selected_pid)
         self.draw()
 
+    @exception_handled
     def delete_selection(self):
-        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
-        from spectraclass.gui.pointcloud import PointCloudManager, pcm
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.application.controller import app
         if self.prec is not None:
+            marker = self.markers.pop(self.prec, None)
             self.polys.remove( self.prec )
             self.prec.remove()
-            marker = tm().get_region_marker( self.prec )
             if marker is not None:
-                gpm().remove_marker(marker)
-                pcm().deleteMarkers( marker.pids )
+                app().remove_marker( marker )
             self.prec = None
             self.canvas.draw_idle()
 
@@ -104,11 +104,12 @@ class PolygonInteractor:
         self.prec.complete()
         self.creating = False
         lgm().log( f"POLY->close: points = {self.prec.poly.get_xy().tolist()}")
-        marker = tm().get_region_marker( self.prec )
+        marker =  tm().get_region_marker( self.prec )
         if marker is None:
             self.polys.remove(self.prec)
             self.prec.remove()
         else:
+            self.markers[self.prec] = marker
             app().add_marker( "map", marker )
         self.draw()
         self.prec = None

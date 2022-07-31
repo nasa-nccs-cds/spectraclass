@@ -212,13 +212,22 @@ class SpectraclassController(SCSingletonConfigurable):
     @exception_handled
     def add_marker(self, source: str, marker: Marker):
         from spectraclass.model.labels import LabelsManager, Action, lm
-        from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
         if marker is not None:
             lm().addMarker( marker )
             gpm().plot_graph( marker )
             if self.pcm_active: pcm().addMarker(marker)
+
+    @exception_handled
+    def remove_marker(self, marker: Marker):
+        from spectraclass.model.labels import LabelsManager, Action, lm
+        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
+        if marker is not None:
+            lm().clearMarker( marker )
+            gpm().remove_marker( marker )
+            if self.pcm_active: pcm().deleteMarkers( marker.pids.tolist() )
 
     def get_marked_pids(self) -> Dict[int,Set[int]]:
         from spectraclass.model.labels import LabelsManager, Action, lm

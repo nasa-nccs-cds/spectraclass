@@ -60,8 +60,8 @@ class LearningModel:
             model_data: xa.DataArray = tm().getBlock( tindex=tindex, bindex=bindex ).model_data
             training_mask: np.ndarray = np.isin( model_data.samples.values, pids )
             tdata: np.ndarray = model_data.values[ training_mask ]
-            lgm().log( f"Adding training data: tindex={tindex},  bindex={bindex},  cid={cid},  #pids={pids.size} ")
-            tlabels: np.ndarray = np.full( [pids.size], cid )
+            tlabels: np.ndarray = np.full([pids.size], cid)
+            lgm().log( f"Adding training data: tindex={tindex} bindex={bindex} cid={cid} #pids={pids.size} data.shape={tdata.shape} labels.shape={tlabels.shape} mask.shape={training_mask.shape}")
             training_data   = tdata   if (training_data   is None) else np.append( training_data,   tdata,   axis=0 )
             training_labels = tlabels if (training_labels is None) else np.append( training_labels, tlabels, axis=0 )
         lgm().log(f"SHAPES--> training_data: {training_data.shape}, training_labels: {training_labels.shape}" )
@@ -135,18 +135,19 @@ class LearningModel:
 class KerasLearningModel(LearningModel):
 
     def __init__(self, name: str, model: Model, callbacks: List[Callback] = None,  **kwargs ):
+        self.opt = str(kwargs.pop('opt', 'adam')).lower()
+        self.loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
+        self.nepochs = kwargs.pop( 'nepochs', 32 )
         LearningModel.__init__(self,name,**kwargs)
         self.callbacks: List[Callback] = callbacks if callbacks else []
         self.callbacks.append( lgm().get_keras_logger() )
-        self.opt = str(kwargs.pop('opt', 'adam')).lower()
-        self.loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
         self._model: models.Model = model
         self._model.compile( optimizer=self.opt, loss=self.loss,  metrics=['accuracy'], **kwargs )
         self._init_model = copy.deepcopy(model)
 
     def fit( self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
-        test_size = kwargs.pop( 'test_size', 0.0 )
-        args = dict( epochs=kwargs.pop( 'nepochs', 35 ), callbacks=self.callbacks, verbose=2, use_multiprocessing=True, workers=4, **kwargs )
+        test_size = kwargs.pop( 'test_size', 0.1 )
+        args = dict( epochs=self.nepochs, callbacks=self.callbacks, verbose=2, use_multiprocessing=True, workers=4, **self.config, **kwargs )
         if class_data.ndim == 1:
             class_data = self.index_to_one_hot( class_data )
         if test_size > 0.0:
