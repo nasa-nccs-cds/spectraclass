@@ -679,8 +679,9 @@ class Block(DataContainer):
         dims = [points_data.dims[1], self.data.dims[1], self.data.dims[2]]
         coords = [(dims[0], points_data[dims[0]].data), (dims[1], self.data[dims[1]].data), (dims[2], self.data[dims[2]].data)]
         raster_data = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
-        pmask = self.mask if (tmask is None) else tmask
-        raster_data[ pmask ] = points_data.data
+        rmask = self.mask if (tmask is None) else tmask
+        pmask = self.get_threshold_mask( raster=False, reduced=True )
+        raster_data[ rmask ] = points_data.data[ pmask ]
         raster_data = raster_data.transpose().reshape([points_data.shape[1], self.data.shape[1], self.data.shape[2]])
         return xa.DataArray( raster_data, coords, dims, points_data.name, points_data.attrs )
 
