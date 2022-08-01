@@ -237,7 +237,7 @@ class ClassificationManager(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, lm
         if self.selection is None: self.create_selection_panel()
 
-        clear_button = ipw.Button(description='Clear History', border='1px solid gray')
+        clear_button = ipw.Button(description='Reset', border='1px solid gray')
         clear_button.layout = ipw.Layout(width='auto', flex="1 0 auto")
         clear_button.on_click( self.model.clear )
 

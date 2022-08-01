@@ -141,9 +141,12 @@ class KerasLearningModel(LearningModel):
         LearningModel.__init__(self,name,**kwargs)
         self.callbacks: List[Callback] = callbacks if callbacks else []
         self.callbacks.append( lgm().get_keras_logger() )
-        self._model: models.Model = model
-        self._model.compile( optimizer=self.opt, loss=self.loss,  metrics=['accuracy'], **kwargs )
-        self._init_model = copy.deepcopy(model)
+        self._init_model = model
+        self.compile()
+
+    def compile(self):
+        self._model = copy.deepcopy( self._init_model )
+        self._model.compile(optimizer=self.opt, loss=self.loss, metrics=['accuracy'], **self.config )
 
     def fit( self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
         test_size = kwargs.pop( 'test_size', 0.1 )
@@ -164,5 +167,4 @@ class KerasLearningModel(LearningModel):
         return self._model( data, **kwargs )
 
     def clear(self):
-        self._model = self._init_model
-        self._model.compile(optimizer=self.opt, loss=self.loss,  metrics=['accuracy'], **self.config )
+        self.compile()
