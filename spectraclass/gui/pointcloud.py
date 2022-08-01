@@ -169,9 +169,11 @@ class PointCloudManager(SCSingletonConfigurable):
             graph = flow.getGraph( nodes=node_data )
             embedding = rm().umap_init( model_data, nngraph=graph, **kwargs )
             self.xyz = self.normalize(embedding)
-            return True
         else:
-            lgm().log(f"UMAP.init: model_data = None")
+            lgm().log(f"UMAP.init: model_data is empty")
+            ecoords = dict( samples=[], model=np.arange(0,3) )
+            attrs = {} if (model_data is None) else model_data.attrs
+            return xa.DataArray( np.empty([0,3]), dims=['samples','model'], coords=ecoords, attrs=attrs )
 
     def normalize(self, point_data: xa.DataArray) -> xa.DataArray:
         return (point_data - point_data.mean()) * (self.scale / point_data.std())

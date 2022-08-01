@@ -330,9 +330,9 @@ class DataManager(SCSingletonConfigurable):
             if model_data is None:
                 lgm().log("getRawModelData: model_data is None")
             else:
-                lgm().log(f"getRawModelData: shape = {model_data.shape}")
                 attrs = project_dataset['attrs']
                 model_data.attrs['dsid'] = attrs['dsid']
+                lgm().log(f"getRawModelData: shape = {model_data.shape}")
             return model_data
         else:
             lgm().log("getRawModelData: project_dataset is None")
