@@ -83,6 +83,8 @@ class MapManager(SCSingletonConfigurable):
                                                     [ "Decrease Labels Alpha", 'Ctrl+<', None, partial( self.update_image_alpha, "labels", False ) ],
                                                     [ "Increase Band Alpha",   'Alt+>',  None, partial( self.update_image_alpha, "bands", True ) ],
                                                     [ "Decrease Band Alpha",   'Alt+<',  None, partial( self.update_image_alpha, "bands", False ) ] ] )
+        self.active_thresholds = ipw.Select( options=[], description='Thresholds:', disabled=False )
+        self.active_thresholds.observe( self.on_active_threshold_selection, names=['value'] )
         atexit.register(self.exit)
 
     def clearMarkers(self):
@@ -154,8 +156,6 @@ class MapManager(SCSingletonConfigurable):
             slider = ipw.FloatSlider( ivals[iC], description=name, min=0.0, max=1.0, step=0.025 )
             tl.link( (slider, "value"), (self, f'{name}_threshold') )
             controls.append( slider )
-        self.active_thresholds = ipw.Select( options=[], description='Thresholds:', disabled=False )
-        self.active_thresholds.observe( self.on_active_threshold_selection, names=['value'] )
         clear_button: ipw.Button = ipw.Button(description="Clear", layout=ipw.Layout(flex='1 1 auto'), border='1px solid dimgrey')
         clear_button.on_click( self.clear_threshold )
         return ipw.HBox( [ipw.VBox( controls ), ipw.VBox( [ self.active_thresholds, clear_button ] )] )

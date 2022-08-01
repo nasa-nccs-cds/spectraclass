@@ -150,7 +150,7 @@ class KerasLearningModel(LearningModel):
 
     def fit( self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
         test_size = kwargs.pop( 'test_size', 0.1 )
-        args = dict( epochs=self.nepochs, callbacks=self.callbacks, verbose=2, use_multiprocessing=True, workers=4, **self.config, **kwargs )
+        args = dict( epochs=self.nepochs, callbacks=self.callbacks, verbose=2, **self.config, **kwargs )
         if class_data.ndim == 1:
             class_data = self.index_to_one_hot( class_data )
         if test_size > 0.0:
@@ -158,7 +158,6 @@ class KerasLearningModel(LearningModel):
             self._model.fit( tx, ty, validation_data=(vx,vy), **args )
         else:
             self._model.fit( data, class_data, **args )
-
 
     def predict( self, data: np.ndarray, **kwargs ) -> np.ndarray:
         return self._model.predict( data, **kwargs )
