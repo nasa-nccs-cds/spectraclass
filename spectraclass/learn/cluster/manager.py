@@ -119,8 +119,9 @@ class ClusterManager(SCSingletonConfigurable):
         return self.get_layer_colormap() if layer else self.get_cluster_colormap()
 
     def get_cluster_colors( self ) ->  np.ndarray:
-        colors = self._cluster_colors.copy()
+        colors: np.ndarray = self._cluster_colors.copy()
         for (icluster, value) in self.marked_colors.items(): colors[icluster] = value
+        lgm().log(f"#IA: cluster_colors: {colors.tolist()}")
         return colors
 
     def get_cluster_colormap( self ) -> LinearSegmentedColormap:
@@ -133,6 +134,7 @@ class ClusterManager(SCSingletonConfigurable):
         for (ckey, value) in self._marked_colors.items():
             icluster = self.get_icluster( ckey )
             if icluster >= 0: mcolors[icluster] = value
+        lgm().log(f"#IA: marked_colors: {mcolors}")
         return mcolors
 
     def get_icluster( self, ckey: Tuple ) -> int:
@@ -211,11 +213,11 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         ckey = ( tm().image_index, tm().block_coords, icluster )
-        lgm().log(f" mark_cluster: ckey={ckey} cid={cid}")
         self._marked_colors[ ckey ] = lm().get_rgb_color(cid)
         self.get_marked_clusters(cid).append( icluster )
         cmap = self.get_cluster_map().values
         marker = Marker("clusters", self.get_points(cid), cid, mask=(cmap == icluster))
+        lgm().log(f"#IA: mark_cluster[{icluster}]: ckey={ckey} cid={cid}, #pids = {marker.size}")
         return marker
 
         # nodata_value = -2
@@ -289,7 +291,7 @@ class ClusterSelector:
                 cid = lm().current_cid
                 icluster = clm().get_cluster(gid)
                 ufm().show(f"Mark cluster: ({ix},{iy})-> {gid}: cluster = {icluster}", color="blue")
-                lgm().log(f"#IA: mark_cluster: [{ix},{iy}]->{gid}, cid={cid}")
+                lgm().log(f"#IA: mark_cluster: [{ix},{iy}]->{gid}, cid={cid}, cluster = {icluster}")
                 if icluster >= 0:
                     marker: Marker = clm().mark_cluster(gid, cid, icluster)
                     app().add_marker( "cluster", marker )
