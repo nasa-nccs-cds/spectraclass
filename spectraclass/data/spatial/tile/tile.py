@@ -529,8 +529,14 @@ class Block(DataContainer):
             if raw_raster.size == 0: ufm().show( "This block does not appear to have any data.", "red" )
         return raw_raster
 
+    def getModelData(self, raster: bool = True ) -> xa.DataArray:
+        return self.points2raster( self.model_data ) if raster else self.model_data
+
+    def getSpectralData(self, raster: bool = True ) -> xa.DataArray:
+        return self.data if raster else self.getPointData()
+
     @property
-    def model_data(self):
+    def model_data(self) -> xa.DataArray:
         if self._model_data is None:
             self._model_data = self._get_model_data()
         return self._model_data

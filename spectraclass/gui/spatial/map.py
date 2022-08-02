@@ -390,7 +390,7 @@ class MapManager(SCSingletonConfigurable):
                     self._spectral_image.set_alpha(alpha)
                 with self.base.hold_limits():
                     self._spectral_image.set_extent(self.block.extent)
-                lgm().log(f"UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}" )
+                lgm().log(f"UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}, model_data={self._use_model_data}" )
                 self.update_canvas()
                 pcm().update_plot(cdata=fdata, norm=norm)
             else: lgm().log(f"UPDATE spectral_image: fdata is None")
@@ -454,6 +454,7 @@ class MapManager(SCSingletonConfigurable):
         return self.base.msax if use_model else self.base.bsax
 
     def update_slider_visibility(self):
+        lgm().log( f" UPDATE MAP SLIDER: model = {self._use_model_data}")
         self.base.msax.set_visible( self._use_model_data )
         self.base.bsax.set_visible( not self._use_model_data )
 

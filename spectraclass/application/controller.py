@@ -139,7 +139,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.spatial.map import MapManager, mm
         ufm().show(f"Creating clusters using {clm().mid}... ")
-        cluster_inuput: xa.DataArray = dm().getModelData() if clm().use_model_data else dm().getSpectralData()
+        cluster_inuput: xa.DataArray = dm().getModelData() if dm().use_model_data else dm().getSpectralData()
         cluster_image: xa.DataArray = clm().cluster( cluster_inuput )
         mm().plot_cluster_image( cluster_image )
         ufm().show(f"Clustering completed")

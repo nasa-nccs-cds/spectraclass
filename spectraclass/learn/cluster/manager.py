@@ -44,7 +44,6 @@ class ClusterMagnitudeWidget(ipw.HBox):
 
 class ClusterManager(SCSingletonConfigurable):
     modelid = tl.Unicode("kmeans").tag(config=True, sync=True)
-    use_model_data = tl.Bool(False).tag(config=True, sync=True)
     nclusters = tl.Int(5).tag(config=True, sync=True)
     random_state = tl.Int(0).tag(config=True, sync=True)
 
