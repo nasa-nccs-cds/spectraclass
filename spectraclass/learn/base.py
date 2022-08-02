@@ -148,13 +148,16 @@ class KerasLearningModel(LearningModel):
         self._model = copy.deepcopy( self._init_model )
         self._model.compile(optimizer=self.opt, loss=self.loss, metrics=['accuracy'], **self.config )
 
+    def train_test_split(self, data: np.ndarray, class_data: np.ndarray, test_size: float ) -> List[np.ndarray]:
+        return train_test_split(data, class_data, test_size=test_size)
+
     def fit( self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
-        test_size = kwargs.pop( 'test_size', 0.1 )
+        test_size = kwargs.pop( 'test_size', 0.0 )
         args = dict( epochs=self.nepochs, callbacks=self.callbacks, verbose=2, **self.config, **kwargs )
         if class_data.ndim == 1:
             class_data = self.index_to_one_hot( class_data )
         if test_size > 0.0:
-            tx, vx, ty, vy = train_test_split( data, class_data, test_size=test_size )
+            [tx, vx, ty, vy] = self.train_test_split( data, class_data, test_size )
             self._model.fit( tx, ty, validation_data=(vx,vy), **args )
         else:
             self._model.fit( data, class_data, **args )

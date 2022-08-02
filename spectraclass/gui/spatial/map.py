@@ -2,6 +2,7 @@ import xarray as xa
 import numpy as np
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import logging, os
+import matplotlib as mpl
 from matplotlib.backend_bases import MouseEvent, KeyEvent
 from spectraclass.gui.spatial.widgets.markers import Marker
 from matplotlib.colors import Normalize
@@ -304,10 +305,14 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def plot_cluster_image(self, clusters: xa.DataArray = None ):
-        try: self.clusters_image.remove()
-        except Exception: pass
-        self.clusters_image = clusters.plot.imshow( ax=self.base.gax, cmap=clusters.attrs['cmap'], add_colorbar=False )
-        self.layers.set_visibility( "clusters", 1.0, True, notify=False )
+#        try: self.clusters_image.remove()
+#        except Exception: pass
+        ncolors = clusters.shape[0]
+        color_bounds = np.linspace(-0.5, ncolors - 0.5, ncolors + 1)
+        self.clusters_image.set_data( clusters.to_numpy() )
+        self.clusters_image.cmap = clusters.attrs['cmap']
+        self.clusters_image.norm = mpl.colors.BoundaryNorm( color_bounds, ncolors, clip=True )
+        self.clusters_image.changed()
         self.update_canvas()
 
     def layer_managers( self, name: str ) -> List:

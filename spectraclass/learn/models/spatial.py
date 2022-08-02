@@ -4,6 +4,7 @@ import numpy as np
 from spectraclass.data.spatial.tile.tile import Block
 from sklearn.exceptions import NotFittedError
 from tensorflow.keras.models import Model
+from sklearn.model_selection import train_test_split
 from tensorflow.keras import Input
 from typing import List, Tuple, Optional, Dict
 import traitlets as tl
@@ -26,6 +27,9 @@ class SpatialModelWrapper(KerasLearningModel):
     def get_sample_weight( self, labels: np.ndarray ) -> np.ndarray:
         sample_weights: np.ndarray = np.where((labels == 0), 0.0, 1.0)
         return np.expand_dims(sample_weights, 0)
+
+    def train_test_split(self, data: np.ndarray, class_data: np.ndarray, test_size: float ) -> List[np.ndarray]:
+        return [ np.expand_dims(x,0) for x in train_test_split( data[0], class_data, test_size=test_size ) ]
 
     def get_class_weight( self, labels: np.ndarray ) -> Dict[int,float]:
         from spectraclass.model.labels import LabelsManager, lm

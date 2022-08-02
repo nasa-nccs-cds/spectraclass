@@ -121,7 +121,7 @@ class ClusterManager(SCSingletonConfigurable):
     def get_cluster_colors( self ) ->  np.ndarray:
         colors: np.ndarray = self._cluster_colors.copy()
         for (icluster, value) in self.marked_colors.items(): colors[icluster] = value
-        lgm().log(f"#IA: cluster_colors: {colors.tolist()}")
+        lgm().log(f"#IA: cluster_colors: {colors.tolist()}, marked colors = {self.marked_colors}")
         return colors
 
     def get_cluster_colormap( self ) -> LinearSegmentedColormap:
@@ -134,13 +134,13 @@ class ClusterManager(SCSingletonConfigurable):
         for (ckey, value) in self._marked_colors.items():
             icluster = self.get_icluster( ckey )
             if icluster >= 0: mcolors[icluster] = value
-        lgm().log(f"#IA: marked_colors: {mcolors}")
+        lgm().log(f"#IA: marked_colors: {mcolors} ({self._marked_colors})")
         return mcolors
 
     def get_icluster( self, ckey: Tuple ) -> int:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         ( tindex, bindex, icluster ) = ckey
-        return icluster if ( (tindex==tm().image_index) and (bindex==tm().block_index) )  else -1
+        return icluster if ( (tindex==tm().image_index) and (bindex==tm().block_coords) )  else -1
 
     def cluster_color(self, index: int ) -> Tuple[int]:
         colors = self.get_cluster_colors()
@@ -254,6 +254,7 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.gui.spatial.map import MapManager, mm
         self.clear()
         self._cluster_points = self.model.rescale( icluster, change['new'] )
+        self._cluster_raster = None
         mm().plot_cluster_image( self.get_cluster_map() )
 
 class ClusterSelector:

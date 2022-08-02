@@ -414,14 +414,15 @@ class LabelsManager(SCSingletonConfigurable):
         mtype = kwargs.get( 'type' )
         projected = kwargs.get( 'projected', True )
         xcmap: xa.DataArray = block.classmap()
-        cmap = xcmap.values
-        fcmap = np.ravel( cmap )
+        cmap = xcmap.values.copy()
         markers = self.getMarkers()
         lgm().log( f" *GET LABEL MAP: {len(markers)} markers")
         for marker in markers:
             if marker.relevant(mtype):
                 if marker.mask is not None:
-                    fcmap[ marker.mask.flatten() ] = marker.cid
+                    fmask = marker.mask.flatten()
+                    lgm().log(f" Setting {np.count_nonzero(fmask)} labels for cid = {marker.cid}")
+                    np.ravel(cmap)[ fmask ] = marker.cid
                 else:
                     lgm().log( f" Setting {len(marker.pids)} labels for cid = {marker.cid}" )
                     for pid in marker.pids:
@@ -430,6 +431,7 @@ class LabelsManager(SCSingletonConfigurable):
                             cmap[ idx['iy'], idx['ix'] ] = marker.cid
                         else:
                             pass
+        lgm().log(f" get_label_map, #labeled points = {np.count_nonzero(cmap)}")
         return xcmap.copy(data=cmap)
 
     @log_timing
