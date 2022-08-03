@@ -26,17 +26,20 @@ class Network:
     def name(self):
         return self._name
 
-    def build( self, **kwargs ) -> "LearningModel":
+    def build_model(self) -> Tuple[Model,Dict]:
+        return self._build_model(**self._parms)
+
+    def build( self ) -> "LearningModel":
         from .spatial import SpatialModelWrapper
         from spectraclass.learn.base import KerasLearningModel
         if self._type == ModelType.SPATIAL:
-                model, bparms = self._build_model(  **self._parms, **kwargs )
-                return SpatialModelWrapper( self._name, model, callbacks=[NetworkCallback(self)], **bparms )
+                model, bparms = self.build_model()
+                return SpatialModelWrapper( self._name, model, callbacks=[NetworkCallback(self)], network=self, **bparms )
         if self._type == ModelType.SAMPLES:
-                model, bparms = self._build_model( **self._parms, **kwargs )
-                return KerasLearningModel( self._name, model, callbacks=[NetworkCallback(self)], **bparms )
+                model, bparms = self.build_model()
+                return KerasLearningModel( self._name, model, callbacks=[NetworkCallback(self)], network=self, **bparms )
         if self._type == ModelType.CUSTOM:
-                return self._learning_model( self._name, callbacks=[NetworkCallback(self)], **self._parms, **kwargs )
+                return self._learning_model( self._name, callbacks=[NetworkCallback(self)], **self._parms )
 
     def _build_model( self, **kwargs ) -> Tuple[Model,Dict]:
         raise NotImplementedError( "Attempt to call abstract method '_build_model' on Network object")

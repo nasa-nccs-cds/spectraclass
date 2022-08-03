@@ -166,6 +166,9 @@ class ClassificationManager(SCSingletonConfigurable):
         self.selection = self.selection_label = None
         self.model_table: ModelTable = None
 
+    def rebuild(self):
+        self._models = { mid: lmodel.rebuild() for mid, lmodel in self._models.items() }
+
     @property
     def mids(self) -> List[str]:
         return list(self._models.keys())
@@ -181,6 +184,7 @@ class ClassificationManager(SCSingletonConfigurable):
 
     def set_model_callback(self, event: Dict ):
         self.mid = event['new']
+        cm().rebuild()
 
     def import_models(self):
         from .cnn import CNN

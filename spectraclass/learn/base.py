@@ -12,6 +12,7 @@ from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timin
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras import datasets, layers, models
 from tensorflow.keras.callbacks import Callback
+from spectraclass.learn.models.network import Network, ModelType
 
 class LearningModel:
 
@@ -23,6 +24,9 @@ class LearningModel:
 
     def clear(self):
         raise Exception( "abstract method LearningModel.clear called")
+
+    def rebuild(self):
+        self.clear()
 
     @property
     def model_dir(self):
@@ -138,10 +142,16 @@ class KerasLearningModel(LearningModel):
         self.opt = str(kwargs.pop('opt', 'adam')).lower()
         self.loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
         self.nepochs = kwargs.pop( 'nepochs', 32 )
+        self.network: Network = kwargs.pop( 'network', None )
         LearningModel.__init__(self,name,**kwargs)
         self.callbacks: List[Callback] = callbacks if callbacks else []
         self.callbacks.append( lgm().get_keras_logger() )
         self._init_model = model
+        self.compile()
+
+    def rebuild(self):
+        if self.network is not None:
+            self._init_model, self.config = self.network.build_model()
         self.compile()
 
     def compile(self):
