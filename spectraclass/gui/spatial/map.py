@@ -111,12 +111,14 @@ class MapManager(SCSingletonConfigurable):
 
     def use_model_data(self, use: bool):
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
+        from spectraclass.learn.manager import ClassificationManager, cm
         if use != self._use_model_data:
             self._use_model_data = use
             if self.base is not None:
                 self.update_slider_visibility()
                 self.update_spectral_image()
                 gpm().use_model_data(use)
+                cm().rebuild()
 
     # @property
     # def band_selector(self):

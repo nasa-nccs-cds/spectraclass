@@ -185,7 +185,6 @@ class ClassificationManager(SCSingletonConfigurable):
 
     def set_model_callback(self, event: Dict ):
         self.mid = event['new']
-        cm().rebuild()
 
     def import_models(self):
         from .cnn import CNN

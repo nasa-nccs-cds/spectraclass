@@ -120,7 +120,6 @@ class ClusterManager(SCSingletonConfigurable):
     def get_cluster_colors( self ) ->  np.ndarray:
         colors: np.ndarray = self._cluster_colors.copy()
         for (icluster, value) in self.marked_colors.items(): colors[icluster] = value
-        lgm().log(f"#IA: cluster_colors: {colors.tolist()}, marked colors = {self.marked_colors}")
         return colors
 
     def get_cluster_colormap( self ) -> LinearSegmentedColormap:
@@ -133,7 +132,6 @@ class ClusterManager(SCSingletonConfigurable):
         for (ckey, value) in self._marked_colors.items():
             icluster = self.get_icluster( ckey )
             if icluster >= 0: mcolors[icluster] = value
-        lgm().log(f"#IA: marked_colors: {mcolors} ({self._marked_colors})")
         return mcolors
 
     def get_icluster( self, ckey: Tuple ) -> int:

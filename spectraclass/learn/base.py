@@ -138,20 +138,24 @@ class LearningModel:
 class KerasLearningModel(LearningModel):
 
     def __init__(self, name: str, model: Model, callbacks: List[Callback] = None,  **kwargs ):
-        from spectraclass.learn.models.network import Network
-        self.opt = str(kwargs.pop('opt', 'adam')).lower()
-        self.loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
-        self.nepochs = kwargs.pop( 'nepochs', 32 )
-        self.network: Network = kwargs.pop( 'network', None )
-        LearningModel.__init__(self,name,**kwargs)
+        LearningModel.__init__( self, name, **self.set_learning_parameters( **kwargs ) )
         self.callbacks: List[Callback] = callbacks if callbacks else []
         self.callbacks.append( lgm().get_keras_logger() )
         self._init_model = model
         self.compile()
 
+    def set_learning_parameters( self, **kwargs ) -> Dict:
+        from spectraclass.learn.models.network import Network
+        self.opt = str(kwargs.pop('opt', 'adam')).lower()
+        self.loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
+        self.nepochs = kwargs.pop( 'nepochs', 32 )
+        self.network: Network = kwargs.pop( 'network', None )
+        return kwargs
+
     def rebuild(self):
         if self.network is not None:
-            self._init_model, self.config = self.network.build_model()
+            self._init_model, largs = self.network.build_model()
+            self.config = self.set_learning_parameters(**largs)
         self.compile()
 
     def compile(self):
