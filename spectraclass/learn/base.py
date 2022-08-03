@@ -12,7 +12,6 @@ from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timin
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras import datasets, layers, models
 from tensorflow.keras.callbacks import Callback
-from spectraclass.learn.models.network import Network, ModelType
 
 class LearningModel:
 
@@ -139,6 +138,7 @@ class LearningModel:
 class KerasLearningModel(LearningModel):
 
     def __init__(self, name: str, model: Model, callbacks: List[Callback] = None,  **kwargs ):
+        from spectraclass.learn.models.network import Network
         self.opt = str(kwargs.pop('opt', 'adam')).lower()
         self.loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
         self.nepochs = kwargs.pop( 'nepochs', 32 )

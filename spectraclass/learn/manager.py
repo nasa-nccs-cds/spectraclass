@@ -167,6 +167,7 @@ class ClassificationManager(SCSingletonConfigurable):
         self.model_table: ModelTable = None
 
     def rebuild(self):
+        lgm().log( "#IA: REBUILD MODELS")
         self._models = { mid: lmodel.rebuild() for mid, lmodel in self._models.items() }
 
     @property
@@ -191,6 +192,7 @@ class ClassificationManager(SCSingletonConfigurable):
         from .svc import SVCLearningModel
         from .mlp import MLP
         from spectraclass.data.base import DataManager, dm
+        lgm().log("#IA: INIT MODELS")
         self.addNetwork( MLP( 'mlp', nfeatures=dm().modal.model_dims) )
         self.addNetwork( CNN( 'cnn', nfeatures=self.nfeatures ) )
         self._models['svc'] = SVCLearningModel()
@@ -203,6 +205,7 @@ class ClassificationManager(SCSingletonConfigurable):
         self._models[ mid ] = KerasLearningModel(mid, model, **kwargs)
 
     def addNetwork(self, network ):
+        lgm().log( f"#IA: ADD NETWORK MODEL: {network.name}" )
         self._models[ network.name ] = network.build()
 
     def get_control_button(self, task: str ) -> ipw.Button:
