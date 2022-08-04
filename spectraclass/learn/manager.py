@@ -167,8 +167,7 @@ class ClassificationManager(SCSingletonConfigurable):
         self.model_table: ModelTable = None
 
     def rebuild(self):
-        lgm().log( "#IA: REBUILD MODELS")
-        self._models = { mid: lmodel.rebuild() for mid, lmodel in self._models.items() }
+        for lmodel in self._models.values(): lmodel.rebuild()
 
     @property
     def mids(self) -> List[str]:

@@ -155,7 +155,6 @@ class KerasLearningModel(LearningModel):
     def rebuild(self):
         if self.network is not None:
             self._init_model, largs = self.network.build_model()
-            self.config = self.set_learning_parameters(**largs)
         self.compile()
 
     def compile(self):
