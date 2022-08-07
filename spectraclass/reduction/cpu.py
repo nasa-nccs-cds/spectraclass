@@ -1248,6 +1248,7 @@ class cpUMAP(UMAP):
 
         nepochs = kwargs.get( 'nepochs', self.n_epochs )
         init_alpha = kwargs.get( 'alpha', self._initial_alpha )
+        t0 = time.time()
         print( f"Computing umap embedding with nepochs = {nepochs}, alpha = {init_alpha}, nLabels = {np.count_nonzero( y > 0 )}, n_neighbors = {self.n_neighbors}, init = {init} ({self.init})" )
         self._init_embedding_, self._embedding_ = simplicial_set_embedding(
             self._raw_data,  # JH why raw data?
@@ -1266,7 +1267,7 @@ class cpUMAP(UMAP):
             self.parallel,
             self.verbose,
         )
-        print(f"umap embedding complete, result shape = {self._embedding_.shape} " )
+        print(f"umap embedding complete, result shape = {self._embedding_.shape}, time = {time.time()-t0} " )
 
         self._input_hash = joblib.hash(self._raw_data)
         return self

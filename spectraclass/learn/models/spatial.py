@@ -18,18 +18,34 @@ class SpatialModelWrapper(KerasLearningModel):
 
     def __init__(self, name: str,  model: models.Model, **kwargs ):
         KerasLearningModel.__init__( self, name,  model, kwargs.pop('callbacks'), **kwargs )
+        self.test_mask = None
+        self.training_data = None
+        self.training_labels = None
+        self.sample_weight = None
 
     @classmethod
     def flatten( cls, shape, nfeatures ):
         if   len( shape ) == 4: return [ shape[0], shape[1]*shape[2], nfeatures ]
         elif len( shape ) == 3: return [ shape[0] * shape[1], nfeatures ]
 
-    def get_sample_weight( self, labels: np.ndarray ) -> np.ndarray:
-        sample_weights: np.ndarray = np.where((labels == 0), 0.0, 1.0)
-        return np.expand_dims(sample_weights, 0)
+    def get_sample_weight( self, labels: np.ndarray ) -> Tuple[np.ndarray,Optional[np.ndarray]]:
+        label_mask = (labels > 0)
+        sample_weights: np.ndarray = np.where(label_mask, 1.0, 0.0 )
+        if self.test_size == 0.0:
+            test_mask = np.full(label_mask.shape, False)
+        else:
+            tmask = ( np.random.rand( label_mask.size ) < self.test_size )
+            test_mask = tmask & label_mask
+            sample_weights[ test_mask ] = 0.0
+            lgm().log( f"TMASK: tmask{tmask.shape} size={np.count_nonzero(tmask)}, test_mask{test_mask.shape} size={np.count_nonzero(test_mask)}, label_mask{label_mask.shape} size={np.count_nonzero(label_mask)}")
+        return np.expand_dims(sample_weights, 0), test_mask
 
-    def train_test_split(self, data: np.ndarray, class_data: np.ndarray, test_size: float ) -> List[np.ndarray]:
-        return [ np.expand_dims(x,0) for x in train_test_split( data[0], class_data, test_size=test_size ) ]
+    # def train_test_split(self, data: np.ndarray, class_data: np.ndarray, test_size: float ) -> List[np.ndarray]:
+    #     lgm().log( f"train_test_split-> data{data.shape} labels{class_data.shape}")
+    #     sdata, slabels = data.squeeze(), class_data.squeeze()
+    #     gshape = [ sdata[0], sdata[1] ]
+    #     sdata: np.ndarray = sdata.reshape( gshape[0]*gshape[1], sdata[2] )
+    #     return [ np.expand_dims(x,0) for x in train_test_split( data[0], class_data, test_size=test_size ) ]
 
     def get_class_weight( self, labels: np.ndarray ) -> Dict[int,float]:
         from spectraclass.model.labels import LabelsManager, lm
@@ -40,7 +56,7 @@ class SpatialModelWrapper(KerasLearningModel):
         label_weights = {iC: label_weights[iC] / weights_sum for iC in range(nLabels)}
         return label_weights
 
-    def get_training_set(self, block: Block, **kwargs ) -> Tuple[np.ndarray,np.ndarray,np.ndarray]:
+    def get_training_set(self, block: Block, **kwargs ) -> Tuple[np.ndarray,np.ndarray,Optional[np.ndarray],Optional[np.ndarray]]:
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.learn.base import LearningModel
@@ -50,8 +66,8 @@ class SpatialModelWrapper(KerasLearningModel):
         lgm().log(f"get_training_set->base_data: shape={base_data.shape} dims={base_data.dims} tdims={tdims}")
         training_data: np.ndarray = base_data.transpose(*tdims).fillna(0.0).expand_dims('batch', 0).values
         training_labels = np.expand_dims( LearningModel.index_to_one_hot( label_map ), 0 )
-        sample_weight = self.get_sample_weight( label_map )
-        return ( training_data, training_labels, sample_weight )
+        sample_weight, test_mask = self.get_sample_weight( label_map )
+        return ( training_data, training_labels, sample_weight, test_mask )
 
     @classmethod
     def block_data(cls) -> xa.DataArray:
@@ -97,11 +113,19 @@ class SpatialModelWrapper(KerasLearningModel):
         t1 = time.time()
         blocks: List[Block] = lm().getTrainingBlocks()
         for block in blocks:
-            training_data, training_labels, sample_weight = self.get_training_set( block, **kwargs )
-            if np.count_nonzero( training_labels > 0 ) > 0:
-                lgm().log(f"Learning mapping with shapes: spectral_data{training_data.shape}, class_data{training_labels.shape}, sample_weight{sample_weight.shape}")
-                self.fit( training_data, training_labels, sample_weight=sample_weight, **kwargs )
+            self.training_data, self.training_labels, self.sample_weight, self.test_mask = self.get_training_set( block, **kwargs )
+            if np.count_nonzero( self.training_labels > 0 ) > 0:
+                lgm().log(f"Learning mapping with shapes: spectral_data{self.training_data.shape}, class_data{self.training_labels.shape}, sample_weight{self.sample_weight.shape}")
+                self.fit( self.training_data, self.training_labels, sample_weight=self.sample_weight, **kwargs )
         lgm().log(f"Completed Spatial learning in {time.time() - t1} sec.")
+
+    @exception_handled
+    def epoch_callback(self, epoch):
+        if (self.test_mask is not None) and (self.test_size > 0.0):
+            prediction = self.predict( self.training_data )
+            test_results = np.equal( prediction.flatten(), self.training_labels.squeeze().argmax(axis=1) )[ self.test_mask ]
+            accuracy = np.count_nonzero( test_results ) / test_results.size
+            lgm().log( f"Epoch[{epoch}]-> Test[{test_results.size}] accuracy: {accuracy:.4f}" )
 
     def predict( self, data: np.ndarray, **kwargs ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm

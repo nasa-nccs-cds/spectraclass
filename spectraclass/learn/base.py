@@ -24,6 +24,9 @@ class LearningModel:
     def clear(self):
         raise Exception( "abstract method LearningModel.clear called")
 
+    def epoch_callback(self, epoch):
+        pass
+
     def rebuild(self):
         self.clear()
 
@@ -54,7 +57,7 @@ class LearningModel:
     def score(self) -> Optional[np.ndarray]:
         return self._score
 
-    def get_training_set(self, **kwargs ) -> Tuple[np.ndarray,np.ndarray,Optional[np.ndarray]]:
+    def get_training_set(self, **kwargs ) -> Tuple[np.ndarray,np.ndarray,Optional[np.ndarray],Optional[np.ndarray]]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.model.labels import LabelsManager, Action, lm
         label_data = lm().getTrainingLabels()
@@ -68,11 +71,11 @@ class LearningModel:
             training_data   = tdata   if (training_data   is None) else np.append( training_data,   tdata,   axis=0 )
             training_labels = tlabels if (training_labels is None) else np.append( training_labels, tlabels, axis=0 )
         lgm().log(f"SHAPES--> training_data: {training_data.shape}, training_labels: {training_labels.shape}" )
-        return ( training_data, training_labels, None )
+        return ( training_data, training_labels, None, None )
 
     @exception_handled
     def learn_classification( self,**kwargs ):
-        training_data, training_labels, sample_weight = self.get_training_set( **kwargs )
+        training_data, training_labels, sample_weight, test_mask = self.get_training_set( **kwargs )
         t1 = time.time()
         if np.count_nonzero( training_labels > 0 ) == 0:
             ufm().show( "Must label some points before learning the classification" )
@@ -149,6 +152,7 @@ class KerasLearningModel(LearningModel):
         self.opt = str(kwargs.pop('opt', 'adam')).lower()
         self.loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
         self.nepochs = kwargs.pop( 'nepochs', 32 )
+        self.test_size = kwargs.pop( 'test_size', 0.0 )
         self.network: Network = kwargs.pop( 'network', None )
         return kwargs
 
@@ -161,19 +165,17 @@ class KerasLearningModel(LearningModel):
         self._model = copy.deepcopy( self._init_model )
         self._model.compile(optimizer=self.opt, loss=self.loss, metrics=['accuracy'], **self.config )
 
-    def train_test_split(self, data: np.ndarray, class_data: np.ndarray, test_size: float ) -> List[np.ndarray]:
-        return train_test_split(data, class_data, test_size=test_size)
+    # def train_test_split(self, data: np.ndarray, class_data: np.ndarray, test_size: float ) -> List[np.ndarray]:
+    #     return train_test_split(data, class_data, test_size=test_size)
 
     def fit( self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
-        test_size = kwargs.pop( 'test_size', 0.0 )
         args = dict( epochs=self.nepochs, callbacks=self.callbacks, verbose=2, **self.config, **kwargs )
-        if class_data.ndim == 1:
-            class_data = self.index_to_one_hot( class_data )
-        if test_size > 0.0:
-            [tx, vx, ty, vy] = self.train_test_split( data, class_data, test_size )
-            self._model.fit( tx, ty, validation_data=(vx,vy), **args )
-        else:
-            self._model.fit( data, class_data, **args )
+        if class_data.ndim == 1: class_data = self.index_to_one_hot( class_data )
+        lgm().log( f"KerasLearningModel.fit: data{data.shape} labels{class_data.shape} args={args}" )
+        self._model.fit( data, class_data, **args )
+
+    def epoch_callback(self, epoch):
+        pass
 
     def predict( self, data: np.ndarray, **kwargs ) -> np.ndarray:
         return self._model.predict( data, **kwargs )

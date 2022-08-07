@@ -7,6 +7,7 @@ import xarray as xa
 import scipy.sparse
 import scipy.sparse.csgraph
 import numba
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 locale.setlocale(locale.LC_NUMERIC, "C")
 
 INT32_MIN = np.iinfo(np.int32).min + 1
@@ -478,8 +479,7 @@ class UMAP(BaseEstimator):
         # True if metric returns iterable of length 2, False otherwise
         return hasattr(metric_out, "__iter__") and len(metric_out) == 2
 
-
-
+    @log_timing
     def embed( self, X: np.ndarray, y: np.ndarray=None, **kwargs ):
         """Fit X into an embedded space.
 

@@ -4,7 +4,7 @@
 import traceback
 from warnings import warn
 
-import numba
+import numba, time
 import numpy as np
 from sklearn.utils import check_random_state, check_array
 from sklearn.preprocessing import normalize
@@ -870,7 +870,7 @@ class NNDescent(object):
 
             if verbose:
                 print(ts(), "NN descent for", str(n_iters), "iterations")
-
+            t0 = time.time()
             self._neighbor_graph = nn_descent(
                 self._raw_data,
                 self.n_neighbors,
@@ -885,6 +885,7 @@ class NNDescent(object):
                 leaf_array=leaf_array,
                 verbose=verbose,
             )
+            print( f"Completed NN descent in {time.time()-t0} sec")
 
         if np.any(self._neighbor_graph[0] < 0):
             warn(
