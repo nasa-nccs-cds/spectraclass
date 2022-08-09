@@ -23,10 +23,10 @@ model.fit(X)
 cu_sparse_graph: csr_matrix = model.kneighbors_graph(X_cudf)
 sparse_graph = cu_sparse_graph.get()
 #offsets = cudf.Series(sparse_graph.indptr)
-#indices = cudf.Series(sparse_graph.indices)
+#gindices = cudf.Series(sparse_graph.gindices)
 
 offsets = sparse_graph.indptr
-indices = sparse_graph.indices
+indices = sparse_graph.gindices
 
 #print( f"offsets:\n {offsets}" )
 print( f"indices:\n {indices[0:100].reshape(20,5)}" )

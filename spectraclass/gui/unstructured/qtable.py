@@ -99,7 +99,7 @@ class TableManager(SCSingletonConfigurable):
         #
         #         index_list: List[int] = selection_table.index.tolist()
         #         table.edit_cell( index_list, "cid", cid )
-        #         lgm().log( f" Edit directory table: set _classes for indices {index_list} to {cid}")
+        #         lgm().log( f" Edit directory table: set _classes for gindices {index_list} to {cid}")
         #         table.df = pd.concat( [table.df, selection_table] )
         #         lgm().log(f" Edit class table[{cid}]: add pids {pids}, append selection_table with shape {selection_table.shape}")
 
@@ -148,7 +148,7 @@ class TableManager(SCSingletonConfigurable):
 #         #
 #         #         index_list: List[int] = selection_table.index.tolist()
 #         #         table.edit_cell( index_list, "cid", cid )
-#         #         lgm().log( f" Edit directory table: set _classes for indices {index_list} to {cid}")
+#         #         lgm().log( f" Edit directory table: set _classes for gindices {index_list} to {cid}")
 #         #         table.df = pd.concat( [table.df, selection_table] )
 #         #         lgm().log(f" Edit class table[{cid}]: add pids {pids}, append selection_table with shape {selection_table.shape}")
 #
@@ -160,7 +160,7 @@ class TableManager(SCSingletonConfigurable):
 #         for table_index, table in enumerate( self._tables ):
 #             if table_index == 0:
 #                 index_list: List[int] = selection_table.index.tolist()
-#                 lgm().log( f" -----> Setting cid[{cid}] for indices[:10]= {index_list[:10]}, current_selection = {self._current_selection}, class map nonzero = {np.count_nonzero(self._class_map)}")
+#                 lgm().log( f" -----> Setting cid[{cid}] for gindices[:10]= {index_list[:10]}, current_selection = {self._current_selection}, class map nonzero = {np.count_nonzero(self._class_map)}")
 #                 table.edit_cell( index_list, "cid", cid )
 #             else:
 #                 if table_index == cid:    table.df = pd.concat( [ table.df, selection_table ] ).drop_duplicates()

@@ -267,9 +267,9 @@ class DataManager(SCSingletonConfigurable):
         file_selector = dm().modal.set_file_selection_observer( dm().modal.on_image_change )
         controls = [ title, file_selector ]
         if self.modal.model_dims > 0:
-            use_model_data = ip.Checkbox( value=False, description = "Use Model Data", layout=ipw.Layout( width='500px' ) )
-            tl.link( (use_model_data, "value"), (self, 'use_model_data') )
-            controls.append( use_model_data )
+            model_data_cbox = ip.Checkbox( value=self.use_model_data, description = "Use Model Data", layout=ipw.Layout( width='500px' ) )
+            tl.link( (model_data_cbox, "value"), (self, 'use_model_data') )
+            controls.append( model_data_cbox )
         return ip.VBox( controls, layout=ipw.Layout(flex='1 1 auto') )
 
     def getInputFileData(self, vname: str = None, **kwargs ) -> np.ndarray:

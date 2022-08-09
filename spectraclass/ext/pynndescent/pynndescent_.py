@@ -484,12 +484,12 @@ def degree_prune(graph, max_degree=20):
 
 
 def resort_tree_indices(tree, tree_order):
-    """Given a new data indexing, resort the tree indices to match"""
+    """Given a new data indexing, resort the tree gindices to match"""
     new_tree = FlatTree(
         tree.hyperplanes,
         tree.offsets,
         tree.children,
-        tree.indices[tree_order].astype(np.int32, order="C"),
+        tree.gindices[tree_order].astype(np.int32, order="C"),
         tree.leaf_size,
     )
     return new_tree
@@ -1042,7 +1042,7 @@ class NNDescent(object):
         if self._is_sparse:
             sparse.diversify_csr(
                 reverse_graph.indptr,
-                reverse_graph.indices,
+                reverse_graph.gindices,
                 reverse_graph.data,
                 self._raw_data.indptr,
                 self._raw_data.indices,
@@ -1054,7 +1054,7 @@ class NNDescent(object):
         else:
             diversify_csr(
                 reverse_graph.indptr,
-                reverse_graph.indices,
+                reverse_graph.gindices,
                 reverse_graph.data,
                 self._raw_data,
                 self._distance_func,
@@ -1103,7 +1103,7 @@ class NNDescent(object):
         # reorder according to the search tree leaf order
         if self.verbose:
             print(ts(), "Resorting data and graph based on tree order")
-        self._vertex_order = self._search_forest[0].indices
+        self._vertex_order = self._search_forest[0].gindices
         row_ordered_graph = self._search_graph[self._vertex_order, :].tocsc()
         self._search_graph = row_ordered_graph[:, self._vertex_order]
         self._search_graph = self._search_graph.tocsr()
@@ -1136,7 +1136,7 @@ class NNDescent(object):
 
         tree_hyperplanes = self._search_forest[0].hyperplanes
         tree_offsets = self._search_forest[0].offsets
-        tree_indices = self._search_forest[0].indices
+        tree_indices = self._search_forest[0].gindices
         tree_children = self._search_forest[0].children
 
         @numba.njit(
@@ -1185,7 +1185,7 @@ class NNDescent(object):
                 "d": numba.types.float32,
                 "d_vertex": numba.types.float32,
                 "visited": numba.types.uint8[::1],
-                "indices": numba.types.int32[::1],
+                "gindices": numba.types.int32[::1],
                 "indptr": numba.types.int32[::1],
                 "data": numba.types.float32[:, ::1],
                 "heap_size": numba.types.int16,
@@ -1226,7 +1226,7 @@ class NNDescent(object):
                 for j in range(n_initial_points):
                     candidate = candidate_indices[j]
                     d = dist(data[candidate], current_query)
-                    # indices are guaranteed different
+                    # gindices are guaranteed different
                     simple_heap_push(heap_priorities, heap_indices, d, candidate)
                     heapq.heappush(seed_set, (d, candidate))
                     mark_visited(visited, candidate)
@@ -1291,7 +1291,7 @@ class NNDescent(object):
 
         tree_hyperplanes = self._search_forest[0].hyperplanes
         tree_offsets = self._search_forest[0].offsets
-        tree_indices = self._search_forest[0].indices
+        tree_indices = self._search_forest[0].gindices
         tree_children = self._search_forest[0].children
 
         @numba.njit(
@@ -1343,7 +1343,7 @@ class NNDescent(object):
                 "candidate": numba.types.int32,
                 "d": numba.types.float32,
                 "visited": numba.types.uint8[::1],
-                "indices": numba.types.int32[::1],
+                "gindices": numba.types.int32[::1],
                 "indptr": numba.types.int32[::1],
                 "data": numba.types.float32[:, ::1],
                 "heap_size": numba.types.int16,
@@ -1401,7 +1401,7 @@ class NNDescent(object):
                     d = dist(
                         from_inds, from_data, current_query_inds, current_query_data
                     )
-                    # indices are guaranteed different
+                    # gindices are guaranteed different
                     simple_heap_push(heap_priorities, heap_indices, d, candidate)
                     heapq.heappush(seed_set, (d, candidate))
                     mark_visited(visited, candidate)
@@ -1482,7 +1482,7 @@ class NNDescent(object):
         # Force compilation of the search function (hardcoded k, epsilon)
         query_data = self._raw_data[:1]
         _ = self._search_function(
-            query_data.indices,
+            query_data.gindices,
             query_data.indptr,
             query_data.data,
             5,
@@ -1550,10 +1550,10 @@ class NNDescent(object):
 
         Returns
         -------
-        indices, distances: array (n_query_points, k), array (n_query_points, k)
-            The first array, ``indices``, provides the indices of the graph_data
+        gindices, distances: array (n_query_points, k), array (n_query_points, k)
+            The first array, ``gindices``, provides the gindices of the graph_data
             points in the training set that are the nearest neighbors of
-            each query point. Thus ``indices[i, j]`` is the index into the
+            each query point. Thus ``gindices[i, j]`` is the index into the
             training graph_data of the jth nearest neighbor of the ith query points.
 
             Similarly ``distances`` provides the distances to the neighbors

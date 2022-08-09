@@ -165,7 +165,7 @@ def metis_one_level(rr,cc,vv,rid,weights):
 
 def compute_perm(parents):
     """
-    Return a list of indices to reorder the adjacency and data matrices so
+    Return a list of gindices to reorder the adjacency and data matrices so
     that the union of two neighbors from layer to layer forms a binary tree.
     """
 

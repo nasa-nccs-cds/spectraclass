@@ -53,7 +53,7 @@ _doc_snippets['multiple_selection_params'] = """
         displayed is not guaranteed.
 
     index: iterable of int
-        The indices of the options that are selected.
+        The gindices of the options that are selected.
 
     value: iterable
         The values that are selected. When programmatically setting the
@@ -282,7 +282,7 @@ class _MultipleSelection(DescriptionWidget, ValueWidget, CoreWidget):
 
     value = TypedTuple(trait=Any(), help="Selected values")
     label = TypedTuple(trait=Unicode(), help="Selected labels")
-    index = TypedTuple(trait=Int(), help="Selected indices").tag(sync=True)
+    index = TypedTuple(trait=Int(), help="Selected gindices").tag(sync=True)
 
     options = Any((),
                   help="""Iterable of values, (label, value) pairs, or a mapping of {label: value} pairs that the user can select.
@@ -597,7 +597,7 @@ class SelectionRangeSlider(_MultipleSelectionNonempty):
 
     value = Tuple(help="Min and max selected values")
     label = Tuple(help="Min and max selected labels")
-    index = Tuple((0, 0), help="Min and max selected indices").tag(sync=True)
+    index = Tuple((0, 0), help="Min and max selected gindices").tag(sync=True)
 
     @observe('options')
     def _propagate_options(self, change):
@@ -610,7 +610,7 @@ class SelectionRangeSlider(_MultipleSelectionNonempty):
 
     @validate('index')
     def _validate_index(self, proposal):
-        "Make sure we have two indices and check the range of each proposed index."
+        "Make sure we have two gindices and check the range of each proposed index."
         if len(proposal.value) != 2:
             raise TraitError('Invalid selection: index must have two values, but is %r' % (proposal.value,))
         if all(0 <= i < len(self._options_labels) for i in proposal.value):

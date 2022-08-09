@@ -154,7 +154,7 @@ def breadth_first_search(adjmat, start, min_vertices):
             max_level = max(levels.values())
 
         if levels[node] + 1 < max_level:
-            neighbors = adjmat[node].indices
+            neighbors = adjmat[node].gindices
             for neighbour in neighbors:
                 if neighbour not in visited:
                     queue.append(neighbour)
@@ -296,7 +296,7 @@ def compute_membership_strengths(knn_indices, knn_dists, sigmas, rhos):
     Parameters
     ----------
     knn_indices: array of shape (n_samples, n_neighbors)
-        The indices on the ``n_neighbors`` closest points in the dataset.
+        The gindices on the ``n_neighbors`` closest points in the dataset.
 
     knn_dists: array of shape (n_samples, n_neighbors)
         The distances to the ``n_neighbors`` closest points in the dataset.
@@ -421,7 +421,7 @@ def fuzzy_simplicial_set(
     knn_indices: array of shape (n_samples, n_neighbors) (optional)
         If the k-nearest neighbors of each point has already been calculated
         you can pass them in here to save computation time. This should be
-        an array with the indices of the k-nearest neighbors as a row for
+        an array with the gindices of the k-nearest neighbors as a row for
         each data point.
 
     knn_dists: array of shape (n_samples, n_neighbors) (optional)
@@ -730,10 +730,10 @@ def general_simplicial_set_intersection(simplicial_set1, simplicial_set2, weight
 
     sparse.general_sset_intersection(
         left.indptr,
-        left.indices,
+        left.gindices,
         left.data,
         right.indptr,
-        right.indices,
+        right.gindices,
         right.data,
         result.row,
         result.col,
@@ -981,9 +981,9 @@ def optimize_layout_euclidean(
         is simply the head_embedding (again); otherwise it provides the
         existing embedding to embed with respect to.
     head: array of shape (n_1_simplices)
-        The indices of the heads of 1-simplices with non-zero membership.
+        The gindices of the heads of 1-simplices with non-zero membership.
     tail: array of shape (n_1_simplices)
-        The indices of the tails of 1-simplices with non-zero membership.
+        The gindices of the tails of 1-simplices with non-zero membership.
     n_epochs: int
         The number of training epochs to use in optimization.
     n_vertices: int
@@ -1059,14 +1059,14 @@ def optimize_layout_euclidean(
 
 @numba.njit()
 def init_transform(indices, weights, embedding):
-    """Given indices and weights and an original embeddings
+    """Given gindices and weights and an original embeddings
     initialize the positions of new points relative to the
-    indices and weights (of their neighbors in the source data).
+    gindices and weights (of their neighbors in the source data).
 
     Parameters
     ----------
     indices: array of shape (n_new_samples, n_neighbors)
-        The indices of the neighbors of each new sample
+        The gindices of the neighbors of each new sample
 
     weights: array of shape (n_new_samples, n_neighbors)
         The membership strengths of associated 1-simplices
@@ -1316,10 +1316,10 @@ class cpUMAP(UMAP):
         graph = scipy.sparse.coo_matrix( (vals, (rows, cols)), shape=(X.shape[0], self._raw_data.shape[0])  )
 
         # This was a very specially constructed graph with constant degree.
-        # That lets us do fancy unpacking by reshaping the csr matrix indices
+        # That lets us do fancy unpacking by reshaping the csr matrix gindices
         # and data. Doing so relies on the constant degree assumption!
         csr_graph = normalize(graph.tocsr(), norm="l1")
-        inds = csr_graph.indices.reshape(X.shape[0], self.n_neighbors)
+        inds = csr_graph.gindices.reshape(X.shape[0], self.n_neighbors)
         weights = csr_graph.data.reshape(X.shape[0], self.n_neighbors)
         embedding = init_transform(inds, weights, self.embedding)
 
@@ -1493,11 +1493,11 @@ class cpUMAP(UMAP):
             (weights, (rows, cols)), shape=(X.shape[0], self._raw_data.shape[0])
         )
 
-        # That lets us do fancy unpacking by reshaping the csr matrix indices
+        # That lets us do fancy unpacking by reshaping the csr matrix gindices
         # and data. Doing so relies on the constant degree assumption!
         # csr_graph = graph.tocsr()
         csr_graph = normalize(graph.tocsr(), norm="l1")
-        inds = csr_graph.indices.reshape(X.shape[0], min_vertices)
+        inds = csr_graph.gindices.reshape(X.shape[0], min_vertices)
         weights = csr_graph.data.reshape(X.shape[0], min_vertices)
         inv_transformed_points = init_transform(inds, weights, self._raw_data)
 

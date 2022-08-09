@@ -27,7 +27,7 @@ def create_component_search(index):
 
     data = index._raw_data
     indptr = index._search_graph.indptr
-    indices = index._search_graph.indices
+    indices = index._search_graph.gindices
     dist = index._distance_func
 
     @numba.njit(
@@ -44,7 +44,7 @@ def create_component_search(index):
             "d": numba.types.float32,
             "d_vertex": numba.types.float32,
             "visited": numba.types.uint8[::1],
-            "indices": numba.types.int32[::1],
+            "gindices": numba.types.int32[::1],
             "indptr": numba.types.int32[::1],
             "data": numba.types.float32[:, ::1],
             "heap_size": numba.types.int16,
@@ -78,7 +78,7 @@ def create_component_search(index):
             for j in range(n_initial_points):
                 candidate = np.int32(candidate_indices[j])
                 d = dist(data[candidate], current_query)
-                # indices are guaranteed different
+                # gindices are guaranteed different
                 simple_heap_push(heap_priorities, heap_indices, d, candidate)
                 heapq.heappush(seed_set, (d, candidate))
                 mark_visited(visited, candidate)
@@ -181,7 +181,7 @@ def adjacency_matrix_representation(neighbor_indices, neighbor_distances):
 
     # Get rid of any -1 index entries
     result = result.tocsr()
-    result.data[result.indices == -1] = 0.0
+    result.data[result.gindices == -1] = 0.0
     result.eliminate_zeros()
 
     # Symmetrize
@@ -217,7 +217,7 @@ def connect_graph(graph, index, search_size=10, n_jobs=None):
         if index._distance_correction is not None:
             d = index._distance_correction(d)
 
-        # Convert indices to original data order
+        # Convert gindices to original data order
         i = index._vertex_order[i]
         j = index._vertex_order[j]
 

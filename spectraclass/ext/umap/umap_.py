@@ -95,7 +95,7 @@ def breadth_first_search(adjmat, start, min_vertices):
             max_level = max(levels.values())
 
         if levels[node] + 1 < max_level:
-            neighbors = adjmat[node].indices
+            neighbors = adjmat[node].gindices
             for neighbour in neighbors:
                 if neighbour not in visited:
                     queue.append(neighbour)
@@ -297,7 +297,7 @@ def nearest_neighbors(
     Returns
     -------
     knn_indices: array of shape (n_samples, n_neighbors)
-        The indices on the ``n_neighbors`` closest points in the dataset.
+        The gindices on the ``n_neighbors`` closest points in the dataset.
 
     knn_dists: array of shape (n_samples, n_neighbors)
         The distances to the ``n_neighbors`` closest points in the dataset.
@@ -310,7 +310,7 @@ def nearest_neighbors(
 
     if metric == "precomputed":
         # Note that this does not support sparse distance matrices yet ...
-        # Compute indices of n nearest neighbors
+        # Compute gindices of n nearest neighbors
         knn_indices = fast_knn_indices(X, n_neighbors)
         # knn_indices = np.argsort(X)[:, :n_neighbors]
         # Compute the nearest neighbor distances
@@ -373,7 +373,7 @@ def compute_membership_strengths(
     Parameters
     ----------
     knn_indices: array of shape (n_samples, n_neighbors)
-        The indices on the ``n_neighbors`` closest points in the dataset.
+        The gindices on the ``n_neighbors`` closest points in the dataset.
 
     knn_dists: array of shape (n_samples, n_neighbors)
         The distances to the ``n_neighbors`` closest points in the dataset.
@@ -389,7 +389,7 @@ def compute_membership_strengths(
 
     bipartite: bool (optional, default False)
         Does the nearest neighbour set represent a bipartite graph?  That is are the
-        nearest neighbour indices from the same point set as the row indices?
+        nearest neighbour gindices from the same point set as the row gindices?
 
     Returns
     -------
@@ -421,7 +421,7 @@ def compute_membership_strengths(
             if knn_indices[i, j] == -1:
                 continue  # We didn't get the full knn for i
             # If applied to an adjacency matrix points shouldn't be similar to themselves.
-            # If applied to an incidence matrix (or bipartite) then the row and column indices are different.
+            # If applied to an incidence matrix (or bipartite) then the row and column gindices are different.
             if (bipartite == False) & (knn_indices[i, j] == i):
                 val = 0.0
             elif knn_dists[i, j] - rhos[i] <= 0.0 or sigmas[i] == 0.0:
@@ -518,7 +518,7 @@ def fuzzy_simplicial_set(
     knn_indices: array of shape (n_samples, n_neighbors) (optional)
         If the k-nearest neighbors of each point has already been calculated
         you can pass them in here to save computation time. This should be
-        an array with the indices of the k-nearest neighbors as a row for
+        an array with the gindices of the k-nearest neighbors as a row for
         each data point.
 
     knn_dists: array of shape (n_samples, n_neighbors) (optional)
@@ -865,10 +865,10 @@ def general_simplicial_set_intersection(
 
     sparse.general_sset_intersection(
         left.indptr,
-        left.indices,
+        left.gindices,
         left.data,
         right.indptr,
-        right.indices,
+        right.gindices,
         right.data,
         result.row,
         result.col,
@@ -887,10 +887,10 @@ def general_simplicial_set_union(simplicial_set1, simplicial_set2):
 
     sparse.general_sset_union(
         left.indptr,
-        left.indices,
+        left.gindices,
         left.data,
         right.indptr,
-        right.indices,
+        right.gindices,
         right.data,
         result.row,
         result.col,
@@ -1258,14 +1258,14 @@ def simplicial_set_embedding(
 
 @numba.njit()
 def init_transform(indices, weights, embedding):
-    """Given indices and weights and an original embeddings
+    """Given gindices and weights and an original embeddings
     initialize the positions of new points relative to the
-    indices and weights (of their neighbors in the source data).
+    gindices and weights (of their neighbors in the source data).
 
     Parameters
     ----------
     indices: array of shape (n_new_samples, n_neighbors)
-        The indices of the neighbors of each new sample
+        The gindices of the neighbors of each new sample
 
     weights: array of shape (n_new_samples, n_neighbors)
         The membership strengths of associated 1-simplices
@@ -1316,12 +1316,12 @@ def init_graph_transform(graph, embedding):
     result = np.zeros((graph.shape[0], embedding.shape[1]), dtype=np.float32)
 
     for row_index in range(graph.shape[0]):
-        num_neighbours = len(graph[row_index].indices)
+        num_neighbours = len(graph[row_index].gindices)
         if num_neighbours == 0:
             result[row_index] = np.nan
             continue
         row_sum = np.sum(graph[row_index])
-        for col_index in graph[row_index].indices:
+        for col_index in graph[row_index].gindices:
             if graph[row_index, col_index] == 1:
                 result[row_index, :] = embedding[col_index, :]
                 break
@@ -1980,7 +1980,7 @@ class UMAP(BaseEstimator):
             x, y = np.random.uniform(low=-10, high=10, size=(2, self.n_components))
 
         if scipy.sparse.issparse(data):
-            metric_out = metric(x.indices, x.data, y.indices, y.data, **kwds)
+            metric_out = metric(x.gindices, x.data, y.gindices, y.data, **kwds)
         else:
             metric_out = metric(x, y, **kwds)
         # True if metric returns iterable of length 2, False otherwise
@@ -2384,7 +2384,7 @@ class UMAP(BaseEstimator):
                 for row_id in range(X.shape[0]):
                     # Find KNNs row-by-row
                     row_data = X[row_id].data
-                    row_indices = X[row_id].indices
+                    row_indices = X[row_id].gindices
                     if len(row_data) < self._n_neighbors:
                         raise ValueError(
                             "Some rows contain fewer than n_neighbors distances!"
@@ -2850,7 +2850,7 @@ class UMAP(BaseEstimator):
                         raise ValueError(
                             f"Need at least n_neighbors ({self.n_neighbors}) distances for each row!"
                         )
-                    indices[i] = X[i].indices[data_indices[: self._n_neighbors]]
+                    indices[i] = X[i].gindices[data_indices[: self._n_neighbors]]
                     dists[i] = X[i].data[data_indices[: self._n_neighbors]]
             else:
                 indices = np.argsort(X, axis=1)[:, : self._n_neighbors].astype(np.int32)
@@ -2923,10 +2923,10 @@ class UMAP(BaseEstimator):
             return graph
 
         # This was a very specially constructed graph with constant degree.
-        # That lets us do fancy unpacking by reshaping the csr matrix indices
+        # That lets us do fancy unpacking by reshaping the csr matrix gindices
         # and data. Doing so relies on the constant degree assumption!
         # csr_graph = normalize(graph.tocsr(), norm="l1")
-        # inds = csr_graph.indices.reshape(X.shape[0], self._n_neighbors)
+        # inds = csr_graph.gindices.reshape(X.shape[0], self._n_neighbors)
         # weights = csr_graph.data.reshape(X.shape[0], self._n_neighbors)
         # embedding = init_transform(inds, weights, self.embedding_)
         # This is less fast code than the above numba.jit'd code.
@@ -3117,11 +3117,11 @@ class UMAP(BaseEstimator):
             (weights, (rows, cols)), shape=(X.shape[0], self._raw_data.shape[0])
         )
 
-        # That lets us do fancy unpacking by reshaping the csr matrix indices
+        # That lets us do fancy unpacking by reshaping the csr matrix gindices
         # and data. Doing so relies on the constant degree assumption!
         # csr_graph = graph.tocsr()
         csr_graph = normalize(graph.tocsr(), norm="l1")
-        inds = csr_graph.indices.reshape(X.shape[0], min_vertices)
+        inds = csr_graph.gindices.reshape(X.shape[0], min_vertices)
         weights = csr_graph.data.reshape(X.shape[0], min_vertices)
         inv_transformed_points = init_transform(inds, weights, self._raw_data)
 

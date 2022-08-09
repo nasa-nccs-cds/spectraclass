@@ -200,7 +200,7 @@ def sparse_mul(ind1, data1, ind2, data2):
     return result_ind, result_data
 
 
-# Return dense vectors supported on the union of the non-zero valued indices
+# Return dense vectors supported on the union of the non-zero valued gindices
 @numba.njit()
 def dense_union(ind1, data1, ind2, data2):
     result_ind = arr_union(ind1, ind2)
@@ -713,7 +713,7 @@ def dummy_ground_metric(x, y):
 
 def create_ground_metric(ground_vectors, metric):
     """Generate a "ground_metric" suitable for passing to a ``sparse_kantorovich``
-    distance function. This should be a metric that, given indices of the data,
+    distance function. This should be a metric that, given gindices of the data,
     should produce the ground distance between the corresponding vectors. This
     allows the construction of a cost_matrix or ground_distance_matrix between
     sparse samples on the fly -- without having to compute an all pairs distance.
@@ -759,7 +759,7 @@ def sparse_kantorovich(ind1, data1, ind2, data2, ground_metric=dummy_ground_metr
 
 
 # Because of the EPS values and the need to normalize after adding them (and then average those for jensen_shannon)
-# it seems like we might as well just take the dense union (dense vectors supported on the union of indices)
+# it seems like we might as well just take the dense union (dense vectors supported on the union of gindices)
 # and call the dense distance functions
 
 

@@ -193,7 +193,8 @@ class PointCloudManager(SCSingletonConfigurable):
         mapper = plt.cm.ScalarMappable( norm = norm, cmap="jet" )
         colors = mapper.to_rgba( cdata.values )[:, :-1] * 255
         if self.pick_point >= 0:
-            colors[ self.pick_point ] = [255] * colors.shape[1]
+            pid = self.voxelizer.gid2pid( self.pick_point )
+            colors[ pid ] = [255] * colors.shape[1]
         return colors.astype(np.uint8)
 
     @exception_handled
@@ -261,13 +262,13 @@ class PointCloudManager(SCSingletonConfigurable):
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.gui.unstructured.table import tbm
         point = tuple( event["new"] )
-        ppid = self.voxelizer.get_pid( point )
+        ppid = self.voxelizer.get_gid(point)
         if ppid >= 0:
             self.pick_point = ppid
             if mm().initialized():
                 if highlight:   pos = mm().highlight_points( [self.pick_point], [0] )
                 else:           pos = mm().mark_point( self.pick_point, cid=0 )
-                lgm().log( f"       -----> pos = {pos}")
+                lgm().log( f"  on_pick[highlight={highlight}] pick_point={self.pick_point} pos={pos}")
             if tbm().active:
                 tbm().mark_point( self.pick_point, 0, point )
             self.mark_point( self.pick_point, 0 )

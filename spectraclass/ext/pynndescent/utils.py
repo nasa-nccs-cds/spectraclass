@@ -160,12 +160,12 @@ def Heap_get_distances(self):
 
 @numba.njit(cache=True)
 def Heap_get_indices(self):
-    return self.indices
+    return self.gindices
 
 
-structref.define_proxy(Heap, HeapType, ["indices", "distances", "flags"])
+structref.define_proxy(Heap, HeapType, ["gindices", "distances", "flags"])
 
-# Heap = namedtuple("Heap", ("indices", "distances", "flags"))
+# Heap = namedtuple("Heap", ("gindices", "distances", "flags"))
 
 
 @numba.njit(cache=True)

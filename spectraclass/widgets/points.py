@@ -57,8 +57,10 @@ class PointsInteractor:
 
     @log_timing
     def plot( self, **kwargs ):
+        lgm().log(f" MAP Marker plot" )
         ycoords, xcoords, colors = self.get_points( probes=False )
         if len(ycoords) > 0:
+            lgm().log(f" --> MAP Markers: {len(ycoords)}")
             self.points.set_offsets(np.c_[xcoords, ycoords])
             self.points.set_facecolor(colors)
         else:
@@ -67,6 +69,7 @@ class PointsInteractor:
 
         ycoords, xcoords, _ = self.get_points( probes=True )
         if len(ycoords) > 0:
+            lgm().log(f" --> MAP Probes: {len(ycoords)}")
             self.probes.set_offsets(np.c_[xcoords, ycoords])
         else:
             offsets = np.ma.column_stack([[], []])
@@ -75,7 +78,7 @@ class PointsInteractor:
         if kwargs.get('clear_highlights', False): self._highlight_points = []
         ycoords, xcoords, cids = self.get_highlight_points()
         if len(ycoords) > 0:
-            lgm().log(f" --> Hightlghting {len(ycoords)} points: {tuple(self._highlight_points)} ")
+            lgm().log(f" --> MAP Hightlghting {len(ycoords)} points: {tuple(self._highlight_points)} ")
             self.highlights.set_offsets(np.c_[xcoords, ycoords])
         else:
             offsets = np.ma.column_stack([[], []])

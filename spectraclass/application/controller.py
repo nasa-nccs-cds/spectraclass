@@ -215,6 +215,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
         if marker is not None:
+            lgm().log( f" #APP-> Add Marker[{marker.cid}] ")
             lm().addMarker( marker )
             gpm().plot_graph( marker )
             if self.pcm_active: pcm().addMarker(marker)

@@ -126,8 +126,8 @@ class MarkerManager( PointsInteractor ):
     @exception_handled
     def delete_marker(self, x, y ):
         apx, apy = self.ax.transData.transform( (x, y) )
-        markers = dict( **self._markers )
-        for (pid, marker) in markers.items():
+        for pid in list(self._markers.keys()):
+            marker = self._markers[pid]
             (mx,my) = marker.props['point']
             amx, amy = self.ax.transData.transform( (mx, my) )
             if (abs(apx-amx)<self.PICK_DIST) and (abs(apy-amy)<self.PICK_DIST):
@@ -147,18 +147,20 @@ class MarkerManager( PointsInteractor ):
 
     def get_points( self, probes: bool = False  ) -> Tuple[ List[float], List[float], List[str] ]:
         from spectraclass.model.labels import LabelsManager, lm
-        ycoords, xcoords, colors, markers = [], [], [], lm().markers
-        for marker in markers:
+        ycoords, xcoords, colors = [], [], []
+        lgm().log(f" *** get_points(probe={probes}): #markers = {len(self._markers)}" )
+        for marker in self._markers.values():
             valid =  (marker.cid == 0) if probes else (marker.cid > 0)
+            lgm().log(f" *** >>> Marker[{marker.cid}] valid={valid} pids={marker.pids} point={marker['point']}")
             if (marker.type == "marker") and valid:
                 point = marker['point']
                 if point is not None:
-               #     lgm().log(f" ** get_points, point = {marker.pids}")
+                    lgm().log(f" *** >>> point = {marker.pids}")
                     ycoords.append(point[1])
                     xcoords.append(point[0])
                     colors.append(lm().colors[marker.cid])
                 else:
-                    lgm().log( f" ** get_points, markers = {marker.pids}")
+                    lgm().log( f" *** >>> markers = {marker.pids}")
                     for pid in marker.pids:
                         coords = self.block.gid2coords(pid)
                         if (coords is not None) and self.block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
@@ -174,6 +176,12 @@ class MarkerManager( PointsInteractor ):
     #         self.delete_marker( event.mouseevent.ydata, event.mouseevent.xdata )
     #         self.plot()
 
+    def _add_marker(self, marker: Marker ):
+        for mid in list(self._markers.keys()):
+            if self._markers[mid].cid == 0:
+                self._markers.pop( mid )
+        self._markers[marker.pids[0]] = marker
+
     @exception_handled
     def add( self, marker: Marker ):
         from spectraclass.application.controller import app
@@ -183,7 +191,8 @@ class MarkerManager( PointsInteractor ):
                 lgm().log("NULL Marker: point select is probably out of bounds.")
             else:
                 app().add_marker("map", marker)
-                self._markers[ marker.pids[0] ] = marker
+                self._add_marker( marker )
+                self.plot()
         else:
             lgm().log("Dropping marker add: already adding_marker.")
         self._adding_marker = False
@@ -197,6 +206,7 @@ class MarkerManager( PointsInteractor ):
             lm().deletePid( pid )
             gpm().remove_point( pid )
             pcm().deleteMarkers( [pid] )
+        self.plot()
 
     @log_timing
     def mark_point(self, gid, **kwargs ) -> Optional[Tuple[float,float]]:
@@ -205,6 +215,7 @@ class MarkerManager( PointsInteractor ):
         if gid >= 0:
             cid = kwargs.get( 'cid', lm().current_cid )
             point = kwargs.get('point', mm().get_point_coords( gid ) )
+            lgm().log( f"mark_point[{cid}], gid={gid}, point={point}")
             m = Marker( "marker", [gid], cid, point=point )
             self.add(m)
             return point

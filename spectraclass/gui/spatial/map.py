@@ -26,7 +26,8 @@ from spectraclass.model.labels import LabelsManager, lm
 from matplotlib.image import AxesImage
 from spectraclass.xext.xgeo import XGeo
 from spectraclass.learn.cluster.manager import ClusterSelector
-from spectraclass.widgets.slider import PageSlider
+# from spectraclass.widgets.slider import PageSlider
+from  matplotlib.widgets import Slider
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.data.spatial.tile.tile import Block, Tile, ThresholdRecord
@@ -68,8 +69,8 @@ class MapManager(SCSingletonConfigurable):
         self.cspecs=None
         self._classification_data: xa.DataArray = None
         self.layers = LayersManager( self.on_layer_change )
-        self.band_slider: PageSlider = None
-        self.model_slider: PageSlider = None
+        self.band_slider: Slider = None
+        self.model_slider: Slider = None
         self._spectral_image: Optional[AxesImage] = None
         self.label_map: Optional[xa.DataArray] = None     # Map of classification labels from ML
         self.labels_image: Optional[AxesImage] = None
@@ -269,9 +270,9 @@ class MapManager(SCSingletonConfigurable):
             self.region_selection.set_class( cid )
 
     def create_sliders(self):
-        self.band_slider = PageSlider( self.slider_axes(False), self.nFrames(model=False) )
+        self.band_slider = Slider( ax=self.slider_axes(False), label="band", valmin=0, valmax=self.nFrames(model=False), valstep=1, valfmt="%0.0f" )
         self.band_slider_cid = self.band_slider.on_changed(self._update)
-        self.model_slider = PageSlider( self.slider_axes(True), self.nFrames(model=True) )
+        self.model_slider = Slider( self.slider_axes(True), label="band", valmin=0, valmax=self.nFrames(model=True), valstep=1, valfmt="%0.0f"  )
         self.model_slider_cid = self.model_slider.on_changed(self._update)
 
     def one_hot_to_index(self, class_data: xa.DataArray, axis=0) -> xa.DataArray:
@@ -344,7 +345,7 @@ class MapManager(SCSingletonConfigurable):
         self.update_canvas()
 
     @property
-    def slider(self) -> PageSlider:
+    def slider(self) -> Slider:
         return self.model_slider if self._use_model_data else self.band_slider
 
     @property
@@ -353,14 +354,14 @@ class MapManager(SCSingletonConfigurable):
 
     @currentFrame.setter
     def currentFrame(self, value: int ):
+        lgm().log( f"MM: Set current Frame: {value}")
         self._currentFrame = value
-        self.slider.refesh()
         self.update_thresholds()
         self.update_spectral_image()
 
     @exception_handled
-    def _update( self, val ):
-        self.currentFrame = int( self.slider.val )
+    def _update( self, val: float ):
+        self.currentFrame = int( val )
 
     def update_image_alpha( self, layer: str, increase: bool, *args, **kwargs ):
         self.layers(layer).increment( increase )
@@ -546,10 +547,12 @@ class MapManager(SCSingletonConfigurable):
         self.points_selection.plot( **kwargs )
 
     def init_map(self):
+        from spectraclass.data.base import DataManager, dm
         self.update_spectral_image()
         self.create_sliders()
         self.initLabels()
         self._cidpress = self.figure.canvas.mpl_connect('button_press_event', self.on_button_press)
+        self.use_model_data( dm().use_model_data )
      #   self._cidrelease = self._spectral_image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
      #   self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
 

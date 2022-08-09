@@ -13,12 +13,12 @@ import scipy.sparse
 
 @numba.njit(parallel=True)
 def fast_knn_indices(X, n_neighbors):
-    """A fast computation of knn indices.
+    """A fast computation of knn gindices.
 
     Parameters
     ----------
     X: array of shape (n_samples, n_features)
-        The input data to compute the k-neighbor indices of.
+        The input data to compute the k-neighbor gindices of.
 
     n_neighbors: int
         The number of nearest neighbors to compute for each sample in ``X``.
@@ -26,7 +26,7 @@ def fast_knn_indices(X, n_neighbors):
     Returns
     -------
     knn_indices: array of shape (n_samples, n_neighbors)
-        The indices on the ``n_neighbors`` closest points in the dataset.
+        The gindices on the ``n_neighbors`` closest points in the dataset.
     """
     knn_indices = np.empty((X.shape[0], n_neighbors), dtype=np.int32)
     for row in numba.prange(X.shape[0]):
@@ -100,7 +100,7 @@ def norm(vec):
 
 @numba.njit(parallel=True)
 def submatrix(dmat, indices_col, n_neighbors):
-    """Return a submatrix given an orginal matrix and the indices to keep.
+    """Return a submatrix given an orginal matrix and the gindices to keep.
 
     Parameters
     ----------
@@ -108,7 +108,7 @@ def submatrix(dmat, indices_col, n_neighbors):
         Original matrix.
 
     indices_col: array, shape (n_samples, n_neighbors)
-        Indices to keep. Each row consists of the indices of the columns.
+        Indices to keep. Each row consists of the gindices of the columns.
 
     n_neighbors: int
         Number of neighbors.
@@ -137,15 +137,15 @@ def csr_unique(matrix, return_index=True, return_inverse=True, return_counts=Tru
     """Find the unique elements of a sparse csr matrix.
     We don't explicitly construct the unique matrix leaving that to the user
     who may not want to duplicate a massive array in memory.
-    Returns the indices of the input array that give the unique values.
-    Returns the indices of the unique array that reconstructs the input array.
+    Returns the gindices of the input array that give the unique values.
+    Returns the gindices of the unique array that reconstructs the input array.
     Returns the number of times each unique row appears in the input matrix.
 
     matrix: a csr matrix
     return_index = bool, optional
-        If true, return the row indices of 'matrix'
+        If true, return the row gindices of 'matrix'
     return_inverse: bool, optional
-        If true, return the the indices of the unique array that can be
+        If true, return the the gindices of the unique array that can be
            used to reconstruct 'matrix'.
     return_counts = bool, optional
         If true, returns the number of times each unique item appears in 'matrix'

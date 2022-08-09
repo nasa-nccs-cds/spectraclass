@@ -286,7 +286,7 @@ class WMTSRasterSource(RasterSource):
     def _select_tiles(self, tile_matrix, tile_matrix_limits,
                       tile_span_x, tile_span_y, extent):
         # Convert the requested extent from CRS coordinates to tile
-        # indices. See annex H of the WMTS v1.0.0 spec.
+        # gindices. See annex H of the WMTS v1.0.0 spec.
         # NB. The epsilons get rid of any tiles which only just
         # (i.e. one part in a million) intrude into the requested
         # extent. Since these wouldn't be visible anyway there's nothing

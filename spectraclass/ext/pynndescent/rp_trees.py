@@ -22,7 +22,7 @@ INT32_MIN = np.iinfo(np.int32).min + 1
 INT32_MAX = np.iinfo(np.int32).max - 1
 
 FlatTree = namedtuple(
-    "FlatTree", ["hyperplanes", "offsets", "children", "indices", "leaf_size"]
+    "FlatTree", ["hyperplanes", "offsets", "children", "gindices", "leaf_size"]
 )
 
 dense_hyperplane_type = numba.float32[::1]
@@ -982,7 +982,7 @@ def make_forest(
         if scipy.sparse.isspmatrix_csr(data):
             result = joblib.Parallel(n_jobs=n_jobs, require="sharedmem")(
                 joblib.delayed(make_sparse_tree)(
-                    data.indices,
+                    data.gindices,
                     data.indptr,
                     data.data,
                     rng_states[i],
@@ -1015,10 +1015,10 @@ def get_leaves_from_tree(tree):
 
     result = np.full((n_leaves, tree.leaf_size), -1, dtype=np.int32)
     leaf_index = 0
-    for i in range(len(tree.indices)):
+    for i in range(len(tree.gindices)):
         if tree.children[i][0] == -1 or tree.children[i][1] == -1:
-            leaf_size = tree.indices[i].shape[0]
-            result[leaf_index, :leaf_size] = tree.indices[i]
+            leaf_size = tree.gindices[i].shape[0]
+            result[leaf_index, :leaf_size] = tree.gindices[i]
             leaf_index += 1
 
     return result
@@ -1044,10 +1044,10 @@ def recursive_convert(
 ):
 
     if tree.children[tree_node][0] < 0:
-        leaf_end = leaf_start + len(tree.indices[tree_node])
+        leaf_end = leaf_start + len(tree.gindices[tree_node])
         children[node_num, 0] = -leaf_start
         children[node_num, 1] = -leaf_end
-        indices[leaf_start:leaf_end] = tree.indices[tree_node]
+        indices[leaf_start:leaf_end] = tree.gindices[tree_node]
         return node_num, leaf_end
     else:
         hyperplanes[node_num] = tree.hyperplanes[tree_node]
@@ -1084,10 +1084,10 @@ def recursive_convert_sparse(
 ):
 
     if tree.children[tree_node][0] < 0:
-        leaf_end = leaf_start + len(tree.indices[tree_node])
+        leaf_end = leaf_start + len(tree.gindices[tree_node])
         children[node_num, 0] = -leaf_start
         children[node_num, 1] = -leaf_end
-        indices[leaf_start:leaf_end] = tree.indices[tree_node]
+        indices[leaf_start:leaf_end] = tree.gindices[tree_node]
         return node_num, leaf_end
     else:
         hyperplanes[
@@ -1195,7 +1195,7 @@ def denumbaify_tree(tree):
         tree.hyperplanes,
         tree.offsets,
         tree.children,
-        tree.indices,
+        tree.gindices,
         tree.leaf_size,
     )
 
@@ -1232,7 +1232,7 @@ def score_tree(tree, neighbor_indices, data, rng_state):
             tree.hyperplanes,
             tree.offsets,
             tree.children,
-            tree.indices,
+            tree.gindices,
             rng_state,
         )
         intersection = arr_intersect(neighbor_indices[i], leaf_indices)
@@ -1249,8 +1249,8 @@ def score_linked_tree(tree, neighbor_indices):
         left_child = tree.children[node][0]
         right_child = tree.children[node][1]
         if left_child == -1 and right_child == -1:
-            for j in range(tree.indices[node].shape[0]):
-                idx = tree.indices[node][j]
-                intersection = arr_intersect(neighbor_indices[idx], tree.indices[node])
+            for j in range(tree.gindices[node].shape[0]):
+                idx = tree.gindices[node][j]
+                intersection = arr_intersect(neighbor_indices[idx], tree.gindices[node])
                 result += numba.float32(intersection.shape[0] > 1)
     return result / numba.float32(neighbor_indices.shape[0])

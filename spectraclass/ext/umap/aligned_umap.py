@@ -211,7 +211,7 @@ def init_from_existing(previous_embedding, graph, relations):
     return init_from_existing_internal(
         previous_embedding,
         graph.indptr,
-        graph.indices,
+        graph.gindices,
         graph.data,
         typed_relations,
     )
@@ -349,7 +349,7 @@ class AlignedUMAP(BaseEstimator):
 
         for mapper in self.mappers_:
             indptr_list.append(mapper.graph_.indptr)
-            indices_list.append(mapper.graph_.indices)
+            indices_list.append(mapper.graph_.gindices)
             heads.append(mapper.graph_.tocoo().row)
             tails.append(mapper.graph_.tocoo().col)
             epochs_per_samples.append(
@@ -480,7 +480,7 @@ class AlignedUMAP(BaseEstimator):
 
         for i, mapper in enumerate(self.mappers_):
             indptr_list.append(mapper.graph_.indptr)
-            indices_list.append(mapper.graph_.indices)
+            indices_list.append(mapper.graph_.gindices)
             heads.append(mapper.graph_.tocoo().row)
             tails.append(mapper.graph_.tocoo().col)
             if i == len(self.mappers_) - 1:

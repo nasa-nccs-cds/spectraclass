@@ -253,9 +253,9 @@ def optimize_layout_euclidean(
         is simply the head_embedding (again); otherwise it provides the
         existing embedding to embed with respect to.
     head: array of shape (n_1_simplices)
-        The indices of the heads of 1-simplices with non-zero membership.
+        The gindices of the heads of 1-simplices with non-zero membership.
     tail: array of shape (n_1_simplices)
-        The indices of the tails of 1-simplices with non-zero membership.
+        The gindices of the tails of 1-simplices with non-zero membership.
     n_epochs: int
         The number of training epochs to use in optimization.
     n_vertices: int
@@ -521,10 +521,10 @@ def optimize_layout_generic(
         existing embedding to embed with respect to.
 
     head: array of shape (n_1_simplices)
-        The indices of the heads of 1-simplices with non-zero membership.
+        The gindices of the heads of 1-simplices with non-zero membership.
 
     tail: array of shape (n_1_simplices)
-        The indices of the tails of 1-simplices with non-zero membership.
+        The gindices of the tails of 1-simplices with non-zero membership.
 
     n_epochs: int
         The number of training epochs to use in optimization.
@@ -727,10 +727,10 @@ def optimize_layout_inverse(
         existing embedding to embed with respect to.
 
     head: array of shape (n_1_simplices)
-        The indices of the heads of 1-simplices with non-zero membership.
+        The gindices of the heads of 1-simplices with non-zero membership.
 
     tail: array of shape (n_1_simplices)
-        The indices of the tails of 1-simplices with non-zero membership.
+        The gindices of the tails of 1-simplices with non-zero membership.
 
     weight: array of shape (n_1_simplices)
         The membership weights of the 1-simplices.

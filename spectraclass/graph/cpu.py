@@ -11,7 +11,7 @@ import os, time, traceback
 @nb.njit( fastmath=True,
     locals={
         "selection": nb.types.Array(nb.types.boolean, 1, 'C'),
-        "indices": nb.types.Array(nb.types.int32, 1, 'C'),
+        "gindices": nb.types.Array(nb.types.int32, 1, 'C'),
         "labels": nb.types.Array(nb.types.int32, 1, 'C'),
         "index_stack": nb.types.Array(nb.types.int32, 2, 'F'),
     },)
