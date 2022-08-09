@@ -36,7 +36,7 @@ class ModeDataManager(SCSingletonConfigurable):
     model_dims = tl.Int(32).tag(config=True, sync=True)
     subsample_index = tl.Int(1).tag(config=True, sync=True)
     reduce_method = tl.Unicode("vae").tag(config=True, sync=True)
-    reduce_nepochs = tl.Int(5).tag(config=True, sync=True)
+    reduce_nepochs = tl.Int(20).tag(config=True, sync=True)
     reduce_sparsity = tl.Float( 0.0 ).tag(config=True,sync=True)
     modelkey = tl.Unicode("").tag(config=True, sync=True)
 
@@ -284,10 +284,13 @@ class ModeDataManager(SCSingletonConfigurable):
     @exception_handled
     def loadDataset(self, **kwargs) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        lgm().log(f"Load dataset, current = {self.datasets.keys()}")
+        from spectraclass.data.base import DataManager, dm, DataType
+        lgm().log(f"Load dataset, current = {list(self.datasets.keys())}")
         if self.dsid() not in self.datasets:
-            lgm().log(f"Load dataset {self.dsid()}, current datasets = {self.datasets.keys()}")
-            xdataset: Optional[xa.Dataset] = self.loadDataFile(**kwargs)
+            lgm().log(f"Load dataset {self.dsid()}, current datasets = {list(self.datasets.keys())}")
+            xdataset: Optional[xa.Dataset] = None
+            if not dm().refresh_model:
+                xdataset = self.loadDataFile(**kwargs)
             if xdataset is None:
                 xdataset = self.process_block( tm().getBlock() )
             if len(xdataset.variables.keys()) == 0:

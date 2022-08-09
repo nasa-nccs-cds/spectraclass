@@ -50,6 +50,7 @@ class DataManager(SCSingletonConfigurable):
     proc_type = tl.Unicode('cpu').tag(config=True)
     labels_dset = tl.Unicode('labels').tag(config=True)
     use_model_data = tl.Bool(False).tag(config=True, sync=True)
+    refresh_model = tl.Bool(False).tag(config=True, sync=True)
     _mode_data_managers_: Dict = {}
 
     def __init__(self):
@@ -259,17 +260,25 @@ class DataManager(SCSingletonConfigurable):
             self._wGui = ipw.Tab()
             self._wGui.set_title( 0, "blocks" )
             self._wGui.set_title( 1, "images" )
-            self._wGui.children = [ mode_gui, dm().control_panel() ]
+            self._wGui.children = [mode_gui, dm().images_panel()]
         return self._wGui
 
-    def control_panel(self) -> ip.VBox:
+    def images_panel(self) -> ip.VBox:
         title = ipw.Label( value="Images", width='500px' )
         file_selector = dm().modal.set_file_selection_observer( dm().modal.on_image_change )
         controls = [ title, file_selector ]
+        return ip.VBox( controls, layout=ipw.Layout(flex='1 1 auto') )
+
+    def model_panel(self) -> ip.VBox:
+        title = ipw.Label( value="Model", width='500px' )
+        controls = [ title ]
         if self.modal.model_dims > 0:
             model_data_cbox = ip.Checkbox( value=self.use_model_data, description = "Use Model Data", layout=ipw.Layout( width='500px' ) )
             tl.link( (model_data_cbox, "value"), (self, 'use_model_data') )
             controls.append( model_data_cbox )
+            refresh_cbox = ip.Checkbox( value=self.refresh_model, description = "Refresh Model", layout=ipw.Layout( width='500px' ) )
+            tl.link( (refresh_cbox, "value"), (self, 'refresh_model') )
+            controls.append( refresh_cbox )
         return ip.VBox( controls, layout=ipw.Layout(flex='1 1 auto') )
 
     def getInputFileData(self, vname: str = None, **kwargs ) -> np.ndarray:

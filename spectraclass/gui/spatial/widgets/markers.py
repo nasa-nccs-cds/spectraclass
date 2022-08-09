@@ -222,13 +222,15 @@ class MarkerManager( PointsInteractor ):
 
     @exception_handled
     def on_button_press(self, event: MouseEvent ):
+        inaxes = event.inaxes == self.ax
+        lgm().log(f"MarkerManager.on_button_press --> inaxes = {inaxes}, enabled = {self._enabled}")
         from spectraclass.gui.control import ufm
-        if (event.xdata != None) and (event.ydata != None) and (event.inaxes == self.ax) and self._enabled:
+        if (event.xdata != None) and (event.ydata != None) and inaxes and self._enabled:
             if int(event.button) == self.RIGHT_BUTTON:
                 self.delete_marker( event.xdata, event.ydata )
             elif int(event.button) == self.LEFT_BUTTON:
                 gid,ix,iy = self.block.coords2gid(event.ydata, event.xdata)
-                lgm().log(f"MarkerManager.on_button_press --> selected gid = {gid}, button = {event.button}")
+                lgm().log(f" *** --> selected gid = {gid}, button = {event.button}")
                 ufm().show( f" event[{event.xdata:.2f},{event.ydata:.2f}]: ({ix},{iy}) -> {gid}" )
                 self.mark_point( gid, point=(event.xdata,event.ydata) )
             self.plot()
