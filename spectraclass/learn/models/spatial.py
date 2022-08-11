@@ -97,10 +97,12 @@ class SpatialModelWrapper(KerasLearningModel):
             classifcation: np.ndarray = self.predict( input_data.values, **kwargs )
             lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> CLASSIFY, result shape = {classifcation.shape}, vrange = [{classifcation.min()}, {classifcation.max()}] ")
             classification = xa.DataArray(  classifcation,
-                                            dims=['y', 'x' ],
-                                            coords=dict( y= input_data.coords['y'],
+                                            dims=[ 'blocks', 'y', 'x' ],
+                                            coords=dict( blocks = range(classifcation.shape[0]),
+                                                         y= input_data.coords['y'],
                                                          x= input_data.coords['x'] ) )
-            mm().plot_labels_image( classification )
+            block_index = 0    #TODO -> get correct index
+            mm().plot_labels_image( classification[block_index] )
             lm().addAction("classify", "application")
             return classification
         except NotFittedError:
@@ -130,16 +132,23 @@ class SpatialModelWrapper(KerasLearningModel):
     @exception_handled
     def epoch_callback(self, epoch):
         if (self.test_mask is not None) and (self.test_size > 0.0):
+            prediction = self.predict( self.training_data )
             for iBlock in range( self.training_data.shape[0] ):
-                prediction = self.predict( self.training_data[iBlock] )
-                test_results = np.equal( prediction.flatten(), self.training_labels.squeeze().argmax(axis=1) )[ self.test_mask[iBlock] ]
+                labels = self.training_labels[iBlock].argmax(axis=-1)
+                classification_results = np.equal( prediction[iBlock].flatten(), labels )
+                test_results = classification_results[ self.test_mask[iBlock] ]
                 accuracy = np.count_nonzero( test_results ) / test_results.size
                 lgm().log( f"Epoch[{epoch}]-> BLOCK-{iBlock}: Test[{test_results.size}] accuracy: {accuracy:.4f}" )
 
     def predict( self, data: np.ndarray, **kwargs ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block: Block = tm().getBlock()
-        postresult: np.ndarray = self._model.predict(data).squeeze()
-        classresult: np.ndarray = postresult.argmax(axis=1)
-        classresult[ ~block.raster_mask.flatten() ] = 0
-        return classresult.reshape( block.raster_mask.shape )
+        bshape: List[int] = list(block.shape[1:])
+        predictresult: np.ndarray = self._model.predict(data)
+        classresult: np.ndarray = predictresult.argmax(axis=-1)
+        raster_mask = ~block.raster_mask.flatten()
+        lgm().log(f" **** predict: data shape = {data.shape}, predict-result shape = {predictresult.shape}, class-result shape = {classresult.shape},  bshape = {bshape}, raster_mask shape = {raster_mask.shape}")
+        for iB in range( classresult.shape[0] ):
+            classresult[ iB, raster_mask ] = 0
+        result = classresult.reshape( [data.shape[0]] + bshape )
+        return result
