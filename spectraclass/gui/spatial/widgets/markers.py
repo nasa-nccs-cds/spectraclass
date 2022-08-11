@@ -222,16 +222,24 @@ class MarkerManager( PointsInteractor ):
 
     @exception_handled
     def on_button_press(self, event: MouseEvent ):
+        from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.gui.spatial.map import MapManager, mm
+        from matplotlib.image import AxesImage
         inaxes = event.inaxes == self.ax
         lgm().log(f"MarkerManager.on_button_press --> inaxes = {inaxes}, enabled = {self._enabled}")
         from spectraclass.gui.control import ufm
         if (event.xdata != None) and (event.ydata != None) and inaxes and self._enabled:
+            mdata = ""
             if int(event.button) == self.RIGHT_BUTTON:
                 self.delete_marker( event.xdata, event.ydata )
             elif int(event.button) == self.LEFT_BUTTON:
+                labels_img: AxesImage = mm().layer_managers("labels")[0]
                 gid,ix,iy = self.block.coords2gid(event.ydata, event.xdata)
+                if labels_img.get_visible():
+                    cid = mm().classification_data[iy,ix]
+                    mdata = mdata + f" label={cid} "
                 lgm().log(f" *** --> selected gid = {gid}, button = {event.button}")
-                ufm().show( f" event[{event.xdata:.2f},{event.ydata:.2f}]: ({ix},{iy}) -> {gid}" )
+                ufm().show( f" event[{event.xdata:.2f},{event.ydata:.2f}]: ({ix},{iy},{gid}) {mdata}" )
                 self.mark_point( gid, point=(event.xdata,event.ydata) )
             self.plot()
 

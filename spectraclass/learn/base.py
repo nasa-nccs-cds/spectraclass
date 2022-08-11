@@ -108,12 +108,12 @@ class LearningModel:
             from spectraclass.data.spatial.tile.manager import TileManager, tm
             from spectraclass.gui.spatial.map import MapManager, mm
             from spectraclass.model.labels import LabelsManager, Action, lm
-            lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> CLASSIFY ")
             block = tm().getBlock()
+            lgm().log( f" APPLY classification: block={block.block_coords}" )
             input_data: xa.DataArray = self.get_input_data()
             prediction: np.ndarray = self.predict( input_data.values, **kwargs )
             classification = xa.DataArray(prediction, dims=['samples', 'classes'], coords=dict(samples=input_data.coords['samples'], classes=range(prediction.shape[1])))
-            if classification.ndim == 1: classification = classification.reshape([classification.size, 1])
+            if classification.ndim == 1: classification = classification.reshape( [classification.size, 1] )
             overlay_image: xa.DataArray = block.points2raster(classification)
             mm().plot_labels_image(overlay_image)
             lm().addAction("classify", "application")
@@ -126,16 +126,11 @@ class LearningModel:
         raise Exception( "abstract method LearningModel.predict called")
 
     def save( self, **kwargs ) -> str:
-        mfile = self.model_file
-        lgm().log( f'KerasModelWrapper: save weights -> {mfile}' )
-        self._model.save( mfile, save_format="tf", **kwargs )
-        return os.path.splitext( os.path.basename(mfile) )[0]
+        raise Exception( "abstract method LearningModel.save called")
 
     @exception_handled
     def load( self, model_name: str, **kwargs ):
-        file_path = os.path.join( self.model_dir, f"{model_name}.tf" )
-        lgm().log( f'KerasModelWrapper: loading model -> {file_path}' )
-        self._model = models.load_model( file_path, **kwargs )
+        raise Exception( "abstract method LearningModel.load called")
 
 
 class KerasLearningModel(LearningModel):
@@ -144,7 +139,8 @@ class KerasLearningModel(LearningModel):
         LearningModel.__init__( self, name, **self.set_learning_parameters( **kwargs ) )
         self.callbacks: List[Callback] = callbacks if callbacks else []
         self.callbacks.append( lgm().get_keras_logger() )
-        self._init_model = model
+        self._init_model: Model = model
+        self._model: Model = None
         self.compile()
 
     def set_learning_parameters( self, **kwargs ) -> Dict:
@@ -174,6 +170,18 @@ class KerasLearningModel(LearningModel):
         lgm().log( f"KerasLearningModel.fit: data{data.shape} labels{class_data.shape} args={args}" )
         self._model.fit( data, class_data, **args )
 
+    @exception_handled
+    def load( self, model_name: str, **kwargs ):
+        file_path = os.path.join( self.model_dir, f"{model_name}.tf" )
+        lgm().log( f'KerasModelWrapper: loading model -> {file_path}' )
+        self._model = models.load_model( file_path, **kwargs )
+
+    def save( self, **kwargs ) -> str:
+        mfile = self.model_file
+        lgm().log( f'KerasModelWrapper: save weights -> {mfile}' )
+        self._model.save( mfile, save_format="tf", **kwargs )
+        return os.path.splitext( os.path.basename(mfile) )[0]
+
     def epoch_callback(self, epoch):
         pass
 
@@ -181,6 +189,8 @@ class KerasLearningModel(LearningModel):
         return self._model.predict( data, **kwargs )
 
     def apply( self, data: np.ndarray, **kwargs ) -> np.ndarray:
+        waves = [ w.mean() for w in self._model.get_layer(0).get_weights() ]
+        lgm().log( f"KerasLearningModel[{hex(id(self))}:{hex(id(self._model))}].apply: weights = {waves}")
         return self._model( data, **kwargs )
 
     def clear(self):

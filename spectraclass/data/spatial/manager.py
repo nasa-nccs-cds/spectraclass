@@ -199,7 +199,7 @@ class SpatialDataManager(ModeDataManager):
         if not hasattr(ax, 'projection'): defaults['aspect'] = 'auto'
         defaults.update(kwargs)
         lgm().log( f"\n $$$COLOR: Plotting overlay image with parameters: {defaults}, data range = {[raster.min(),raster.max()]}, raster type = {raster.dtype}, shape = {raster.shape}\n")
-        img = ax.imshow( raster, zorder=2, **defaults )
+        img = ax.imshow( raster, zorder=2.5, **defaults )
         return img
 
     def reduced_dataset_name(self, dsid: str ):

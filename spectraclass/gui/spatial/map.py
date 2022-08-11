@@ -198,7 +198,7 @@ class MapManager(SCSingletonConfigurable):
         self.label_map.name = f"{self.block.data.name}_labels"
         self.label_map.attrs[ 'long_name' ] =  "labels"
         self.cspecs = lm().get_labels_colormap()
-        self.labels_image = self.template.plot.imshow( ax=self.base.gax, alpha=self.layers('labels').visibility,
+        self.labels_image = self.template.plot.imshow( ax=self.base.gax, alpha=self.layers('labels').visibility, zorder=3.0,
                                                         cmap=self.cspecs['cmap'], add_colorbar=False, norm=self.cspecs['norm'] )
         self.init_cluster_image()
 
@@ -210,7 +210,7 @@ class MapManager(SCSingletonConfigurable):
                 self.labels_image.set_alpha(0.0)
 
     def init_cluster_image(self):
-         self.clusters_image = self.template.plot.imshow( ax=self.base.gax, alpha=self.layers('clusters').visibility, add_colorbar=False )
+         self.clusters_image = self.template.plot.imshow( ax=self.base.gax, alpha=self.layers('clusters').visibility, add_colorbar=False, zorder=4.0 )
 
     @property
     def toolbarMode(self) -> str:
@@ -278,6 +278,10 @@ class MapManager(SCSingletonConfigurable):
     def one_hot_to_index(self, class_data: xa.DataArray, axis=0) -> xa.DataArray:
         return class_data.argmax( axis=axis, skipna=True, keep_attrs=True ).squeeze()
 
+    @property
+    def classification_data(self) -> np.ndarray:
+        return self._classification_data.values
+
     @exception_handled
     def plot_labels_image(self, classification: xa.DataArray = None ):
         if classification is None:
@@ -289,25 +293,25 @@ class MapManager(SCSingletonConfigurable):
                 self._classification_data = self.one_hot_to_index( self._classification_data )
 
         if self._classification_data is not None:
-            try:
-                self.labels_image.remove()
-                self.labels_image = None
-            except Exception: pass
-
             vrange = [ self._classification_data.values.min(), self._classification_data.values.max() ]
             if self.labels_image is None:
                 alpha, cmap, norm = self.layers.alpha("labels"), self.cspecs['cmap'], self.cspecs['norm']
                 lgm().log(f"  create labels image, shape={self._classification_data.shape}, dims={self._classification_data.dims}, vrange={vrange}, cmap={cmap}, norm={norm}  ")
-                self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=alpha, cmap=cmap, norm=norm, add_colorbar=False)
+                self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=alpha, cmap=cmap, norm=norm, zorder=3.0, add_colorbar=False)
             else:
+                from spectraclass.data.spatial.tile.manager import TileManager, tm
+                block: Block = tm().getBlock()
                 lgm().log(f"  update labels image, shape={self._classification_data.shape}, vrange={vrange}  ")
                 self.labels_image.set_data( self._classification_data.values )
+                self.labels_image.set_extent( block.extent )
                 self.labels_image.changed()
 
             self.update_canvas()
 
     @exception_handled
     def plot_cluster_image(self, clusters: xa.DataArray = None ):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        block = tm().getBlock()
 #        try: self.clusters_image.remove()
 #        except Exception: pass
         ncolors = clusters.shape[0]
@@ -315,12 +319,12 @@ class MapManager(SCSingletonConfigurable):
         self.clusters_image.set_data( clusters.to_numpy() )
         self.clusters_image.cmap = clusters.attrs['cmap']
         self.clusters_image.norm = mpl.colors.BoundaryNorm( color_bounds, ncolors, clip=True )
+        self.clusters_image.set_extent( block.extent )
         self.clusters_image.changed()
         self.update_canvas()
 
     def layer_managers( self, name: str ) -> List:
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
-        from spectraclass.learn.cluster.manager import  clm
         if   name == "basemap":   mgrs = [ self.base ]
         elif name == "labels":    mgrs = [ self.labels_image ]
         elif name == "clusters":  mgrs = [ self.clusters_image ]
@@ -386,13 +390,13 @@ class MapManager(SCSingletonConfigurable):
                 norm = Normalize(**drange)
                 if self._spectral_image is None:
                     self.base.set_bounds(self.block.xlim, self.block.ylim)
-                    self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=alpha, cmap='jet', norm=norm, add_colorbar=False)
+                    self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=alpha, cmap='jet', norm=norm, add_colorbar=False, zorder=2.0 )
                 else:
                     self._spectral_image.set_norm( norm )
                     self._spectral_image.set_data(fdata.values)
                     self._spectral_image.set_alpha(alpha)
-                with self.base.hold_limits():
-                    self._spectral_image.set_extent(self.block.extent)
+#                with self.base.hold_limits():
+                self._spectral_image.set_extent(self.block.extent)
                 lgm().log(f"UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}, model_data={self._use_model_data}" )
                 self.update_canvas()
                 pcm().update_plot(cdata=fdata, norm=norm)
@@ -402,8 +406,8 @@ class MapManager(SCSingletonConfigurable):
 
     def reset_plot(self):
         from spectraclass.data.base import DataManager, dm
-        self._spectral_image.remove()
-        self._spectral_image = None
+#        self._spectral_image.remove()
+#        self._spectral_image = None
         plot_name = os.path.basename( dm().dsid() )
         self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame + 1}")
         self.plot_axes.title.set_fontsize(8)

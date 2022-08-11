@@ -260,7 +260,8 @@ class DataManager(SCSingletonConfigurable):
             self._wGui = ipw.Tab()
             self._wGui.set_title( 0, "blocks" )
             self._wGui.set_title( 1, "images" )
-            self._wGui.children = [mode_gui, dm().images_panel()]
+            self._wGui.set_title( 2, "model")
+            self._wGui.children = [ mode_gui, dm().images_panel(), dm().model_panel() ]
         return self._wGui
 
     def images_panel(self) -> ip.VBox:
@@ -270,8 +271,7 @@ class DataManager(SCSingletonConfigurable):
         return ip.VBox( controls, layout=ipw.Layout(flex='1 1 auto') )
 
     def model_panel(self) -> ip.VBox:
-        title = ipw.Label( value="Model", width='500px' )
-        controls = [ title ]
+        controls = []
         if self.modal.model_dims > 0:
             model_data_cbox = ip.Checkbox( value=self.use_model_data, description = "Use Model Data", layout=ipw.Layout( width='500px' ) )
             tl.link( (model_data_cbox, "value"), (self, 'use_model_data') )

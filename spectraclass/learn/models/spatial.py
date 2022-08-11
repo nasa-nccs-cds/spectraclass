@@ -38,7 +38,7 @@ class SpatialModelWrapper(KerasLearningModel):
             test_mask = tmask & label_mask
             sample_weights[ test_mask ] = 0.0
             lgm().log( f"TMASK: tmask{tmask.shape} size={np.count_nonzero(tmask)}, test_mask{test_mask.shape} size={np.count_nonzero(test_mask)}, label_mask{label_mask.shape} size={np.count_nonzero(label_mask)}")
-        return np.expand_dims(sample_weights, 0), test_mask
+        return np.expand_dims(sample_weights, 0), np.expand_dims(test_mask, 0)
 
     # def train_test_split(self, data: np.ndarray, class_data: np.ndarray, test_size: float ) -> List[np.ndarray]:
     #     lgm().log( f"train_test_split-> data{data.shape} labels{class_data.shape}")
@@ -112,20 +112,29 @@ class SpatialModelWrapper(KerasLearningModel):
         from spectraclass.model.labels import lm
         t1 = time.time()
         blocks: List[Block] = lm().getTrainingBlocks()
+        self.training_data, self.training_labels, self.sample_weight, self.test_mask = None, None, None, None
         for block in blocks:
-            self.training_data, self.training_labels, self.sample_weight, self.test_mask = self.get_training_set( block, **kwargs )
-            if np.count_nonzero( self.training_labels > 0 ) > 0:
-                lgm().log(f"Learning mapping with shapes: spectral_data{self.training_data.shape}, class_data{self.training_labels.shape}, sample_weight{self.sample_weight.shape}")
-                self.fit( self.training_data, self.training_labels, sample_weight=self.sample_weight, **kwargs )
+            training_data, training_labels, sample_weight, test_mask = self.get_training_set( block, **kwargs )
+            if np.count_nonzero( training_labels > 0 ) > 0:
+                if self.training_data is None:
+                    self.training_data, self.training_labels, self.sample_weight, self.test_mask = training_data, training_labels, sample_weight, test_mask
+                else:
+                    self.training_data =   np.concatenate( (self.training_data,   training_data) )
+                    self.training_labels = np.concatenate( (self.training_labels, training_labels) )
+                    self.sample_weight =   np.concatenate( (self.sample_weight,   sample_weight) )
+                    self.test_mask =       np.concatenate( (self.test_mask,       test_mask) )
+        lgm().log(f"Learning mapping with shapes: spectral_data{self.training_data.shape}, class_data{self.training_labels.shape}, sample_weight{self.sample_weight.shape}")
+        self.fit( self.training_data, self.training_labels, sample_weight=self.sample_weight, **kwargs )
         lgm().log(f"Completed Spatial learning in {time.time() - t1} sec.")
 
     @exception_handled
     def epoch_callback(self, epoch):
         if (self.test_mask is not None) and (self.test_size > 0.0):
-            prediction = self.predict( self.training_data )
-            test_results = np.equal( prediction.flatten(), self.training_labels.squeeze().argmax(axis=1) )[ self.test_mask ]
-            accuracy = np.count_nonzero( test_results ) / test_results.size
-            lgm().log( f"Epoch[{epoch}]-> Test[{test_results.size}] accuracy: {accuracy:.4f}" )
+            for iBlock in range( self.training_data.shape[0] ):
+                prediction = self.predict( self.training_data[iBlock] )
+                test_results = np.equal( prediction.flatten(), self.training_labels.squeeze().argmax(axis=1) )[ self.test_mask[iBlock] ]
+                accuracy = np.count_nonzero( test_results ) / test_results.size
+                lgm().log( f"Epoch[{epoch}]-> BLOCK-{iBlock}: Test[{test_results.size}] accuracy: {accuracy:.4f}" )
 
     def predict( self, data: np.ndarray, **kwargs ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
