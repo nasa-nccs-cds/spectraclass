@@ -22,6 +22,7 @@ class SpatialModelWrapper(KerasLearningModel):
         self.training_data = None
         self.training_labels = None
         self.sample_weight = None
+        self._training_layers: Dict[Tuple,int] = {}
 
     @classmethod
     def flatten( cls, shape, nfeatures ):
@@ -56,6 +57,7 @@ class SpatialModelWrapper(KerasLearningModel):
         label_weights = {iC: label_weights[iC] / weights_sum for iC in range(nLabels)}
         return label_weights
 
+    @exception_handled
     def get_training_set(self, block: Block, **kwargs ) -> Tuple[np.ndarray,np.ndarray,Optional[np.ndarray],Optional[np.ndarray]]:
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.data.base import DataManager, dm
@@ -63,10 +65,10 @@ class SpatialModelWrapper(KerasLearningModel):
         label_map: np.ndarray  = lm().get_label_map( block=block ).values.flatten()
         base_data: xa.DataArray = block.getModelData(True) if dm().use_model_data else block.getSpectralData(True)
         tdims = [ base_data.dims[1], base_data.dims[2], base_data.dims[0] ]
-        lgm().log(f"get_training_set->base_data: shape={base_data.shape} dims={base_data.dims} tdims={tdims}")
         training_data: np.ndarray = base_data.transpose(*tdims).fillna(0.0).expand_dims('batch', 0).values
         training_labels = np.expand_dims( LearningModel.index_to_one_hot( label_map ), 0 )
         sample_weight, test_mask = self.get_sample_weight( label_map )
+        lgm().log(f">> get_training_set{(block.tile_index,block.block_coords)}->base_data: shape={base_data.shape} dims={base_data.dims} tdims={tdims}, nlabels={np.count_nonzero(training_labels)}")
         return ( training_data, training_labels, sample_weight, test_mask )
 
     @classmethod
@@ -94,6 +96,7 @@ class SpatialModelWrapper(KerasLearningModel):
             from spectraclass.gui.spatial.map import MapManager, mm
             from spectraclass.model.labels import LabelsManager, Action, lm
             input_data: xa.DataArray = self.get_input_data()
+            block: Block = tm().getBlock()
             classifcation: np.ndarray = self.predict( input_data.values, **kwargs )
             lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> CLASSIFY, result shape = {classifcation.shape}, vrange = [{classifcation.min()}, {classifcation.max()}] ")
             classification = xa.DataArray(  classifcation,
@@ -101,7 +104,7 @@ class SpatialModelWrapper(KerasLearningModel):
                                             coords=dict( blocks = range(classifcation.shape[0]),
                                                          y= input_data.coords['y'],
                                                          x= input_data.coords['x'] ) )
-            block_index = 0    #TODO -> get correct index
+            block_index = self.get_training_layer_index( block )
             mm().plot_labels_image( classification[block_index] )
             lm().addAction("classify", "application")
             return classification
@@ -117,17 +120,27 @@ class SpatialModelWrapper(KerasLearningModel):
         self.training_data, self.training_labels, self.sample_weight, self.test_mask = None, None, None, None
         for block in blocks:
             training_data, training_labels, sample_weight, test_mask = self.get_training_set( block, **kwargs )
-            if np.count_nonzero( training_labels > 0 ) > 0:
-                if self.training_data is None:
-                    self.training_data, self.training_labels, self.sample_weight, self.test_mask = training_data, training_labels, sample_weight, test_mask
-                else:
-                    self.training_data =   np.concatenate( (self.training_data,   training_data) )
-                    self.training_labels = np.concatenate( (self.training_labels, training_labels) )
-                    self.sample_weight =   np.concatenate( (self.sample_weight,   sample_weight) )
-                    self.test_mask =       np.concatenate( (self.test_mask,       test_mask) )
+            nlabels = np.count_nonzero( training_labels )
+            if nlabels > 0:
+                lgm().log( f"Adding {nlabels} labels for block {block.block_coords} of image {block.tile_index}")
+                self.training_data =   self.concat( self.training_data,   training_data )
+                self.training_labels = self.concat( self.training_labels, training_labels )
+                self.sample_weight =   self.concat( self.sample_weight,   sample_weight )
+                self.test_mask =       self.concat( self.test_mask,       test_mask )
+                self.set_training_layer_index( block, self.training_data.shape[0] - 1 )
         lgm().log(f"Learning mapping with shapes: spectral_data{self.training_data.shape}, class_data{self.training_labels.shape}, sample_weight{self.sample_weight.shape}")
         self.fit( self.training_data, self.training_labels, sample_weight=self.sample_weight, **kwargs )
         lgm().log(f"Completed Spatial learning in {time.time() - t1} sec.")
+
+    @classmethod
+    def concat( cls, base_array: np.ndarray, new_array: np.ndarray) -> np.ndarray:
+        return new_array if (base_array is None) else np.concatenate( (base_array, new_array) )
+
+    def set_training_layer_index(self, block: Block, layer_index ):
+        self._training_layers[ (block.tile_index, block.block_coords) ] = layer_index
+
+    def get_training_layer_index(self, block: Block ) -> int:
+        return self._training_layers.get( (block.tile_index, block.block_coords), -1 )
 
     @exception_handled
     def epoch_callback(self, epoch):

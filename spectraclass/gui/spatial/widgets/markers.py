@@ -25,18 +25,15 @@ class Marker:
     def block_coords(self) -> Tuple:
         return tuple(self.block_index)
 
-    @property
-    def active(self) -> bool:
+    def active(self, **kwargs) -> bool:
         from spectraclass.data.spatial.tile.manager import tm
-        return (self.block_coords == tm().block_index) and (self.image_index == tm().image_index)
-
-    def relevant(self, mtype: str ) -> bool:
-        from spectraclass.data.spatial.tile.manager import tm
-        rv = self.active and ((mtype is None) or (self.type == mtype))
-        if not self.active:
-            lgm().log( f"Rejecting inactive marker[{self.type}]:")
-            lgm().log( f"block_index: {self.block_index} <-> {tm().block_index},  image_index: {self.image_index} <-> {tm().image_index}" )
+        block: Block = kwargs.get( 'block', tm().getBlock() )
+        rv = ( self.block_coords == block.block_coords ) and (self.image_index == block.tile_index )
+        if not rv: lgm().log( f"Rejecting inactive marker: {self.block_coords} <-> {block.block_coords}" )
         return rv
+
+    def relevant(self, mtype: str, **kwargs ) -> bool:
+        return self.active(**kwargs) and ((mtype is None) or (self.type == mtype))
 
     @property
     def pids(self) -> np.ndarray:
@@ -109,10 +106,10 @@ class MarkerManager( PointsInteractor ):
     PICK_DIST = 5
 
     def __init__(self, ax ):
-        super(MarkerManager, self).__init__( ax )
         self._adding_marker = False
         self._markers = {}
         self._probes = {}
+        super(MarkerManager, self).__init__( ax )
 
     def clear(self):
         self._markers = {}

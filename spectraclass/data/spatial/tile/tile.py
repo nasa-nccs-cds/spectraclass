@@ -403,6 +403,10 @@ class Block(DataContainer):
         self.tile.initialize()
         return initialized
 
+    @property
+    def index(self) -> Tuple[int,Tuple]:
+        return (self.tile_index, self.block_coords)
+
     def threshold_record(self, model_data: bool, iFrame: int ) -> ThresholdRecord:
         from spectraclass.data.base import dm
         from spectraclass.data.spatial.tile.manager import TileManager, tm

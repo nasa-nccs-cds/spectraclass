@@ -178,7 +178,7 @@ class LabelsManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import tm
         self.clearTransientMarkers(marker)
         self._markers.append( marker )
-        lgm().log(f"LabelsManager[{tm().image_index}:{tm().block_index}].addMarker: cid={marker.cid}, #pids={len(marker.pids)}, active = {marker.active}, block={marker.block_index}, image={marker.image_index}" )
+        lgm().log(f"LabelsManager[{tm().image_index}:{tm().block_index}].addMarker: cid={marker.cid}, #pids={len(marker.pids)}, active = {marker.active()}, block={marker.block_index}, image={marker.image_index}" )
 
     def popMarker(self, mtype: str = None ) -> Optional[Marker]:
         for iM in range( len(self._markers)-1, -1, -1 ):
@@ -187,7 +187,7 @@ class LabelsManager(SCSingletonConfigurable):
 
     @property
     def markers(self):
-        return [m for m in self._markers if m.active]
+        return [m for m in self._markers if m.active()]
 
     def getMarkers(self) -> List[Marker]:
         return self._markers
@@ -273,6 +273,7 @@ class LabelsManager(SCSingletonConfigurable):
     def getTrainingBlocks(self) -> List[Block]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block_data = { ( marker.image_index, marker.block_coords ) for marker in self._markers }
+        lgm().log( f" ----------------------------->>>  getTrainingBlocks: block_data= {block_data}" )
         return [ tm().getBlock(tindex=tindex, bindex=bindex) for (tindex,bindex) in block_data ]
 
     def getLabelsArray(self) -> xa.DataArray:
@@ -418,13 +419,13 @@ class LabelsManager(SCSingletonConfigurable):
         markers = self.getMarkers()
         lgm().log( f" *GET LABEL MAP: {len(markers)} markers")
         for marker in markers:
-            if marker.relevant(mtype):
+            if marker.relevant(mtype,block=block):
                 if marker.mask is not None:
                     fmask = marker.mask.flatten()
-                    lgm().log(f" Setting {np.count_nonzero(fmask)} labels for cid = {marker.cid}")
+                    lgm().log(f" Setting {np.count_nonzero(fmask)} labels for cid = {marker.cid}, block={block.index}")
                     np.ravel(cmap)[ fmask ] = marker.cid
                 else:
-                    lgm().log( f" Setting {len(marker.pids)} labels for cid = {marker.cid}" )
+                    lgm().log( f" Setting {len(marker.pids)} labels for cid = {marker.cid}, block={block.index}" )
                     for pid in marker.pids:
                         if projected:
                             idx = block.gid2indices(pid)
