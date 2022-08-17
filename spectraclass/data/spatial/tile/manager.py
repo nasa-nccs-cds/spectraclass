@@ -158,9 +158,9 @@ class TileManager(SCSingletonConfigurable):
         tindex = kwargs.get( 'tindex' )
         if (bindex is None) and ('block' in kwargs): bindex = kwargs['block'].block_coords
         init_bindex = self.block_index if (bindex is None) else bindex
-        self.block_index = self.tile.get_valid_block_coords( init_bindex )
+        block_index = self.tile.get_valid_block_coords( init_bindex )
         tile = self.tile if (tindex is None) else self.get_tile( tindex )
-        return tile.getDataBlock( self.block_index[0], self.block_index[1] )
+        return tile.getDataBlock( block_index[0], block_index[1] )
 
     @exception_handled
     def getMask(self) -> Optional[np.ndarray]:

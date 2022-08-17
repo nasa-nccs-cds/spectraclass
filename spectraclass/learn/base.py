@@ -111,13 +111,12 @@ class LearningModel:
             block = tm().getBlock()
             lgm().log( f" APPLY classification: block={block.block_coords}" )
             input_data: xa.DataArray = self.get_input_data()
-            prediction: np.ndarray = self.predict( input_data.values, **kwargs )
+            prediction: np.ndarray = self.predict( input_data.values, log=True, **kwargs )
             classification = xa.DataArray(prediction, dims=['samples', 'classes'], coords=dict(samples=input_data.coords['samples'], classes=range(prediction.shape[1])))
             if classification.ndim == 1: classification = classification.reshape( [classification.size, 1] )
             overlay_image: xa.DataArray = block.points2raster(classification)
             mm().plot_labels_image(overlay_image)
             lm().addAction("classify", "application")
-     #       lm().set_classification( np.argmax(prediction, axis=1) )
             return classification
         except NotFittedError:
             ufm().show( "Must learn a mapping before applying a classification", "red")
@@ -168,6 +167,7 @@ class KerasLearningModel(LearningModel):
         args = dict( epochs=self.nepochs, callbacks=self.callbacks, verbose=2, **self.config, **kwargs )
         if class_data.ndim == 1: class_data = self.index_to_one_hot( class_data )
         lgm().log( f"KerasLearningModel.fit: data{data.shape} labels{class_data.shape} args={args}" )
+        ufm().show( "Runnning learning algorithm... ")
         self._model.fit( data, class_data, **args )
 
     @exception_handled

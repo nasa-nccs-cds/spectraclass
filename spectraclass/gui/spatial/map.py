@@ -284,6 +284,7 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def plot_labels_image(self, classification: xa.DataArray = None ):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         if classification is None:
             if self._classification_data is not None:
                 self._classification_data = xa.zeros_like( self._classification_data )
@@ -294,14 +295,14 @@ class MapManager(SCSingletonConfigurable):
 
         if self._classification_data is not None:
             vrange = [ self._classification_data.values.min(), self._classification_data.values.max() ]
+            block: Block = tm().getBlock()
             if self.labels_image is None:
                 alpha, cmap, norm = self.layers.alpha("labels"), self.cspecs['cmap'], self.cspecs['norm']
                 lgm().log(f"  create labels image, shape={self._classification_data.shape}, dims={self._classification_data.dims}, vrange={vrange}, cmap={cmap}, norm={norm}  ")
                 self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=alpha, cmap=cmap, norm=norm, zorder=3.0, add_colorbar=False)
             else:
-                from spectraclass.data.spatial.tile.manager import TileManager, tm
-                block: Block = tm().getBlock()
-                lgm().log(f"  update labels image, shape={self._classification_data.shape}, vrange={vrange}  ")
+
+                lgm().log(f"  update labels image, block={block.block_coords}, shape={self._classification_data.shape}, vrange={vrange}  ")
                 self.labels_image.set_data( self._classification_data.values )
                 self.labels_image.set_extent( block.extent )
                 self.labels_image.changed()

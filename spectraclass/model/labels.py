@@ -282,7 +282,7 @@ class LabelsManager(SCSingletonConfigurable):
 
     def getLabelDataset(self) -> xa.Dataset:
         data_arrays = {}
-        labeled_blocks: List[Block] = self.getLabeledBlocks()
+        labeled_blocks: List[Block] = self.getTrainingBlocks()
         for block in labeled_blocks:
             lname = f"labels-{block.tile_index}-{block.block_coords[0]}-{block.block_coords[1]}"
             data_arrays[ lname ] = self.get_label_map( block=block )
@@ -377,14 +377,6 @@ class LabelsManager(SCSingletonConfigurable):
         for m in self.markers:
             if (m.cid > 0): pids.extend( m.pids )
         return pids
-
-    def getLabeledBlocks(self) -> List[Block]:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        blocks = []
-        for m in self.markers:
-            tile = tm().get_tile( m.image_index )
-            blocks.append( tile.getDataBlock( m.block_index[0], m.block_index[1] ) )
-        return blocks
 
     def getLabelMap( self, update_directory_table = False ) -> Dict[int,Set[int]]:
         from spectraclass.gui.unstructured.table import tbm

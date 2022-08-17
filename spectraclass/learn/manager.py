@@ -274,7 +274,7 @@ class ClassificationManager(SCSingletonConfigurable):
 
     @exception_handled
     def apply_classification( self, **kwargs  ):
-        lgm().log( f"apply_classification: MODEL = {self.mid} ")
+        lgm().log( f"apply_classification: MODEL({hex(id(self.model))}) = {self.mid} ")
         self.model.apply_classification( **kwargs  )
 
 

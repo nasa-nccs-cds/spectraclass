@@ -21,6 +21,9 @@ class Marker:
         self._pids: np.ndarray = pids if isinstance( pids, np.ndarray ) else np.array( pids, dtype=np.int64 )
         self._mask: Optional[np.ndarray] = kwargs.get( 'mask', None )
 
+    def bid(self) -> Tuple[int,Tuple]:
+        return (  self.image_index, self.block_coords )
+
     @property
     def block_coords(self) -> Tuple:
         return tuple(self.block_index)
