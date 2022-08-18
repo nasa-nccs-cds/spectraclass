@@ -194,6 +194,12 @@ class mplGraphPlot(LinePlot):
             mm().highlight_points( [self.selected_pid], [selected_lrec.cid] )
             self.plot()
 
+    def mark_selection(self):
+        from spectraclass.gui.spatial.map import MapManager, mm
+        if self.selected_pid >= 0:
+            mm().mark_point( self.selected_pid )
+            mm().plot_markers_image(clear_highlights=True)
+
     @exception_handled
     def on_key_press(self, event: KeyEvent ):
         if event.inaxes == self.ax:

@@ -222,7 +222,6 @@ class MarkerManager( PointsInteractor ):
 
     @exception_handled
     def on_button_press(self, event: MouseEvent ):
-        from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.map import MapManager, mm
         from matplotlib.image import AxesImage
         inaxes = event.inaxes == self.ax
