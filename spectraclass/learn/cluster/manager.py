@@ -26,21 +26,24 @@ def clm() -> "ClusterManager":
 
 class ClusterMagnitudeWidget(ipw.HBox):
 
-    def __init__(self, index: int ):
+    def __init__(self, index: int, **kwargs ):
         color = f"rgb{ clm().cluster_color(index) }"
-        lgm().log( f"ClusterMagnitudeWidget[{index}]: color = {color}")
-        self.label = ipw.Button( description=f"Cluster-{index}", style=dict( button_color=color ) )
-        if index == 0: lgm().log(f" label.style = {self.label.style.keys}")
+        self.init_value = kwargs.get( 'value', 1.0 )
+        handler = kwargs.get( 'handler', False )
+        range = kwargs.get( 'range', [0.0,4.0] )
+        cname = "Threshold" if index == 0 else f"Cluster-{index}"
+        self.label = ipw.Button( description=cname, style=dict( button_color=color ) )
         self._index = index
-        self.slider = ipw.FloatSlider( 1.0, description="", min=0.0, max=4.0, step=0.1 )
+        self.slider = ipw.FloatSlider( self.init_value, description="", min=range[0], max=range[1], step=0.1 )
         self.label.on_click( self.reset )
         ipw.HBox.__init__( self, [self.label,self.slider] )
+        if handler: self.on_change( handler )
 
     def on_change(self, handler ):
         self.slider.observe( partial( handler, self._index ), 'value' )
 
     def reset(self, *args ):
-        self.slider.value = 0.5
+        self.slider.value = self.init_value
 
 class ClusterManager(SCSingletonConfigurable):
     modelid = tl.Unicode("kmeans").tag(config=True, sync=True)
@@ -56,6 +59,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._cluster_raster: xa.DataArray = None
         self._marked_colors: Dict[Tuple,Tuple[float,float,float]] = {}
         self._marked_clusters: Dict[Tuple, List] = {}
+        self.thresh_slider = None
         self._cluster_points: xa.DataArray = None
         self._models: Dict[str,ClusterBase] = {}
         self._model_selector = ipw.Select( options=self.mids, description='Methods:', value=self.modelid, disabled=False,
@@ -74,7 +78,8 @@ class ClusterManager(SCSingletonConfigurable):
         hsv = np.full( [ncolors,3], 1.0 )
         hsv[:,0] = np.linspace( 0.0, 1.0, ncolors+1 )[:ncolors]
         hsv[:, 1] = np.full( [ncolors], 0.4 )
-        self._cluster_colors = hsv_to_rgb(hsv)
+        self._cluster_colors = np.full( [ncolors+1,3], 1.0 )
+        self._cluster_colors[1:ncolors+1,:] = hsv_to_rgb(hsv)
 
     @property
     def mids(self) -> List[str]:
@@ -123,7 +128,8 @@ class ClusterManager(SCSingletonConfigurable):
         return colors
 
     def get_cluster_colormap( self ) -> LinearSegmentedColormap:
-        colors = self.get_cluster_colors()
+        colors: np.ndarray = self.get_cluster_colors()
+        lgm().log( f'get_cluster_colormap: ncolors={colors.shape[0]}, colors = {colors.tolist()}')
         return LinearSegmentedColormap.from_list( 'clusters', colors, N=colors.shape[0] )
 
     @property
@@ -139,10 +145,12 @@ class ClusterManager(SCSingletonConfigurable):
         ( tindex, bindex, icluster ) = ckey
         return icluster if ( (tindex==tm().image_index) and (bindex==tm().block_coords) )  else -1
 
-    def cluster_color(self, index: int ) -> Tuple[int]:
-        colors = self.get_cluster_colors()
-        rgb: np.ndarray = colors[ index ] * 255.99
-        return tuple( rgb.astype(np.int).tolist() )
+    def cluster_color(self, index: int ) -> Tuple[int,int,int]:
+        if index == 0: return ( 1, 1, 1 )
+        else:
+            colors = self.get_cluster_colors()
+            rgb: np.ndarray = colors[ index ] * 255.99
+            return tuple( rgb.astype(np.int).tolist() )
 
     def get_layer_colormap( self ):
         ncolors = self._cluster_colors.shape[0]
@@ -150,14 +158,19 @@ class ClusterManager(SCSingletonConfigurable):
         for (key, value) in self.marked_colors.items(): colors[key] = list(value) + [1.0]
         return LinearSegmentedColormap.from_list( 'cluster-layer', colors, N=ncolors )
 
-    def clear(self):
+    def clear(self, reset=True ):
         self._cluster_points = None
         self._cluster_raster = None
+        self.threshold_mask = None
+        if self.thresh_slider is not None:
+            self.thresh_slider.value = 0.0
+        if reset: self.model.reset()
 
     def run_cluster_model( self, data: xa.DataArray ):
         lgm().log( f"Creating clusters from input data shape = {data.shape}")
-        self._cluster_points = self.model.cluster( data )
-        self._cluster_raster = None
+        self.clear()
+        self.model.cluster(data)
+        self._cluster_points = self.model.cluster_data
 
     def cluster(self, data: xa.DataArray ) -> xa.DataArray:
         self.run_cluster_model( data )
@@ -238,20 +251,18 @@ class ClusterManager(SCSingletonConfigurable):
 
     @exception_handled
     def tuning_gui(self) -> ipw.DOMWidget:
-        nclusters = 10 # self._ncluster_selector.value
-        tuning_sliders= []
-        for icluster in range( self._max_culsters ):
-            tuning_slider = ClusterMagnitudeWidget( icluster )
-            tuning_slider.on_change( self.tune_cluster )
-            tuning_sliders.append( tuning_slider )
+        self.thresh_slider = ClusterMagnitudeWidget( 0, range=[0.0,1.0], value=0.0, handler=self.tune_cluster )
+        tuning_sliders= [ self.thresh_slider ]
+        for icluster in range( 1, self._max_culsters+1 ):
+            tuning_sliders.append( ClusterMagnitudeWidget( icluster, handler=self.tune_cluster ) )
         return  ipw.VBox( tuning_sliders, layout=ipw.Layout( width="600px", border='2px solid firebrick' ) )
 
     @exception_handled
     def tune_cluster(self, icluster: int, change: Dict ):
         from spectraclass.gui.spatial.map import MapManager, mm
-        self.clear()
-        self._cluster_points = self.model.rescale( icluster, change['new'] )
-        self._cluster_raster = None
+        self.clear( reset=False )
+        self.model.rescale(icluster, change['new'])
+        self._cluster_points = self.model.cluster_data
         mm().plot_cluster_image( self.get_cluster_map() )
 
 class ClusterSelector:

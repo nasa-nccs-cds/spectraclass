@@ -13,12 +13,20 @@ class  ClusterBase(TransformerMixin,ClusterMixin,BaseEstimator):
     def cluster_data(self) -> xa.DataArray:
         raise NotImplementedError("Call to abstract property of base class: ClusterBase.cluster_data")
 
-    def rescale(self, index: int, sval: float ) -> xa.DataArray:
-        lgm().log( f"Cluster[{index}].rescale: value = {sval}")
-        self.cscale[ 0, index ] = sval
-        return self.cluster_data
+    def rescale(self, index: int, sval: float ):
+        if index > 0:
+            lgm().log(f"Cluster[{index}].rescale: value = {sval}")
+            self.cscale[ 0, index ] = sval
+        else:
+            self.threshold( sval )
 
-    def cluster( self, data: xa.DataArray, y=None ) -> np.ndarray:
+    def threshold(self, sval: float):
+        pass
+
+    def reset(self):
+        pass
+
+    def cluster( self, data: xa.DataArray, y=None ):
         raise NotImplementedError( "Call to abstract method of base class: ClusterBase.fit_predict")
 
     def _update_nclusters( self ):

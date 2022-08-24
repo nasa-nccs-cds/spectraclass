@@ -9,13 +9,15 @@ from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import matplotlib.pyplot as plt
 from .manager import LinePlot
+import ipywidgets as ipw
 
 class LineRec:
 
-    def __init__(self, line: Optional[Line2D], pid: int, cid: int ):
+    def __init__(self, line: Optional[Line2D], pid: int, cid: int, **kwargs ):
         self.line: Optional[Line2D] = line
         self.pid: int = pid
         self.cid: int = cid
+        self.mpids: List[int] = kwargs.get( 'mpids', [] )
 
     def clear(self):
         if self.line is not None:
@@ -78,7 +80,14 @@ class mplGraphPlot(LinePlot):
             if not self.standalone: plt.ion()
 
     def gui(self):
-        return self.fig.canvas
+        return ipw.VBox([ self.fig.canvas, self.control_panel() ] )
+
+    def control_panel(self) -> ipw.DOMWidget:
+        mark_button = ipw.Button(description="Reclassify", layout=ipw.Layout(width='120px'), border='1px solid dimgrey')
+        mark_button.on_click( self.mark_selection )
+        unmark_button = ipw.Button(description="Unclassify", layout=ipw.Layout(width='120px'), border='1px solid dimgrey')
+        unmark_button.on_click( self.delete_selection )
+        return ipw.HBox([ mark_button, unmark_button ] )
 
     def clear(self, reset: bool = True ):
         for lrec in self.lrecs.values(): lrec.clear()
@@ -136,7 +145,7 @@ class mplGraphPlot(LinePlot):
         pids = mpids[::skip_index]
         x,y = self.lx(pids), self.ly(pids)
         if y is not None:
-            lrecs = [ LineRec(None, pid, cid) for pid in pids ]
+            lrecs = [ LineRec(None, pid, cid, mpids=mpids) for pid in pids ]
             for lrec in lrecs: self.lrecs[lrec.pid] = lrec
             lines = self.ax.plot( x, y, picker=True, pickradius=2, color=color, alpha=0.2, linewidth=1.0 )
             self.ax.figure.canvas.draw_idle()
@@ -144,18 +153,33 @@ class mplGraphPlot(LinePlot):
         else:
             ufm().show(f"Points out of bounds","red")
 
+    def expose_nearby_lines(self, pid: int ):
+        from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.gui.control import UserFeedbackManager, ufm
+        y: np.ndarray = self.y
+        sely: np.ndarray = self.ly(pid)
+        ufm().show(f"Compare: y: {y.shape}, self: {sely.shape}", "blue")
+
     @exception_handled
     def get_plotspecs(self):
         from spectraclass.model.labels import LabelsManager, lm
         colors, alphas, lws = [], [], []
-        selected: bool = (self.selected_pid >= 0)
+        test_ids = {}
      #   lgm().log( f"create plotspecs for {len(self.lrecs.items())} lines, pids({self.selected_pid})->{self.pids}")
         for (pid, lrec) in self.lrecs.items():
             selection = ( pid == self.selected_pid )
-            alphas.append( (1.0 if selection else 0.2) if selected else 1.0 )
+            alphas.append( 1.0 if selection else 0.2 )
             colors.append( lm().graph_colors[ lrec.cid ] )
             lws.append( 2.0 if selection else 1.0 )
-        return dict( color=colors, alpha=alphas, lw=lws)
+            idx = len(colors)-1
+            if ( pid in [ 22025, 22663 ] ) or selection:
+                test_ids[ idx ] = pid
+        if self.selected_pid >= 0:
+            lgm().log(f" ^^^ get_plotspecs-test: " )
+            for tpid in [22025, 22663 ]:
+                lrec = self.lrecs[tpid]
+                lgm().log(f" ----->>> pid={tpid}, cid={lrec.cid} ")
+        return dict( color=colors, alpha=alphas, lw=lws, test_ids = test_ids )
 
     @property
     def cids( self ):
@@ -166,10 +190,13 @@ class mplGraphPlot(LinePlot):
         self.ax.title.text = self.title
         if clear_selection: self.selected_pid = -1
         ps = self.get_plotspecs()
+        colors, alphas, linewidths = ps['color'], ps['alpha'], ps['lw']
+        test_colors = { pid: colors[idx] for (idx,pid) in ps['test_ids'].items() }
+        lgm().log(f"GRAPHPlot->test colors: {test_colors}")
         try:
-            self.ax.set_prop_cycle( color=ps['color'], alpha=ps['alpha'], linewidth=ps['lw'] )
+            self.ax.set_prop_cycle( color=colors, alpha=alphas, linewidth=linewidths )
         except Exception as err:
-            lgm().log(f"set_prop_cycle: color={ps['color']}, alpha={ps['alpha']}, linewidth={ps['lw']}")
+            lgm().log(f"set_prop_cycle: color={colors}, alpha=alphas, linewidth={linewidths}")
             lgm().log( f"## Error setting property cycle: {err}")
         self.update_graph()
 
@@ -194,11 +221,17 @@ class mplGraphPlot(LinePlot):
             mm().highlight_points( [self.selected_pid], [selected_lrec.cid] )
             self.plot()
 
-    def mark_selection(self):
+    def mark_selection( self, *args ):
         from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.model.labels import LabelsManager, lm
         if self.selected_pid >= 0:
-            mm().mark_point( self.selected_pid )
-            mm().plot_markers_image(clear_highlights=True)
+            lrec: LineRec = self.get_selected_lrec()
+            lrec.cid = lm().current_cid
+            mm().mark_point( lrec.pid, cid=lrec.cid )
+            self.expose_nearby_lines( lrec.pid )
+            mm().plot_markers_image( clear_highlights=True )
+            lgm().log( f"MARK SELECTION: cid={lrec.cid}, pid={lrec.pid}")
+            self.plot()
 
     @exception_handled
     def on_key_press(self, event: KeyEvent ):

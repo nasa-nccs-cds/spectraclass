@@ -82,7 +82,7 @@ class SpatialDataManager(ModeDataManager):
     def reduce(self, data: xa.DataArray):
         if self.reduce_method and (self.reduce_method.lower() != "none") and (self.model_dims>0):
             normed_data = self.pnorm( data )
-            reduced_spectra, reproduction, _ = rm().reduce( normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, modelkey=self.modelkey )[0]
+            reduced_spectra, reproduction, _ = rm().reduce( normed_data, self.reduce_method, self.model_dims, self.reduce_nepochs, modelkey=self.modelkey )[0]
             coords = dict( samples=data.coords['samples'], band=np.arange( self.model_dims )  )
             return xa.DataArray( reduced_spectra, dims=['samples', 'band'], coords=coords )
         return data
@@ -219,7 +219,9 @@ class SpatialDataManager(ModeDataManager):
         coords = { c: np.empty([1]) for c in [ 'x', 'y', 'band', 'samples', 'model' ] }
         return xa.Dataset( data_vars=data_vars, coords=coords )
 
-    def process_block( self, block  ) -> xa.Dataset:
+    def process_block( self, block  ) -> Optional[xa.Dataset]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+
         block_data_file = dm().modal.dataFile(block=block)
         ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
         coord_data = {}
@@ -230,50 +232,41 @@ class SpatialDataManager(ModeDataManager):
         except NoDataInBounds:
             blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
 
-        if blocks_point_data.size > 0:
-            prange0 = (blocks_point_data.values.min(), blocks_point_data.values.max(), blocks_point_data.values.mean())
-            normed_data: xa.DataArray = self.pnorm(blocks_point_data)
-            prange = (normed_data.values.min(), normed_data.values.max(), normed_data.values.mean())
-            lgm().log( f" Preparing point data with shape {normed_data.shape}, range={prange}, #nan={np.count_nonzero(np.isnan(blocks_point_data))}", print=True)
-            blocks_reduction = rm().reduce(normed_data, None, self.reduce_method, self.model_dims, self.reduce_nepochs, modelkey=self.modelkey)
+        if blocks_point_data.size == 0: return None
+        normed_data: xa.DataArray = self.pnorm(blocks_point_data)
+        prange = (normed_data.values.min(), normed_data.values.max(), normed_data.values.mean())
+        lgm().log( f" Preparing point data with shape {normed_data.shape}, range={prange}, #nan={np.count_nonzero(np.isnan(blocks_point_data))}", print=True)
+        (reduced_spectra, reproduction) = rm().reduce(normed_data, self.reduce_method, self.model_dims, self.reduce_nepochs, modelkey=self.modelkey)
+        self.model_dims = reduced_spectra.shape[1]
+        model_coords = dict(samples=normed_data.samples, model=np.arange(self.model_dims))
+        raw_data: xa.DataArray = block.data
+        data_vars = dict(raw=raw_data, norm=normed_data)
+        reduced_dataArray = xa.DataArray(reduced_spectra, dims=['samples', 'model'], coords=model_coords)
+        lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.size} samples", print=True )
+        lgm().log( f" -----> reduction: shape = {reduced_spectra.shape}, #NULL={np.count_nonzero(np.isnan(reduced_spectra))}")
+        lgm().log( f" -----> point_data: shape = {normed_data.shape}, #NULL={np.count_nonzero(np.isnan(normed_data.values))}")
+        data_vars['reduction'] = reduced_dataArray
+        data_vars['reproduction'] = reproduction
+        data_vars['mask'] = xa.DataArray(coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y', 'x'], coords={d: raw_data.coords[d] for d in ['x', 'y']})
+        result_dataset = xa.Dataset(data_vars)
+        result_dataset.attrs['tile_shape'] = tm().tile.data.shape
+        result_dataset.attrs['block_dims'] = tm().block_dims
+        result_dataset.attrs['tile_size'] = tm().tile_size
+        result_dataset.attrs['block_size'] = result_dataset.coords['samples'].size
+        for (aid, aiv) in tm().tile.data.attrs.items():
+            if aid not in result_dataset.attrs:
+                result_dataset.attrs[aid] = aiv
+        lgm().log( f" Writing reduced output to {block_data_file} with {blocks_point_data.size} samples, dset attrs:")
+        for varname, da in result_dataset.data_vars.items():
+            da.attrs['long_name'] = ".".join([normed_data.attrs['file_name'], varname])
+        for vname, v in data_vars.items():
+            lgm().log( f" ---> {vname}: shape={v.shape}, size={v.size}, dims={v.dims}, coords={[':'.join([cid, str(c.shape)]) for (cid, c) in v.coords.items()]}")
+        if os.path.exists(block_data_file):
+            os.remove(block_data_file)
         else:
-            em2 = np.empty(shape=[0, self.model_dims], dtype=np.float)
-            reduced_spectra = xa.DataArray(em2, dims=('samples', 'model'), coords=dict(samples=ea1, model=np.arange(self.model_dims)))
-            blocks_reduction = [(reduced_spectra, blocks_point_data, blocks_point_data), ]
-
-        if blocks_reduction is not None:
-            from spectraclass.data.spatial.tile.manager import TileManager, tm
-            self.model_dims = blocks_reduction[0][0].shape[1]
-            for (reduced_spectra, reproduction, point_data) in blocks_reduction:
-                model_coords = dict(samples=point_data.samples, model=np.arange(self.model_dims))
-                raw_data: xa.DataArray = block.data
-                data_vars = dict(raw=raw_data, norm=point_data)
-                reduced_dataArray = xa.DataArray(reduced_spectra, dims=['samples', 'model'], coords=model_coords)
-                lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.size} samples", print=True )
-                lgm().log( f" -----> reduction: shape = {reduced_spectra.shape}, #NULL={np.count_nonzero(np.isnan(reduced_spectra))}")
-                lgm().log( f" -----> point_data: shape = {point_data.shape}, #NULL={np.count_nonzero(np.isnan(point_data.values))}")
-                data_vars['reduction'] = reduced_dataArray
-                data_vars['reproduction'] = reproduction
-                data_vars['mask'] = xa.DataArray(coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y', 'x'], coords={d: raw_data.coords[d] for d in ['x', 'y']})
-                result_dataset = xa.Dataset(data_vars)
-                result_dataset.attrs['tile_shape'] = tm().tile.data.shape
-                result_dataset.attrs['block_dims'] = tm().block_dims
-                result_dataset.attrs['tile_size'] = tm().tile_size
-                result_dataset.attrs['block_size'] = result_dataset.coords['samples'].size
-                for (aid, aiv) in tm().tile.data.attrs.items():
-                    if aid not in result_dataset.attrs:
-                        result_dataset.attrs[aid] = aiv
-                lgm().log( f" Writing reduced output to {block_data_file} with {blocks_point_data.size} samples, dset attrs:")
-                for varname, da in result_dataset.data_vars.items():
-                    da.attrs['long_name'] = ".".join([point_data.attrs['file_name'], varname])
-                for vname, v in data_vars.items():
-                    lgm().log( f" ---> {vname}: shape={v.shape}, size={v.size}, dims={v.dims}, coords={[':'.join([cid, str(c.shape)]) for (cid, c) in v.coords.items()]}")
-                if os.path.exists(block_data_file):
-                    os.remove(block_data_file)
-                else:
-                    os.makedirs(os.path.dirname(block_data_file), exist_ok=True)
-                result_dataset.to_netcdf(block_data_file)
-                return result_dataset
+            os.makedirs(os.path.dirname(block_data_file), exist_ok=True)
+        result_dataset.to_netcdf(block_data_file)
+        return result_dataset
 
     @exception_handled
     def generate_metadata(self, **kwargs ):

@@ -33,26 +33,49 @@ class FCM(ClusterBase):
         self.max_iter = kwargs.get('max_iter', 150 )
         self.m = kwargs.get('m', 2.0 )
         self.error: float = kwargs.get( 'error', 1e-5 )
-        self.trained: bool =False
-        self._cluster_data = None
+        self._threshold = 0.0
+        self.threshold_mask = None
+        self.trained: bool = False
         self._samples = None
         self._attrs = None
+        self._fuzzy_cluster_data = None
+
+    def reset(self):
+        self._threshold = 0.0
+        self.threshold_mask = None
+        self.trained: bool =False
+        self._samples = None
+        self._attrs = None
+        self._fuzzy_cluster_data = None
+        lgm().log(f"FCM.cluster: reset")
 
     def _update_nclusters( self ):
-        self._cluster_data = None
+        self._fuzzy_cluster_data = None
+        lgm().log(f"FCM.cluster: update_nclusters")
 
     @property
     def cluster_data(self) -> xa.DataArray:
-        lgm().log( f"FCM.cluster_data: shape = {self._cluster_data}")
-        cdata = np.expand_dims( np.argmax(self._cluster_data * self.cscale, axis=1 ), 1 )
+        cdata = np.expand_dims(np.argmax(self._fuzzy_cluster_data * self.cscale, axis=1), 1) + 1
+        if self._threshold > 0.0: cdata[ self.threshold_mask ] = 0
+        lgm().log( f"FCM.cluster_data: shape = {cdata.shape}, thresh = {self._threshold}, range = [{cdata.min()},{cdata.max()}]")
         return xa.DataArray(cdata, dims=['samples', 'clusters'], name="clusters", coords=dict(samples=self._samples, clusters=[0]), attrs=self._attrs)
 
-    def cluster( self, data: xa.DataArray, y=None ) -> xa.DataArray:
+    def fuzzy_cluster_data(self) -> xa.DataArray:
+        return self._fuzzy_cluster_data
+
+    def cluster( self, data: xa.DataArray, y=None ):
         self._attrs = data.attrs
         self._samples = data.coords[ data.dims[0] ]
         self.fit( data.values )
-        self._cluster_data = self.soft_predict( data.values )
-        return self.cluster_data
+        self._fuzzy_cluster_data = self.soft_predict(data.values)
+        lgm().log(  f"FCM.cluster: data shape = {data.shape}, clusters shape = {self._fuzzy_cluster_data.shape}, range = [{self._fuzzy_cluster_data.min()},{self._fuzzy_cluster_data.max()}]")
+
+    def threshold( self, thresh: float ):
+        self._threshold = thresh
+        if self._fuzzy_cluster_data is not None:
+            cluster_data_peak = self._fuzzy_cluster_data.max(axis=1)
+            self.threshold_mask = cluster_data_peak < self._threshold
+            lgm().log(f"FCM.threshold: cluster data shape = {self._fuzzy_cluster_data.shape}, #gtz = {np.count_nonzero(self.threshold_mask)} ")
 
     def fit(self, X: NDArray) -> None:
         self.rng = np.random.default_rng(self.random_state)
@@ -88,7 +111,9 @@ class FCM(ClusterBase):
         """
         if self._is_trained():
             X = np.expand_dims(X, axis=0) if len(X.shape) == 1 else X
-            return self.soft_predict(X).argmax(axis=-1)
+            fuzzy_result = self.soft_predict(X)
+            lgm().log( f"FCM: fuzzy_result range = [{fuzzy_result.min()},{fuzzy_result.max()}]")
+            return fuzzy_result.argmax(axis=-1)
         raise ReferenceError( "You need to train the model. Run `.fit()` method to this." )
 
     def _is_trained(self) -> bool:

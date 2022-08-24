@@ -120,7 +120,7 @@ class LinePlot(ABC):
         else:              return  sel( xv, self.pids )
 
     @property
-    def y( self ) -> np.ndarray :
+    def y( self ) -> np.ndarray:
         ydata = self._mploty if self._use_model else self._ploty
         return self.normalize( sel( ydata, self.pids ) ).transpose()
 

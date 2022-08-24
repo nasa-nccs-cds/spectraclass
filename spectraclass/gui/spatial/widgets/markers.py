@@ -217,6 +217,7 @@ class MarkerManager( PointsInteractor ):
             point = kwargs.get('point', mm().get_point_coords( gid ) )
             lgm().log( f"mark_point[{cid}], gid={gid}, point={point}")
             m = Marker( "marker", [gid], cid, point=point )
+            self.remove( gid )
             self.add(m)
             return point
 
