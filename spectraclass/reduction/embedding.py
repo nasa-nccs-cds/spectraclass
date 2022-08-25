@@ -99,7 +99,7 @@ class ReductionManager(SCSingletonConfigurable):
         self._encoder =     load_model(  f"{dm().cache_dir}/encoder.{model_dims}.{key}" )
 
     def get_network( self, input_dims: int, model_dims: int, **kwargs ):
-        refresh: bool = kwargs.get('refresh', True )
+        refresh: bool = kwargs.get('refresh', False )
         key: str = kwargs.get( 'modelkey', "" )
         self.vae = kwargs.get( 'vae', False )
         if (self._autoencoder is None) or refresh:
