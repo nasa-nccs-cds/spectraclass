@@ -5,7 +5,9 @@ import ipysheet as ips
 from functools import partial
 import numpy as np
 import scipy, sklearn
-from tensorflow.keras.models import Model
+import tensorflow as tf
+keras = tf.keras
+from keras.models import Model
 from typing import List, Tuple, Optional, Dict, Union
 import traitlets as tl
 import traitlets.config as tlc

@@ -33,6 +33,8 @@ class KMeansCluster(ClusterBase):
     def cluster( self, data: xa.DataArray, y=None ):
         self._attrs = data.attrs
         self._samples = data.coords[ data.dims[0] ]
+ #       drange = [data.values.min(),data.values.max()]
+ #       normed_data: np.ndarray = (data.values - drange[0])/(drange[1]-drange[0])
         self._cluster_data = np.expand_dims( self._model.fit_predict( data.values ), axis=1 ) + 1
 
     def _update_nclusters( self ):

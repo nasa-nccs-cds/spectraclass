@@ -1,16 +1,24 @@
-from typing import List, Union, Tuple, Dict
-from typing import List, Union, Tuple, Optional, Dict
 from ..graph.manager import ActivationFlowManager
 from sklearn.decomposition import PCA, FastICA
-from tensorflow.keras.models import Model
-from tensorflow.keras.models import load_model
+import tensorflow as tf
+keras = tf.keras
+from keras.models import Model
+from keras.models import load_model
 import xarray as xa
-import numpy as np, time, traceback
 from ..model.labels import LabelsManager
 import traitlets as tl
-import traitlets.config as tlc
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from spectraclass.model.base import SCSingletonConfigurable
+import pickle, random, time, numpy as np
+from spectraclass.data.spatial.tile.tile import Block
+from spectraclass.data.spatial.tile.manager import TileManager, tm
+from typing import List, Optional, Dict, Tuple
+import os
+
+def pnorm(data: xa.DataArray, dim: int = 1) -> xa.DataArray:
+    dave, dmag = np.nanmean(data.values, keepdims=True, axis=dim), np.nanstd(data.values, keepdims=True,                                                                             axis=dim)
+    normed_data = (data.values - dave) / dmag
+    return data.copy(data=normed_data)
 
 def norm( x: xa.DataArray, axis = 0 ) -> xa.DataArray:
     return ( x - x.data.mean(axis=axis) ) / x.data.std(axis=axis)
@@ -48,11 +56,11 @@ class ReductionManager(SCSingletonConfigurable):
         self.vae = None
 
     @exception_handled
-    def reduce(self, train_data: xa.DataArray, reduction_method: Optional[str], ndim: int, nepochs: int = 100, **kwargs ) -> Tuple[np.ndarray, xa.DataArray]:
+    def reduce(self, train_data: xa.DataArray, reduction_method: Optional[str], modelkey: str, ndim: int, **kwargs ) -> Tuple[np.ndarray, xa.DataArray]:
         with xa.set_options(keep_attrs=True):
             redm = str(reduction_method).lower()
             if redm in [ "autoencoder", "aec", "ae", "vae" ]:
-                return self.autoencoder_reduction( train_data, ndim, nepochs, vae=(redm=="vae"), **kwargs )
+                return self.autoencoder_reduction( train_data, ndim, modelkey, vae=(redm=="vae"), **kwargs )
             elif redm in [ "pca", "ica" ]:
                 return self.ca_reduction( train_data, ndim, redm )
             else: return  (train_data.data,train_data)
@@ -92,28 +100,36 @@ class ReductionManager(SCSingletonConfigurable):
             reproduction: xa.DataArray = train_input.copy( data = mapper.inverse_transform(reduced_features) )
             return (reduced_features, reproduction )
 
-    def _load_network(self, key: str, model_dims: int, **kwargs ):
-        from spectraclass.data.base import DataManager, dm
-        lgm().log( f"#AEC: LOADING ENCODER from '{dm().cache_dir}/encoder.{model_dims}.{key}'")
-        self._autoencoder = load_model(  f"{dm().cache_dir}/autoencoder.{model_dims}.{key}" )
-        self._encoder =     load_model(  f"{dm().cache_dir}/encoder.{model_dims}.{key}" )
+    def _load_network(self, model_dims: int, key: str  ) -> bool:
+        aefiles = self.autoencoder_files( model_dims, key )
+        if not os.path.exists( aefiles[0] ):
+            lgm().log( f"AEC model file does not exist: {aefiles[0]}")
+            return False
+        else:
+            lgm().log( f"#AEC: LOADING ENCODER from '{aefiles[0]}'")
+            self._autoencoder = load_model(  f"{aefiles[0]}" )
+            self._encoder =     load_model(  f"{aefiles[1]}" )
+            return True
 
-    def get_network( self, input_dims: int, model_dims: int, **kwargs ):
-        refresh: bool = kwargs.get('refresh', False )
-        key: str = kwargs.get( 'modelkey', "" )
-        self.vae = kwargs.get( 'vae', False )
-        if (self._autoencoder is None) or refresh:
-            if key:     self._load_network( key, model_dims, **kwargs )
-            else:
-                if self.vae:  self._build_vae_model(  input_dims, model_dims, **kwargs )
-                else:         self._build_ae_model( input_dims, model_dims, **kwargs )
-        return self._autoencoder, self._encoder, bool(key)
+    def get_trained_network(self, model_dims: int, key: str, **kwargs ):
+        self.vae = kwargs.pop( 'vae', True )
+        if self._autoencoder is None:
+            if not self._load_network( model_dims, key ):
+                self.autoencoder_preprocess( model_dims, key, **kwargs )
+
+    def build_network(self, input_dims: int, model_dims: int, **kwargs):
+        if self.vae:
+            self._build_vae_model(input_dims, model_dims, **kwargs)
+        else:
+            self._build_ae_model(input_dims, model_dims, **kwargs)
 
     def _build_ae_model(self, input_dims: int, model_dims: int, **kwargs):
-        from tensorflow.keras.layers import Input, Dense
-        from tensorflow.keras.models import Model
-        from tensorflow.keras import losses, regularizers
-        lgm().log(f"#AEC: BUILD AEC NETWORK")
+        import tensorflow as tf
+        keras = tf.keras
+        from keras.layers import Input, Dense
+        from keras.models import Model
+        from keras import losses, regularizers
+        lgm().log(f"#AEC: RM BUILD AEC NETWORK: {input_dims} -> {model_dims}")
         sparsity: float = kwargs.get( 'sparsity', 0.0 )
         reduction_factor = 2
         inputlayer = Input(shape=[input_dims])
@@ -139,8 +155,10 @@ class ReductionManager(SCSingletonConfigurable):
         self.log = lgm().log(f" BUILD Autoencoder network: input_dims = {input_dims} ")
 
     def vae_loss(self, inputs, outputs, n_features, z_mean, z_log):
-        from tensorflow.keras import backend as K
-        from tensorflow.keras.losses import mse, binary_crossentropy
+        import tensorflow as tf
+        keras = tf.keras
+        from keras import backend as K
+        from keras.losses import mse, binary_crossentropy
         """ Loss = Recreation loss + Kullback-Leibler loss
         for probability function divergence (ELBO).
         gamma > 1 and capacity != 0 for beta-VAE
@@ -155,7 +173,9 @@ class ReductionManager(SCSingletonConfigurable):
         return K.mean(reconstruction_loss + kl_loss)
 
     def sampling(self, args):
-        from tensorflow.keras import backend as K
+        import tensorflow as tf
+        keras = tf.keras
+        from keras import backend as K
         """Reparametrisation by sampling from Gaussian, N(0,I)
         To sample from epsilon = Norm(0,I) instead of from likelihood Q(z|X)
         with latent variables z: z = z_mean + sqrt(var) * epsilon
@@ -177,12 +197,15 @@ class ReductionManager(SCSingletonConfigurable):
         return z_mean + K.exp(0.5 * z_log) * epsilon
 
     def _build_vae_model(self, input_dims: int, model_dims: int, **kwargs ):
-        from tensorflow.keras.layers import Input, Dense, Dropout, Lambda
-        from tensorflow.keras.models import Model
-        from tensorflow.keras.regularizers import l2
+        import tensorflow as tf
+        keras = tf.keras
+        from keras.layers import Input, Dense, Dropout, Lambda
+        from keras.models import Model
+        from keras.regularizers import l2
         hidden_activation = "tanh"
         output_activation = 'linear'
         optimizer = 'adam'  # 'rmsprop'
+        lgm().log(f"#AEC: RM BUILD VAE NETWORK: {input_dims} -> {model_dims}")
         reduction_factor = 2.0
         verbose = 1
         dropout_rate = 0.1
@@ -222,29 +245,58 @@ class ReductionManager(SCSingletonConfigurable):
         if verbose >= 1: self._autoencoder.summary()
         self.log = lgm().log(f" BUILD Autoencoder network: input_dims = {input_dims} ")
 
+    def autoencoder_files(self, model_dims: int, key: str ) -> List[str]:
+        from spectraclass.data.base import DataManager, dm
+        aefiles = [f"{dm().cache_dir}/autoencoder.{model_dims}.{key}", f"{dm().cache_dir}/encoder.{model_dims}.{key}"]
+        return aefiles
 
-    def autoencoder_reduction(self, train_input: xa.DataArray, model_dims: int, epochs: int = 100, **kwargs ) -> Tuple[np.ndarray, xa.DataArray]:
-        from tensorflow.keras.models import Model
-        autoencoder: Model = None
+    def autoencoder_preprocess(self, model_dims: int, key: str, **kwargs ):
+        from spectraclass.data.base import DataManager, dm
+        from spectraclass.gui.control import UserFeedbackManager, ufm
+        refresh = kwargs.get( 'refresh', False )
+        nepoch: int = kwargs.get( 'nepoch', 5 )
+        niter: int = kwargs.get( 'niter', 2 )
+        self._autoencoder = None
+        aefiles = self.autoencoder_files( model_dims, key )
+        if refresh or not os.path.exists(aefiles[0]):
+            ufm().show( f"Initializing autoencoder{key}[{model_dims}]: file = {aefiles[0]}", print=True, log=True )
+            for iter in range(niter):
+                for image_index in range(dm().modal.num_images):
+                    dm().modal.set_current_image(image_index)
+                    lgm().log(f"Preprocessing data blocks{tm().block_dims} for image {dm().modal.image_name}", print=True)
+                    for block in tm().tile.getBlocks():
+                        t0 = time.time()
+                        point_data, grid = block.getPointData()
+                        if point_data.shape[0] > 0:
+                            norm_data = pnorm(point_data)
+                            lgm().log(f"\nITER[{iter}]: Processing block{block.block_coords}, data shape = {point_data.shape}", print=True )
+                            if self._autoencoder is None:
+                                self.build_network( norm_data.shape[1], model_dims)
+                            self._autoencoder.fit(norm_data.data, norm_data.data, epochs=nepoch, batch_size=256, shuffle=True)
+                            lgm().log(f" Trained autoencoder in {time.time() - t0} sec", print=True)
+                        block.initialize()
+                self._autoencoder.save(aefiles[0])
+                self._encoder.save(aefiles[1])
+                lgm().log(f"autoencoder_preprocess completed, saved model to {aefiles}", print=True)
+                ufm().show(f"autoencoder init complete", print=True)
+
+    def autoencoder_reduction(self, train_input: xa.DataArray, model_dims: int, model_key: str, **kwargs ) -> Tuple[np.ndarray, xa.DataArray]:
         ispecs: List[np.ndarray] = [train_input.data.max(0), train_input.data.min(0), train_input.data.mean(0), train_input.data.std(0)]
-        lgm().log(f" autoencoder_reduction: train_input shape = {train_input.shape} ")
+        lgm().log(f" autoencoder_reduction: train_input shape = {train_input.shape}, model dims={model_dims}, model key={model_key} ")
         lgm().log(f"   ----> max = { ispecs[0][:64].tolist() } ")
         lgm().log(f"   ----> min = { ispecs[1][:64].tolist() } ")
         lgm().log(f"   ----> ave = { ispecs[2][:64].tolist() } ")
         lgm().log(f"   ----> std = { ispecs[3][:64].tolist() } ")
-        autoencoder, encoder, prebuilt = self.get_network( train_input.shape[1], model_dims, **kwargs )
-        if not prebuilt:
-            lgm().log(f"#AEC: TRAIN AEC NETWORK, VAE={self.vae}")
-            autoencoder.fit( train_input.data, train_input.data, epochs=epochs, batch_size=256, shuffle=True )
-        encoder_results = encoder.predict( train_input.data )
-        encoded_data: np.ndarray = encoder_results[0] if self.vae else encoder_results
-        reproduced_data: np.ndarray = autoencoder.predict( train_input.data )
+        self.get_trained_network( model_dims, model_key, **kwargs )
+        encoder_result = self._encoder.predict( train_input.data )
+        encoded_data: np.ndarray = encoder_result[0] if self.vae else encoder_result
+        reproduced_data: np.ndarray = self._autoencoder.predict( train_input.data )
         reproduction: xa.DataArray = train_input.copy( data=reproduced_data )
         lgm().log(f" Autoencoder_reduction, result shape = {encoded_data.shape}")
         lgm().log(f" ----> encoder_input: shape = {train_input.shape}, val[5][5] = {train_input.data[:5][:5]} ")
         lgm().log(f" ----> reproduction: shape = {reproduced_data.shape}, val[5][5] = {reproduced_data[:5][:5]} ")
         lgm().log(f" ----> encoding: shape = {encoded_data.shape}, val[5][5] = {encoded_data[:5][:5]}, std = {encoded_data.std(0)} ")
-        return (encoded_data, reproduction )
+        return (encoded_data, reproduction)
 
     def umap_init( self,  point_data: xa.DataArray, **kwargs ) -> Optional[xa.DataArray]:
         from .cpu import UMAP

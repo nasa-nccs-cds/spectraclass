@@ -11,24 +11,28 @@ class Spectraclass(SpectraclassController):
         self.set_parent_instances()
 
     def gui( self, **kwargs ):
-        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
-        from spectraclass.data.base import DataManager, dm
-        from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
-        from spectraclass.gui.spatial.map import MapManager, mm
-        print( f"Initializing GUI using controller {str(self.__class__)}")
-        basemap: bool = kwargs.pop('basemap',True)
-        embed: bool = kwargs.pop('embed',False)
-        self.set_spectraclass_theme()
-        css_border = '1px solid blue'
-        plot_collapsibles = ipw.Accordion( children = [ dm().gui(), pm().gui(), self.create_viz_tabs() ], layout=ipw.Layout(width='100%'))
-        for iT, title in enumerate(['data', 'controls', 'visualization' ]): plot_collapsibles.set_title(iT, title)
-        plot_collapsibles.selected_index = 1
-        plot = ipw.VBox([ ufm().gui(), plot_collapsibles, gpm().gui() ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
-        smap = mm().gui( basemap=basemap )
-        control = ipw.VBox( [ am().gui(), smap ], layout=ipw.Layout( flex='0 0 700px'), border=css_border )
-        gui = ipw.HBox( [control, plot ], layout=ipw.Layout( width='100%' ) )
-        if embed: self.embed()
-        return gui
+        try:
+            from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
+            from spectraclass.data.base import DataManager, dm
+            from spectraclass.gui.control import ActionsManager, am, ParametersManager, pm, UserFeedbackManager, ufm
+            from spectraclass.gui.spatial.map import MapManager, mm
+            print( f"Initializing GUI using controller {str(self.__class__)}")
+            basemap: bool = kwargs.pop('basemap',True)
+            embed: bool = kwargs.pop('embed',False)
+            self.set_spectraclass_theme()
+            css_border = '1px solid blue'
+            plot_collapsibles = ipw.Accordion( children = [ dm().gui(), pm().gui(), self.create_viz_tabs() ], layout=ipw.Layout(width='100%'))
+            for iT, title in enumerate(['data', 'controls', 'visualization' ]): plot_collapsibles.set_title(iT, title)
+            plot_collapsibles.selected_index = 1
+            plot = ipw.VBox([ ufm().gui(), plot_collapsibles, gpm().gui() ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
+            smap = mm().gui( basemap=basemap )
+            control = ipw.VBox( [ am().gui(), smap ], layout=ipw.Layout( flex='0 0 700px'), border=css_border )
+            gui = ipw.HBox( [control, plot ], layout=ipw.Layout( width='100%' ) )
+            if embed: self.embed()
+            return gui
+        except Exception as err:
+            lgm().exception( "Initialization error")
+            print( f"\n ****** Initialization error, check log file for details: {lgm().log_file} ****** \n")
 
     def create_viz_tabs(self):
         from spectraclass.gui.pointcloud import PointCloudManager, pcm

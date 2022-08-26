@@ -3,7 +3,7 @@ from spectraclass.reduction.embedding import ReductionManager, rm
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import numpy as np
 import xarray as xa
-from .base import ClusterBase
+from learn.cluster.base import ClusterBase
 
 class AutoEncoderCluster(ClusterBase):
 

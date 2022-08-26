@@ -1,6 +1,8 @@
 import pickle, random, time, numpy as np
 from spectraclass.data.base import DataManager
-from tensorflow.keras.models import Model
+import tensorflow as tf
+keras = tf.keras
+from keras.models import Model
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.reduction.embedding import rm
 from spectraclass.data.spatial.tile.manager import TileManager, tm
@@ -36,7 +38,7 @@ for image_index in range(dm.modal.num_images):
                 norm_data = pnorm( point_data )
                 print(f"\nITER[{iter}]: Processing block{block.block_coords}, data shape = {point_data.shape}")
                 if autoencoder is None:
-                    autoencoder, encoder, prebuilt = rm().get_network( norm_data.shape[1], model_dims, vae=vae )
+                    autoencoder, encoder, prebuilt = rm().get_trained_network(norm_data.shape[1], model_dims, vae=vae)
                 nepochs = iter*nblocks + bi
                 autoencoder.fit( norm_data.data, norm_data.data, initial_epoch=nepochs-1, epochs=nepochs, shuffle=True )
                 print(f" Trained autoencoder in {time.time()-t0} sec")

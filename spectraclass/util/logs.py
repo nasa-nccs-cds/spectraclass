@@ -2,7 +2,9 @@ import numpy as np
 from typing import List, Optional, Dict, Type
 import os, datetime
 from enum import Enum
-from tensorflow.keras.callbacks import CSVLogger
+import tensorflow as tf
+keras = tf.keras
+from keras.callbacks import CSVLogger
 from functools import wraps
 from time import time
 from datetime import datetime
@@ -44,6 +46,7 @@ class LogManager(SCSingletonConfigurable):
         self._log_file = None
         self._keras_logger = None
         self.log_dir = None
+        self.log_file  = None
 
     @classmethod
     def pid(cls):
@@ -58,9 +61,9 @@ class LogManager(SCSingletonConfigurable):
         overwrite = kwargs.get( 'overwrite', True )
         self._name = name
         self._lid = "" if overwrite else f"-{os.getpid()}"
-        log_file = f'{self.log_dir}/{name}{self._lid}.log'
-        self._log_file = open( log_file, 'w' )
-        print( f"Opening log file:  '{log_file}'" )
+        self.log_file = f'{self.log_dir}/{name}{self._lid}.log'
+        self._log_file = open( self.log_file, 'w' )
+        print( f"Opening log file:  '{self.log_file}'" )
 
 
     def get_keras_logger(self) -> CSVLogger:

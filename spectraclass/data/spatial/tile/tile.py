@@ -548,12 +548,12 @@ class Block(DataContainer):
     def _get_model_data(self) -> xa.DataArray:
         from spectraclass.data.base import DataManager, dm
         dataset: Optional[xa.Dataset] = dm().modal.loadDataFile( block=self, index=self.tile_index )
-        point_data = dataset["reduction"]
-        point_data.attrs['block_coords'] = self.block_coords
-        point_data.attrs['dsid'] = self.dsid()
-        point_data.attrs['file_name'] = self.file_name
-        point_data.name = self.file_name
-        return point_data
+        (reduction, reproduction) = dm().modal.reduce( dataset['norm'] )
+        reduction.attrs['block_coords'] = self.block_coords
+        reduction.attrs['dsid'] = self.dsid()
+        reduction.attrs['file_name'] = self.file_name
+        reduction.name = self.file_name
+        return reduction
 
     @exception_handled
     def _apply_mask( self, block_array: xa.DataArray, raster=False, reduced=False ) -> xa.DataArray:

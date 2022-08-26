@@ -279,8 +279,8 @@ class MapManager(SCSingletonConfigurable):
         return class_data.argmax( axis=axis, skipna=True, keep_attrs=True ).squeeze()
 
     @property
-    def classification_data(self) -> np.ndarray:
-        return self._classification_data.values
+    def classification_data(self) -> Optional[np.ndarray]:
+        return self._classification_data.values if self._classification_data is not None else None
 
     @exception_handled
     def plot_labels_image(self, classification: xa.DataArray = None ):

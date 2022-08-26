@@ -3,16 +3,13 @@ import time, traceback, abc, os, copy
 import numpy as np
 from spectraclass.data.spatial.tile.tile import Block
 from sklearn.exceptions import NotFittedError
-from tensorflow.keras.models import Model
-from sklearn.model_selection import train_test_split
-from tensorflow.keras import Input
+import tensorflow as tf
+keras = tf.keras
 from typing import List, Tuple, Optional, Dict
-import traitlets as tl
-import traitlets.config as tlc
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.learn.base import KerasLearningModel
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
-from tensorflow.keras import datasets, layers, models
+from keras import datasets, layers, models
 
 class SpatialModelWrapper(KerasLearningModel):
 

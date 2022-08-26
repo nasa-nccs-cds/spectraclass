@@ -1,8 +1,10 @@
 from enum import Enum
 from typing import List, Tuple, Optional, Dict, Union, Type
 from spectraclass.learn.base import LearningModel
-from tensorflow.keras.models import Model
-from tensorflow.keras.callbacks import Callback
+import tensorflow as tf
+keras = tf.keras
+from keras.models import Model
+from keras.callbacks import Callback
 
 class ModelType(Enum):
      SPATIAL = 1

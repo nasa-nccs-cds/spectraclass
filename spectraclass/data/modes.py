@@ -33,12 +33,13 @@ class ModeDataManager(SCSingletonConfigurable):
     ext = tl.Unicode( ".tif" ).tag(config=True)
     class_file = tl.Unicode("NONE").tag(config=True, sync=True)
 
-    model_dims = tl.Int(32).tag(config=True, sync=True)
+    model_dims = tl.Int(16).tag(config=True, sync=True)
     subsample_index = tl.Int(1).tag(config=True, sync=True)
     reduce_method = tl.Unicode("vae").tag(config=True, sync=True)
-    reduce_nepochs = tl.Int(20).tag(config=True, sync=True)
+    reduce_nepoch = tl.Int(5).tag(config=True, sync=True)
+    reduce_niter = tl.Int(2).tag(config=True, sync=True)
     reduce_sparsity = tl.Float( 0.0 ).tag(config=True,sync=True)
-    modelkey = tl.Unicode("").tag(config=True, sync=True)
+    modelkey = tl.Unicode("0000").tag(config=True, sync=True)
 
     def __init__(self, ):
         super(ModeDataManager,self).__init__()
@@ -52,6 +53,11 @@ class ModeDataManager(SCSingletonConfigurable):
         self._dataset_prefix: str = ""
         self._file_selector = None
         self._active_image = 0
+
+    def initialize_dimension_reduction( self, **kwargs ):
+        from spectraclass.reduction.embedding import rm
+        lgm().log( "AEC: initialize_dimension_reduction" )
+        rm().autoencoder_preprocess( self.model_dims, self.modelkey, **kwargs)
 
     @property
     def image_names(self) -> List[str]:
@@ -167,6 +173,9 @@ class ModeDataManager(SCSingletonConfigurable):
         raise NotImplementedError()
 
     def process_block(self, block  ) -> xa.Dataset:
+        raise NotImplementedError()
+
+    def reduce(self, data: xa.DataArray) -> xa.DataArray:
         raise NotImplementedError()
 
     def update_extent(self):
@@ -301,10 +310,8 @@ class ModeDataManager(SCSingletonConfigurable):
                 dvars: Dict[str,Union[xa.DataArray,List,Dict]] = self.dset_subsample( xdataset, dsid=self.dsid(), **kwargs )
                 attrs = xdataset.attrs.copy()
                 raw_data = dvars['raw']
-                lgm().log( f" -----> reduction: shape = {dvars['reduction'].shape}, #NULL={np.count_nonzero(np.isnan(dvars['reduction'].values))}")
                 lgm().log( f" -----> point_data: shape = {raw_data.shape}, #NULL={np.count_nonzero(np.isnan(raw_data.values))}/{raw_data.size}")
                 dvars['plot-x'] = dvars['bands'] if ('bands'in dvars) else dvars['band']
-                dvars['plot-mx'] = dvars['model']
                 attrs['dsid'] = self.dsid()
                 attrs['type'] = 'spectra'
                 dvars['attrs'] = attrs
@@ -333,7 +340,7 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def loadDataFile( self, **kwargs ) -> Optional[xa.Dataset]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        ufm().show(f" Loading Tile {tm().block_index}")
+        ufm().show( f" Loading Tile {tm().block_index} " )
         dFile = self.dataFile( **kwargs )
         dataset: Optional[xa.Dataset] = None
         if path.isfile( dFile ):

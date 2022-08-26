@@ -57,7 +57,10 @@ class FCM(ClusterBase):
     def cluster_data(self) -> xa.DataArray:
         cdata = np.expand_dims(np.argmax(self._fuzzy_cluster_data * self.cscale, axis=1), 1) + 1
         if self._threshold > 0.0: cdata[ self.threshold_mask ] = 0
-        lgm().log( f"FCM.cluster_data: shape = {cdata.shape}, thresh = {self._threshold}, range = [{cdata.min()},{cdata.max()}]")
+        crange = [cdata.min(),cdata.max()]
+        lgm().log( f"FCM.cluster_data: shape = {cdata.shape}, thresh = {self._threshold}, range = [{crange}]")
+        for iC in range( crange[0], crange[1]+1 ):
+            lgm().log(f" --> CLASS {iC}: npix= {np.count_nonzero(cdata==iC)}")
         return xa.DataArray(cdata, dims=['samples', 'clusters'], name="clusters", coords=dict(samples=self._samples, clusters=[0]), attrs=self._attrs)
 
     def fuzzy_cluster_data(self) -> xa.DataArray:
@@ -66,9 +69,12 @@ class FCM(ClusterBase):
     def cluster( self, data: xa.DataArray, y=None ):
         self._attrs = data.attrs
         self._samples = data.coords[ data.dims[0] ]
+#        drange = [data.values.min(),data.values.max()]
+#        normed_data: np.ndarray = (data.values - drange[0])/(drange[1]-drange[0])
         self.fit( data.values )
         self._fuzzy_cluster_data = self.soft_predict(data.values)
-        lgm().log(  f"FCM.cluster: data shape = {data.shape}, clusters shape = {self._fuzzy_cluster_data.shape}, range = [{self._fuzzy_cluster_data.min()},{self._fuzzy_cluster_data.max()}]")
+        lgm().log(  f"FCM.cluster: data shape = {data.shape}, data range = [{data.values.min()},{data.values.max()}], "
+                    f"clusters shape = {self._fuzzy_cluster_data.shape}, range = [{self._fuzzy_cluster_data.min()},{self._fuzzy_cluster_data.max()}]")
 
     def threshold( self, thresh: float ):
         self._threshold = thresh

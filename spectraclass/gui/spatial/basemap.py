@@ -49,7 +49,7 @@ class TileServiceBasemap(SCSingletonConfigurable):
         fig_index = kwargs.pop('index',100)
         self.fig_size = kwargs.pop('size', 6.0)
         use_basemap = kwargs.pop('basemap', True)
-        parallel = kwargs.pop('parallel', True)
+        parallel = kwargs.pop('parallel', False)
         use_slider = kwargs.pop( 'slider', True )
         self.figure: Figure = plt.figure( fig_index )
         self.figure.canvas.mpl_connect('motion_notify_event', self.on_move)
@@ -107,7 +107,7 @@ class TileServiceBasemap(SCSingletonConfigurable):
     def set_basemap(self, xlim: Tuple[float,float], ylim: Tuple[float,float], **kwargs ):
         self.tile_service = WebMapTileService(self.tile_server_url)
         self.layer: str = list(self.tile_service.contents.keys())[0]
-        self.wmts = WMTSRasterSource( self.tile_service, self.layer, kwargs.pop('parallel',True) )
+        self.wmts = WMTSRasterSource( self.tile_service, self.layer, kwargs.pop('parallel',False) )
         self.basemap = TileServiceImage(self.gax, self.wmts, self.crs, xrange=xlim, yrange=ylim, block_selection=self._block_selection, **kwargs )
 
     @contextlib.contextmanager

@@ -1,24 +1,18 @@
 import pickle
 
-import xarray
-from sklearn import cluster
-from sklearn.base import ClusterMixin
 from joblib import cpu_count
 from spectraclass.gui.spatial.widgets.markers import Marker
-import time, traceback, shutil
-from matplotlib.colors import LinearSegmentedColormap, ListedColormap, hsv_to_rgb
-from matplotlib.backend_bases import PickEvent, MouseEvent
+from matplotlib.colors import LinearSegmentedColormap, hsv_to_rgb
+from matplotlib.backend_bases import MouseEvent
 import xarray as xa
 import ipywidgets as ipw
 from functools import partial
 import numpy as np
-from typing import List, Union, Tuple, Optional, Dict, Callable, Iterable
+from typing import List, Tuple, Dict
 import traitlets as tl
-from spectraclass.data.spatial.tile.tile import Block, Tile
-import traitlets.config as tlc
-from spectraclass.gui.control import UserFeedbackManager, ufm
+from spectraclass.data.spatial.tile.tile import Block
 from .base import ClusterBase
-from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
+from spectraclass.util.logs import lgm, exception_handled, log_timing
 from spectraclass.model.base import SCSingletonConfigurable
 
 def clm() -> "ClusterManager":
@@ -86,7 +80,6 @@ class ClusterManager(SCSingletonConfigurable):
         return self._mid_options
 
     def create_model(self, mid: str ) -> ClusterBase:
-        from .autoencoder import AutoEncoderCluster
         from .fcm import FCM
         from  .kmeans import KMeansCluster
         nclusters = self._ncluster_selector.value
@@ -95,8 +88,6 @@ class ClusterManager(SCSingletonConfigurable):
         if mid == "kmeans":
             params = dict(  random_state= self.random_state, batch_size= 256 * cpu_count() )
             return KMeansCluster( nclusters, **params )
-        if mid == "autoencoder":
-            return AutoEncoderCluster( nclusters )
         if mid == "fuzzy cmeans":
             return FCM( nclusters )
 
@@ -141,7 +132,7 @@ class ClusterManager(SCSingletonConfigurable):
         return mcolors
 
     def get_icluster( self, ckey: Tuple ) -> int:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.data.spatial.tile.manager import tm
         ( tindex, bindex, icluster ) = ckey
         return icluster if ( (tindex==tm().image_index) and (bindex==tm().block_coords) )  else -1
 
@@ -178,7 +169,7 @@ class ClusterManager(SCSingletonConfigurable):
 
     @exception_handled
     def get_cluster_map( self, layer: bool = False ) -> xa.DataArray:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.data.spatial.tile.manager import tm
         if self._cluster_raster is None:
             block = tm().getBlock()
             self._cluster_raster: xa.DataArray = block.points2raster( self._cluster_points ).squeeze()
@@ -205,7 +196,7 @@ class ClusterManager(SCSingletonConfigurable):
             return -1
 
     def get_marked_clusters( self, cid: int ) -> List[int]:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.data.spatial.tile.manager import tm
         ckey = ( tm().image_index, tm().block_coords, cid )
         return self._marked_clusters.setdefault( ckey, [] )
 
@@ -220,8 +211,8 @@ class ClusterManager(SCSingletonConfigurable):
 
     @log_timing
     def mark_cluster( self, gid: int, cid: int, icluster: int ) -> Marker:
-        from spectraclass.model.labels import LabelsManager, lm
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.model.labels import lm
+        from spectraclass.data.spatial.tile.manager import tm
         ckey = ( tm().image_index, tm().block_coords, icluster )
         self._marked_colors[ ckey ] = lm().get_rgb_color(cid)
         self.get_marked_clusters(cid).append( icluster )
@@ -259,7 +250,7 @@ class ClusterManager(SCSingletonConfigurable):
 
     @exception_handled
     def tune_cluster(self, icluster: int, change: Dict ):
-        from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.gui.spatial.map import mm
         self.clear( reset=False )
         self.model.rescale(icluster, change['new'])
         self._cluster_points = self.model.cluster_data
@@ -276,7 +267,7 @@ class ClusterSelector:
 
     @property
     def block(self) -> Block:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.data.spatial.tile.manager import tm
         return tm().getBlock()
 
     def set_enabled(self, enable: bool ):
@@ -288,11 +279,11 @@ class ClusterSelector:
 
     @exception_handled
     def on_button_press(self, event: MouseEvent ):
-        from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.gui.spatial.map import mm
         from spectraclass.gui.spatial.widgets.markers import Marker
         from spectraclass.application.controller import app
-        from spectraclass.model.labels import LabelsManager, lm
-        from spectraclass.gui.control import UserFeedbackManager, ufm
+        from spectraclass.model.labels import lm
+        from spectraclass.gui.control import ufm
         lgm().log(f"ClusterSelector: on_button_press: enabled={self.enabled}")
         if (event.xdata != None) and (event.ydata != None) and (event.inaxes == self.ax) and self.enabled:
             if int(event.button) == self.LEFT_BUTTON:

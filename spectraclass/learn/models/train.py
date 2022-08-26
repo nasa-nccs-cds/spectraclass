@@ -2,8 +2,10 @@ import json
 import os
 
 import six
-from tensorflow.keras.callbacks import Callback
-from tensorflow.keras.callbacks import ModelCheckpoint
+import tensorflow as tf
+keras = tf.keras
+from keras.callbacks import Callback
+from keras.callbacks import ModelCheckpoint
 import tensorflow as tf
 import glob
 import sys
@@ -40,7 +42,9 @@ def find_latest_checkpoint(checkpoints_path, fail_safe=True):
     return latest_epoch_checkpoint
 
 def masked_categorical_crossentropy(gt, pr):
-    from tensorflow.keras.losses import categorical_crossentropy
+    import tensorflow as tf
+    keras = tf.keras
+    from keras.losses import categorical_crossentropy
     mask = 1 - gt[:, :, 0]
     return categorical_crossentropy(gt, pr) * mask
 

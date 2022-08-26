@@ -323,28 +323,14 @@ class DataManager(SCSingletonConfigurable):
 
     @exception_handled
     def getModelData(self, **kwargs) -> Optional[xa.DataArray]:
-        raw_model_data = self.getRawModelData()
-        if raw_model_data is not None:
-            return self._mode_data_manager_.getModelData( raw_model_data, **kwargs )
-        else:
-            lgm().log( "getModelData: raw_model_data is None")
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.data.spatial.tile.tile import Block
+        block: Block = tm().getBlock()
+        return self._mode_data_manager_.getModelData( block.model_data, **kwargs )
 
     def valid_bands(self) -> Optional[List]:
         return self._mode_data_manager_.valid_bands()
 
-    def getRawModelData(self) -> Optional[xa.DataArray]:
-        project_dataset: Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ] = self.loadCurrentProject("getModelData")
-        if project_dataset is not None:
-            model_data: Optional[xa.DataArray] = project_dataset.get('reduction')
-            if model_data is None:
-                lgm().log("getRawModelData: model_data is None")
-            else:
-                attrs = project_dataset['attrs']
-                model_data.attrs['dsid'] = attrs['dsid']
-                lgm().log(f"getRawModelData: shape = {model_data.shape}")
-            return model_data
-        else:
-            lgm().log("getRawModelData: project_dataset is None")
 
     def getSpatialDims(self) -> Dict[str,int]:
         project_dataset: Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ] = self.loadCurrentProject("getModelData")

@@ -117,8 +117,12 @@ class UserFeedbackManager(SCSingletonConfigurable):
         def gui(self, **kwargs) -> ipw.HTML:
             return self._wGui
 
-        def show(self, message: str, color: str = "blue" ):
+        def show(self, message: str, color: str = "blue", **kwargs ):
+            print_also = kwargs.get('print',False)
+            log_also = kwargs.get('log', False)
             self._wGui.value = f'<p style="color:{color}"><b>{message}</b></p>'
+            if print_also: print( message )
+            if log_also: lgm().log( message )
 
         def clear(self):
             self._wGui.value = ""

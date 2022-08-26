@@ -236,7 +236,7 @@ class MarkerManager( PointsInteractor ):
                 labels_img: AxesImage = mm().layer_managers("labels")[0]
                 gid,ix,iy = self.block.coords2gid(event.ydata, event.xdata)
                 if labels_img.get_visible():
-                    cid = mm().classification_data[iy,ix]
+                    cid = 0 if mm().classification_data is None else mm().classification_data[iy,ix]
                     mdata = mdata + f" label={cid} "
                 lgm().log(f" *** --> selected gid = {gid}, button = {event.button}")
                 ufm().show( f" event[{event.xdata:.2f},{event.ydata:.2f}]: ({ix},{iy},{gid}) {mdata}" )

@@ -75,11 +75,12 @@ class LinePlot(ABC):
     def init_data(cls, **kwargs ):
         if cls._x is None:
             project_data: Dict[str,Union[xa.DataArray,List,Dict]]  = dm().loadCurrentProject("graph")
+            (reduction, reproduction) = dm().modal.reduce( project_data['norm'] )
             cls._x: xa.DataArray = project_data["plot-x"]
-            cls._mx: xa.DataArray = project_data["plot-mx"]
             cls._ploty: xa.DataArray = project_data["plot-y"]
-            cls._rploty: xa.DataArray = project_data["reproduction"]
-            cls._mploty: xa.DataArray = project_data["reduction"]
+            cls._rploty: xa.DataArray = reproduction
+            cls._mploty: xa.DataArray = reduction
+            cls._mx: xa.DataArray = cls._mploty.coords['band']
             table_cols = DataManager.instance().table_cols
             cls._mdata: List[np.ndarray] = [ cls.get_col_values(project_data[mdv]) for mdv in table_cols ]
 

@@ -9,11 +9,13 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 from spectraclass.util.logs import LogManager, lgm
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Lambda, Input, Dense, Dropout
-from tensorflow.keras.regularizers import l2
-from tensorflow.keras.losses import mse, binary_crossentropy
-from tensorflow.keras import backend as K
+import tensorflow as tf
+keras = tf.keras
+from keras.models import Model
+from keras.layers import Lambda, Input, Dense, Dropout
+from keras.regularizers import l2
+from keras.losses import mse, binary_crossentropy
+from keras import backend as K
 
 
 class VAE:
@@ -261,35 +263,4 @@ class VAE:
                                         verbose=self.verbose).history
 
         return self
-
-    def _build_network( self, input_dims: int, model_dims: int, **kwargs  ):
-        from tensorflow.keras.layers import Input, Dense
-        from tensorflow.keras.models import Model
-        from tensorflow.keras import losses, regularizers
-        lgm().log(f"#AEC: BUILD AEC NETWORK")
-        sparsity: float = kwargs.get( 'sparsity', 0.0 )
-        reduction_factor = 2
-        inputlayer = Input(shape=[input_dims])
-        activation = 'tanh'
-        optimizer = 'rmsprop'
-        layer_dims, x = int(round(input_dims / reduction_factor)), inputlayer
-        while layer_dims > model_dims:
-            x = Dense(layer_dims, activation=activation)(x)
-            layer_dims = int(round(layer_dims / reduction_factor))
-        encoded = x = Dense(model_dims, activation=activation, activity_regularizer=regularizers.l1(sparsity))(x)
-        layer_dims = int(round(model_dims * reduction_factor))
-        while layer_dims < input_dims:
-            x = Dense(layer_dims, activation=activation)(x)
-            layer_dims = int(round(layer_dims * reduction_factor))
-        decoded = Dense(input_dims, activation='linear')(x)
-        #        modelcheckpoint = ModelCheckpoint('xray_auto.weights', monitor='loss', verbose=1, save_best_only=True, save_weights_only=True, mode='auto', period=1)
-        #        earlystopping = EarlyStopping(monitor='loss', min_delta=0., patience=100, verbose=1, mode='auto')
-        self._autoencoder = Model(inputs=[inputlayer], outputs=[decoded])
-        self._encoder = Model(inputs=[inputlayer], outputs=[encoded])
-        #        autoencoder.summary()
-        #        encoder.summary()
-        self._autoencoder.compile( loss=self.loss, optimizer=optimizer )
-        self.log = lgm().log(f" BUILD Autoencoder network: input_dims = {input_dims} ")
-
-
 

@@ -1,8 +1,10 @@
 from spectraclass.data.spatial.tile.tile import Block
-from tensorflow.keras.models import Model
-from tensorflow.keras import Input
+import tensorflow as tf
+keras = tf.keras
+from keras.models import Model
+from keras import Input
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
-from tensorflow.keras import datasets, layers, models
+from keras import datasets, layers, models
 from typing import List, Tuple, Optional, Dict
 from spectraclass.learn.models.network import Network, ModelType
 
