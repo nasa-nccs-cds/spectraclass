@@ -240,7 +240,7 @@ class SpatialDataManager(ModeDataManager):
         lgm().log( f" Preparing point data with shape {normed_data.shape}, range={prange}, #nan={np.count_nonzero(np.isnan(blocks_point_data))}", print=True)
         rargs = dict( nepoch = self.reduce_nepoch, niter = self.reduce_niter )
         (reduced_spectra, reproduction) = rm().reduce(normed_data, self.reduce_method, self.modelkey, self.model_dims, **rargs )
-        lgm().log(f" Generated reduced data, reduced_spectra shape = {reduced_spectra.shape}, reproduction shape = {reproduction.shape} ")
+        lgm().log(f" Generated reduced data, method={self.reduce_method}, reduced_spectra shape = {reduced_spectra.shape}, reproduction shape = {reproduction.shape} ")
         raw_data: xa.DataArray = block.data
         data_vars = dict(raw=raw_data, norm=normed_data)
         lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.size} samples", print=True )

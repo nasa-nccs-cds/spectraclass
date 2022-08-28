@@ -57,7 +57,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def initialize_dimension_reduction( self, **kwargs ):
         from spectraclass.reduction.embedding import rm
         lgm().log( "AEC: initialize_dimension_reduction" )
-        rm().autoencoder_preprocess( self.model_dims, self.modelkey, **kwargs)
+        rm().autoencoder_preprocess( self.model_dims, self.modelkey, method=self.reduce_method, **kwargs)
 
     @property
     def image_names(self) -> List[str]:
