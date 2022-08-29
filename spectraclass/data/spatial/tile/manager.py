@@ -5,7 +5,6 @@ import xarray as xa
 import shapely.vectorized as svect
 from typing import List, Union, Tuple, Optional, Dict
 from pyproj import Proj
-from spectraclass.data.base import DataManager, dm, DataType
 from spectraclass.util.logs import LogManager, lgm, log_timing
 import os, math, pickle, time
 import cartopy.crs as ccrs
@@ -124,14 +123,17 @@ class TileManager(SCSingletonConfigurable):
 
     @property
     def image_name(self):
+        from spectraclass.data.base import DataManager, dm, DataType
         return dm().modal.image_name
 
     def get_image_name( self, **kwargs ):
+        from spectraclass.data.base import DataManager, dm, DataType
         image_index = kwargs.get('index', DataManager.instance().modal._active_image )
         return dm().modal.image_names[ image_index ]
 
     @property
     def image_index(self) -> int:
+        from spectraclass.data.base import DataManager, dm, DataType
         return dm().modal.image_index
 
     @property
@@ -139,11 +141,13 @@ class TileManager(SCSingletonConfigurable):
         return tuple(self.block_index)
 
     def setBlock( self, block_index ):
+        from spectraclass.data.base import DataManager, dm, DataType
         if tuple(block_index) != self.block_index:
             self.block_index = tuple(block_index)
             dm().loadCurrentProject( 'setBlock', True )
 
     def in_bounds( self, pids: List[int] ) -> bool:
+        from spectraclass.data.base import DataManager, dm, DataType
         try:
             project_data: Dict[str,Union[xa.DataArray,List,Dict]] = dm().loadCurrentProject( 'in_bounds' )
             point_data: xa.DataArray = project_data["plot-y"]
@@ -220,6 +224,7 @@ class TileManager(SCSingletonConfigurable):
         return marker
 
     def getTileFileName(self, with_extension = True ) -> str:
+        from spectraclass.data.base import DataManager, dm, DataType
         ext = dm().modal.ext
         return self.image_name + ext if with_extension else self.image_name
 
@@ -234,6 +239,7 @@ class TileManager(SCSingletonConfigurable):
 
     @classmethod
     def filter_invalid_data( cls, tile_data: xa.DataArray ) -> xa.DataArray:
+        from spectraclass.data.base import DataManager, dm, DataType
         tile_data = cls.mask_nodata(tile_data)
         valid_bands = DataManager.instance().valid_bands()
         init_shape = [*tile_data.shape]
@@ -276,9 +282,9 @@ class TileManager(SCSingletonConfigurable):
         return  ProjectiveTransform( np.array(tr1).reshape(3, 3) )
 
     def _readTileFile(self) -> xa.DataArray:
-        from spectraclass.gui.control import UserFeedbackManager, ufm
+        from spectraclass.data.base import DataManager, dm
         tm = TileManager.instance()
-        tile_raster: xa.DataArray = DataManager.instance().modal.readSpectralData()
+        tile_raster: xa.DataArray = dm().modal.readSpectralData()
         if tile_raster is not None:
             tile_raster.name = self.tileName()
             tile_raster.attrs['tilename'] = tm.tileName()

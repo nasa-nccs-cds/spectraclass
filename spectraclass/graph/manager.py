@@ -9,7 +9,7 @@ from spectraclass.util.logs import LogManager, lgm
 def afm() -> "ActivationFlowManager":
     return ActivationFlowManager.instance()
 
-class ActivationFlow():
+class ActivationFlow(object):
 
     def __init__(self, n_neighbors: int, **kwargs ):
         self.nneighbors = n_neighbors
@@ -64,20 +64,14 @@ class ActivationFlowManager(SCSingletonConfigurable):
         result = None
         if point_data is not None:
             dsid = point_data.attrs.get('dsid','global')
-            lgm().log( f"Get Activation flow for dsid {dsid}" )
-            self.condition.acquire()
-            try:
-                result = self.instances.get( dsid, None )
-                if result is None:
-                    metric_specs = self.metric.split("-")
-                    kwargs = dict( metric = metric_specs[0] )
-                    kwargs['p'] = int(metric_specs[1]) if len( metric_specs ) > 1 else 2
-                    result = ActivationFlow.instance( point_data, self.nneighbors, **kwargs )
-                    self.instances[dsid] = result
-                self.condition.notifyAll()
-            except Exception as err:
-                lgm().exception( f"Error in getting ActivationFlow: {err}")
-            finally:
-                self.condition.release()
+            lgm().log( f"Get Activation flow for dsid {dsid}", print=True )
+            result = self.instances.get( dsid, None )
+            if result is None:
+                metric_specs = self.metric.split("-")
+                kwargs = dict( metric = metric_specs[0] )
+                kwargs['p'] = int(metric_specs[1]) if len( metric_specs ) > 1 else 2
+                print( f"ActivationFlow.instance: shape={point_data.shape}, nn={self.nneighbors}, args={kwargs}")
+                result = ActivationFlow.instance( point_data, self.nneighbors, **kwargs )
+                self.instances[dsid] = result
         return result
 

@@ -656,7 +656,7 @@ class NNDescent(object):
         delta=0.001,
         n_jobs=None,
         compressed=True,
-        verbose=False,
+        verbose=True,
     ):
 
         if n_trees is None:
@@ -740,12 +740,8 @@ class NNDescent(object):
         if metric == "dot":
             data = normalize(data, norm="l2", copy=False)
 
-        self.rng_state = current_random_state.randint(INT32_MIN, INT32_MAX, 3).astype(
-            np.int64
-        )
-        self.search_rng_state = current_random_state.randint(
-            INT32_MIN, INT32_MAX, 3
-        ).astype(np.int64)
+        self.rng_state = current_random_state.randint(INT32_MIN, INT32_MAX, 3).astype( np.int64 )
+        self.search_rng_state = current_random_state.randint( INT32_MIN, INT32_MAX, 3 ).astype(np.int64)
         # Warm up the rng state
         for i in range(10):
             _ = tau_rand_int(self.search_rng_state)
@@ -787,20 +783,14 @@ class NNDescent(object):
 
             if metric in sparse.sparse_named_distances:
                 if metric in sparse.sparse_fast_distance_alternatives:
-                    _distance_func = sparse.sparse_fast_distance_alternatives[metric][
-                        "dist"
-                    ]
-                    self._distance_correction = (
-                        sparse.sparse_fast_distance_alternatives[metric]["correction"]
-                    )
+                    _distance_func = sparse.sparse_fast_distance_alternatives[metric][ "dist" ]
+                    self._distance_correction = (  sparse.sparse_fast_distance_alternatives[metric]["correction"]  )
                 else:
                     _distance_func = sparse.sparse_named_distances[metric]
             elif callable(metric):
                 _distance_func = metric
             else:
-                raise ValueError(
-                    "Metric {} not supported for sparse data".format(metric)
-                )
+                raise ValueError(  "Metric {} not supported for sparse data".format(metric)  )
 
             if metric in sparse.sparse_need_n_features:
                 metric_kwds["n_features"] = self._raw_data.shape[1]
@@ -864,9 +854,7 @@ class NNDescent(object):
                 if init_graph.shape[0] != self._raw_data.shape[0]:
                     raise ValueError("Init graph size does not match dataset size!")
                 _init_graph = make_heap(init_graph.shape[0], self.n_neighbors)
-                _init_graph = initalize_heap_from_graph_indices(
-                    _init_graph, init_graph, data, self._distance_func
-                )
+                _init_graph = initalize_heap_from_graph_indices( _init_graph, init_graph, data, self._distance_func  )
 
             if verbose:
                 print(ts(), "NN descent for", str(n_iters), "iterations")

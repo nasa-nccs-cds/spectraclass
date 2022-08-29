@@ -51,10 +51,10 @@ class UnstructuredDataManager(ModeDataManager):
             self.set_progress(0.1)
             if self.reduce_method and (self.reduce_method.lower() != "none"):
                 input_data = data_vars['spectra']
-                ( reduced_spectra, reproduced_spectra, usable_input_data ) = rm().reduce(input_data, self.reduce_method, self.model_dims, self.reduce_nepochs, modelkey=self.modelkey )[0]
+                ( reduced_spectra, reproduced_spectra ) = rm().modal.reduce( input_data )[0]
                 coords = dict(samples=xcoords['samples'], model=np.arange(self.model_dims))
                 data_vars['reduction'] = xa.DataArray(reduced_spectra, dims=['samples', 'model'], coords=coords)
-                data_vars['reproduction'] = usable_input_data.copy(data=reproduced_spectra)
+                data_vars['reproduction'] = reproduced_spectra
                 self.set_progress(0.8)
 
             result_dataset = xa.Dataset(data_vars, coords=xcoords, attrs={'type': 'spectra'})

@@ -50,7 +50,7 @@ class DataManager(SCSingletonConfigurable):
     proc_type = tl.Unicode('cpu').tag(config=True)
     labels_dset = tl.Unicode('labels').tag(config=True)
     use_model_data = tl.Bool(False).tag(config=True, sync=True)
-    refresh_model = tl.Bool(False).tag(config=True, sync=True)
+    refresh_data = tl.Bool(False).tag(config=True, sync=True)
     _mode_data_managers_: Dict = {}
 
     def __init__(self):
@@ -276,8 +276,8 @@ class DataManager(SCSingletonConfigurable):
             model_data_cbox = ip.Checkbox( value=self.use_model_data, description = "Use Model Data", layout=ipw.Layout( width='500px' ) )
             tl.link( (model_data_cbox, "value"), (self, 'use_model_data') )
             controls.append( model_data_cbox )
-            refresh_cbox = ip.Checkbox( value=self.refresh_model, description = "Refresh Model", layout=ipw.Layout( width='500px' ) )
-            tl.link( (refresh_cbox, "value"), (self, 'refresh_model') )
+            refresh_cbox = ip.Checkbox( value=self.refresh_data, description = "Refresh Data", layout=ipw.Layout( width='500px' ) )
+            tl.link( (refresh_cbox, "value"), (self, 'refresh_data') )
             controls.append( refresh_cbox )
         return ip.VBox( controls, layout=ipw.Layout(flex='1 1 auto') )
 

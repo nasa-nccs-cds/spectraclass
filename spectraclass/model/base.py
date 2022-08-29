@@ -5,7 +5,6 @@ from traitlets.config.loader import Config
 
 class SCSingletonConfigurable(tlc.Configurable):
     config_instances: List["SCSingletonConfigurable"] = []
-    _log_file = None
     _instance = None
     _instantiated = None
 

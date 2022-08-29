@@ -79,17 +79,6 @@ class SpatialDataManager(ModeDataManager):
         normed_data = (data.values - dave) / dmag
         return data.copy( data=normed_data )
 
-    def reduce(self, data: xa.DataArray) -> Tuple[xa.DataArray,xa.DataArray]:
-        if self.reduce_method and (self.reduce_method.lower() != "none") and (self.model_dims>0):
-            normed_data = self.pnorm( data )
-            rargs = dict( nepoch = self.reduce_nepoch, niter = self.reduce_niter )
-            (reduced_spectra, reproduction) = rm().reduce( normed_data, self.reduce_method, self.modelkey, self.model_dims, **rargs )
-            coords = dict( samples=data.coords['samples'], band=np.arange( self.model_dims )  )
-            reduced_array = xa.DataArray( reduced_spectra, dims=['samples', 'band'], coords=coords )
-            reproduced_array = normed_data.copy( data=reproduction )
-            return (reduced_array, reproduced_array)
-        return (data,data)
-
     def dsid(self, **kwargs) -> str:
         from spectraclass.data.spatial.tile.manager import tm
         block = kwargs.get( 'block', tm().getBlock() )
@@ -239,7 +228,7 @@ class SpatialDataManager(ModeDataManager):
         prange = (normed_data.values.min(), normed_data.values.max(), normed_data.values.mean())
         lgm().log( f" Preparing point data with shape {normed_data.shape}, range={prange}, #nan={np.count_nonzero(np.isnan(blocks_point_data))}", print=True)
         rargs = dict( nepoch = self.reduce_nepoch, niter = self.reduce_niter )
-        (reduced_spectra, reproduction) = rm().reduce(normed_data, self.reduce_method, self.modelkey, self.model_dims, **rargs )
+        (reduced_spectra, reproduction) = self.reduce(normed_data, **rargs )
         lgm().log(f" Generated reduced data, method={self.reduce_method}, reduced_spectra shape = {reduced_spectra.shape}, reproduction shape = {reproduction.shape} ")
         raw_data: xa.DataArray = block.data
         data_vars = dict(raw=raw_data, norm=normed_data)
