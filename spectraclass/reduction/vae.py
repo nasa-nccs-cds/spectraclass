@@ -9,13 +9,13 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted
 from spectraclass.util.logs import LogManager, lgm
-import tensorflow as tf
-keras = tf.keras
-from keras.models import Model
-from keras.layers import Lambda, Input, Dense, Dropout
-from keras.regularizers import l2
-from keras.losses import mse, binary_crossentropy
-from keras import backend as K
+# import tensorflow as tf
+# keras = tf.keras
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Lambda, Input, Dense, Dropout
+from tensorflow.keras.regularizers import l2
+from tensorflow.keras.losses import mse, binary_crossentropy
+from tensorflow.keras import backend as K
 
 
 class VAE:

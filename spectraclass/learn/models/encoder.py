@@ -1,7 +1,9 @@
 import tensorflow as tf
-keras = tf.keras
-from keras.models import *
-from keras.layers import *
+# import tensorflow as tf
+# keras = tf.keras
+from tensorflow.keras.models import Model
+from tensorflow.keras.models import *
+from tensorflow.keras.layers import *
 IMAGE_ORDERING = 'channels_first'
 
 

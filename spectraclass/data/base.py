@@ -50,8 +50,8 @@ class DataManager(SCSingletonConfigurable):
     proc_type = tl.Unicode('cpu').tag(config=True)
     labels_dset = tl.Unicode('labels').tag(config=True)
     use_model_data = tl.Bool(False).tag(config=True, sync=True)
-    refresh_data = tl.Bool(False).tag(config=True, sync=True)
     _mode_data_managers_: Dict = {}
+    refresh_data = tl.Bool(False).tag(config=True, sync=True)
 
     def __init__(self):
         self.config_files = []

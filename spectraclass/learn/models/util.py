@@ -1,10 +1,11 @@
 from types import MethodType
 
-import tensorflow as tf
-keras = tf.keras
-from keras.models import *
-from keras.layers import *
-import keras.backend as K
+# import tensorflow as tf
+# keras = tf.keras
+from tensorflow.keras.models import Model
+from tensorflow.keras.models import *
+from tensorflow.keras.layers import *
+import tensorflow.keras.backend as K
 from tqdm import tqdm
 IMAGE_ORDERING = 'channels_first'
 

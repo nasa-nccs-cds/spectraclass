@@ -14,15 +14,16 @@ import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable
 import tensorflow as tf
 from sklearn.decomposition import PCA, FastICA
-import tensorflow as tf
-keras = tf.keras
-from keras import losses, regularizers
-from keras.saving.saved_model.load import load as keras_load_model
-from keras.layers import Input, Dense, Dropout, Lambda
-from keras.models import Model
-from keras import backend as K
-from keras.losses import mse, binary_crossentropy
-from keras.regularizers import l2
+#import tensorflow as tf
+#keras = tf.keras
+from tensorflow.keras.models import Model
+from tensorflow.keras import losses, regularizers
+from tensorflow.keras.saving.saved_model.load import load as keras_load_model
+from tensorflow.keras.layers import Input, Dense, Dropout, Lambda
+from tensorflow.keras.models import Model
+from tensorflow.keras import backend as K
+from tensorflow.keras.losses import mse, binary_crossentropy
+from tensorflow.keras.regularizers import l2
 import xarray as xa
 from ..model.labels import LabelsManager
 import traitlets as tl
@@ -215,9 +216,10 @@ class ModeDataManager(SCSingletonConfigurable):
         lgm().log(f" BUILD Autoencoder network: input_dims = {input_dims} ")
 
     def sampling(self, args):
-        import tensorflow as tf
-        keras = tf.keras
-        from keras import backend as K
+        # import tensorflow as tf
+        # keras = tf.keras
+        from tensorflow.keras.models import Model
+        from tensorflow.keras import backend as K
         """Reparametrisation by sampling from Gaussian, N(0,I)
         To sample from epsilon = Norm(0,I) instead of from likelihood Q(z|X)
         with latent variables z: z = z_mean + sqrt(var) * epsilon

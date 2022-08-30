@@ -2,9 +2,9 @@ import xarray as xa
 import time, traceback, abc
 import numpy as np
 import scipy, sklearn
-import tensorflow as tf
-keras = tf.keras
-from keras.models import Model
+# import tensorflow as tf
+# keras = tf.keras
+from tensorflow.keras.models import Model
 from typing import List, Tuple, Optional, Dict
 import traitlets as tl
 import traitlets.config as tlc

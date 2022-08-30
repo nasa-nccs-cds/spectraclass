@@ -1,8 +1,8 @@
 import pickle, random, time, numpy as np
 from spectraclass.data.base import DataManager
-import tensorflow as tf
-keras = tf.keras
-from keras.models import Model
+# import tensorflow as tf
+# keras = tf.keras
+from tensorflow.keras.models import Model
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.reduction.embedding import rm
 from spectraclass.data.spatial.tile.manager import TileManager, tm

@@ -4,12 +4,14 @@ import numpy as np
 from spectraclass.data.spatial.tile.tile import Block
 from sklearn.exceptions import NotFittedError
 import tensorflow as tf
-keras = tf.keras
+# import tensorflow as tf
+# keras = tf.keras
+from tensorflow.keras.models import Model
 from typing import List, Tuple, Optional, Dict
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.learn.base import KerasLearningModel
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
-from keras import datasets, layers, models
+from tensorflow.keras import datasets, layers, models
 
 class SpatialModelWrapper(KerasLearningModel):
 

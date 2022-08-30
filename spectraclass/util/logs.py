@@ -2,9 +2,10 @@ import numpy as np
 from typing import List, Optional, Dict, Type
 import os, datetime
 from enum import Enum
-import tensorflow as tf
-keras = tf.keras
-from keras.callbacks import CSVLogger
+#import tensorflow as tf
+#keras = tf.keras
+from tensorflow.keras.models import Model
+from tensorflow.keras.callbacks import CSVLogger
 from functools import wraps
 from time import time
 from datetime import datetime
