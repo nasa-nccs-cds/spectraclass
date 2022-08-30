@@ -1,6 +1,7 @@
 import random, numpy as np, torch
 from typing import List, Union, Tuple, Optional, Dict, Callable
-from spectraclass.ext.pynndescent import NNDescent
+#from spectraclass.ext.pynndescent import NNDescent
+from pynndescent import NNDescent
 from spectraclass.data.base import DataManager
 from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
 import hvplot.xarray

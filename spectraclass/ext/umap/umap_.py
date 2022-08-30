@@ -45,9 +45,13 @@ from spectraclass.ext.umap.layouts import (
     optimize_layout_inverse,
 )
 
-from spectraclass.ext.pynndescent import NNDescent
-from spectraclass.ext.pynndescent.distances import named_distances as pynn_named_distances
-from spectraclass.ext.pynndescent.sparse import sparse_named_distances as pynn_sparse_named_distances
+#from spectraclass.ext.pynndescent import NNDescent
+#from spectraclass.ext.pynndescent.distances import named_distances as pynn_named_distances
+#from spectraclass.ext.pynndescent.sparse import sparse_named_distances as pynn_sparse_named_distances
+
+from pynndescent import NNDescent
+from pynndescent.distances import named_distances as pynn_named_distances
+from pynndescent.sparse import sparse_named_distances as pynn_sparse_named_distances
 
 locale.setlocale(locale.LC_NUMERIC, "C")
 

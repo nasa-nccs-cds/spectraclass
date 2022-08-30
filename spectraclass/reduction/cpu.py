@@ -21,9 +21,13 @@ from spectraclass.ext.umap.utils import ( tau_rand_int, ts)
 from .base import UMAP
 from spectraclass.ext.umap.spectral import spectral_layout
 from spectraclass.ext.umap.layouts import ( optimize_layout_generic, optimize_layout_inverse )
-from spectraclass.ext.pynndescent.distances import named_distances as pynn_named_distances
-from spectraclass.ext.pynndescent.sparse import sparse_named_distances as pynn_sparse_named_distances
-from spectraclass.ext.pynndescent import NNDescent
+#from spectraclass.ext.pynndescent.distances import named_distances as pynn_named_distances
+#from spectraclass.ext.pynndescent.sparse import sparse_named_distances as pynn_sparse_named_distances
+#from spectraclass.ext.pynndescent import NNDescent
+
+from pynndescent import NNDescent
+from pynndescent.distances import named_distances as pynn_named_distances
+from pynndescent.sparse import sparse_named_distances as pynn_sparse_named_distances
 _HAVE_PYNNDESCENT = True
 
 locale.setlocale(locale.LC_NUMERIC, "C")

@@ -172,8 +172,9 @@ class ModeDataManager(SCSingletonConfigurable):
         else:
             self._build_ae_model( input_dims, **kwargs)
 
-        if not os.path.exists( aefiles[0] ):
-            lgm().log( f"#AEC weights file does not exist: {aefiles[0]}")
+        wfile = aefiles[0] + ".index"
+        if not os.path.exists( wfile ):
+            lgm().log( f"#AEC weights file does not exist: {wfile}")
             return False
         else:
             try:

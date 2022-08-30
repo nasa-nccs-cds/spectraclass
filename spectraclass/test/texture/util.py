@@ -6,7 +6,6 @@ from matplotlib.axes import Axes, BarContainer
 from spectraclass.data.base import DataManager, dm
 import xarray as xa
 TEST_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-from spectraclass.ext.pynndescent import NNDescent
 from sklearn.decomposition import PCA, FastICA
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from pywt import dwt2
@@ -45,12 +44,12 @@ def plot2( axs: np.ndarray, i0: int, i1: int, data: np.ndarray, title: str, cmap
     if data.ndim == 2:  imgplot.set_cmap( cmap )
     return imgplot
 
-def getProbabilityGraph( data: np.ndarray, nneighbors: int ) -> NNDescent:    # data: array, shape = (n_samples, n_features)
-    n_trees = 5 + int(round((data.shape[0]) ** 0.5 / 20.0))
-    n_iters = max(5, 2 * int(round(np.log2(data.shape[0]))))
-    kwargs = dict(n_trees=n_trees, n_iters=n_iters, n_neighbors=nneighbors, max_candidates=60, verbose=True, metric="hellinger" )
-    nnd =  NNDescent(data, **kwargs)
-    return nnd
+# def getProbabilityGraph( data: np.ndarray, nneighbors: int ) -> NNDescent:    # data: array, shape = (n_samples, n_features)
+#     n_trees = 5 + int(round((data.shape[0]) ** 0.5 / 20.0))
+#     n_iters = max(5, 2 * int(round(np.log2(data.shape[0]))))
+#     kwargs = dict(n_trees=n_trees, n_iters=n_iters, n_neighbors=nneighbors, max_candidates=60, verbose=True, metric="hellinger" )
+#     nnd =  NNDescent(data, **kwargs)
+#     return nnd
 
 def ca_reduction( data: np.ndarray, ndim: int, method: str = "pca"  ) -> Tuple[np.ndarray,np.ndarray]:
     if method == "pca":
