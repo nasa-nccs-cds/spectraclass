@@ -1,38 +1,26 @@
-import numpy as np
 from typing import List, Optional, Dict, Tuple, Union
 import ipywidgets as ipw
-import os, glob, sys
-from pathlib import Path
 import ipywidgets as ip
 from os import path
-from collections import OrderedDict
 from pathlib import Path
 from spectraclass.gui.control import UserFeedbackManager, ufm
-from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
-import xarray as xa
-import traitlets as tl
-from spectraclass.model.base import SCSingletonConfigurable
-import tensorflow as tf
 from sklearn.decomposition import PCA, FastICA
 #import tensorflow as tf
 #keras = tf.keras
-from tensorflow.keras.models import Model
 from tensorflow.keras import losses, regularizers
-from tensorflow.keras.saving.saved_model.load import load as keras_load_model
 from tensorflow.keras.layers import Input, Dense, Dropout, Lambda
 from tensorflow.keras.models import Model
 from tensorflow.keras import backend as K
 from tensorflow.keras.losses import mse, binary_crossentropy
 from tensorflow.keras.regularizers import l2
 import xarray as xa
-from ..model.labels import LabelsManager
 import traitlets as tl
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from spectraclass.model.base import SCSingletonConfigurable
-import pickle, random, time, numpy as np
+import time, numpy as np
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from typing import List, Optional, Dict, Tuple
-import os, shutil
+import os, glob, shutil
 
 def invert( X: np.ndarray ) -> np.ndarray:
     return X.max() - X
