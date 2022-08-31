@@ -21,13 +21,13 @@ from spectraclass.ext.umap.utils import ( tau_rand_int, ts)
 from .base import UMAP
 from spectraclass.ext.umap.spectral import spectral_layout
 from spectraclass.ext.umap.layouts import ( optimize_layout_generic, optimize_layout_inverse )
-#from spectraclass.ext.pynndescent.distances import named_distances as pynn_named_distances
-#from spectraclass.ext.pynndescent.sparse import sparse_named_distances as pynn_sparse_named_distances
-#from spectraclass.ext.pynndescent import NNDescent
+from spectraclass.ext.pynndescent.distances import named_distances as pynn_named_distances
+from spectraclass.ext.pynndescent.sparse import sparse_named_distances as pynn_sparse_named_distances
+from spectraclass.ext.pynndescent import NNDescent
 
-from pynndescent import NNDescent
-from pynndescent.distances import named_distances as pynn_named_distances
-from pynndescent.sparse import sparse_named_distances as pynn_sparse_named_distances
+#from pynndescent import NNDescent
+#from pynndescent.distances import named_distances as pynn_named_distances
+#from pynndescent.sparse import sparse_named_distances as pynn_sparse_named_distances
 _HAVE_PYNNDESCENT = True
 
 locale.setlocale(locale.LC_NUMERIC, "C")
@@ -1115,6 +1115,7 @@ def find_ab_params(spread, min_dist):
 class cpUMAP(UMAP):
 
     def embed( self, X: np.ndarray, y: np.ndarray=None, **kwargs ):
+        from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
         """Fit X into an embedded space.
 
         Optionally use y for supervised dimension reduction.
@@ -1137,7 +1138,6 @@ class cpUMAP(UMAP):
 
         X = check_array(X, dtype=np.float32, accept_sparse="csr", order="C")
         self._raw_data = X
-        self._rp_forest: NNDescent = kwargs.get( 'nngraph', self.getNNGraph() )
 
         # Handle all the optional arguments, setting default
         if self.a is None or self.b is None:
@@ -1173,7 +1173,9 @@ class cpUMAP(UMAP):
         else:
             nn_metric = self._input_distance_func
 
-        self._knn_indices, self._knn_dists = self._rp_forest.neighbor_graph
+        flow: ActivationFlow = afm().getActivationFlow()
+        self._knn_indices, self._knn_dists = flow.neighbor_graph
+
         self.graph_, self._sigmas, self._rhos = fuzzy_simplicial_set(
             X,
             self.n_neighbors,
@@ -1278,6 +1280,7 @@ class cpUMAP(UMAP):
 
 
     def transform(self, X):
+        from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
         """Transform X into the existing embedded space and return that
         transformed output.
 
@@ -1311,7 +1314,8 @@ class cpUMAP(UMAP):
         random_state = check_random_state(self.transform_seed)
         rng_state = random_state.randint(INT32_MIN, INT32_MAX, 3).astype(np.int64)
 
-        indices, dists = self._rp_forest.query(X, self.n_neighbors)
+        flow: ActivationFlow = afm().getActivationFlow()
+        indices, dists = flow.query(X, self.n_neighbors)
         dists = dists.astype(np.float32, order="C")
 
         adjusted_local_connectivity = max(0.0, self.local_connectivity - 1.0)

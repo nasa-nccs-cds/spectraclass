@@ -17,6 +17,9 @@ class ActivationFlow(object):
         self.p = kwargs.get( 'p', 2 )
         self._knn_graph = None
 
+    def query(self, X: np.ndarray, n_neighbors: int, **kwargs ) -> Tuple[np.ndarray,np.ndarray]:
+        raise NotImplementedError()
+
     def get_distances(self) -> np.ndarray:
         raise NotImplementedError()
 
@@ -26,7 +29,14 @@ class ActivationFlow(object):
     def spread( self, sample_data: np.ndarray, nIter: int = 1, **kwargs ) -> Optional[bool]:
         raise NotImplementedError()
 
-    def getGraph(self, nodes=None):
+    @property
+    def neighbor_graph(self) -> Tuple[np.ndarray,np.ndarray]:
+        raise NotImplementedError()
+
+    def setNodeData(self, nodes):
+        raise NotImplementedError()
+
+    def getGraph(self):
         raise NotImplementedError()
 
     def getEdgeIndex(self) -> Tuple[np.ndarray,np.ndarray]:
@@ -39,6 +49,9 @@ class ActivationFlow(object):
         if ptype == "cpu":
             from .cpu import cpActivationFlow
             return cpActivationFlow( point_data, nneighbors, **kwargs )
+        if ptype == "skl":
+            from .skl import skActivationFlow
+            return skActivationFlow( point_data, nneighbors, **kwargs )
         elif ptype == "gpu":
             from .gpu import gpActivationFlow
             return  gpActivationFlow( point_data, nneighbors, **kwargs )

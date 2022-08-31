@@ -5,7 +5,8 @@ from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from typing import List, Union, Tuple, Optional, Dict, Callable
 import os, numpy as np, xarray as xa
-from pynndescent import NNDescent
+# from pynndescent import NNDescent
+from spectraclass.ext.pynndescent import NNDescent
 
 dm: DataManager = DataManager.initialize("img_mgr", 'aviris')
 dm.modal.cache_dir = "/Volumes/Shared/Cache"

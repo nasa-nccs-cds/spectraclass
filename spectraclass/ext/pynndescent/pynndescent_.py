@@ -769,6 +769,8 @@ class NNDescent(object):
         else:
             effective_max_candidates = self.max_candidates
 
+        print("9")
+
         # Set threading constraints
         self._original_num_threads = numba.get_num_threads()
         if self.n_jobs != -1 and self.n_jobs is not None:
@@ -826,6 +828,7 @@ class NNDescent(object):
 
             if verbose:
                 print(ts(), "metric NN descent for", str(n_iters), "iterations")
+
 
             self._neighbor_graph = sparse_nnd.nn_descent(
                 self._raw_data.indices,

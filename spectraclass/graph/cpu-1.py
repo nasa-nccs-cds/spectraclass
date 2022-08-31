@@ -61,7 +61,7 @@ class cpActivationFlow(ActivationFlow):
 
     def __init__(self, nodes_data: xa.DataArray, n_neighbors: int, **kwargs ):
         ActivationFlow.__init__( self,  n_neighbors, **kwargs )
-        self.nnd: NNDescent = None
+        self._knn_graph: Optional[NNDescent] = None
         self.I: np.ndarray = None
         self.D: np.ndarray = None
         self.P: np.ndarray = None
@@ -71,13 +71,6 @@ class cpActivationFlow(ActivationFlow):
     def get_distances(self) -> np.ndarray:
         return self.P
 
-    def query(self, X: np.ndarray, n_neighbors: int, **kwargs ) -> Tuple[np.ndarray,np.ndarray]:
-        return self._knn_graph.query( X, n_neighbors )
-
-    @property
-    def neighbor_graph(self) -> Tuple[np.ndarray, np.ndarray]:
-        return self.I, self.D
-
     def get_classes(self) -> np.ndarray:
         return self.C
 
@@ -85,6 +78,7 @@ class cpActivationFlow(ActivationFlow):
         if (nodes_data.size > 0):
             t0 = time.time()
             self.nodes = nodes_data
+            self._knn_graph: Optional[NNDescent] = None
             self.getGraph()
             self.I: np.ndarray = self._knn_graph.neighbor_graph[0]
             self.D: np.ndarray = self._knn_graph.neighbor_graph[1].astype(np.float32)
@@ -94,7 +88,7 @@ class cpActivationFlow(ActivationFlow):
         else:
             lgm().log("No data available for this block")
 
-    def getGraph(self ):
+    def getGraph(self):
         if self._knn_graph is None:
             n_trees =  5 + int(round((self.nodes.shape[0]) ** 0.5 / 20.0))
             n_iters =  max(5, 2 * int(round(np.log2(self.nodes.shape[0]))))

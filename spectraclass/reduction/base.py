@@ -7,7 +7,7 @@ import xarray as xa
 import scipy.sparse
 import scipy.sparse.csgraph
 import numba
-from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
+from spectraclass.util.logs import log_timing
 locale.setlocale(locale.LC_NUMERIC, "C")
 
 INT32_MIN = np.iinfo(np.int32).min + 1
@@ -207,6 +207,7 @@ class UMAP(BaseEstimator):
         output_metric="euclidean",
         output_metric_kwds=None,
         n_epochs=50,
+        nn_type = "cpu",
         learning_rate=1.0,
         init="random",
         min_dist=0.1,
@@ -245,7 +246,7 @@ class UMAP(BaseEstimator):
         self._embedding_ = None
         self._init_embedding_ = None
         self.external_embedding = None
-
+        self.nn_type = nn_type
         self.spread = spread
         self.min_dist = min_dist
         self.low_memory = low_memory
@@ -274,8 +275,7 @@ class UMAP(BaseEstimator):
 
     @property
     def input_data(self) -> np.ndarray:
-        from spectraclass.gui.spatial.map import MapManager, mm
-#        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        #        from spectraclass.data.spatial.tile.manager import TileManager, tm
 #        result, mask = mm().block.raster2points( mm().threshold_mask )
         return self._input_data
 
@@ -284,7 +284,7 @@ class UMAP(BaseEstimator):
         self._input_data = value
 
     def getNNGraph( self ):
-        from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
+        from spectraclass.graph.manager import afm
         return afm().getActivationFlow().getGraph()
 
         # n_trees = kwargs.get('ntree', 5 + int(round((nodes.shape[0]) ** 0.5 / 20.0)))
@@ -522,11 +522,11 @@ class UMAP(BaseEstimator):
         from spectraclass.data.base import DataManager
         ptype = DataManager.instance().proc_type
         mapper = None
-        if ptype == "cpu":
+        if ptype in ["cpu","skl"]:
             from .cpu import cpUMAP
-            mapper = cpUMAP(*args, **kwargs)
+            mapper = cpUMAP( *args, nn_type=ptype, **kwargs )
         elif ptype == "gpu":
-            from .gpu import gpUMAP
+            from reduction.SCRAP.gpu import gpUMAP
             mapper = gpUMAP(*args, **kwargs)
         else:
             print(f"Error, unknown proc_type: {ptype}")

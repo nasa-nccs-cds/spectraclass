@@ -1,6 +1,7 @@
 # Author: Leland McInnes <leland.mcinnes@gmail.com>
 #
 # License: BSD 2 clause
+import traceback
 from warnings import warn
 
 import locale
@@ -509,12 +510,8 @@ def make_euclidean_tree(
     leaf_size=30,
 ):
     if indices.shape[0] > leaf_size:
-        (
-            left_indices,
-            right_indices,
-            hyperplane,
-            offset,
-        ) = euclidean_random_projection_split(data, indices, rng_state)
+        (left_indices, right_indices, hyperplane, offset) = euclidean_random_projection_split(data, indices, rng_state)
+        print("make_euclidean_trees")
 
         make_euclidean_tree(
             data,
@@ -760,7 +757,8 @@ def make_sparse_angular_tree(
 
 
 @numba.njit(nogil=True, cache=True)
-def make_dense_tree(data, rng_state, leaf_size=30, angular=False):
+def make_dense_tree(idx, data, rng_state, leaf_size=30, angular=False):
+    print(f"START[{idx}]: make_dense_tree")
     indices = np.arange(data.shape[0]).astype(np.int32)
 
     hyperplanes = numba.typed.List.empty_list(dense_hyperplane_type)
@@ -769,6 +767,7 @@ def make_dense_tree(data, rng_state, leaf_size=30, angular=False):
     point_indices = numba.typed.List.empty_list(point_indices_type)
 
     if angular:
+        print( f"INIT[{idx}]: make_angular_tree")
         make_angular_tree(
             data,
             indices,
@@ -780,6 +779,7 @@ def make_dense_tree(data, rng_state, leaf_size=30, angular=False):
             leaf_size,
         )
     else:
+        print( f"INIT[{idx}]: make_euclidean_tree" )
         make_euclidean_tree(
             data,
             indices,
@@ -793,7 +793,6 @@ def make_dense_tree(data, rng_state, leaf_size=30, angular=False):
 
     result = FlatTree(hyperplanes, offsets, children, point_indices, leaf_size)
     return result
-
 
 @numba.njit(nogil=True, cache=True)
 def make_sparse_tree(inds, indptr, spdata, rng_state, leaf_size=30, angular=False):
@@ -951,6 +950,7 @@ def make_forest(
     random_state,
     n_jobs=None,
     angular=False,
+    parallel=True
 ):
     """Build a random projection forest with ``n_trees``.
 
@@ -968,7 +968,6 @@ def make_forest(
     forest: list
         A list of random projection trees.
     """
-    # print(ts(), "Started forest construction")
     result = []
     if leaf_size is None:
         leaf_size = max(10, np.int32(n_neighbors))
@@ -980,6 +979,7 @@ def make_forest(
     )
     try:
         if scipy.sparse.isspmatrix_csr(data):
+            print("Started sparse forest construction")
             result = joblib.Parallel(n_jobs=n_jobs, require="sharedmem")(
                 joblib.delayed(make_sparse_tree)(
                     data.gindices,
@@ -992,17 +992,24 @@ def make_forest(
                 for i in range(n_trees)
             )
         else:
-            result = joblib.Parallel(n_jobs=n_jobs, require="sharedmem")(
-                joblib.delayed(make_dense_tree)(data, rng_states[i], leaf_size, angular)
-                for i in range(n_trees)
-            )
+            print(f" --> Started dense forest construction, parallel={parallel}")
+            if parallel:
+                result = joblib.Parallel(n_jobs=n_jobs, require="sharedmem")(
+                    joblib.delayed(make_dense_tree)(i, data, rng_states[i], leaf_size, angular) for i in range(n_trees) )
+            else:
+                print(f"Make dense trees...")
+                result = [ make_dense_tree(i, data, rng_states[i], leaf_size, angular) for i in range(n_trees) ]
     except (RuntimeError, RecursionError, SystemError):
-        warn(
+        print(
             "Random Projection forest initialisation failed due to recursion"
             "limit being reached. Something is a little strange with your "
             "graph_data, and this may take longer than normal to compute."
         )
-
+        traceback.print_exc()
+    except Exception:
+        traceback.print_exc()
+    finally:
+        print("Completed forest construction")
     return tuple(result)
 
 

@@ -1,4 +1,4 @@
-from .base import UMAP
+from reduction.base import UMAP
 import numpy as np
 import xarray as xa
 from typing import List, Union, Tuple, Optional, Dict, Callable, Iterable

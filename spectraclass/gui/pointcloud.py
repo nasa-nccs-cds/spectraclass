@@ -164,13 +164,10 @@ class PointCloudManager(SCSingletonConfigurable):
         if (model_data is not None) and (model_data.shape[0] > 1):
             lgm().log(f"UMAP.init: model_data{model_data.dims} shape = {model_data.shape}",print=True)
             flow: ActivationFlow = afm().getActivationFlow()
-            print( "ActivationFlow")
             if flow is None: return False
             node_data = model_data if refresh else None
-            graph = flow.getGraph( nodes=node_data )
-            print("graph")
-            embedding = rm().umap_init( model_data, nngraph=graph, **kwargs )
-            print("embedding")
+            flow.setNodeData( node_data )
+            embedding = rm().umap_init( model_data, **kwargs )
             self.xyz = self.normalize(embedding)
         else:
             lgm().log(f"UMAP.init: model_data is empty",print=True)
