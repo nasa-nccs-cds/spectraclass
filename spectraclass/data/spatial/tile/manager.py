@@ -47,6 +47,7 @@ class TileManager(SCSingletonConfigurable):
         self._block_dims = None
         self._tile_size = None
         self._tile_shape = None
+        self._scale = None
 
     @classmethod
     def encode( cls, obj ) -> str:
@@ -140,11 +141,19 @@ class TileManager(SCSingletonConfigurable):
     def block_coords(self) -> Tuple:
         return tuple(self.block_index)
 
-    def setBlock( self, block_index ):
+    def setBlock( self, block_index ) -> bool:
         from spectraclass.data.base import DataManager, dm, DataType
         if tuple(block_index) != self.block_index:
             self.block_index = tuple(block_index)
             dm().loadCurrentProject( 'setBlock', True )
+            return True
+        return False
+
+    def set_scale(self, scale: xa.DataArray ):
+        self._scale = scale
+
+    def get_scale(self) -> xa.DataArray:
+        return self._scale
 
     def in_bounds( self, pids: List[int] ) -> bool:
         from spectraclass.data.base import DataManager, dm, DataType
@@ -297,3 +306,7 @@ class TileManager(SCSingletonConfigurable):
     def mask_nodata(self, raster: xa.DataArray) -> xa.DataArray:
         nodata_value = raster.attrs.get('data_ignore_value', -9999)
         return raster.where(raster != nodata_value, float('nan') )
+
+    def norm(self, raster: xa.DataArray) -> xa.DataArray:
+        return raster / self._scale
+

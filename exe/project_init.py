@@ -10,6 +10,6 @@ else:
     project: str = sys.argv[2]    #   e.g. 'demo1', 'demo2', 'demo3', or 'demo4'
 
     dm: DataManager = DataManager.initialize( project, mode )
-    dm.prepare_inputs( reprocess=False )
+    dm.prepare_inputs( reprocess=True )
 
 

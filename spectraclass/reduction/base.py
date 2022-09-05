@@ -7,7 +7,7 @@ import xarray as xa
 import scipy.sparse
 import scipy.sparse.csgraph
 import numba
-from spectraclass.util.logs import log_timing
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 locale.setlocale(locale.LC_NUMERIC, "C")
 
 INT32_MIN = np.iinfo(np.int32).min + 1
@@ -275,7 +275,8 @@ class UMAP(BaseEstimator):
 
     @property
     def input_data(self) -> np.ndarray:
-        #        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.gui.spatial.map import MapManager, mm
+#        from spectraclass.data.spatial.tile.manager import TileManager, tm
 #        result, mask = mm().block.raster2points( mm().threshold_mask )
         return self._input_data
 
@@ -284,7 +285,7 @@ class UMAP(BaseEstimator):
         self._input_data = value
 
     def getNNGraph( self ):
-        from spectraclass.graph.manager import afm
+        from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
         return afm().getActivationFlow().getGraph()
 
         # n_trees = kwargs.get('ntree', 5 + int(round((nodes.shape[0]) ** 0.5 / 20.0)))
@@ -526,7 +527,7 @@ class UMAP(BaseEstimator):
             from .cpu import cpUMAP
             mapper = cpUMAP( *args, nn_type=ptype, **kwargs )
         elif ptype == "gpu":
-            from reduction.SCRAP.gpu import gpUMAP
+            from .gpu import gpUMAP
             mapper = gpUMAP(*args, **kwargs)
         else:
             print(f"Error, unknown proc_type: {ptype}")

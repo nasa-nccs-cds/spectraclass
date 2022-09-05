@@ -79,6 +79,11 @@ class SpatialDataManager(ModeDataManager):
         normed_data = (data.values - dave) / dmag
         return data.copy( data=normed_data )
 
+    def sum( self, data: xa.DataArray, dim: int = 1 ) -> xa.DataArray:
+        result = data.sum( axis=dim, keepdims=True )
+        result.attrs['scale'] = data.shape[dim]
+        return result
+
     def dsid(self, **kwargs) -> str:
         from spectraclass.data.spatial.tile.manager import tm
         block = kwargs.get( 'block', tm().getBlock() )
@@ -224,16 +229,10 @@ class SpatialDataManager(ModeDataManager):
             blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
 
         if blocks_point_data.size == 0: return None
-        normed_data: xa.DataArray = self.pnorm(blocks_point_data)
-        prange = (normed_data.values.min(), normed_data.values.max(), normed_data.values.mean())
-        lgm().log( f" Preparing point data with shape {normed_data.shape}, range={prange}, #nan={np.count_nonzero(np.isnan(blocks_point_data))}", print=True)
-        rargs = dict( nepoch = self.reduce_nepoch, niter = self.reduce_niter )
-        (reduced_spectra, reproduction) = self.reduce(normed_data, **rargs )
-        lgm().log(f" Generated reduced data, method={self.reduce_method}, reduced_spectra shape = {reduced_spectra.shape}, reproduction shape = {reproduction.shape} ")
+        sum = self.sum(blocks_point_data)
         raw_data: xa.DataArray = block.data
-        data_vars = dict(raw=raw_data, norm=normed_data)
+        data_vars = dict(raw=raw_data, sum=sum)
         lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.size} samples", print=True )
-        lgm().log( f" -----> point_data: shape = {normed_data.shape}, #NULL={np.count_nonzero(np.isnan(normed_data.values))}")
         data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y', 'x'], coords={d: raw_data.coords[d] for d in ['x', 'y']} )
         result_dataset = xa.Dataset(data_vars)
         result_dataset.attrs['tile_shape'] = tm().tile.data.shape
@@ -243,9 +242,9 @@ class SpatialDataManager(ModeDataManager):
         for (aid, aiv) in tm().tile.data.attrs.items():
             if aid not in result_dataset.attrs:
                 result_dataset.attrs[aid] = aiv
-        lgm().log( f" Writing reduced output to {block_data_file} with {blocks_point_data.size} samples, dset attrs:")
+        lgm().log( f" Writing preprocessed output to {block_data_file} with {blocks_point_data.size} samples, dset attrs:")
         for varname, da in result_dataset.data_vars.items():
-            da.attrs['long_name'] = ".".join([normed_data.attrs['file_name'], varname])
+            da.attrs['long_name'] = ".".join([blocks_point_data.attrs['file_name'], varname])
         for vname, v in data_vars.items():
             lgm().log( f" ---> {vname}: shape={v.shape}, size={v.size}, dims={v.dims}, coords={[':'.join([cid, str(c.shape)]) for (cid, c) in v.coords.items()]}")
         if os.path.exists(block_data_file):
@@ -265,44 +264,61 @@ class SpatialDataManager(ModeDataManager):
             tm().tile.saveMetadata()
         lgm().log( f"METADATA GENERATION COMPLETE", print=True )
 
+    def preprocess_block(self, block) -> Optional[xa.Dataset]:
+        lgm().log(f" Processing block{block.block_coords}")
+        block_data_file = dm().modal.dataFile(block=block)
+        process_dataset = True
+        nsamples = 0
+        if os.path.isfile(block_data_file):
+            try:
+                with xa.open_dataset(block_data_file) as dataset:
+                    nsamples = 0 if (len(dataset.coords) == 0) else dataset.coords['samples'].size
+                    process_dataset = False
+            except Exception as err:
+                lgm().log(  f" Error getting samples from existing block_data_file: {block_data_file}\n ---> ERROR = {err}", print=True)
+        if not process_dataset:
+            lgm().log( f" Skipping existing block{block.block_coords} with nsamples={nsamples}, existing file: {block_data_file}", print=True)
+        else:
+            return self.process_block(block)
+
+    def get_scaling( self, sums: List[xa.DataArray] ) -> xa.DataArray:
+        dsum: xa.DataArray = None
+        npts = 0
+        for sum in sums:
+            if dsum is None:
+                dsum = sum
+                npts = dsum.attrs['scale']
+            else:
+                dsum = dsum + sum
+                npts = npts + dsum.attrs['scale']
+        return dsum/npts
+
+
     @exception_handled
     def prepare_inputs(self, **kwargs ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         tm().autoprocess = False
         lgm().log(f" Preparing inputs", print=True)
         if tm().reprocess: dm().modal.removeDataset()
+        sums: List[xa.DataArray] = []
         for image_index in range( dm().modal.num_images ):
             self.set_current_image( image_index )
             block_nsamples = {}
             ufm().show( f"Preprocessing data blocks for image {dm().modal.image_name}", "blue" )
-
             ref_dataset = None
             for block in self.tiles.tile.getBlocks():
-                lgm().log(f" Processing block{block.block_coords}")
-                block_data_file =  dm().modal.dataFile(block=block)
-                process_dataset = True
-                nsamples = 0
-                if os.path.isfile( block_data_file ):
-                    try:
-                        with xa.open_dataset(block_data_file) as dataset:
-                            nsamples = 0 if (len( dataset.coords ) == 0) else dataset.coords['samples'].size
-                            block_nsamples[block.block_coords] = nsamples
-                            process_dataset = False
-                    except Exception as err:
-                        lgm().log(f" Error getting samples from existing block_data_file: {block_data_file}\n ---> ERROR = {err}",  print=True)
-                if not process_dataset:
-                    lgm().log( f" Skipping existing block{block.block_coords} with nsamples={nsamples}, existing file: {block_data_file}", print=True)
-                else:
-                    result_dataset = self.process_block( block )
-                    if ref_dataset is None: ref_dataset = result_dataset
-                    block_nsamples[block.block_coords] = result_dataset.coords['samples'].size
-    #                        print(f"Writing raster file: '{self._reduced_raster_file}' with dims={reduced_dataArray.dims}, attrs = {reduced_dataArray.attrs}")
-    #                        reduced_dataArray.rio.set_spatial_dims()
-    #                        raw_data.rio.to_raster( self._reduced_raster_file )
+                result_dataset = self.preprocess_block( block )
+                if ref_dataset is None: ref_dataset = result_dataset
+                block_nsamples[block.block_coords] = result_dataset.coords['samples'].size
+                sums.append( result_dataset.data_vars['sum'] )
             tm().block_index = (0,0)
             if ref_dataset is not None:
                 ref_dataset.attrs[ 'block_sizes'] = tm().encode( block_nsamples )
                 ref_dataset.to_netcdf( ref_dataset.attrs['block_data_file'] )
+
+        tm().set_scale( self.get_scaling( sums ) )
+        refresh = kwargs.pop( "refresh", True )
+        dm().modal.autoencoder_preprocess( refresh=refresh, **kwargs )
 
 
     def dataFile( self, **kwargs ):

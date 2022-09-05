@@ -248,17 +248,13 @@ class PointCloudManager(SCSingletonConfigurable):
         return ipw.Label( f"{toks[0]} {toks[2]}" )
 
     def _get_gui( self ) -> ipw.DOMWidget:
-        print( "pcm-gui0")
         self.createPoints()
-        print("pcm-gui1")
         self.scene = p3js.Scene( children=[ self.points, self.camera, p3js.AmbientLight(intensity=0.8)  ] )
         self.renderer = p3js.Renderer( scene=self.scene, camera=self.camera, controls=[self.orbit_controls], width=800, height=500 )
         self.point_picker = p3js.Picker(controlling=self.points, event='click')
-        print("pcm-gui2")
         self.point_picker.observe( partial( self.on_pick, False ), names=['point'])
         self.renderer.controls = self.renderer.controls + [self.point_picker]
         self.control_panel = self.getControlsWidget()
-        print("pcm-gui3")
         return ipw.VBox( [ self.renderer, self.control_panel ]  )
 
     @exception_handled
@@ -280,10 +276,8 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def gui(self, **kwargs ) -> ipw.DOMWidget:
         if self._gui is None:
-            lgm().log(f"Creating the PCM[{id(self)}] gui", print=True )
             self.init_data( **kwargs )
             self._gui = self._get_gui()
-            lgm().log(f"PCM[{id(self)}] gui COMPLETE", print=True )
         return self._gui
 
     def get_index_from_point(self, point: List[float] ) -> int:

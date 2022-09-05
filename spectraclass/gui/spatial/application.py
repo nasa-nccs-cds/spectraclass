@@ -24,12 +24,9 @@ class Spectraclass(SpectraclassController):
             plot_collapsibles = ipw.Accordion( children = [ dm().gui(), pm().gui(), self.create_viz_tabs() ], layout=ipw.Layout(width='100%'))
             for iT, title in enumerate(['data', 'controls', 'visualization' ]): plot_collapsibles.set_title(iT, title)
             plot_collapsibles.selected_index = 1
-            print("Created data panels")
             plot = ipw.VBox([ ufm().gui(), plot_collapsibles, gpm().gui() ], layout=ipw.Layout( flex='1 0 700px' ), border=css_border )
-            print("Created graph panels")
             smap = mm().gui( basemap=basemap )
             control = ipw.VBox( [ am().gui(), smap ], layout=ipw.Layout( flex='0 0 700px'), border=css_border )
-            print("Created map panels")
             gui = ipw.HBox( [control, plot ], layout=ipw.Layout( width='100%' ) )
             if embed: self.embed()
             print( "GUI Init complete")

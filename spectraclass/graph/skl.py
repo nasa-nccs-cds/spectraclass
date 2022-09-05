@@ -98,9 +98,8 @@ class skActivationFlow(ActivationFlow):
 
     def getGraph(self ):
         if self._knn_graph is None:
-            self._knn_graph = skNearestNeighbors( algorithm="brute", n_jobs=-1)
+            self._knn_graph = skNearestNeighbors()
             self._knn_graph.fit( self.nodes )
-            lgm().log(f"skGraph COMPLETED",print=True)
         return self._knn_graph
 
     def spread( self, sample_data: np.ndarray, nIter: int = 1, **kwargs ) -> Optional[bool]:

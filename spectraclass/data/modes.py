@@ -26,9 +26,8 @@ import os, glob, shutil
 def invert( X: np.ndarray ) -> np.ndarray:
     return X.max() - X
 
-
 def pnorm(data: xa.DataArray, dim: int = 1) -> xa.DataArray:
-    dave, dmag = np.nanmean(data.values, keepdims=True, axis=dim), np.nanstd(data.values, keepdims=True,                                                                             axis=dim)
+    dave, dmag = np.nanmean(data.values, keepdims=True, axis=dim), np.nanstd(data.values, keepdims=True, axis=dim)
     normed_data = (data.values - dave) / dmag
     return data.copy(data=normed_data)
 
@@ -231,13 +230,13 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def _build_vae_model(self, input_dims: int, **kwargs ):
         model_dims: int = kwargs.get('dims', self.model_dims)
-        hidden_activation = "relu"
+        hidden_activation = "tanh"
         output_activation = 'linear'
         optimizer = 'rmsprop'  # 'rmsprop'
         reduction_factor = 2.0
         verbose = 0
-        dropout_rate = 0.1
-        l2_regularizer = 0.1
+        dropout_rate = 0.01
+        l2_regularizer = 0.01
         inputs = Input(shape=(input_dims,))
         layer = Dense(input_dims, activation=hidden_activation)(inputs)
         layer_dims = int(round(input_dims / reduction_factor))
@@ -283,6 +282,15 @@ class ModeDataManager(SCSingletonConfigurable):
         lgm().log( "AEC: initialize_dimension_reduction" )
         self.autoencoder_preprocess( **kwargs )
 
+    def autoencoder_process(self, point_data: xa.DataArray, **kwargs ):
+        nepoch: int = kwargs.get( 'nepoch', self.reduce_nepoch )
+        if self._autoencoder is None:
+            method: str = kwargs.pop('method', self.reduce_method)
+            self.vae = (method.strip().lower() == 'vae')
+            self.build_encoder(**kwargs)
+        norm_data = tm().norm(point_data)
+        self._autoencoder.fit(norm_data.values, norm_data.values, epochs=nepoch, batch_size=256, shuffle=True)
+
     def autoencoder_preprocess(self, **kwargs ):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.control import UserFeedbackManager, ufm
@@ -303,7 +311,7 @@ class ModeDataManager(SCSingletonConfigurable):
                         t0 = time.time()
                         point_data, grid = block.getPointData()
                         if point_data.shape[0] > 0:
-                            norm_data = pnorm(point_data)
+                            norm_data = tm().norm(point_data)
                             lgm().log(f"\nITER[{iter}]: Processing block{block.block_coords}, data shape = {point_data.shape}", print=True )
                             self._autoencoder.fit(norm_data.data, norm_data.data, epochs=nepoch, batch_size=256, shuffle=True)
                             lgm().log(f" Trained autoencoder in {time.time() - t0} sec", print=True)

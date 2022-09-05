@@ -131,6 +131,8 @@ class Tile(DataContainer):
         self._index = tile_index
         self._metadata: Dict = None
         self.subsampling: int =  kwargs.get('subsample',1)
+        self._mean = None
+        self._std = None
 
     @property
     def metadata(self) -> Dict:
@@ -155,7 +157,9 @@ class Tile(DataContainer):
 
     def _get_data(self) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        return tm().getTileData()
+        tile_data = tm().getTileData()
+        lgm().log( f"#Tile[{self._index}]-> Read Data: shape = {tile_data.shape}, dims={tile_data.dims}", print=True )
+        return tile_data
 
     @property
     def name(self) -> str:
