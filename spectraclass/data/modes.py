@@ -93,9 +93,69 @@ class ModeDataManager(SCSingletonConfigurable):
         self._active_image = 0
         self._autoencoder = None
         self._encoder = None
+        self._metadata: Dict = None
 
-    @exception_handled
+    @property
+    def metadata(self) -> Dict:
+        if self._metadata is None:
+            self._metadata = self.loadMetadata()
+        return self._metadata
 
+    def write_metadata(self, block_data, attrs ):
+        from spectraclass.data.base import DataManager, dm
+        file_path = f"{dm().cache_dir}/{self.modelkey}.mdata.txt"
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        try:
+            with open(file_path, "w") as mdfile:
+                for (k, v) in attrs.items():
+                    mdfile.write(f"{k}={v}\n")
+                for bcoords, bsize in block_data.items():
+                    mdfile.write(f"nvalid-{'-'.join(bcoords)}={bsize}\n")
+            lgm().log(f" ---> Writing metadata file at {file_path}", print=True)
+        except Exception as err:
+            lgm().log(f" ---> ERROR Writing metadata file at {file_path}: {err}", print=True)
+            if os.path.isfile(file_path): os.remove(file_path)
+
+    def loadMetadata(self) -> Dict:
+        from spectraclass.data.base import DataManager, dm
+        file_path = f"{dm().cache_dir}/{self.modelkey}.mdata.txt"
+        mdata = {}
+        try:
+            with open(file_path, "r") as mdfile:
+                print(f"Loading metadata from file: {file_path}")
+                block_sizes = {}
+                for line in mdfile.readlines():
+                    try:
+                        toks = line.split("=")
+                        if toks[0].startswith('nvalid'):
+                            bcoords = tuple( [ int(iv) for iv in toks[0].split("-")[1:] ] )
+                            block_sizes[bcoords] = int(toks[1])
+                        elif toks[0] == "scale":
+                            scale = [ float(iv) for iv in toks[0].strip("()").split(",") ]
+                            tm().set_scale( np.array(scale) )
+                        else:
+                            mdata[toks[0]] = "=".join(toks[1:])
+                    except Exception as err:
+                        lgm().log(f"LoadMetadata: Error '{err}' reading line '{line}'")
+                mdata['block_size'] = block_sizes
+        except Exception as err:
+            lgm().log(f"Warning: can't read config file '{file_path}': {err}\n")
+        return mdata
+
+    @property
+    def block_sizes(self) -> Dict[Tuple[int,int,int], int]:
+        return self.metadata['block_size']
+
+    def block_nvalid(self, block_coords: Tuple[int,int,int]) -> int:
+        return self.block_sizes.get(tuple(block_coords), 0)
+
+    def get_valid_block_coords(self, image_index, block_coords: Tuple[int,int,int]) -> Tuple[int,int,int]:
+        from spectraclass.data.base import DataManager, dm
+        if self.block_nvalid(block_coords) > 0: return block_coords
+        for (coords, nvalid) in self.block_sizes.items():
+            if (image_index==coords[0]) and (nvalid > 0): return coords
+        lgm().log(f"No valid blocks in tile.\nMetadata File: {dm().metadata_file}\nBlock sizes: {self.block_sizes}")
+        raise Exception("No valid blocks in tile")
 
     # def spectral_reduction(data, graph, n_components=3, sparsify=False):
     #     t0 = time.time()
@@ -151,11 +211,11 @@ class ModeDataManager(SCSingletonConfigurable):
     def build_encoder(self, **kwargs) -> bool:
         model_key: str = kwargs.get('key', self.modelkey )
         refresh = kwargs.pop( 'refresh', self.refresh_model )
+        input_dims = kwargs.pop( 'bands' )
+        if input_dims is None: input_dims = tm().getBlock().data.shape[0]
         aefiles = self.autoencoder_files( **kwargs  )
         if refresh:
             for aef in aefiles: shutil.rmtree( aef, ignore_errors=True )
-
-        input_dims = tm().getBlock().data.shape[0]
         if self.vae:
             self._build_vae_model( input_dims, **kwargs)
         else:
@@ -297,12 +357,9 @@ class ModeDataManager(SCSingletonConfigurable):
         nepoch: int = kwargs.get( 'nepoch', self.reduce_nepoch )
         niter: int = kwargs.get( 'niter', self.reduce_niter )
         method: str = kwargs.pop( 'method', self.reduce_method )
-        key: str = kwargs.pop( 'key', self.modelkey )
-        model_dims: int = kwargs.pop( 'dims', self.model_dims )
         self.vae = (method.strip().lower() == 'vae')
         weights_loaded = self.build_encoder(**kwargs)
         if not weights_loaded:
-            ufm().show( f"Initializing autoencoder.{key}[{model_dims}]", print=True, log=True )
             for iter in range(niter):
                 for image_index in range(dm().modal.num_images):
                     dm().modal.set_current_image(image_index)
@@ -448,9 +505,6 @@ class ModeDataManager(SCSingletonConfigurable):
         raise NotImplementedError()
 
     def prepare_inputs(self, **kwargs ) -> Dict[Tuple,int]:
-        raise NotImplementedError()
-
-    def generate_metadata(self, **kwargs ):
         raise NotImplementedError()
 
     def process_block(self, block  ) -> xa.Dataset:

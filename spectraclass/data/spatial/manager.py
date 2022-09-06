@@ -79,8 +79,8 @@ class SpatialDataManager(ModeDataManager):
         normed_data = (data.values - dave) / dmag
         return data.copy( data=normed_data )
 
-    def sum( self, data: xa.DataArray, dim: int = 1 ) -> xa.DataArray:
-        result = data.sum( axis=dim, keepdims=True )
+    def sum( self, data: xa.DataArray, dim: int = 0 ) -> xa.DataArray:
+        result = data.sum( axis=dim )
         result.attrs['scale'] = data.shape[dim]
         return result
 
@@ -219,26 +219,27 @@ class SpatialDataManager(ModeDataManager):
     def process_block( self, block  ) -> Optional[xa.Dataset]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block_data_file = dm().modal.dataFile(block=block)
+        if os.path.exists(block_data_file): os.remove(block_data_file)
         ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
         coord_data = {}
         ufm().show( f" *** Processing Block{block.block_coords}" )
         try:
             blocks_point_data, coord_data = block.getPointData()
-            lgm().log(f" Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}", print=True)
+            lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}", print=True)
         except NoDataInBounds:
             blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
 
         if blocks_point_data.size == 0: return None
-        sum = self.sum(blocks_point_data)
+        sum: xa.DataArray = self.sum(blocks_point_data)
         raw_data: xa.DataArray = block.data
         data_vars = dict(raw=raw_data, sum=sum)
-        lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.size} samples", print=True )
+        lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.shape[0]} samples", print=True )
         data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y', 'x'], coords={d: raw_data.coords[d] for d in ['x', 'y']} )
         result_dataset = xa.Dataset(data_vars)
         result_dataset.attrs['tile_shape'] = tm().tile.data.shape
         result_dataset.attrs['block_dims'] = tm().block_dims
         result_dataset.attrs['tile_size'] = tm().tile_size
-        result_dataset.attrs['block_size'] = result_dataset.coords['samples'].size
+        result_dataset.attrs['block_size'] = blocks_point_data.shape[0]
         for (aid, aiv) in tm().tile.data.attrs.items():
             if aid not in result_dataset.attrs:
                 result_dataset.attrs[aid] = aiv
@@ -247,39 +248,9 @@ class SpatialDataManager(ModeDataManager):
             da.attrs['long_name'] = ".".join([blocks_point_data.attrs['file_name'], varname])
         for vname, v in data_vars.items():
             lgm().log( f" ---> {vname}: shape={v.shape}, size={v.size}, dims={v.dims}, coords={[':'.join([cid, str(c.shape)]) for (cid, c) in v.coords.items()]}")
-        if os.path.exists(block_data_file):
-            os.remove(block_data_file)
-        else:
-            os.makedirs(os.path.dirname(block_data_file), exist_ok=True)
+        os.makedirs(os.path.dirname(block_data_file), exist_ok=True)
         result_dataset.to_netcdf(block_data_file)
         return result_dataset
-
-    @exception_handled
-    def generate_metadata(self, **kwargs ):
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        dm().modal.generate_image_list()
-        lgm().log( f"GENERATING METADATA in directory {dm().cache_dir}", print=True )
-        for image_index in range( dm().modal.num_images ):
-            self.set_current_image( image_index )
-            tm().tile.saveMetadata()
-        lgm().log( f"METADATA GENERATION COMPLETE", print=True )
-
-    def preprocess_block(self, block) -> Optional[xa.Dataset]:
-        lgm().log(f" Processing block{block.block_coords}")
-        block_data_file = dm().modal.dataFile(block=block)
-        process_dataset = True
-        nsamples = 0
-        if os.path.isfile(block_data_file):
-            try:
-                with xa.open_dataset(block_data_file) as dataset:
-                    nsamples = 0 if (len(dataset.coords) == 0) else dataset.coords['samples'].size
-                    process_dataset = False
-            except Exception as err:
-                lgm().log(  f" Error getting samples from existing block_data_file: {block_data_file}\n ---> ERROR = {err}", print=True)
-        if not process_dataset:
-            lgm().log( f" Skipping existing block{block.block_coords} with nsamples={nsamples}, existing file: {block_data_file}", print=True)
-        else:
-            return self.process_block(block)
 
     def get_scaling( self, sums: List[xa.DataArray] ) -> xa.DataArray:
         dsum: xa.DataArray = None
@@ -290,9 +261,8 @@ class SpatialDataManager(ModeDataManager):
                 npts = dsum.attrs['scale']
             else:
                 dsum = dsum + sum
-                npts = npts + dsum.attrs['scale']
+                npts = npts + sum.attrs['scale']
         return dsum/npts
-
 
     @exception_handled
     def prepare_inputs(self, **kwargs ):
@@ -300,26 +270,23 @@ class SpatialDataManager(ModeDataManager):
         tm().autoprocess = False
         lgm().log(f" Preparing inputs", print=True)
         if tm().reprocess: dm().modal.removeDataset()
+        attrs, block_sizes = {}, {}
         sums: List[xa.DataArray] = []
         for image_index in range( dm().modal.num_images ):
             self.set_current_image( image_index )
-            block_nsamples = {}
             ufm().show( f"Preprocessing data blocks for image {dm().modal.image_name}", "blue" )
-            ref_dataset = None
             for block in self.tiles.tile.getBlocks():
-                result_dataset = self.preprocess_block( block )
-                if ref_dataset is None: ref_dataset = result_dataset
-                block_nsamples[block.block_coords] = result_dataset.coords['samples'].size
+                result_dataset = self.process_block( block )
+                block_sizes[ block.cindex ] = result_dataset.attrs[ 'block_size']
                 sums.append( result_dataset.data_vars['sum'] )
             tm().block_index = (0,0)
-            if ref_dataset is not None:
-                ref_dataset.attrs[ 'block_sizes'] = tm().encode( block_nsamples )
-                ref_dataset.to_netcdf( ref_dataset.attrs['block_data_file'] )
 
-        tm().set_scale( self.get_scaling( sums ) )
+        scaling = self.get_scaling( sums )
+        tm().set_scale( scaling )
         refresh = kwargs.pop( "refresh", True )
-        dm().modal.autoencoder_preprocess( refresh=refresh, **kwargs )
-
+        dm().modal.autoencoder_preprocess( refresh=refresh, bands=scaling.size, **kwargs )
+        attrs['scale'] = scaling.values.tolist()
+        dm().modal.write_metadata( block_sizes, attrs )
 
     def dataFile( self, **kwargs ):
         from spectraclass.data.spatial.tile.tile import Block

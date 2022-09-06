@@ -129,31 +129,13 @@ class Tile(DataContainer):
         super(Tile, self).__init__(**kwargs)
         self._blocks = {}
         self._index = tile_index
-        self._metadata: Dict = None
         self.subsampling: int =  kwargs.get('subsample',1)
         self._mean = None
         self._std = None
 
     @property
-    def metadata(self) -> Dict:
-        if self._metadata is None:
-            self.init_metadata()
-        return self._metadata
-
-    @property
-    def block_sizes(self) -> Dict[ Tuple[int,int], int ]:
-        return self.metadata['block_size']
-
-    def block_nvalid(self, block_coords: Tuple[int,int] ) -> int:
-        return self.block_sizes.get( tuple(block_coords), 0 )
-
-    def get_valid_block_coords(self, block_coords: Tuple[int,int] ) -> Tuple[int,int]:
-        from spectraclass.data.base import DataManager, dm
-        if self.block_nvalid(block_coords) > 0: return block_coords
-        for (coords,nvalid) in self.block_sizes.items():
-            if nvalid > 0: return coords
-        lgm().log( f"No valid blocks in tile.\nMetadata File: {dm().metadata_file}\nBlock sizes: {self.block_sizes}")
-        raise Exception( "No valid blocks in tile")
+    def index(self):
+        return self._index
 
     def _get_data(self) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
@@ -174,34 +156,6 @@ class Tile(DataContainer):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         lgm().log( f"getBlocks: tile_shape[x,y]={tm().tile_shape},  block_dims[x,y]={tm().block_dims}, raster_shape={tm().tile.data.shape}")
         return [ self.getDataBlock( ix, iy, **kwargs ) for ix in range(0,tm().block_dims[0]) for iy in range(0,tm().block_dims[1]) ]
-
-    def init_metadata(self):
-        from spectraclass.data.base import DataManager, dm
-        if not dm().hasMetadata(): self.saveMetadata()
-        self._metadata = self.loadMetadata()
-
-    def loadMetadata(self) -> Dict:
-        from spectraclass.data.base import DataManager, dm
-        file_path = dm().metadata_file
-        mdata = {}
-        try:
-            with open( file_path, "r" ) as mdfile:
-                print(f"Loading metadata from file: {file_path}")
-                block_sizes = {}  # { (1,1): 244284, (0,0): 134321 }
-                for line in mdfile.readlines():
-                    try:
-                        toks = line.split("=")
-                        if toks[0].startswith('nvalid'):
-                            bstok = toks[0].split("-")
-                            block_sizes[ (int(bstok[1]), int(bstok[2])) ] = int( toks[1] )
-                        else:
-                            mdata[toks[0]] = "=".join(toks[1:])
-                    except Exception as err:
-                        lgm().log( f"LoadMetadata: Error '{err}' reading line '{line}'" )
-                mdata[ 'block_size' ] = block_sizes
-        except Exception as err:
-            lgm().log( f"Warning: can't read config file '{file_path}': {err}\n")
-        return mdata
 
     @log_timing
     def band_data(self, iband: int ) -> np.ndarray:
@@ -240,6 +194,7 @@ class Tile(DataContainer):
     #     except Exception as err:
     #         lgm().log(f" ---> ERROR Writing metadata file at {file_path}: {err}", print=True)
     #         if os.path.isfile(file_path): os.remove(file_path)
+
 
     @log_timing
     def saveMetadata( self ):
@@ -410,6 +365,10 @@ class Block(DataContainer):
     @property
     def index(self) -> Tuple[int,Tuple]:
         return (self.tile_index, self.block_coords)
+
+    @property
+    def cindex(self) -> Tuple[int,int,int]:
+        return ( self.tile_index, self.block_coords[0], self.block_coords[1]  )
 
     def threshold_record(self, model_data: bool, iFrame: int ) -> ThresholdRecord:
         from spectraclass.data.base import dm

@@ -150,7 +150,7 @@ class TileManager(SCSingletonConfigurable):
         return False
 
     def set_scale(self, scale: xa.DataArray ):
-        self._scale = scale
+        self._scale = scale # xa.DataArray( scale, coords = dict(band=np.arange(scale.size)), dims=['band'] )
 
     def get_scale(self) -> xa.DataArray:
         return self._scale
@@ -167,12 +167,13 @@ class TileManager(SCSingletonConfigurable):
 
     @exception_handled
     def getBlock( self, **kwargs ) -> Block:
+        from spectraclass.data.base import DataManager, dm
         bindex = kwargs.get( 'bindex' )
         tindex = kwargs.get( 'tindex' )
         if (bindex is None) and ('block' in kwargs): bindex = kwargs['block'].block_coords
         init_bindex = self.block_index if (bindex is None) else bindex
-        block_index = self.tile.get_valid_block_coords( init_bindex )
-        tile = self.tile if (tindex is None) else self.get_tile( tindex )
+        tile: Tile = self.tile if (tindex is None) else self.get_tile( tindex )
+        block_index = dm().modal.get_valid_block_coords( tile.index, init_bindex )
         return tile.getDataBlock( block_index[0], block_index[1] )
 
     @exception_handled
