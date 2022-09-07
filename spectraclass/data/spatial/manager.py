@@ -9,6 +9,7 @@ from spectraclass.data.base import ModeDataManager
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Set
 import matplotlib.pyplot as plt
 import os, time, json
+from spectraclass.data.spatial.tile.tile import Block, Tile
 from rioxarray.exceptions import NoDataInBounds
 from collections import OrderedDict
 from spectraclass.util.logs import lgm, exception_handled, log_timing
@@ -83,6 +84,9 @@ class SpatialDataManager(ModeDataManager):
         result = data.sum( axis=dim )
         result.attrs['scale'] = data.shape[dim]
         return result
+
+    def range( self, data: xa.DataArray, dim: int = 0 ) -> Tuple[xa.DataArray,xa.DataArray]:
+        return ( data.min( axis=dim ), data.max( axis=dim ) )
 
     def dsid(self, **kwargs) -> str:
         from spectraclass.data.spatial.tile.manager import tm
@@ -216,41 +220,45 @@ class SpatialDataManager(ModeDataManager):
         coords = { c: np.empty([1]) for c in [ 'x', 'y', 'band', 'samples', 'model' ] }
         return xa.Dataset( data_vars=data_vars, coords=coords )
 
-    def process_block( self, block  ) -> Optional[xa.Dataset]:
+    def process_block( self, block: Block  ) -> Optional[xa.Dataset]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block_data_file = dm().modal.dataFile(block=block)
-        if os.path.exists(block_data_file): os.remove(block_data_file)
-        ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
-        coord_data = {}
-        ufm().show( f" *** Processing Block{block.block_coords}" )
-        try:
-            blocks_point_data, coord_data = block.getPointData()
-            lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}", print=True)
-        except NoDataInBounds:
-            blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
+        if os.path.exists(block_data_file):
+            lgm().log(f"** Reading BLOCK{block.cindex} ",print=True)
+            return xa.open_dataset( block_data_file )
+        else:
+            ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
+            coord_data = {}
+            ufm().show( f" *** Processing Block{block.block_coords}" )
+            try:
+                blocks_point_data, coord_data = block.getPointData()
+                lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}", print=True)
+            except NoDataInBounds:
+                blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
 
-        if blocks_point_data.size == 0: return None
-        sum: xa.DataArray = self.sum(blocks_point_data)
-        raw_data: xa.DataArray = block.data
-        data_vars = dict(raw=raw_data, sum=sum)
-        lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.shape[0]} samples", print=True )
-        data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y', 'x'], coords={d: raw_data.coords[d] for d in ['x', 'y']} )
-        result_dataset = xa.Dataset(data_vars)
-        result_dataset.attrs['tile_shape'] = tm().tile.data.shape
-        result_dataset.attrs['block_dims'] = tm().block_dims
-        result_dataset.attrs['tile_size'] = tm().tile_size
-        result_dataset.attrs['block_size'] = blocks_point_data.shape[0]
-        for (aid, aiv) in tm().tile.data.attrs.items():
-            if aid not in result_dataset.attrs:
-                result_dataset.attrs[aid] = aiv
-        lgm().log( f" Writing preprocessed output to {block_data_file} with {blocks_point_data.size} samples, dset attrs:")
-        for varname, da in result_dataset.data_vars.items():
-            da.attrs['long_name'] = ".".join([blocks_point_data.attrs['file_name'], varname])
-        for vname, v in data_vars.items():
-            lgm().log( f" ---> {vname}: shape={v.shape}, size={v.size}, dims={v.dims}, coords={[':'.join([cid, str(c.shape)]) for (cid, c) in v.coords.items()]}")
-        os.makedirs(os.path.dirname(block_data_file), exist_ok=True)
-        result_dataset.to_netcdf(block_data_file)
-        return result_dataset
+            if blocks_point_data.size == 0: return None
+            range: Tuple[xa.DataArray, xa.DataArray] = self.range(blocks_point_data)
+            raw_data: xa.DataArray = block.data
+            data_vars = dict( raw=raw_data, band_min=range[0], band_max=range[1] )
+            lgm().log(f" Block data range = {[range[0].values.min(),range[1].values.max(),]}")
+            lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.shape[0]} samples", print=True )
+            data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y', 'x'], coords={d: raw_data.coords[d] for d in ['x', 'y']} )
+            result_dataset = xa.Dataset(data_vars)
+            result_dataset.attrs['tile_shape'] = tm().tile.data.shape
+            result_dataset.attrs['block_dims'] = tm().block_dims
+            result_dataset.attrs['tile_size'] = tm().tile_size
+            result_dataset.attrs['block_size'] = blocks_point_data.shape[0]
+            for (aid, aiv) in tm().tile.data.attrs.items():
+                if aid not in result_dataset.attrs:
+                    result_dataset.attrs[aid] = aiv
+            lgm().log( f" Writing preprocessed output to {block_data_file} with {blocks_point_data.size} samples, dset attrs:")
+            for varname, da in result_dataset.data_vars.items():
+                da.attrs['long_name'] = ".".join([blocks_point_data.attrs['file_name'], varname])
+            for vname, v in data_vars.items():
+                lgm().log( f" ---> {vname}: shape={v.shape}, size={v.size}, dims={v.dims}, coords={[':'.join([cid, str(c.shape)]) for (cid, c) in v.coords.items()]}")
+            os.makedirs(os.path.dirname(block_data_file), exist_ok=True)
+            result_dataset.to_netcdf(block_data_file)
+            return result_dataset
 
     def get_scaling( self, sums: List[xa.DataArray] ) -> xa.DataArray:
         dsum: xa.DataArray = None
@@ -269,24 +277,32 @@ class SpatialDataManager(ModeDataManager):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         tm().autoprocess = False
         lgm().log(f" Preparing inputs", print=True)
-        if tm().reprocess: dm().modal.removeDataset()
-        attrs, block_sizes = {}, {}
-        sums: List[xa.DataArray] = []
-        for image_index in range( dm().modal.num_images ):
-            self.set_current_image( image_index )
-            ufm().show( f"Preprocessing data blocks for image {dm().modal.image_name}", "blue" )
-            for block in self.tiles.tile.getBlocks():
-                result_dataset = self.process_block( block )
-                block_sizes[ block.cindex ] = result_dataset.attrs[ 'block_size']
-                sums.append( result_dataset.data_vars['sum'] )
-            tm().block_index = (0,0)
+        try:
+            if tm().reprocess: dm().modal.removeDataset()
+            attrs, block_sizes = {}, {}
+            band_range: Tuple[xa.DataArray,xa.DataArray] = None
+            for image_index in range( dm().modal.num_images ):
+                self.set_current_image( image_index )
+                ufm().show( f"Preprocessing data blocks for image {dm().modal.image_name}", "blue" )
+                for block in self.tiles.tile.getBlocks():
+                    result_dataset = self.process_block( block )
+                    block_sizes[ block.cindex ] = result_dataset.attrs[ 'block_size']
+                    band_range = self.update_band_range( band_range, result_dataset )
+                tm().block_index = (0,0)
 
-        scaling = self.get_scaling( sums )
-        tm().set_scale( scaling )
-        refresh = kwargs.pop( "refresh", True )
-        dm().modal.autoencoder_preprocess( refresh=refresh, bands=scaling.size, **kwargs )
-        attrs['scale'] = scaling.values.tolist()
-        dm().modal.write_metadata( block_sizes, attrs )
+            tm().set_scale( band_range )
+            dm().modal.autoencoder_preprocess( bands=band_range[0].size, **kwargs )
+            (attrs['band_min'], attrs['band_max']) = band_range
+            dm().modal.write_metadata( block_sizes, attrs )
+        except Exception as err:
+            print( f"\n *** Error in processing workflow, check log file for details: {lgm().log_file} *** ")
+            lgm().exception("prepare_inputs error:")
+
+    def update_band_range(self, band_range: Tuple[xa.DataArray,xa.DataArray], dataset: xa.Dataset ) -> Tuple[xa.DataArray,xa.DataArray]:
+        band_min: xa.DataArray = dataset['band_min'] if band_range is None else np.fmin( band_range[0], dataset['band_min'] )
+        band_max: xa.DataArray = dataset['band_max'] if band_range is None else np.fmax( band_range[1], dataset['band_max'] )
+        return ( band_min, band_max )
+
 
     def dataFile( self, **kwargs ):
         from spectraclass.data.spatial.tile.tile import Block

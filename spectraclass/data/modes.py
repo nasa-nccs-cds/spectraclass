@@ -34,6 +34,10 @@ def pnorm(data: xa.DataArray, dim: int = 1) -> xa.DataArray:
 def norm( x: xa.DataArray, axis = 0 ) -> xa.DataArray:
     return ( x - x.data.mean(axis=axis) ) / x.data.std(axis=axis)
 
+def list2str( list: List, sep: str ) -> str:
+    slist = [ str(bc) for bc in list ]
+    return sep.join( slist )
+
 def scale( x: xa.DataArray, axis = 0 ) -> xa.DataArray:
     result = x / x.mean(axis=axis)
     result.attrs.update( x.attrs )
@@ -110,10 +114,11 @@ class ModeDataManager(SCSingletonConfigurable):
                 for (k, v) in attrs.items():
                     mdfile.write(f"{k}={v}\n")
                 for bcoords, bsize in block_data.items():
-                    mdfile.write(f"nvalid-{'-'.join(bcoords)}={bsize}\n")
+                    mdfile.write(f"nvalid-{list2str(bcoords,'-')}={bsize}\n")
             lgm().log(f" ---> Writing metadata file at {file_path}", print=True)
         except Exception as err:
             lgm().log(f" ---> ERROR Writing metadata file at {file_path}: {err}", print=True)
+            lgm().exception( 'ERROR Writing metadata file' )
             if os.path.isfile(file_path): os.remove(file_path)
 
     def loadMetadata(self) -> Dict:
@@ -206,22 +211,23 @@ class ModeDataManager(SCSingletonConfigurable):
     def get_trained_network(self, **kwargs ):
         self.vae = kwargs.pop( 'vae', True )
         if self._autoencoder is None:
-            self.autoencoder_preprocess( **kwargs )
+            self.autoencoder_preprocess( refresh_model=False, **kwargs )
 
-    def build_encoder(self, **kwargs) -> bool:
-        model_key: str = kwargs.get('key', self.modelkey )
-        refresh = kwargs.pop( 'refresh', self.refresh_model )
-        input_dims = kwargs.pop( 'bands' )
+    def build_encoder(self, **kwargs):
+        input_dims = kwargs.pop( 'bands', None )
         if input_dims is None: input_dims = tm().getBlock().data.shape[0]
-        aefiles = self.autoencoder_files( **kwargs  )
-        if refresh:
-            for aef in aefiles: shutil.rmtree( aef, ignore_errors=True )
         if self.vae:
             self._build_vae_model( input_dims, **kwargs)
         else:
             self._build_ae_model( input_dims, **kwargs)
 
+    def load_weights(self, **kwargs) -> bool:
+        model_key: str = kwargs.get('key', self.modelkey)
+        aefiles = self.autoencoder_files(**kwargs)
         wfile = aefiles[0] + ".index"
+        if self.refresh_model:
+            for aef in aefiles:
+                for ifile in glob.glob( aef + ".*" ): os.remove( ifile )
         if not os.path.exists( wfile ):
             lgm().log( f"#AEC weights file does not exist: {wfile}")
             return False
@@ -290,13 +296,13 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def _build_vae_model(self, input_dims: int, **kwargs ):
         model_dims: int = kwargs.get('dims', self.model_dims)
-        hidden_activation = "tanh"
+        hidden_activation = kwargs.get('activation',"tanh")
         output_activation = 'linear'
-        optimizer = 'rmsprop'  # 'rmsprop'
+        optimizer = kwargs.get('optimizer','rmsprop')  # 'rmsprop'
         reduction_factor = 2.0
         verbose = 0
-        dropout_rate = 0.01
-        l2_regularizer = 0.01
+        dropout_rate = kwargs.get('dropout',0.01)
+        l2_regularizer = kwargs.get('regularizer',0.01)
         inputs = Input(shape=(input_dims,))
         layer = Dense(input_dims, activation=hidden_activation)(inputs)
         layer_dims = int(round(input_dims / reduction_factor))
@@ -327,7 +333,8 @@ class ModeDataManager(SCSingletonConfigurable):
         outputs = self._decoder(self._encoder(inputs)[2])
         self._autoencoder = Model(inputs, outputs)
         self._autoencoder.add_loss( vae_loss( inputs, outputs, input_dims, z_mean, z_log ) )
-        self._autoencoder.compile(optimizer=optimizer)
+        self._autoencoder.compile( optimizer=optimizer )
+        self._decoder.compile( optimizer=optimizer )
         if verbose >= 1: self._autoencoder.summary()
         lgm().log(f"#AEC: RM BUILD VAE NETWORK: {input_dims} -> {model_dims}")
 
@@ -340,7 +347,7 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def initialize_dimension_reduction( self, **kwargs ):
         lgm().log( "AEC: initialize_dimension_reduction" )
-        self.autoencoder_preprocess( **kwargs )
+        self.prepare_inputs( **kwargs )
 
     def autoencoder_process(self, point_data: xa.DataArray, **kwargs ):
         nepoch: int = kwargs.get( 'nepoch', self.reduce_nepoch )
@@ -348,36 +355,40 @@ class ModeDataManager(SCSingletonConfigurable):
             method: str = kwargs.pop('method', self.reduce_method)
             self.vae = (method.strip().lower() == 'vae')
             self.build_encoder(**kwargs)
-        norm_data = tm().norm(point_data)
-        self._autoencoder.fit(norm_data.values, norm_data.values, epochs=nepoch, batch_size=256, shuffle=True)
+        weights_loaded = self.load_weights(**kwargs)
+        if not weights_loaded:
+            norm_data = tm().norm(point_data)
+            self._autoencoder.fit(norm_data.values, norm_data.values, epochs=nepoch, batch_size=256, shuffle=True)
 
     def autoencoder_preprocess(self, **kwargs ):
         from spectraclass.data.base import DataManager, dm
-        from spectraclass.gui.control import UserFeedbackManager, ufm
         nepoch: int = kwargs.get( 'nepoch', self.reduce_nepoch )
         niter: int = kwargs.get( 'niter', self.reduce_niter )
         method: str = kwargs.pop( 'method', self.reduce_method )
+        target_block = kwargs.get( 'target_block', None )
+
         self.vae = (method.strip().lower() == 'vae')
-        weights_loaded = self.build_encoder(**kwargs)
+        self.build_encoder(**kwargs)
+        weights_loaded = self.load_weights(**kwargs)
         if not weights_loaded:
             for iter in range(niter):
                 for image_index in range(dm().modal.num_images):
                     dm().modal.set_current_image(image_index)
                     lgm().log(f"Preprocessing data blocks{tm().block_dims} for image {dm().modal.image_name}", print=True)
-                    for block in tm().tile.getBlocks():
-                        t0 = time.time()
-                        point_data, grid = block.getPointData()
-                        if point_data.shape[0] > 0:
-                            norm_data = tm().norm(point_data)
-                            lgm().log(f"\nITER[{iter}]: Processing block{block.block_coords}, data shape = {point_data.shape}", print=True )
-                            self._autoencoder.fit(norm_data.data, norm_data.data, epochs=nepoch, batch_size=256, shuffle=True)
-                            lgm().log(f" Trained autoencoder in {time.time() - t0} sec", print=True)
-                        block.initialize()
+                    for iB, block in enumerate(tm().tile.getBlocks()):
+                        if (target_block is None) or (target_block == block.block_coords):
+                            t0 = time.time()
+                            point_data, grid = block.getPointData()
+                            if point_data.shape[0] > 0:
+                                norm_data = tm().norm(point_data)
+                                lgm().log(f"\nITER[{iter}]: Processing block{block.block_coords}, data shape = {point_data.shape}", print=True )
+                                self._autoencoder.fit(norm_data.data, norm_data.data, epochs=nepoch, batch_size=256, shuffle=True)
+                                lgm().log(f" Trained autoencoder in {time.time() - t0} sec", print=True)
+                            block.initialize()
             aefiles = self.autoencoder_files(**kwargs)
             self._autoencoder.save_weights( aefiles[0] )
             self._encoder.save_weights( aefiles[1] )
             lgm().log(f"autoencoder_preprocess completed, saved model weights to files={aefiles}", print=True)
-        ufm().show(f"autoencoder init complete", print=True)
 
     def autoencoder_reduction(self, train_input: xa.DataArray, **kwargs ) -> Tuple[np.ndarray, np.ndarray]:
         ispecs: List[np.ndarray] = [train_input.data.max(0), train_input.data.min(0), train_input.data.mean(0), train_input.data.std(0)]
@@ -511,9 +522,10 @@ class ModeDataManager(SCSingletonConfigurable):
         raise NotImplementedError()
 
     def reduce(self, train_data: xa.DataArray, **kwargs ) -> Tuple[xa.DataArray,xa.DataArray]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         reduction_method: int = kwargs.pop( 'method', self.reduce_method )
         with xa.set_options(keep_attrs=True):
-            normed_data = pnorm(train_data)
+            normed_data: xa.DataArray = tm().norm(train_data)
             redm = str(reduction_method).lower()
             if redm in [ "autoencoder", "aec", "ae", "vae" ]:
                 (reduced_spectra, reproduction) =  self.autoencoder_reduction( normed_data, vae=(redm=="vae"), **kwargs )
@@ -633,14 +645,12 @@ class ModeDataManager(SCSingletonConfigurable):
                     result.attrs.update(kwargs)
             dvars[vname] = result
             lgm().log(f" -----> VAR {vname}{result.dims}: shape = {result.shape}")
-            if vname in [ 'norm', 'embedding' ]:
-                dvars['spectra'] = result
-                dvars['plot-y'] = result
         return dvars
 
     @exception_handled
     def loadDataset(self, **kwargs) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.data.spatial.tile.tile import Block
         from spectraclass.data.base import DataManager, dm, DataType
         lgm().log(f"Load dataset, current = {list(self.datasets.keys())}")
         if self.dsid() not in self.datasets:
@@ -648,8 +658,9 @@ class ModeDataManager(SCSingletonConfigurable):
             xdataset: Optional[xa.Dataset] = None
             if not dm().refresh_data:
                 xdataset = self.loadDataFile(**kwargs)
+            block: Block = tm().getBlock()
             if xdataset is None:
-                xdataset = self.process_block( tm().getBlock() )
+                xdataset = self.process_block( block )
             if len(xdataset.variables.keys()) == 0:
                 lgm().log(f"Warning: Attempt to Load empty dataset {self.dataFile( **kwargs )}", print=True)
                 return None
@@ -658,8 +669,9 @@ class ModeDataManager(SCSingletonConfigurable):
                 dvars: Dict[str,Union[xa.DataArray,List,Dict]] = self.dset_subsample( xdataset, dsid=self.dsid(), **kwargs )
                 attrs = xdataset.attrs.copy()
                 raw_data = dvars['raw']
+                point_data, pcoords = block.getPointData()
                 lgm().log( f" -----> point_data: shape = {raw_data.shape}, #NULL={np.count_nonzero(np.isnan(raw_data.values))}/{raw_data.size}")
-                dvars['plot-x'] = dvars['bands'] if ('bands'in dvars) else dvars['band']
+                dvars['samples'] = point_data.coords['samples']
                 attrs['dsid'] = self.dsid()
                 attrs['type'] = 'spectra'
                 dvars['attrs'] = attrs

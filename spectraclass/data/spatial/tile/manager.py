@@ -34,6 +34,7 @@ class TileManager(SCSingletonConfigurable):
     mask_class = tl.Int(0).tag( config=True, sync=True )
     autoprocess = tl.Bool(True).tag( config=True, sync=True )
     reprocess = tl.Bool(False).tag( config=True, sync=True )
+    normalize = tl.Bool(False).tag(config=True, sync=True)
     image_attrs = {}
     ESPG = 3857
     crs = ccrs.epsg(ESPG) # "+a=6378137.0 +b=6378137.0 +nadgrids=@null +proj=merc +lon_0=0.0 +x_0=0.0 +y_0=0.0 +units=m +no_defs"
@@ -47,7 +48,7 @@ class TileManager(SCSingletonConfigurable):
         self._block_dims = None
         self._tile_size = None
         self._tile_shape = None
-        self._scale = None
+        self._scale: Tuple[xa.DataArray,xa.DataArray] = None
 
     @classmethod
     def encode( cls, obj ) -> str:
@@ -149,10 +150,10 @@ class TileManager(SCSingletonConfigurable):
             return True
         return False
 
-    def set_scale(self, scale: xa.DataArray ):
-        self._scale = scale # xa.DataArray( scale, coords = dict(band=np.arange(scale.size)), dims=['band'] )
+    def set_scale(self, scale: Tuple[xa.DataArray,xa.DataArray] ):
+        self._scale = scale
 
-    def get_scale(self) -> xa.DataArray:
+    def get_scale(self) -> Tuple[xa.DataArray,xa.DataArray]:
         return self._scale
 
     def in_bounds( self, pids: List[int] ) -> bool:
@@ -167,13 +168,13 @@ class TileManager(SCSingletonConfigurable):
 
     @exception_handled
     def getBlock( self, **kwargs ) -> Block:
-        from spectraclass.data.base import DataManager, dm
+#        from spectraclass.data.base import DataManager, dm
         bindex = kwargs.get( 'bindex' )
         tindex = kwargs.get( 'tindex' )
         if (bindex is None) and ('block' in kwargs): bindex = kwargs['block'].block_coords
-        init_bindex = self.block_index if (bindex is None) else bindex
+        block_index = self.block_index if (bindex is None) else bindex
         tile: Tile = self.tile if (tindex is None) else self.get_tile( tindex )
-        block_index = dm().modal.get_valid_block_coords( tile.index, init_bindex )
+ #       block_index = dm().modal.get_valid_block_coords( tile.index, init_bindex )
         return tile.getDataBlock( block_index[0], block_index[1] )
 
     @exception_handled
@@ -309,5 +310,8 @@ class TileManager(SCSingletonConfigurable):
         return raster.where(raster != nodata_value, float('nan') )
 
     def norm(self, raster: xa.DataArray) -> xa.DataArray:
-        return raster / self._scale
+        if self.normalize:
+            return (raster - self._scale[0]) / (self._scale[1] - self._scale[0])
+        else:
+            return raster
 

@@ -351,6 +351,7 @@ class Block(DataContainer):
         self._raster_mask: Optional[np.ndarray] = None
         self._tmask: xa.DataArray = None
         self._model_data: xa.DataArray = None
+        self._reproduction = None
 
     def set_thresholds(self, bUseModel: bool, iFrame: int, thresholds: Tuple[float,float] ) -> bool:
         trec: ThresholdRecord = self.threshold_record( bUseModel, iFrame )
@@ -504,19 +505,21 @@ class Block(DataContainer):
 
     @property
     def model_data(self) -> xa.DataArray:
-        if self._model_data is None:
-            self._model_data = self._get_model_data()
+        if self._model_data is None: self._get_model_data()
         return self._model_data
 
-    def _get_model_data(self) -> xa.DataArray:
+    @property
+    def reproduction(self) -> xa.DataArray:
+        if self._model_data is None: self._get_model_data()
+        return self._reproduction
+
+    def _get_model_data(self):
         from spectraclass.data.base import DataManager, dm
-        dataset: Optional[xa.Dataset] = dm().modal.loadDataFile( block=self, index=self.tile_index )
-        (reduction, reproduction) = dm().modal.reduce( dataset['norm'] )
-        reduction.attrs['block_coords'] = self.block_coords
-        reduction.attrs['dsid'] = self.dsid()
-        reduction.attrs['file_name'] = self.file_name
-        reduction.name = self.file_name
-        return reduction
+        (self._model_data, self._reproduction) = dm().modal.reduce( self.getPointData()[0] )
+        self._model_data.attrs['block_coords'] = self.block_coords
+        self._model_data.attrs['dsid'] = self.dsid()
+        self._model_data.attrs['file_name'] = self.file_name
+        self._model_data.name = self.file_name
 
     @exception_handled
     def _apply_mask( self, block_array: xa.DataArray, raster=False, reduced=False ) -> xa.DataArray:

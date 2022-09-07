@@ -504,13 +504,14 @@ class MapManager(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
-        if block_index is not None:
-            tm().setBlock( block_index )
         needs_update = (self.block_index == None) or (block_index != tm().block_index)
         if needs_update:
+            if block_index is not None:
+                ufm().show(f" *** Setting Block{block_index}")
+                tm().setBlock( block_index )
             self.block: Block = tm().getBlock()
             if (self.block is not None):
-                ufm().show(f" *** Loading Block{self.block.block_coords}")
+                lgm().log(f" *** Loading Block{self.block.block_coords}")
                 self.block_index = block_index
                 dm().clear_project_cache()
                 pcm().reset()

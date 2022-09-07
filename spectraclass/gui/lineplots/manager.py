@@ -73,16 +73,19 @@ class LinePlot(ABC):
 
     @classmethod
     def init_data(cls, **kwargs ):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         if cls._x is None:
             project_data: Dict[str,Union[xa.DataArray,List,Dict]]  = dm().loadCurrentProject("graph")
-            (reduction, reproduction) = dm().modal.reduce( project_data['norm'] )
-            cls._x: xa.DataArray = project_data["plot-x"]
-            cls._ploty: xa.DataArray = project_data["plot-y"]
-            cls._rploty: xa.DataArray = reproduction
-            cls._mploty: xa.DataArray = reduction
-            cls._mx: xa.DataArray = cls._mploty.coords['band']
             table_cols = DataManager.instance().table_cols
             cls._mdata: List[np.ndarray] = [ cls.get_col_values(project_data[mdv]) for mdv in table_cols ]
+
+            block = tm().getBlock()
+            point_data, pcoords = block.getPointData()
+            cls._ploty: xa.DataArray = point_data
+            cls._x: xa.DataArray = cls._ploty.coords['band']
+            cls._rploty: xa.DataArray = block.reproduction
+            cls._mploty: xa.DataArray = block.model_data
+            cls._mx: xa.DataArray = cls._mploty.coords['band']
 
     @classmethod
     def get_col_values(cls, data: Union[xa.DataArray,List] ):
@@ -97,7 +100,7 @@ class LinePlot(ABC):
     def ly( self, pids: Union[int,List[int]] ) -> Optional[np.ndarray]:
         try:
             ydata: xa.DataArray = self._mploty if self._use_model else self._ploty
-            return self.normalize( sel( ydata, pids ) ).squeeze().transpose()
+            return sel( ydata, pids ).squeeze().transpose()
         except KeyError:
             return None
 
@@ -112,7 +115,7 @@ class LinePlot(ABC):
 
 
     def lry(self, pid ) -> np.ndarray:
-        return self.normalize( sel( self._rploty, pid ) ).squeeze()
+        return sel( self._rploty, pid ).squeeze()
 
     @property
     def x(self) -> np.ndarray:
@@ -123,11 +126,11 @@ class LinePlot(ABC):
     @property
     def y( self ) -> np.ndarray:
         ydata = self._mploty if self._use_model else self._ploty
-        return self.normalize( sel( ydata, self.pids ) ).transpose()
+        return sel( ydata, self.pids ).transpose()
 
     @property
     def ry( self ) ->  np.ndarray:
-        return self.normalize( sel( self._rploty, self.tpids ) ).transpose()
+        return sel( self._rploty, self.tpids ).transpose()
 
     def normalize(self, data: np.ndarray ) -> np.ndarray:
         axis = 1 if (data.ndim > 1) else 0
