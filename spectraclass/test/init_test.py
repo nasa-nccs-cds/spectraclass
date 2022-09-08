@@ -19,13 +19,14 @@ method = "aec" # "vae"
 model_dims = 32
 subsample = 10
 
-activation= "relu" # "tanh"
-optimizer= 'rmsprop'
+activation= "relu" # "relu" # "tanh"
+optimizer= 'rmsprop' # 'adam' 'sgd' 'rmsprop'
+learning_rate = .0002
 dropout = 0.005
 regularizer = 0.01
 niter = 5
 nepoch = 5
-vaargs= dict( activation=activation, optimizer=optimizer, dropout=dropout, regularizer=regularizer )
+vaargs= dict( activation=activation, optimizer=optimizer, dropout=dropout, regularizer=regularizer, learning_rate=learning_rate )
 
 dm.modal.ext = "_img"
 dm.proc_type = "skl"

@@ -34,7 +34,7 @@ class TileManager(SCSingletonConfigurable):
     mask_class = tl.Int(0).tag( config=True, sync=True )
     autoprocess = tl.Bool(True).tag( config=True, sync=True )
     reprocess = tl.Bool(False).tag( config=True, sync=True )
-    normalize = tl.Bool(False).tag(config=True, sync=True)
+    normalize = tl.Bool(True).tag(config=True, sync=True)
     image_attrs = {}
     ESPG = 3857
     crs = ccrs.epsg(ESPG) # "+a=6378137.0 +b=6378137.0 +nadgrids=@null +proj=merc +lon_0=0.0 +x_0=0.0 +y_0=0.0 +units=m +no_defs"
@@ -48,7 +48,7 @@ class TileManager(SCSingletonConfigurable):
         self._block_dims = None
         self._tile_size = None
         self._tile_shape = None
-        self._scale: Tuple[xa.DataArray,xa.DataArray] = None
+        self._scale: Tuple[np.ndarray,np.ndarray] = None
 
     @classmethod
     def encode( cls, obj ) -> str:
@@ -150,10 +150,10 @@ class TileManager(SCSingletonConfigurable):
             return True
         return False
 
-    def set_scale(self, scale: Tuple[xa.DataArray,xa.DataArray] ):
+    def set_scale(self, scale: Tuple[np.ndarray,np.ndarray] ):
         self._scale = scale
 
-    def get_scale(self) -> Tuple[xa.DataArray,xa.DataArray]:
+    def get_scale(self) -> Tuple[np.ndarray,np.ndarray]:
         return self._scale
 
     def in_bounds( self, pids: List[int] ) -> bool:
@@ -311,7 +311,8 @@ class TileManager(SCSingletonConfigurable):
 
     def norm(self, raster: xa.DataArray) -> xa.DataArray:
         if self.normalize:
-            return (raster - self._scale[0]) / (self._scale[1] - self._scale[0])
+            ndata: np.ndarray = (raster.values - self._scale[0]) / (self._scale[1] - self._scale[0])
+            return raster.copy( data=ndata )
         else:
             return raster
 

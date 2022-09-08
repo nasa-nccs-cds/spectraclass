@@ -5,7 +5,7 @@ from os import path
 from pathlib import Path
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from sklearn.decomposition import PCA, FastICA
-#import tensorflow as tf04241957
+#import tensorflow as tf
 
 #keras = tf.keras
 from tensorflow.keras import losses, regularizers
@@ -14,6 +14,8 @@ from tensorflow.keras.models import Model
 from tensorflow.keras import backend as K
 from tensorflow.keras.losses import mse, binary_crossentropy
 from tensorflow.keras.regularizers import l2
+from tensorflow.keras.optimizers import Adam, SGD, RMSprop
+from tensorflow.keras.callbacks import History
 import xarray as xa
 import traitlets as tl
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
@@ -42,6 +44,14 @@ def scale( x: xa.DataArray, axis = 0 ) -> xa.DataArray:
     result = x / x.mean(axis=axis)
     result.attrs.update( x.attrs )
     return result
+
+def get_optimizer( **kwargs ):
+    oid = kwargs.get( 'optimizer','rmsprop').lower()
+    lr = kwargs.get( 'learning_rate', 1e-3 )
+    if   oid == "rmsprop": return RMSprop( learning_rate=lr )
+    elif oid == "adam":    return Adam(    learning_rate=lr )
+    elif oid == "sgd":     return SGD(     learning_rate=lr )
+    else: raise Exception( f" Unknown optimizer: {oid}")
 
 def vae_loss( inputs, outputs, n_features, z_mean, z_log ):
     """ Loss = Recreation loss + Kullback-Leibler loss
@@ -121,7 +131,7 @@ class ModeDataManager(SCSingletonConfigurable):
             lgm().exception( 'ERROR Writing metadata file' )
             if os.path.isfile(file_path): os.remove(file_path)
 
-    def loadMetadata(self) -> Dict:
+    def loadMetadata(self) -> Optional[Dict]:
         from spectraclass.data.base import DataManager, dm
         file_path = f"{dm().cache_dir}/{self.modelkey}.mdata.txt"
         mdata = {}
@@ -135,17 +145,16 @@ class ModeDataManager(SCSingletonConfigurable):
                         if toks[0].startswith('nvalid'):
                             bcoords = tuple( [ int(iv) for iv in toks[0].split("-")[1:] ] )
                             block_sizes[bcoords] = int(toks[1])
-                        elif toks[0] == "scale":
-                            scale = [ float(iv) for iv in toks[0].strip("()").split(",") ]
-                            tm().set_scale( np.array(scale) )
                         else:
-                            mdata[toks[0]] = "=".join(toks[1:])
+                            mdata[toks[0]] = toks[1]
                     except Exception as err:
                         lgm().log(f"LoadMetadata: Error '{err}' reading line '{line}'")
                 mdata['block_size'] = block_sizes
+                return mdata
         except Exception as err:
             lgm().log(f"Warning: can't read config file '{file_path}': {err}\n")
-        return mdata
+        return None
+
 
     @property
     def block_sizes(self) -> Dict[Tuple[int,int,int], int]:
@@ -248,8 +257,8 @@ class ModeDataManager(SCSingletonConfigurable):
         sparsity: float = kwargs.get( 'sparsity', 0.0 )
         reduction_factor = 2
         inputlayer = Input(shape=[input_dims])
-        activation = 'tanh'
-        optimizer = 'rmsprop'
+        activation = kwargs.get( 'activation', 'tanh' )
+        optimizer =  get_optimizer( **kwargs )
         layer_dims, x = int(round(input_dims / reduction_factor)), inputlayer
         while layer_dims > model_dims:
             x = Dense(layer_dims, activation=activation)(x)
@@ -382,7 +391,7 @@ class ModeDataManager(SCSingletonConfigurable):
                             if point_data.shape[0] > 0:
                                 norm_data = tm().norm(point_data)
                                 lgm().log(f"\nITER[{iter}]: Processing block{block.block_coords}, data shape = {point_data.shape}", print=True )
-                                self._autoencoder.fit(norm_data.data, norm_data.data, epochs=nepoch, batch_size=256, shuffle=True)
+                                history: History = self._autoencoder.fit(norm_data.data, norm_data.data, epochs=nepoch, batch_size=256, shuffle=True)
                                 lgm().log(f" Trained autoencoder in {time.time() - t0} sec", print=True)
                             block.initialize()
             aefiles = self.autoencoder_files(**kwargs)

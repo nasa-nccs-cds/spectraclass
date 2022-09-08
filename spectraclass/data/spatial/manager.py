@@ -20,6 +20,10 @@ def dm():
     from spectraclass.data.base import DataManager
     return DataManager.instance()
 
+def s2np( value: str ) -> np.ndarray:
+    toks: List[str] = value.strip("[]\n").split(",")
+    return np.array( [float(tv) for tv in toks] )
+
 class SpatialDataManager(ModeDataManager):
     colorstretch = 1.25
 
@@ -276,32 +280,39 @@ class SpatialDataManager(ModeDataManager):
     def prepare_inputs(self, **kwargs ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         tm().autoprocess = False
+        band_range: Optional[Tuple[np.ndarray,np.ndarray]] = None
+        attrs, block_sizes = {}, {}
         lgm().log(f" Preparing inputs", print=True)
         try:
-            if tm().reprocess: dm().modal.removeDataset()
-            attrs, block_sizes = {}, {}
-            band_range: Tuple[xa.DataArray,xa.DataArray] = None
-            for image_index in range( dm().modal.num_images ):
-                self.set_current_image( image_index )
-                ufm().show( f"Preprocessing data blocks for image {dm().modal.image_name}", "blue" )
-                for block in self.tiles.tile.getBlocks():
-                    result_dataset = self.process_block( block )
-                    block_sizes[ block.cindex ] = result_dataset.attrs[ 'block_size']
-                    band_range = self.update_band_range( band_range, result_dataset )
-                tm().block_index = (0,0)
+            if tm().reprocess:
+                dm().modal.removeDataset()
+            else:
+                metadata = dm().modal.metadata
+                band_range = None if metadata is None else ( s2np(metadata['band_min']),  s2np(metadata['band_max']) )
+
+            if band_range is None:
+                for image_index in range( dm().modal.num_images ):
+                    self.set_current_image( image_index )
+                    ufm().show( f"Preprocessing data blocks for image {dm().modal.image_name}", "blue" )
+                    for block in self.tiles.tile.getBlocks():
+                        result_dataset = self.process_block( block )
+                        block_sizes[ block.cindex ] = result_dataset.attrs[ 'block_size']
+                        band_range = self.update_band_range( band_range, result_dataset )
+                    tm().block_index = (0,0)
+                [attrs['band_min'], attrs['band_max']] = [ br.tolist() for br in band_range ]
+                dm().modal.write_metadata(block_sizes, attrs)
 
             tm().set_scale( band_range )
             dm().modal.autoencoder_preprocess( bands=band_range[0].size, **kwargs )
-            (attrs['band_min'], attrs['band_max']) = band_range
-            dm().modal.write_metadata( block_sizes, attrs )
+
         except Exception as err:
             print( f"\n *** Error in processing workflow, check log file for details: {lgm().log_file} *** ")
             lgm().exception("prepare_inputs error:")
 
-    def update_band_range(self, band_range: Tuple[xa.DataArray,xa.DataArray], dataset: xa.Dataset ) -> Tuple[xa.DataArray,xa.DataArray]:
-        band_min: xa.DataArray = dataset['band_min'] if band_range is None else np.fmin( band_range[0], dataset['band_min'] )
-        band_max: xa.DataArray = dataset['band_max'] if band_range is None else np.fmax( band_range[1], dataset['band_max'] )
-        return ( band_min, band_max )
+    def update_band_range(self, band_range: Tuple[np.ndarray,np.ndarray], dataset: xa.Dataset ) -> Tuple[np.ndarray,np.ndarray]:
+        band_min: np.ndarray = dataset['band_min'].squeeze() if band_range is None else np.fmin( band_range[0], dataset['band_min'].values ).squeeze()
+        band_max: np.ndarray = dataset['band_max'].squeeze() if band_range is None else np.fmax( band_range[1], dataset['band_max'].values ).squeeze()
+        return ( np.expand_dims(band_min,0), np.expand_dims(band_max,0) )
 
 
     def dataFile( self, **kwargs ):
