@@ -15,15 +15,15 @@ dm.modal.data_dir = "/Users/tpmaxwel/Development/Data/Aviris"
 dm.modal.refresh_model = True
 
 block_size = 150
-method = "aec" # "vae"
+method = "vae" # "vae" "aec"
 model_dims = 32
-subsample = 10
+subsample = 100
 
 activation= "relu" # "relu" # "tanh"
 optimizer= 'rmsprop' # 'adam' 'sgd' 'rmsprop'
 learning_rate = .0002
 dropout = 0.005
-regularizer = 0.01
+regularizer = 0.002
 niter = 5
 nepoch = 5
 vaargs= dict( activation=activation, optimizer=optimizer, dropout=dropout, regularizer=regularizer, learning_rate=learning_rate )
@@ -32,7 +32,6 @@ dm.modal.ext = "_img"
 dm.proc_type = "skl"
 TileManager.block_size = block_size
 TileManager.block_index = (0,7)
-TileManager.normalize = True
 AvirisDataManager.model_dims = model_dims
 AvirisDataManager.reduce_method = method
 AvirisDataManager.reduce_niter = niter
@@ -60,10 +59,12 @@ print( f"reproduction shape = {reproduction.shape}, dims={reproduction.dims}, av
 input_data = point_data.values[::subsample].transpose()
 result_data = reproduction.values[::subsample].transpose()
 diff_data = diff[::subsample].transpose()
-fig, ax = plt.subplots( 1, 3, sharex='all', sharey='all' )
-ax[0].plot( x, input_data, alpha = 0.1, lw=1, color="green" )
-ax[1].plot( x, result_data, alpha = 0.1, lw=1, color="blue"  )
-ax[2].plot( x, diff_data, alpha = 0.1, lw=1, color="red"  )
+
+fig0, ax0 = plt.subplots( 1, 3, sharex='all', sharey='all' )
+ax0[0].plot( x, input_data, alpha = 0.1, lw=1, color="green" )
+ax0[1].plot( x, result_data, alpha = 0.1, lw=1, color="blue"  )
+ax0[2].plot( x, diff_data, alpha = 0.1, lw=1, color="red"  )
+
 plt.show()
 
 

@@ -228,7 +228,7 @@ class SpatialDataManager(ModeDataManager):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block_data_file = dm().modal.dataFile(block=block)
         if os.path.exists(block_data_file):
-            lgm().log(f"** Reading BLOCK{block.cindex} ",print=True)
+            lgm().log(f"** Reading BLOCK{block.cindex} ")
             return xa.open_dataset( block_data_file )
         else:
             ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
@@ -241,10 +241,8 @@ class SpatialDataManager(ModeDataManager):
                 blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
 
             if blocks_point_data.size == 0: return None
-            range: Tuple[xa.DataArray, xa.DataArray] = self.range(blocks_point_data)
             raw_data: xa.DataArray = block.data
-            data_vars = dict( raw=raw_data, band_min=range[0], band_max=range[1] )
-            lgm().log(f" Block data range = {[range[0].values.min(),range[1].values.max(),]}")
+            data_vars = dict( raw=raw_data )
             lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.shape[0]} samples", print=True )
             data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y', 'x'], coords={d: raw_data.coords[d] for d in ['x', 'y']} )
             result_dataset = xa.Dataset(data_vars)
@@ -252,6 +250,7 @@ class SpatialDataManager(ModeDataManager):
             result_dataset.attrs['block_dims'] = tm().block_dims
             result_dataset.attrs['tile_size'] = tm().tile_size
             result_dataset.attrs['block_size'] = blocks_point_data.shape[0]
+            result_dataset.attrs['nbands'] = blocks_point_data.shape[1]
             for (aid, aiv) in tm().tile.data.attrs.items():
                 if aid not in result_dataset.attrs:
                     result_dataset.attrs[aid] = aiv
@@ -280,30 +279,22 @@ class SpatialDataManager(ModeDataManager):
     def prepare_inputs(self, **kwargs ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         tm().autoprocess = False
-        band_range: Optional[Tuple[np.ndarray,np.ndarray]] = None
         attrs, block_sizes = {}, {}
+        nbands = None
         lgm().log(f" Preparing inputs", print=True)
         try:
             if tm().reprocess:
                 dm().modal.removeDataset()
-            else:
-                metadata = dm().modal.metadata
-                band_range = None if metadata is None else ( s2np(metadata['band_min']),  s2np(metadata['band_max']) )
 
-            if band_range is None:
-                for image_index in range( dm().modal.num_images ):
-                    self.set_current_image( image_index )
-                    ufm().show( f"Preprocessing data blocks for image {dm().modal.image_name}", "blue" )
-                    for block in self.tiles.tile.getBlocks():
-                        result_dataset = self.process_block( block )
-                        block_sizes[ block.cindex ] = result_dataset.attrs[ 'block_size']
-                        band_range = self.update_band_range( band_range, result_dataset )
-                    tm().block_index = (0,0)
-                [attrs['band_min'], attrs['band_max']] = [ br.tolist() for br in band_range ]
-                dm().modal.write_metadata(block_sizes, attrs)
-
-            tm().set_scale( band_range )
-            dm().modal.autoencoder_preprocess( bands=band_range[0].size, **kwargs )
+            for image_index in range( dm().modal.num_images ):
+                self.set_current_image( image_index )
+                ufm().show( f"Preprocessing data blocks for image {dm().modal.image_name}", "blue" )
+                for block in self.tiles.tile.getBlocks():
+                    result_dataset = self.process_block( block )
+                    block_sizes[ block.cindex ] = result_dataset.attrs[ 'block_size']
+                    if nbands is None: nbands = result_dataset.attrs[ 'nbands']
+            dm().modal.write_metadata(block_sizes, attrs)
+            dm().modal.autoencoder_preprocess( bands=nbands, **kwargs )
 
         except Exception as err:
             print( f"\n *** Error in processing workflow, check log file for details: {lgm().log_file} *** ")

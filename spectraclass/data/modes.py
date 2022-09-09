@@ -15,6 +15,7 @@ from tensorflow.keras import backend as K
 from tensorflow.keras.losses import mse, binary_crossentropy
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
+from tensorflow.keras.initializers import RandomNormal, Zeros
 from tensorflow.keras.callbacks import History
 import xarray as xa
 import traitlets as tl
@@ -252,29 +253,32 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def _build_ae_model(self, input_dims: int, **kwargs):
         model_dims: int = kwargs.pop('dims', self.model_dims)
-        loss = str( kwargs.pop('loss', 'categorical_crossentropy') ).lower()
+        verbose = kwargs.pop('verbose', True)
+        loss = str( kwargs.pop('loss', 'mean_squared_error') ).lower()  # mean_squared_error categorical_crossentropy
         lgm().log(f"#AEC: RM BUILD AEC NETWORK: {input_dims} -> {model_dims}")
-        sparsity: float = kwargs.get( 'sparsity', 0.0 )
+        winit: float = kwargs.get( 'winit', 0.001 )
         reduction_factor = 2
-        inputlayer = Input(shape=[input_dims])
+        inputlayer = Input( shape=[input_dims] )
         activation = kwargs.get( 'activation', 'tanh' )
         optimizer =  get_optimizer( **kwargs )
+        dargs = dict( kernel_initializer=RandomNormal(stddev=winit), bias_initializer=Zeros() )
         layer_dims, x = int(round(input_dims / reduction_factor)), inputlayer
         while layer_dims > model_dims:
-            x = Dense(layer_dims, activation=activation)(x)
+            x = Dense(layer_dims, activation=activation, **dargs )(x)
             layer_dims = int(round(layer_dims / reduction_factor))
-        encoded = x = Dense(model_dims, activation=activation, activity_regularizer=regularizers.l1(sparsity))(x)
+        encoded = x = Dense(model_dims, activation=activation, **dargs )(x)
         layer_dims = int(round(model_dims * reduction_factor))
         while layer_dims < input_dims:
-            x = Dense(layer_dims, activation=activation)(x)
+            x = Dense(layer_dims, activation=activation, **dargs )(x)
             layer_dims = int(round(layer_dims * reduction_factor))
-        decoded = Dense(input_dims, activation='linear')(x)
+        decoded = Dense(input_dims, activation='linear', **dargs )(x)
         #        modelcheckpoint = ModelCheckpoint('xray_auto.weights', monitor='loss', verbose=1, save_best_only=True, save_weights_only=True, mode='auto', period=1)
         #        earlystopping = EarlyStopping(monitor='loss', min_delta=0., patience=100, verbose=1, mode='auto')
         self._autoencoder = Model(inputs=[inputlayer], outputs=[decoded])
         self._encoder = Model(inputs=[inputlayer], outputs=[encoded])
-        #        autoencoder.summary()
-        #        encoder.summary()
+        if verbose:
+            self._autoencoder.summary()
+            self._encoder.summary()
         self._autoencoder.compile( loss=loss, optimizer=optimizer )
         lgm().log(f" BUILD Autoencoder network: input_dims = {input_dims} ")
 
@@ -366,11 +370,11 @@ class ModeDataManager(SCSingletonConfigurable):
             self.build_encoder(**kwargs)
         weights_loaded = self.load_weights(**kwargs)
         if not weights_loaded:
-            norm_data = tm().norm(point_data)
-            self._autoencoder.fit(norm_data.values, norm_data.values, epochs=nepoch, batch_size=256, shuffle=True)
+            self._autoencoder.fit(point_data.values, point_data.values, epochs=nepoch, batch_size=256, shuffle=True)
 
     def autoencoder_preprocess(self, **kwargs ):
         from spectraclass.data.base import DataManager, dm
+        from spectraclass.data.spatial.tile.tile import Block, Tile
         nepoch: int = kwargs.get( 'nepoch', self.reduce_nepoch )
         niter: int = kwargs.get( 'niter', self.reduce_niter )
         method: str = kwargs.pop( 'method', self.reduce_method )
@@ -379,19 +383,21 @@ class ModeDataManager(SCSingletonConfigurable):
         self.vae = (method.strip().lower() == 'vae')
         self.build_encoder(**kwargs)
         weights_loaded = self.load_weights(**kwargs)
+        blocks: List[Block] = tm().tile.getBlocks()
+        initial_epoch = 0
         if not weights_loaded:
             for iter in range(niter):
                 for image_index in range(dm().modal.num_images):
                     dm().modal.set_current_image(image_index)
                     lgm().log(f"Preprocessing data blocks{tm().block_dims} for image {dm().modal.image_name}", print=True)
-                    for iB, block in enumerate(tm().tile.getBlocks()):
+                    for iB, block in enumerate(blocks):
                         if (target_block is None) or (target_block == block.block_coords):
                             t0 = time.time()
                             point_data, grid = block.getPointData()
                             if point_data.shape[0] > 0:
-                                norm_data = tm().norm(point_data)
                                 lgm().log(f"\nITER[{iter}]: Processing block{block.block_coords}, data shape = {point_data.shape}", print=True )
-                                history: History = self._autoencoder.fit(norm_data.data, norm_data.data, epochs=nepoch, batch_size=256, shuffle=True)
+                                history: History = self._autoencoder.fit(point_data.data, point_data.data, initial_epoch=initial_epoch, epochs=initial_epoch+nepoch, batch_size=256, shuffle=True)
+                                initial_epoch = initial_epoch + nepoch
                                 lgm().log(f" Trained autoencoder in {time.time() - t0} sec", print=True)
                             block.initialize()
             aefiles = self.autoencoder_files(**kwargs)
@@ -531,21 +537,18 @@ class ModeDataManager(SCSingletonConfigurable):
         raise NotImplementedError()
 
     def reduce(self, train_data: xa.DataArray, **kwargs ) -> Tuple[xa.DataArray,xa.DataArray]:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         reduction_method: int = kwargs.pop( 'method', self.reduce_method )
         with xa.set_options(keep_attrs=True):
-            normed_data: xa.DataArray = tm().norm(train_data)
             redm = str(reduction_method).lower()
             if redm in [ "autoencoder", "aec", "ae", "vae" ]:
-                (reduced_spectra, reproduction) =  self.autoencoder_reduction( normed_data, vae=(redm=="vae"), **kwargs )
+                (reduced_spectra, reproduction) =  self.autoencoder_reduction( train_data, vae=(redm=="vae"), **kwargs )
             elif redm in [ "pca", "ica" ]:
-                (reduced_spectra, reproduction) =  self.ca_reduction( normed_data, **kwargs )
+                (reduced_spectra, reproduction) =  self.ca_reduction( train_data, **kwargs )
             else: return  ( train_data, train_data )
             coords = dict( samples=train_data.coords['samples'], band=np.arange( self.model_dims )  )
             reduced_array = xa.DataArray( reduced_spectra, dims=['samples', 'band'], coords=coords )
-            reproduced_array = normed_data.copy( data=reproduction )
+            reproduced_array = train_data.copy( data=reproduction )
             return (reduced_array, reproduced_array)
-
 
     def update_extent(self):
         raise NotImplementedError()
@@ -692,6 +695,7 @@ class ModeDataManager(SCSingletonConfigurable):
         return path.join(self.datasetDir, self.dsid(**kwargs) + "." + ext )
 
     def removeDataset(self):
+        lgm().log( "Removing existing block data files.", print=True )
         for f in os.listdir(self.datasetDir):
             file = os.path.join(self.datasetDir, f)
             if path.isfile( file ):

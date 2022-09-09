@@ -565,7 +565,9 @@ class Block(DataContainer):
         return bounds
 
     @log_timing
-    def getPointData( self ) -> Tuple[xa.DataArray,Dict]:
+    def getPointData( self, **kwargs ) -> Tuple[xa.DataArray,Dict]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        norm = kwargs.get('norm', True)
         if self._point_data is None:
             self._point_data, pmask, rmask =  self.raster2points( self.data )
             self._point_coords: Dict[str,np.ndarray] = dict( y=self.data.y.values, x=self.data.x.values, mask=pmask )
@@ -574,7 +576,8 @@ class Block(DataContainer):
             self._point_data.attrs['dsid'] = self.dsid()
             self._point_mask = pmask
             self._raster_mask = rmask
-        return (self._point_data, self._point_coords )
+        result = tm().norm( self._point_data )
+        return (result, self._point_coords )
 
     @property
     def point_mask(self) -> np.ndarray:

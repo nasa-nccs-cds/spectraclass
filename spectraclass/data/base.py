@@ -319,9 +319,7 @@ class DataManager(SCSingletonConfigurable):
     @exception_handled
     def getModelData(self, **kwargs) -> Optional[xa.DataArray]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        from spectraclass.data.spatial.tile.tile import Block
-        block: Block = tm().getBlock()
-        return self._mode_data_manager_.getModelData( block.model_data, **kwargs )
+        return self._mode_data_manager_.getModelData( tm().getBlock().model_data, **kwargs )
 
     def valid_bands(self) -> Optional[List]:
         return self._mode_data_manager_.valid_bands()

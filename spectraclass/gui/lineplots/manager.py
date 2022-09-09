@@ -104,16 +104,6 @@ class LinePlot(ABC):
         except KeyError:
             return None
 
-    def in_bounds( pids: List[int] ) -> bool:
-        try:
-            project_data: Dict[str,Union[xa.DataArray,List,Dict]] = DataManager.instance().loadCurrentProject("labels")
-            point_data: xa.DataArray = project_data["plot-y"]
-            result = point_data.sel( dict(samples=pids) ).values
-            return True
-        except KeyError:
-            return False
-
-
     def lry(self, pid ) -> np.ndarray:
         return sel( self._rploty, pid ).squeeze()
 

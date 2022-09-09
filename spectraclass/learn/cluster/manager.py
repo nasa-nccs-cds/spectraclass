@@ -209,6 +209,10 @@ class ClusterManager(SCSingletonConfigurable):
             class_points = np.concatenate( (class_points, pids), axis=0 )
         return class_points.astype(np.int)
 
+    @property
+    def cluster_points(self) -> xa.DataArray:
+        return self._cluster_points
+
     @log_timing
     def mark_cluster( self, gid: int, cid: int, icluster: int ) -> Marker:
         from spectraclass.model.labels import lm

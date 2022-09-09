@@ -34,7 +34,6 @@ class TileManager(SCSingletonConfigurable):
     mask_class = tl.Int(0).tag( config=True, sync=True )
     autoprocess = tl.Bool(True).tag( config=True, sync=True )
     reprocess = tl.Bool(False).tag( config=True, sync=True )
-    normalize = tl.Bool(True).tag(config=True, sync=True)
     image_attrs = {}
     ESPG = 3857
     crs = ccrs.epsg(ESPG) # "+a=6378137.0 +b=6378137.0 +nadgrids=@null +proj=merc +lon_0=0.0 +x_0=0.0 +y_0=0.0 +units=m +no_defs"
@@ -157,10 +156,9 @@ class TileManager(SCSingletonConfigurable):
         return self._scale
 
     def in_bounds( self, pids: List[int] ) -> bool:
-        from spectraclass.data.base import DataManager, dm, DataType
         try:
-            project_data: Dict[str,Union[xa.DataArray,List,Dict]] = dm().loadCurrentProject( 'in_bounds' )
-            point_data: xa.DataArray = project_data["plot-y"]
+            block = self.getBlock()
+            point_data: xa.DataArray = block.getPointData()[0]
             result = point_data.sel( dict(samples=pids) ).values
             return True
         except KeyError:
@@ -309,10 +307,10 @@ class TileManager(SCSingletonConfigurable):
         nodata_value = raster.attrs.get('data_ignore_value', -9999)
         return raster.where(raster != nodata_value, float('nan') )
 
-    def norm(self, raster: xa.DataArray) -> xa.DataArray:
-        if self.normalize:
-            ndata: np.ndarray = (raster.values - self._scale[0]) / (self._scale[1] - self._scale[0])
-            return raster.copy( data=ndata )
-        else:
-            return raster
+    def norm(self, data: xa.DataArray, axis=1) -> xa.DataArray:
+        dave, dmag = np.nanmean(data.values, keepdims=True, axis=axis), np.nanstd(data.values, keepdims=True, axis=axis)
+        normed_data = (data.values - dave) / dmag
+        return data.copy(data=normed_data)
+
+
 

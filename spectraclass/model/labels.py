@@ -235,10 +235,9 @@ class LabelsManager(SCSingletonConfigurable):
 
     def _init_data(self):
         from ..graph.manager import ActivationFlowManager
-        from spectraclass.data.base import DataManager
+        from spectraclass.data.spatial.tile.manager import tm
         if self._flow is None:
-            project_data: Dict[str,Union[xa.DataArray,List,Dict]] = DataManager.instance().loadCurrentProject("labels")
-            point_data: xa.DataArray = project_data["plot-y"]
+            point_data: xa.DataArray = tm().getBlock().getPointData()[0]
             self._init_labels_data( point_data )
             self._flow = ActivationFlowManager.instance().getActivationFlow()
 

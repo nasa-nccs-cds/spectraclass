@@ -127,7 +127,7 @@ class mplGraphPlot(LinePlot):
         self.lrecs[pid] = lrec
         x,y = self.lx(lrec.pid), self.ly(lrec.pid)
         if y is not None:
-            lines = self.ax.plot( x,y, picker=True, pickradius=2, color=color, alpha=alpha, linewidth=lw )
+            lines = self.ax.plot( x, y, picker=True, pickradius=2, color=color, alpha=alpha, linewidth=lw )
             lrec.line = lines[0]
             if (not self._use_model) and (self.ry.size > 0):
                 self.rlines.extend( self.ax.plot( x, self.lry(lrec.pid), color="grey" ) )
@@ -153,33 +153,25 @@ class mplGraphPlot(LinePlot):
         else:
             ufm().show(f"Points out of bounds","red")
 
-    def expose_nearby_lines(self, pid: int ):
-        from spectraclass.model.labels import LabelsManager, lm
-        from spectraclass.gui.control import UserFeedbackManager, ufm
-        y: np.ndarray = self.y
-        sely: np.ndarray = self.ly(pid)
-        ufm().show(f"Compare: y: {y.shape}, self: {sely.shape}", "blue")
+    def expose_nearby_lines(self, pid: int, mpids: List[int], cid: int, eps = 1.0 ):
+        dy: np.ndarray = np.abs( self._ploty.values[pid] - self._ploty.values[mpids] ).sum(axis=1)
+        dymax = dy.max(); dy[ dy==0.0 ] = dymax
+        thresh = dymax * ( eps / 50.0 )
+        pids = np.arange( dy.size )[ dy < thresh ].tolist()
+        self.plot_lines( pids, cid )
+        lgm().log( f"expose_nearby_lines[{pid}]: cid={cid}, thresh={thresh}, dymax={dymax}, pids={pids}" )
 
     @exception_handled
     def get_plotspecs(self):
         from spectraclass.model.labels import LabelsManager, lm
         colors, alphas, lws = [], [], []
-        test_ids = {}
-     #   lgm().log( f"create plotspecs for {len(self.lrecs.items())} lines, pids({self.selected_pid})->{self.pids}")
+#        lgm().log( f"create plotspecs for {len(self.lrecs.items())} lines, pids({self.selected_pid})->{self.pids}")
         for (pid, lrec) in self.lrecs.items():
             selection = ( pid == self.selected_pid )
             alphas.append( 1.0 if selection else 0.2 )
             colors.append( lm().graph_colors[ lrec.cid ] )
             lws.append( 2.0 if selection else 1.0 )
-            idx = len(colors)-1
-            if ( pid in [ 22025, 22663 ] ) or selection:
-                test_ids[ idx ] = pid
-        if self.selected_pid >= 0:
-            lgm().log(f" ^^^ get_plotspecs-test: " )
-            for tpid in [22025, 22663 ]:
-                lrec = self.lrecs[tpid]
-                lgm().log(f" ----->>> pid={tpid}, cid={lrec.cid} ")
-        return dict( color=colors, alpha=alphas, lw=lws, test_ids = test_ids )
+        return dict( color=colors, alpha=alphas, lw=lws )
 
     @property
     def cids( self ):
@@ -191,8 +183,6 @@ class mplGraphPlot(LinePlot):
         if clear_selection: self.selected_pid = -1
         ps = self.get_plotspecs()
         colors, alphas, linewidths = ps['color'], ps['alpha'], ps['lw']
-        test_colors = { pid: colors[idx] for (idx,pid) in ps['test_ids'].items() }
-        lgm().log(f"GRAPHPlot->test colors: {test_colors}")
         try:
             self.ax.set_prop_cycle( color=colors, alpha=alphas, linewidth=linewidths )
         except Exception as err:
@@ -221,16 +211,19 @@ class mplGraphPlot(LinePlot):
             mm().highlight_points( [self.selected_pid], [selected_lrec.cid] )
             self.plot()
 
+    @exception_handled
     def mark_selection( self, *args ):
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.model.labels import LabelsManager, lm
+        cid = lm().current_cid
+        lgm().log(f"mark_selection: pid={self.selected_pid} cid={cid}", print=True )
         if self.selected_pid >= 0:
-            lrec: LineRec = self.get_selected_lrec()
-            lrec.cid = lm().current_cid
-            mm().mark_point( lrec.pid, cid=lrec.cid )
-            self.expose_nearby_lines( lrec.pid )
+            lrec: LineRec = self.lrecs.pop( self.selected_pid )
+            lrec.clear()
+            mm().mark_point( lrec.pid, cid=cid )
+            self.expose_nearby_lines( lrec.pid, lrec.mpids, cid )
             mm().plot_markers_image( clear_highlights=True )
-            lgm().log( f"MARK SELECTION: cid={lrec.cid}, pid={lrec.pid}")
+            lgm().log(f"MARK SELECTION: cid={cid}, pid={lrec.pid}")
             self.plot()
 
     @exception_handled
