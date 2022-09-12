@@ -1,4 +1,4 @@
-from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
+from spectraclass.util.logs import LogManager, lgm, log_timing
 from sklearn import cluster
 from joblib import cpu_count
 import xarray as xa
@@ -27,6 +27,7 @@ class KMeansCluster(ClusterBase):
 
     @property
     def cluster_data(self) -> xa.DataArray:
+        lgm().log( f"cluster_data: data.shape={self._cluster_data.shape}, samples.shape = {self._samples.shape}")
         return xa.DataArray( self._cluster_data, dims=['samples', 'clusters'], name="clusters",
                              coords=dict( samples=self._samples, clusters=[0]), attrs=self._attrs )
 

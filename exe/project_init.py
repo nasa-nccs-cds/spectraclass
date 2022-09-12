@@ -12,7 +12,7 @@ else:
     dm: DataManager = DataManager.initialize(project, mode)
 
     block_size = 150
-    method = "aec" # "aec" "vae"
+    method = "vae" # "aec" "vae"
     model_dims = 32
     reprocess_data = False
 

@@ -4,12 +4,15 @@ from typing import List, Union, Tuple, Optional, Dict, Callable, Set
 from collections import OrderedDict
 import time, xarray as xa
 import numpy as np
-from spectraclass.data.base import DataManager, dm
 from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import matplotlib.pyplot as plt
 from .manager import LinePlot
 import ipywidgets as ipw
+
+def sel( array: xa.DataArray, pids: List[int] ) -> xa.DataArray:
+    mask: np.ndarray = np.isin( array.samples.values, np.array(pids) )
+    return array[mask,:]
 
 class LineRec:
 
@@ -17,7 +20,7 @@ class LineRec:
         self.line: Optional[Line2D] = line
         self.pid: int = pid
         self.cid: int = cid
-        self.mpids: List[int] = kwargs.get( 'mpids', [] )
+        self.mpids: List[int] = kwargs.get( 'mpids', [self.pid] )
 
     def clear(self):
         if self.line is not None:
@@ -153,13 +156,19 @@ class mplGraphPlot(LinePlot):
         else:
             ufm().show(f"Points out of bounds","red")
 
-    def expose_nearby_lines(self, pid: int, mpids: List[int], cid: int, eps = 1.0 ):
-        dy: np.ndarray = np.abs( self._ploty.values[pid] - self._ploty.values[mpids] ).sum(axis=1)
-        dymax = dy.max(); dy[ dy==0.0 ] = dymax
-        thresh = dymax * ( eps / 50.0 )
-        pids = np.arange( dy.size )[ dy < thresh ].tolist()
+    def expose_nearby_lines(self, pid: int, mpids: List[int], cid: int, eps = 0.05 ):
+        target_line, line_group = sel(self._ploty,[pid]), sel(self._ploty,mpids)
+        diff: np.array = np.abs( target_line.values - line_group.values )
+        offset: np.array = diff.sum(axis=1)
+        idmask = (offset > 0.0)
+        minval, maxval = offset[idmask].min(), offset.max()
+        lgm().log(f"\n              expose_nearby_lines[{pid}]: cid={cid}, offset.shape={offset.shape}, offset.range={[minval,maxval]},")
+        thresh = minval + (maxval-minval)*eps
+        mask = (offset < thresh) & idmask
+        pids = np.array(mpids)[ mask ].tolist()
+        lgm().log(f"                 ---> thresh={thresh}, mask-nz={np.count_nonzero(mask)}, pids={pids}")
         self.plot_lines( pids, cid )
-        lgm().log( f"expose_nearby_lines[{pid}]: cid={cid}, thresh={thresh}, dymax={dymax}, pids={pids}" )
+
 
     @exception_handled
     def get_plotspecs(self):
