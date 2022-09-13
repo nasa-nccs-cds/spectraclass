@@ -228,7 +228,7 @@ class SpatialDataManager(ModeDataManager):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block_data_file = dm().modal.dataFile(block=block)
         if os.path.exists(block_data_file):
-            lgm().log(f"** Reading BLOCK{block.cindex} ")
+  #          lgm().log(f"** Reading BLOCK{block.cindex} ")
             return xa.open_dataset( block_data_file )
         else:
             ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)

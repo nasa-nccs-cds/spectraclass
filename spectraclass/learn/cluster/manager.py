@@ -82,6 +82,8 @@ class ClusterManager(SCSingletonConfigurable):
     def create_model(self, mid: str ) -> ClusterBase:
         from .fcm import FCM
         from  .kmeans import KMeansCluster
+        from .dbscan import DBScan
+        from .spectral import Spectral
         nclusters = self._ncluster_selector.value
         self.update_colors( self._max_culsters )
         lgm().log( f"Creating {mid} model with {nclusters} clusters")
@@ -90,14 +92,15 @@ class ClusterManager(SCSingletonConfigurable):
             return KMeansCluster( nclusters, **params )
         if mid == "fuzzy cmeans":
             return FCM( nclusters )
+        elif mid == "dbscan":
+             eps = 0.001 / nclusters
+             return DBScan( eps=eps, min_samples=10, n_clusters=nclusters )
+        elif mid == "spectral":
+            return Spectral( n_clusters=nclusters )
 
         # elif mid == "hierarchical":
         #     return cluster.AgglomerativeClustering( linkage="ward", n_clusters=nclusters ) # , connectivity= )
-        # elif mid == "DBSCAN":
-        #      eps = 0.001 / nclusters
-        #      return cluster.DBSCAN( eps=eps, min_samples=10, metric="cosine" )
-        # elif mid == "spectral":
-        #     return cluster.SpectralClustering( n_clusters=nclusters )
+
 
     def on_parameter_change(self, *args ):
         self.update_model()

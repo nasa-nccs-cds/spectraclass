@@ -46,6 +46,9 @@ def scale( x: xa.DataArray, axis = 0 ) -> xa.DataArray:
     result.attrs.update( x.attrs )
     return result
 
+def nsamples( trainingsets: List[np.ndarray ]):
+    return sum( [ts.shape[0] for ts in trainingsets] )
+
 def get_optimizer( **kwargs ):
     oid = kwargs.get( 'optimizer','rmsprop').lower()
     lr = kwargs.get( 'learning_rate', 1e-3 )
@@ -88,10 +91,13 @@ class ModeDataManager(SCSingletonConfigurable):
     model_dims = tl.Int(16).tag(config=True, sync=True)
     subsample_index = tl.Int(1).tag(config=True, sync=True)
     reduce_method = tl.Unicode("vae").tag(config=True, sync=True)
+    reduce_anom_focus = tl.Float( 0.25 ).tag(config=True, sync=True)
     reduce_nepoch = tl.Int(5).tag(config=True, sync=True)
-    reduce_niter = tl.Int(2).tag(config=True, sync=True)
+    reduce_focus_nepoch = tl.Int(20).tag(config=True, sync=True)
+    reduce_niter = tl.Int(1).tag(config=True, sync=True)
     reduce_sparsity = tl.Float( 0.0 ).tag(config=True,sync=True)
     modelkey = tl.Unicode("0000").tag(config=True, sync=True)
+    aeckey = tl.Unicode("").tag(config=True, sync=True)
     refresh_model = tl.Bool(False).tag(config=True, sync=True)
 
     def __init__(self, ):
@@ -219,7 +225,6 @@ class ModeDataManager(SCSingletonConfigurable):
     #         return True
 
     def get_trained_network(self, **kwargs ):
-        self.vae = kwargs.pop( 'vae', True )
         if self._autoencoder is None:
             self.autoencoder_preprocess( refresh_model=False, **kwargs )
 
@@ -232,7 +237,6 @@ class ModeDataManager(SCSingletonConfigurable):
             self._build_ae_model( input_dims, **kwargs)
 
     def load_weights(self, **kwargs) -> bool:
-        model_key: str = kwargs.get('key', self.modelkey)
         aefiles = self.autoencoder_files(**kwargs)
         wfile = aefiles[0] + ".index"
         if self.refresh_model:
@@ -245,10 +249,10 @@ class ModeDataManager(SCSingletonConfigurable):
             try:
                 self._autoencoder.load_weights( aefiles[0] )
                 self._encoder.load_weights( aefiles[1] )
-                lgm().log(f"#AEC: Loaded saved weights from files {aefiles}")
+                lgm().log(f"#AEC: Loaded saved weights.")
                 return True
             except Exception as err:
-                lgm().log(f"#AEC: Unable to load saved weights for key {model_key}: {err}")
+                lgm().log(f"#AEC: Unable to load saved weights for files {aefiles}: {err}")
                 return False
 
     def _build_ae_model(self, input_dims: int, **kwargs):
@@ -353,9 +357,12 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def autoencoder_files(self, **kwargs ) -> List[str]:
         key: str = kwargs.get( 'key', self.modelkey )
+        aeckey: str = kwargs.get( 'aeckey', self.aeckey )
+        ext = "." + aeckey if len(aeckey) else ""
         model_dims: int = kwargs.get('dims', self.model_dims)
         from spectraclass.data.base import DataManager, dm
-        aefiles = [f"{dm().cache_dir}/autoencoder.{model_dims}.{key}", f"{dm().cache_dir}/encoder.{model_dims}.{key}"]
+        aefiles = [f"{dm().cache_dir}/autoencoder.{model_dims}.{key}{ext}", f"{dm().cache_dir}/encoder.{model_dims}.{key}{ext}"]
+        lgm().log(f"#AEC: autoencoder_files (key={key}, aeckey={aeckey}, ext={ext}): {aefiles}")
         return aefiles
 
     def initialize_dimension_reduction( self, **kwargs ):
@@ -373,37 +380,108 @@ class ModeDataManager(SCSingletonConfigurable):
             self._autoencoder.fit(point_data.values, point_data.values, epochs=nepoch, batch_size=256, shuffle=True)
 
     def autoencoder_preprocess(self, **kwargs ):
-        from spectraclass.data.base import DataManager, dm
-        from spectraclass.data.spatial.tile.tile import Block, Tile
-        nepoch: int = kwargs.get( 'nepoch', self.reduce_nepoch )
         niter: int = kwargs.get( 'niter', self.reduce_niter )
-        method: str = kwargs.pop( 'method', self.reduce_method )
-        target_block = kwargs.get( 'target_block', None )
-
+        method: str = kwargs.get( 'method', self.reduce_method )
         self.vae = (method.strip().lower() == 'vae')
         self.build_encoder(**kwargs)
         weights_loaded = self.load_weights(**kwargs)
-        blocks: List[Block] = tm().tile.getBlocks()
         initial_epoch = 0
         if not weights_loaded:
             for iter in range(niter):
-                for image_index in range(dm().modal.num_images):
-                    dm().modal.set_current_image(image_index)
-                    lgm().log(f"Preprocessing data blocks{tm().block_dims} for image {dm().modal.image_name}", print=True)
-                    for iB, block in enumerate(blocks):
-                        if (target_block is None) or (target_block == block.block_coords):
-                            t0 = time.time()
-                            point_data, grid = block.getPointData()
-                            if point_data.shape[0] > 0:
-                                lgm().log(f"\nITER[{iter}]: Processing block{block.block_coords}, data shape = {point_data.shape}", print=True )
-                                history: History = self._autoencoder.fit(point_data.data, point_data.data, initial_epoch=initial_epoch, epochs=initial_epoch+nepoch, batch_size=256, shuffle=True)
-                                initial_epoch = initial_epoch + nepoch
-                                lgm().log(f" Trained autoencoder in {time.time() - t0} sec", print=True)
-                            block.initialize()
+                self.general_training( initial_epoch, **kwargs )
+                self.focus_training(   initial_epoch, **kwargs )
             aefiles = self.autoencoder_files(**kwargs)
             self._autoencoder.save_weights( aefiles[0] )
             self._encoder.save_weights( aefiles[1] )
             lgm().log(f"autoencoder_preprocess completed, saved model weights to files={aefiles}", print=True)
+
+    def general_training(self, initial_epoch = 0, **kwargs ):
+        target_block = kwargs.get( 'target_block', None )
+        nepoch: int = kwargs.get( 'nepoch', self.reduce_nepoch )
+        from spectraclass.data.base import DataManager, dm
+        from spectraclass.data.spatial.tile.tile import Block, Tile
+        for image_index in range(dm().modal.num_images):
+            dm().modal.set_current_image(image_index)
+            lgm().log(f"Preprocessing data blocks{tm().block_dims} for image {dm().modal.image_name}", print=True)
+            blocks: List[Block] = tm().tile.getBlocks()
+            for iB, block in enumerate(blocks):
+                if (target_block is None) or (target_block == block.block_coords):
+                    t0 = time.time()
+                    point_data, grid = block.getPointData()
+                    if point_data.shape[0] > 0:
+                        lgm().log(
+                            f"  ITER[{iter}]: Processing block{block.block_coords}, data shape = {point_data.shape}",
+                            print=True)
+                        history: History = self._autoencoder.fit(point_data.data, point_data.data,initial_epoch=initial_epoch,
+                                                                 epochs=initial_epoch + nepoch, batch_size=256, shuffle=True)
+                        initial_epoch = initial_epoch + nepoch
+                        lgm().log(f" Trained autoencoder in {time.time() - t0} sec", print=True)
+                    block.initialize()
+    def focus_training(self, initial_epoch = 0, **kwargs ) -> bool:
+        from spectraclass.data.base import DataManager, dm
+        from spectraclass.data.spatial.tile.tile import Block, Tile
+        nepoch: int = kwargs.get( 'nepoch', self.reduce_focus_nepoch )
+        anom_focus: float = kwargs.get( 'anom_focus', self.reduce_anom_focus )
+        if (anom_focus == 0.0) or (nepoch==0): return False
+
+        anomalies = {}
+        for image_index in range(dm().modal.num_images):
+            dm().modal.set_current_image(image_index)
+            blocks: List[Block] = tm().tile.getBlocks()
+            for iB, block in enumerate(blocks):
+                point_data, grid = block.getPointData()
+                if point_data.shape[0] > 0:
+                    reproduced_data: np.ndarray = self._autoencoder.predict( point_data.values )
+                    anomalies[(image_index,iB)] = self.get_anomaly( point_data.data, reproduced_data )
+        full_anomaly: np.ndarray = np.concatenate( list(anomalies.values()) )
+        t = self.get_anomaly_threshold(full_anomaly, anom_focus)
+        lgm().log(f"autoencoder focus({anom_focus}) training: anomaly threshold = {t}", print=True)
+        focused_datsets = []
+        for image_index in range(dm().modal.num_images):
+            dm().modal.set_current_image(image_index)
+            blocks: List[Block] = tm().tile.getBlocks()
+            for iB, block in enumerate(blocks):
+                point_data, grid = block.getPointData()
+                if point_data.shape[0] > 0:
+                    anomaly = anomalies[(image_index,iB)]
+                    focused_point_data = self.get_focused_dataset(point_data.data, anomaly, t )
+                    focused_datsets.append( focused_point_data )
+                    ntrainsamples = nsamples( focused_datsets )
+                    lgm().log(f" --> BLOCK[{image_index}:{block.block_coords}]: ntrainsamples = {ntrainsamples}", print=True)
+                    if ntrainsamples > point_data.shape[0]:
+                        focused_training_data = np.concatenate( focused_datsets )
+                        lgm().log( f" --> Focused Training with #samples = {ntrainsamples}", print=True)
+                        history: History = self._autoencoder.fit( focused_training_data, focused_training_data, initial_epoch=initial_epoch,
+                                                                  epochs=initial_epoch + nepoch, batch_size=256, shuffle=True)
+                        initial_epoch = initial_epoch + nepoch
+                        focused_datsets = []
+        ntrainsamples = nsamples( focused_datsets )
+        if ntrainsamples > 0:
+            focused_training_data = np.concatenate( focused_datsets )
+            lgm().log(f" --> Focused Training with #samples = {ntrainsamples}", print=True)
+            history: History = self._autoencoder.fit(focused_training_data, focused_training_data, initial_epoch=initial_epoch,
+                                                     epochs=initial_epoch + nepoch, batch_size=256, shuffle=True)
+        return True
+
+    def get_focused_dataset(self, train_data: np.ndarray, anomaly: np.ndarray, threshold: float ) -> np.ndarray:
+        rng = np.random.default_rng()
+        amask: np.ndarray = (anomaly > threshold)
+        anom_data, std_data = train_data[amask], train_data[~amask]
+        if anom_data.shape[0] >= std_data.shape[0]:
+            return train_data
+        else:
+            std_data_sample = rng.choice( std_data, anom_data.shape[0], replace=False, axis=0, shuffle=False )
+            new_data = np.concatenate((anom_data, std_data_sample), axis=0)
+            return new_data
+
+    def get_anomaly(self, train_data: np.ndarray, reproduced_data ) -> np.ndarray:
+        return np.abs(train_data - reproduced_data).sum(axis=-1, keepdims=False)
+
+    def get_anomaly_threshold(self, anomaly: np.ndarray, anom_focus=0.10 ) -> float:
+        hist, edges = np.histogram(anomaly, 64)
+        counts: np.ndarray = np.cumsum(hist)
+        ti: int = np.abs(counts - counts[-1] * (1 - anom_focus)).argmin()
+        return edges[ti + 1]
 
     def autoencoder_reduction(self, train_input: xa.DataArray, **kwargs ) -> Tuple[np.ndarray, np.ndarray]:
         ispecs: List[np.ndarray] = [train_input.data.max(0), train_input.data.min(0), train_input.data.mean(0), train_input.data.std(0)]
@@ -413,15 +491,17 @@ class ModeDataManager(SCSingletonConfigurable):
         lgm().log(f"   ----> ave = { ispecs[2][:64].tolist() } ")
         lgm().log(f"   ----> std = { ispecs[3][:64].tolist() } ")
         self.get_trained_network( **kwargs )
-        encoder_result = self._encoder.predict( train_input.data )
+        encoder_result = self._encoder.predict( train_input.values )
         encoded_data: np.ndarray = encoder_result[0] if isinstance(encoder_result, (list, tuple)) else encoder_result
-        reproduced_data: np.ndarray = self._autoencoder.predict( train_input.data )
+        reproduced_data: np.ndarray = self._autoencoder.predict( train_input.values )
         lgm().log(f" Autoencoder_reduction, result shape = {encoded_data.shape}")
-        lgm().log(f" ----> encoder_input: shape = {train_input.shape}, val[5][5] = {train_input.data[:5][:5]} ")
+        lgm().log(f" ----> encoder_input: shape = {train_input.shape}, val[5][5] = {train_input.values[:5][:5]} ")
         lgm().log(f" ----> reproduction: shape = {reproduced_data.shape}, val[5][5] = {reproduced_data[:5][:5]} ")
         lgm().log(f" ----> encoding: shape = {encoded_data.shape}, val[5][5] = {encoded_data[:5][:5]}, std = {encoded_data.std(0)} ")
+        anomaly = np.abs( train_input.values - reproduced_data ).sum( axis=-1, keepdims=False )
+        dmask = anomaly > 0.0
+        lgm().log( f" ----> ANOMALY: shape = {anomaly.shape}, range = [{anomaly.min(where=dmask,initial=np.inf)},{anomaly.max()}] ")
         return (encoded_data, reproduced_data)
-
 
     @property
     def image_names(self) -> List[str]:
@@ -691,7 +771,7 @@ class ModeDataManager(SCSingletonConfigurable):
         return self.datasets[ self.dsid() ]
 
     def blockFilePath( self, **kwargs ) -> str:
-        ext = kwargs.get('ext','nc')
+        ext = kwargs.get('../ext', 'nc')
         return path.join(self.datasetDir, self.dsid(**kwargs) + "." + ext )
 
     def removeDataset(self):

@@ -5,7 +5,7 @@ import xarray as xa
 import numpy as np
 from .base import ClusterBase
 
-class KMeansCluster(ClusterBase):
+class Spectral(ClusterBase):
 
     def __init__( self, n_clusters: int, **kwargs ):
         ClusterBase.__init__( self, n_clusters )
@@ -23,7 +23,8 @@ class KMeansCluster(ClusterBase):
 
     def update_model(self):
         params = dict( n_clusters=self._n_clusters, random_state=self.random_state, batch_size=self.batch_size )
-        self._model = cluster.MiniBatchKMeans(**params)
+        self._model = cluster.SpectralClustering(**params)
+
     @property
     def cluster_data(self) -> xa.DataArray:
         lgm().log( f"cluster_data: data.shape={self._cluster_data.shape}, samples.shape = {self._samples.shape}")
