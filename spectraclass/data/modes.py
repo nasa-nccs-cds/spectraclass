@@ -93,11 +93,12 @@ class ModeDataManager(SCSingletonConfigurable):
     reduce_method = tl.Unicode("vae").tag(config=True, sync=True)
     reduce_anom_focus = tl.Float( 0.25 ).tag(config=True, sync=True)
     reduce_nepoch = tl.Int(5).tag(config=True, sync=True)
+    reduce_dropout = tl.Float( 0.01 ).tag(config=True, sync=True)
     reduce_focus_nepoch = tl.Int(20).tag(config=True, sync=True)
+    reduce_focus_ratio = tl.Float(2.0).tag(config=True, sync=True)
     reduce_niter = tl.Int(1).tag(config=True, sync=True)
     reduce_sparsity = tl.Float( 0.0 ).tag(config=True,sync=True)
     modelkey = tl.Unicode("0000").tag(config=True, sync=True)
-    aeckey = tl.Unicode("").tag(config=True, sync=True)
     refresh_model = tl.Bool(False).tag(config=True, sync=True)
 
     def __init__(self, ):
@@ -240,9 +241,8 @@ class ModeDataManager(SCSingletonConfigurable):
         aefiles = self.autoencoder_files(**kwargs)
         wfile = aefiles[0] + ".index"
         if self.refresh_model:
-            for aef in aefiles:
-                for ifile in glob.glob( aef + ".*" ): os.remove( ifile )
-        if not os.path.exists( wfile ):
+            return False
+        elif not os.path.exists( wfile ):
             lgm().log( f"#AEC weights file does not exist: {wfile}")
             return False
         else:
@@ -258,6 +258,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def _build_ae_model(self, input_dims: int, **kwargs):
         model_dims: int = kwargs.pop('dims', self.model_dims)
         verbose = kwargs.pop('verbose', True)
+        dropout_rate = kwargs.get('dropout', 0.01)
         loss = str( kwargs.pop('loss', 'mean_squared_error') ).lower()  # mean_squared_error categorical_crossentropy
         lgm().log(f"#AEC: RM BUILD AEC NETWORK: {input_dims} -> {model_dims}")
         winit: float = kwargs.get( 'winit', 0.001 )
@@ -266,16 +267,18 @@ class ModeDataManager(SCSingletonConfigurable):
         activation = kwargs.get( 'activation', 'tanh' )
         optimizer =  get_optimizer( **kwargs )
         dargs = dict( kernel_initializer=RandomNormal(stddev=winit), bias_initializer=Zeros() )
-        layer_dims, x = int(round(input_dims / reduction_factor)), inputlayer
+        layer_dims, layer = int(round(input_dims / reduction_factor)), inputlayer
         while layer_dims > model_dims:
-            x = Dense(layer_dims, activation=activation, **dargs )(x)
+            layer = Dense(layer_dims, activation=activation, **dargs )(layer)
+            if dropout_rate > 0.0: layer = Dropout(dropout_rate)(layer)
             layer_dims = int(round(layer_dims / reduction_factor))
-        encoded = x = Dense(model_dims, activation=activation, **dargs )(x)
+        encoded = x = Dense(model_dims, activation=activation, **dargs )(layer)
         layer_dims = int(round(model_dims * reduction_factor))
         while layer_dims < input_dims:
-            x = Dense(layer_dims, activation=activation, **dargs )(x)
+            layer = Dense(layer_dims, activation=activation, **dargs )(layer)
+            if dropout_rate > 0.0: layer = Dropout(dropout_rate)(layer)
             layer_dims = int(round(layer_dims * reduction_factor))
-        decoded = Dense(input_dims, activation='linear', **dargs )(x)
+        decoded = Dense(input_dims, activation='linear', **dargs )(layer)
         #        modelcheckpoint = ModelCheckpoint('xray_auto.weights', monitor='loss', verbose=1, save_best_only=True, save_weights_only=True, mode='auto', period=1)
         #        earlystopping = EarlyStopping(monitor='loss', min_delta=0., patience=100, verbose=1, mode='auto')
         self._autoencoder = Model(inputs=[inputlayer], outputs=[decoded])
@@ -357,12 +360,10 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def autoencoder_files(self, **kwargs ) -> List[str]:
         key: str = kwargs.get( 'key', self.modelkey )
-        aeckey: str = kwargs.get( 'aeckey', self.aeckey )
-        ext = "." + aeckey if len(aeckey) else ""
         model_dims: int = kwargs.get('dims', self.model_dims)
         from spectraclass.data.base import DataManager, dm
-        aefiles = [f"{dm().cache_dir}/autoencoder.{model_dims}.{key}{ext}", f"{dm().cache_dir}/encoder.{model_dims}.{key}{ext}"]
-        lgm().log(f"#AEC: autoencoder_files (key={key}, aeckey={aeckey}, ext={ext}): {aefiles}")
+        aefiles = [f"{dm().cache_dir}/autoencoder.{model_dims}.{key}", f"{dm().cache_dir}/encoder.{model_dims}.{key}"]
+        lgm().log(f"#AEC: autoencoder_files (key={key}): {aefiles}")
         return aefiles
 
     def initialize_dimension_reduction( self, **kwargs ):
@@ -371,10 +372,11 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def autoencoder_process(self, point_data: xa.DataArray, **kwargs ):
         nepoch: int = kwargs.get( 'nepoch', self.reduce_nepoch )
+        dropout: float = kwargs.get('dropout', self.reduce_dropout)
         if self._autoencoder is None:
             method: str = kwargs.pop('method', self.reduce_method)
             self.vae = (method.strip().lower() == 'vae')
-            self.build_encoder(**kwargs)
+            self.build_encoder( dropout=dropout, **kwargs )
         weights_loaded = self.load_weights(**kwargs)
         if not weights_loaded:
             self._autoencoder.fit(point_data.values, point_data.values, epochs=nepoch, batch_size=256, shuffle=True)
@@ -382,15 +384,19 @@ class ModeDataManager(SCSingletonConfigurable):
     def autoencoder_preprocess(self, **kwargs ):
         niter: int = kwargs.get( 'niter', self.reduce_niter )
         method: str = kwargs.get( 'method', self.reduce_method )
+        dropout: float = kwargs.get('dropout', self.reduce_dropout)
         self.vae = (method.strip().lower() == 'vae')
-        self.build_encoder(**kwargs)
+        self.build_encoder(dropout=dropout,**kwargs)
         weights_loaded = self.load_weights(**kwargs)
         initial_epoch = 0
         if not weights_loaded:
             for iter in range(niter):
                 self.general_training( initial_epoch, **kwargs )
-                self.focus_training(   initial_epoch, **kwargs )
+                self.focused_training(initial_epoch, **kwargs)
             aefiles = self.autoencoder_files(**kwargs)
+            if self.refresh_model:
+                for aef in aefiles:
+                    for ifile in glob.glob(aef + ".*"): os.remove(ifile)
             self._autoencoder.save_weights( aefiles[0] )
             self._encoder.save_weights( aefiles[1] )
             lgm().log(f"autoencoder_preprocess completed, saved model weights to files={aefiles}", print=True)
@@ -417,7 +423,7 @@ class ModeDataManager(SCSingletonConfigurable):
                         initial_epoch = initial_epoch + nepoch
                         lgm().log(f" Trained autoencoder in {time.time() - t0} sec", print=True)
                     block.initialize()
-    def focus_training(self, initial_epoch = 0, **kwargs ) -> bool:
+    def focused_training(self, initial_epoch = 0, **kwargs) -> bool:
         from spectraclass.data.base import DataManager, dm
         from spectraclass.data.spatial.tile.tile import Block, Tile
         nepoch: int = kwargs.get( 'nepoch', self.reduce_focus_nepoch )
@@ -467,10 +473,11 @@ class ModeDataManager(SCSingletonConfigurable):
         rng = np.random.default_rng()
         amask: np.ndarray = (anomaly > threshold)
         anom_data, std_data = train_data[amask], train_data[~amask]
-        if anom_data.shape[0] >= std_data.shape[0]:
+        num_standard_samples = round( anom_data.shape[0]/self.reduce_focus_ratio )
+        if num_standard_samples >= std_data.shape[0]:
             return train_data
         else:
-            std_data_sample = rng.choice( std_data, anom_data.shape[0], replace=False, axis=0, shuffle=False )
+            std_data_sample = rng.choice( std_data, num_standard_samples, replace=False, axis=0, shuffle=False )
             new_data = np.concatenate((anom_data, std_data_sample), axis=0)
             return new_data
 

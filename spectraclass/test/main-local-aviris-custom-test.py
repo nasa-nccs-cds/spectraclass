@@ -30,7 +30,6 @@ dm.modal.model_dims = model_dims
 dm.modal.reduce_method = method
 dm.modal.refresh_model = False
 dm.modal.modelkey = f"b{block_size}.{method}"
-dm.modal.aeckey = "focus"
 
 dm.loadCurrentProject()
 classes = [('Class-1', "cyan"),

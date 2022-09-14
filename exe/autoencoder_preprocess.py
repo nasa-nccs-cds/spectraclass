@@ -7,21 +7,20 @@ from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timin
 block_size = 150
 method = "aec" # "vae"
 model_dims = 32
-nepochs = 5
-niter = 1
 reprocess_data = False
 
 try:
     dm: DataManager = DataManager.initialize("img_mgr", 'aviris')
     TileManager.block_size = block_size
     dm.modal.model_dims = model_dims
-    dm.modal.reduce_nepoch = nepochs
-    dm.modal.reduce_anom_focus = 0.1
-    dm.modal.reduce_niter = niter
-    dm.modal.reduce_method = method
-    dm.modal.refresh_model = False
+    dm.modal.reduce_anom_focus = 0.20
+    dm.modal.reduce_nepoch = 5
+    dm.modal.reduce_focus_nepoch = 10
+    dm.modal.reduce_niter = 1
+    dm.modal.refresh_model = True
     dm.modal.modelkey = f"b{block_size}.{method}"
-    dm.modal.aeckey = "focus"
+    dm.modal.reduce_focus_ratio = 2.0
+    dm.modal.reduce_dropout = 0.0
 
     dm.loadCurrentProject()
     dm.modal.initialize_dimension_reduction( refresh=reprocess_data )
