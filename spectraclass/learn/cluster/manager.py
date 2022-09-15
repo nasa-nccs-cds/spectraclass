@@ -25,10 +25,11 @@ class ClusterMagnitudeWidget(ipw.HBox):
         self.init_value = kwargs.get( 'value', 1.0 )
         handler = kwargs.get( 'handler', False )
         range = kwargs.get( 'range', [0.0,4.0] )
+        step = kwargs.get( 'step', 0.05 )
         cname = "Threshold" if index == 0 else f"Cluster-{index}"
         self.label = ipw.Button( description=cname, style=dict( button_color=color ) )
         self._index = index
-        self.slider = ipw.FloatSlider( self.init_value, description="", min=range[0], max=range[1], step=0.1 )
+        self.slider = ipw.FloatSlider( self.init_value, description="", min=range[0], max=range[1], step=step )
         self.label.on_click( self.reset )
         ipw.HBox.__init__( self, [self.label,self.slider] )
         if handler: self.on_change( handler )
@@ -48,7 +49,7 @@ class ClusterManager(SCSingletonConfigurable):
         super(ClusterManager, self).__init__(**kwargs)
         self._max_culsters = 15
         self._ncluster_options = range( 2, self._max_culsters )
-        self._mid_options = [ "kmeans", "fuzzy cmeans", "autoencoder" ] # , "umap" ] # "hierarchical" "DBSCAN", "spectral" ]
+        self._mid_options = [ "kmeans", "fuzzy cmeans", "bisecting kmeans" ]
         self._cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
         self._marked_colors: Dict[Tuple,Tuple[float,float,float]] = {}
@@ -81,9 +82,7 @@ class ClusterManager(SCSingletonConfigurable):
 
     def create_model(self, mid: str ) -> ClusterBase:
         from .fcm import FCM
-        from  .kmeans import KMeansCluster
-        from .dbscan import DBScan
-        from .spectral import Spectral
+        from  .kmeans import KMeansCluster, BisectingKMeans
         nclusters = self._ncluster_selector.value
         self.update_colors( self._max_culsters )
         lgm().log( f"Creating {mid} model with {nclusters} clusters")
@@ -92,15 +91,8 @@ class ClusterManager(SCSingletonConfigurable):
             return KMeansCluster( nclusters, **params )
         if mid == "fuzzy cmeans":
             return FCM( nclusters )
-        elif mid == "dbscan":
-             eps = 0.001 / nclusters
-             return DBScan( eps=eps, min_samples=10, n_clusters=nclusters )
-        elif mid == "spectral":
-            return Spectral( n_clusters=nclusters )
-
-        # elif mid == "hierarchical":
-        #     return cluster.AgglomerativeClustering( linkage="ward", n_clusters=nclusters ) # , connectivity= )
-
+        elif mid == "bisecting kmeans":
+             return BisectingKMeans( n_clusters=nclusters )
 
     def on_parameter_change(self, *args ):
         self.update_model()
@@ -175,7 +167,7 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import tm
         if self._cluster_raster is None:
             block = tm().getBlock()
-            self._cluster_raster: xa.DataArray = block.points2raster( self._cluster_points ).squeeze()
+            self._cluster_raster: xa.DataArray = block.points2raster( self.cluster_points ).squeeze()
         self._cluster_raster.attrs['cmap'] = self.get_colormap( layer )
         return self._cluster_raster
 
@@ -249,7 +241,7 @@ class ClusterManager(SCSingletonConfigurable):
 
     @exception_handled
     def tuning_gui(self) -> ipw.DOMWidget:
-        self.thresh_slider = ClusterMagnitudeWidget( 0, range=[0.0,1.0], value=0.0, handler=self.tune_cluster )
+        self.thresh_slider = ClusterMagnitudeWidget( 0, range=[0.0,1.0], value=0.0, step=0.02, handler=self.tune_cluster )
         tuning_sliders= [ self.thresh_slider ]
         for icluster in range( 1, self._max_culsters+1 ):
             tuning_sliders.append( ClusterMagnitudeWidget( icluster, handler=self.tune_cluster ) )
@@ -258,10 +250,13 @@ class ClusterManager(SCSingletonConfigurable):
     @exception_handled
     def tune_cluster(self, icluster: int, change: Dict ):
         from spectraclass.gui.spatial.map import mm
-        self.clear( reset=False )
-        self.model.rescale(icluster, change['new'])
-        self._cluster_points = self.model.cluster_data
+        self.rescale( icluster, change['new'] )
         mm().plot_cluster_image( self.get_cluster_map() )
+
+    def rescale(self, icluster: int, threshold: float ):
+        self.clear( reset=False )
+        self.model.rescale(icluster, threshold )
+        self._cluster_points = self.model.cluster_data
 
 class ClusterSelector:
     LEFT_BUTTON = 1

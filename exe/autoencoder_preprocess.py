@@ -13,14 +13,15 @@ try:
     dm: DataManager = DataManager.initialize("img_mgr", 'aviris')
     TileManager.block_size = block_size
     dm.modal.model_dims = model_dims
-    dm.modal.reduce_anom_focus = 0.20
-    dm.modal.reduce_nepoch = 5
-    dm.modal.reduce_focus_nepoch = 10
+    dm.modal.reduce_anom_focus = 0.15
+    dm.modal.reduce_nepoch = 3
+    dm.modal.reduce_focus_nepoch = 15
     dm.modal.reduce_niter = 1
     dm.modal.refresh_model = True
     dm.modal.modelkey = f"b{block_size}.{method}"
-    dm.modal.reduce_focus_ratio = 2.0
+    dm.modal.reduce_focus_ratio = 10.0
     dm.modal.reduce_dropout = 0.0
+    dm.modal.reduce_learning_rate = 5e-4
 
     dm.loadCurrentProject()
     dm.modal.initialize_dimension_reduction( refresh=reprocess_data )

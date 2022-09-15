@@ -1,8 +1,7 @@
 from spectraclass.data.base import DataManager
 from spectraclass.data.spatial.tile.manager import TileManager
-from spectraclass.application.controller import app, SpectraclassController
-from spectraclass.model.labels import LabelsManager, lm
-from spectraclass.learn.manager import ClassificationManager, cm
+from spectraclass.learn.cluster.manager import ClusterManager, clm
+import xarray as xa
 from typing import List, Union, Tuple, Optional, Dict, Callable
 
 dm: DataManager = DataManager.initialize("img_mgr", 'aviris')
@@ -19,23 +18,29 @@ else:
 block_size = 150
 method = "aec"  # "vae"
 model_dims = 32
+reprocess_data = False
 
-dm.modal.ext = "_img"
-dm.use_model_data = True
-dm.proc_type = "skl"
+dm: DataManager = DataManager.initialize("img_mgr", 'aviris')
 TileManager.block_size = block_size
-TileManager.block_index = [0, 7]
-dm.modal.valid_aviris_bands = [[5, 193], [214, 283], [319, 10000]]
 dm.modal.model_dims = model_dims
-dm.modal.reduce_method = method
+dm.modal.reduce_anom_focus = 0.20
+dm.modal.reduce_nepoch = 3
+dm.modal.reduce_focus_nepoch = 10
+dm.modal.reduce_niter = 1
 dm.modal.refresh_model = False
 dm.modal.modelkey = f"b{block_size}.{method}"
+dm.modal.reduce_focus_ratio = 10.0
+dm.modal.reduce_dropout = 0.0
+dm.modal.reduce_learning_rate = 1e-4
+ClusterManager.modelid = "kmeans"
 
 dm.loadCurrentProject()
-classes = [('Class-1', "cyan"),
-           ('Class-2', "green"),
-           ('Class-3', "magenta"),
-           ('Class-4', "blue")]
+dm.modal.initialize_dimension_reduction( refresh=reprocess_data )
+cluster_image: xa.DataArray = clm().run_cluster_model( dm.getModelData() )
+clm().rescale( 0, 0.5 )
 
-lm().setLabels(classes)
-dm.modal.initialize_dimension_reduction()
+
+
+
+
+

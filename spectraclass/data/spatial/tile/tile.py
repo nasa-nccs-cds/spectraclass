@@ -654,7 +654,7 @@ class Block(DataContainer):
 
     def points2raster(self, points_data: xa.DataArray ) -> xa.DataArray:
         tmask = self.get_threshold_mask( reduced=False )
- #       lgm().log( f"points->raster, points: dims={points_data.dims}, shape={points_data.shape}; data: dims={self.data.dims}, shape={self.data.shape}")
+        lgm().log( f"points->raster, points: dims={points_data.dims}, shape={points_data.shape}; data: dims={self.data.dims}, shape={self.data.shape}")
         dims = [points_data.dims[1], self.data.dims[1], self.data.dims[2]]
         coords = [(dims[0], points_data[dims[0]].data), (dims[1], self.data[dims[1]].data), (dims[2], self.data[dims[2]].data)]
         raster_data = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))

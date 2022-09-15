@@ -51,7 +51,7 @@ def nsamples( trainingsets: List[np.ndarray ]):
 
 def get_optimizer( **kwargs ):
     oid = kwargs.get( 'optimizer','rmsprop').lower()
-    lr = kwargs.get( 'learning_rate', 1e-3 )
+    lr = kwargs.get( 'lr', 1e-3 )
     if   oid == "rmsprop": return RMSprop( learning_rate=lr )
     elif oid == "adam":    return Adam(    learning_rate=lr )
     elif oid == "sgd":     return SGD(     learning_rate=lr )
@@ -94,6 +94,7 @@ class ModeDataManager(SCSingletonConfigurable):
     reduce_anom_focus = tl.Float( 0.25 ).tag(config=True, sync=True)
     reduce_nepoch = tl.Int(5).tag(config=True, sync=True)
     reduce_dropout = tl.Float( 0.01 ).tag(config=True, sync=True)
+    reduce_learning_rate = tl.Float(1e-3).tag(config=True, sync=True)
     reduce_focus_nepoch = tl.Int(20).tag(config=True, sync=True)
     reduce_focus_ratio = tl.Float(2.0).tag(config=True, sync=True)
     reduce_niter = tl.Int(1).tag(config=True, sync=True)
@@ -232,6 +233,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def build_encoder(self, **kwargs):
         input_dims = kwargs.pop( 'bands', None )
         if input_dims is None: input_dims = tm().getBlock().data.shape[0]
+        lgm().log( f"build_encoder, input_dims={input_dims}, parms={kwargs}")
         if self.vae:
             self._build_vae_model( input_dims, **kwargs)
         else:
@@ -385,8 +387,9 @@ class ModeDataManager(SCSingletonConfigurable):
         niter: int = kwargs.get( 'niter', self.reduce_niter )
         method: str = kwargs.get( 'method', self.reduce_method )
         dropout: float = kwargs.get('dropout', self.reduce_dropout)
+        lr = kwargs.get('lr', self.reduce_learning_rate )
         self.vae = (method.strip().lower() == 'vae')
-        self.build_encoder(dropout=dropout,**kwargs)
+        self.build_encoder( dropout=dropout, lr=lr, **kwargs )
         weights_loaded = self.load_weights(**kwargs)
         initial_epoch = 0
         if not weights_loaded:
