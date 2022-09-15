@@ -54,6 +54,7 @@ class GenericClusterBase(ClusterBase):
         self._cluster_data: np.ndarray = None
         self._cluster_distances: Dict[int, Tuple[np.ndarray,np.ndarray] ] = {}
         self._samples: np.ndarray = None
+        self._max_cluster_distance = 0.0
         self._attrs = None
         self._model = None
         self.update_model()
@@ -80,6 +81,7 @@ class GenericClusterBase(ClusterBase):
         self._threshold_mask = None
         self._cluster_data = np.expand_dims( self._model.fit_predict( data.values ), axis=1 ) + 1
         self._samples = data.samples.values
+        self._max_cluster_distance = 0.0
         cluster_centers: np.ndarray = self._model.cluster_centers_
 
         for iC in range( 1, self.n_clusters+1 ):
@@ -88,6 +90,7 @@ class GenericClusterBase(ClusterBase):
             cluster_distance = np.linalg.norm( data.values[cmask,:] - cluster_centers[iC-1,:], axis=1 )
             dmask = np.isin( self._samples, indices, assume_unique=True )
             self._cluster_distances[iC] = ( dmask, cluster_distance )
+            self._max_cluster_distance = max( self._max_cluster_distance, cluster_distance.max() )
 
     @property
     def threshold_mask( self ):
@@ -96,7 +99,7 @@ class GenericClusterBase(ClusterBase):
             for iC in range( 1, self.n_clusters+1 ):
                 (dmask, cluster_distance) = self._cluster_distances[iC]
                 cluster_distances[ dmask ] = cluster_distance / max( self.cscale[0,iC-1], 0.1 )
-            uncertainty: np.ndarray = cluster_distances / cluster_distances.max()
+            uncertainty: np.ndarray = cluster_distances / self._max_cluster_distance
             self._threshold_mask = ((1.0 - uncertainty) ) > self._threshold
         return self._threshold_mask
 
