@@ -1,14 +1,14 @@
 from ..graph.manager import ActivationFlowManager
 from sklearn.decomposition import PCA, FastICA
-import tensorflow as tf
-keras = tf.keras
+import tensorflow
+keras = tensorflow.keras
 from keras import losses, regularizers
-from keras.saving.saved_model.load import load as keras_load_model
-from keras.layers import Input, Dense, Dropout, Lambda
-from keras.models import Model
-from keras import backend as K
-from keras.losses import mse, binary_crossentropy
-from keras.regularizers import l2
+from tensorflow.keras.saving.saved_model.load import load as keras_load_model
+from tensorflow.keras.layers import Input, Dense, Dropout, Lambda
+from tensorflow.keras.models import Model
+from tensorflow.keras import backend as K
+from tensorflow.keras.losses import mse, binary_crossentropy
+from tensorflow.keras.regularizers import l2
 import xarray as xa
 from ..model.labels import LabelsManager
 import traitlets as tl
