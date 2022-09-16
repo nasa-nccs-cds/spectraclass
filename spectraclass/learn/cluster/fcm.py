@@ -55,7 +55,7 @@ class FCM(ClusterBase):
 
     @property
     def cluster_data(self) -> xa.DataArray:
-        cdata = np.expand_dims(np.argmax(self._fuzzy_cluster_data * self.cscale, axis=1), 1) + 1
+        cdata = np.expand_dims(np.argmax(self._fuzzy_cluster_data * self.cscale[:,:self._fuzzy_cluster_data.shape[1]], axis=1), 1) + 1
         if self._threshold > 0.0: cdata[ self.threshold_mask ] = 0
         crange = [cdata.min(),cdata.max()]
         lgm().log( f"FCM.cluster_data: shape = {cdata.shape}, thresh = {self._threshold}, range = [{self._fuzzy_cluster_data.min()},{self._fuzzy_cluster_data.max()}]")

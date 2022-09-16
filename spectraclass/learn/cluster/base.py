@@ -8,8 +8,9 @@ import xarray as xa
 class  ClusterBase(TransformerMixin,ClusterMixin,BaseEstimator):
 
     def __init__( self, n_clusters: int ):
+        from spectraclass.learn.cluster.manager import clm
         self._n_clusters = n_clusters
-        self.cscale = np.full([1, self._n_clusters], 0.5)
+        self.cscale = np.full( [1, clm().max_clusters+1], 1.0 )
         self._threshold = 0.0
         self._threshold_mask = None
 
@@ -41,7 +42,6 @@ class  ClusterBase(TransformerMixin,ClusterMixin,BaseEstimator):
     @n_clusters.setter
     def n_clusters( self, value: int ):
         self._n_clusters = value
-        self.cscale = np.full([1, self._n_clusters], 0.5)
         self._update_nclusters()
 
 
@@ -98,8 +98,8 @@ class GenericClusterBase(ClusterBase):
             cluster_distances = np.zeros( self._cluster_data.shape[0], np.float ) # ndarray[n-clusters,n-model-dims]
             for iC in range( 1, self.n_clusters+1 ):
                 (dmask, cluster_distance) = self._cluster_distances[iC]
-                cluster_distances[ dmask ] = cluster_distance / max( self.cscale[0,iC-1], 0.1 )
-            uncertainty: np.ndarray = cluster_distances / self._max_cluster_distance
+                cluster_distances[ dmask ] = cluster_distance / max( self.cscale[0,iC], 0.1 )
+            uncertainty: np.ndarray = cluster_distances / (1.4*self._max_cluster_distance)
             self._threshold_mask = ((1.0 - uncertainty) ) > self._threshold
         return self._threshold_mask
 

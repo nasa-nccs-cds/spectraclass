@@ -23,8 +23,8 @@ class ClusterMagnitudeWidget(ipw.HBox):
     def __init__(self, index: int, **kwargs ):
         color = f"rgb{ clm().cluster_color(index) }"
         self.init_value = kwargs.get( 'value', 1.0 )
-        handler = kwargs.get( 'handler', False )
-        range = kwargs.get( 'range', [0.0,4.0] )
+        handler = kwargs.get( 'handler', None )
+        range = kwargs.get( 'range', [0.0,2.0] )
         step = kwargs.get( 'step', 0.05 )
         cname = "Threshold" if index == 0 else f"Cluster-{index}"
         self.label = ipw.Button( description=cname, style=dict( button_color=color ) )
@@ -32,7 +32,12 @@ class ClusterMagnitudeWidget(ipw.HBox):
         self.slider = ipw.FloatSlider( self.init_value, description="", min=range[0], max=range[1], step=step )
         self.label.on_click( self.reset )
         ipw.HBox.__init__( self, [self.label,self.slider] )
-        if handler: self.on_change( handler )
+        if handler is not None:
+            self.on_change( handler )
+            handler( self._index, dict(new=self.init_value) )
+
+    def set_color(self, color: str ):
+        self.label.style.button_color = color
 
     def on_change(self, handler ):
         self.slider.observe( partial( handler, self._index ), 'value' )
@@ -54,6 +59,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._cluster_raster: xa.DataArray = None
         self._marked_colors: Dict[Tuple,Tuple[float,float,float]] = {}
         self._marked_clusters: Dict[Tuple, List] = {}
+        self._tuning_sliders: List[ClusterMagnitudeWidget] = []
         self.thresh_slider = None
         self._cluster_points: xa.DataArray = None
         self._models: Dict[str,ClusterBase] = {}
@@ -61,10 +67,10 @@ class ClusterManager(SCSingletonConfigurable):
                                           layout=ipw.Layout(width="500px"))
         self._ncluster_selector = ipw.Select( options=self._ncluster_options, description='#Clusters:', disabled=False,
                                              value=self.nclusters, layout=ipw.Layout(width="500px"))
-        self.update_model()
 
     def update_model(self):
-        self._models[ self.mid ] = self.create_model( self.mid )
+        if self.mid not in self._models:
+            self._models[ self.mid ] = self.create_model( self.mid )
 
     def add_model(self, mid: str, clusterer: ClusterBase ):
         self._models[ mid ] = clusterer
@@ -103,6 +109,7 @@ class ClusterManager(SCSingletonConfigurable):
 
     @property
     def model(self) -> ClusterBase:
+        self.update_model()
         return self._models[ self.mid ]
 
     def get_colormap( self, layer: bool ):
@@ -214,6 +221,7 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import tm
         ckey = ( tm().image_index, tm().block_coords, icluster )
         self._marked_colors[ ckey ] = lm().get_rgb_color(cid)
+        self._tuning_sliders[ icluster ].set_color( lm().current_color )
         self.get_marked_clusters(cid).append( icluster )
         cmap = self.get_cluster_map().values
         marker = Marker("clusters", self.get_points(cid), cid, mask=(cmap == icluster))
@@ -241,11 +249,16 @@ class ClusterManager(SCSingletonConfigurable):
 
     @exception_handled
     def tuning_gui(self) -> ipw.DOMWidget:
-        self.thresh_slider = ClusterMagnitudeWidget( 0, range=[0.0,1.0], value=0.0, step=0.02, handler=self.tune_cluster )
-        tuning_sliders= [ self.thresh_slider ]
-        for icluster in range( 1, self._max_culsters+1 ):
-            tuning_sliders.append( ClusterMagnitudeWidget( icluster, handler=self.tune_cluster ) )
-        return  ipw.VBox( tuning_sliders, layout=ipw.Layout( width="600px", border='2px solid firebrick' ) )
+        if not self._tuning_sliders:
+            self.thresh_slider = ClusterMagnitudeWidget( 0, range=[0.0,1.0], value=0.5, step=0.02, handler=self.tune_cluster )
+            self._tuning_sliders= [ self.thresh_slider ]
+            for icluster in range( 1, self._max_culsters+1 ):
+                self._tuning_sliders.append( ClusterMagnitudeWidget( icluster, handler=self.tune_cluster ) )
+        return  ipw.VBox( self._tuning_sliders, layout=ipw.Layout( width="600px", border='2px solid firebrick' ) )
+
+    @property
+    def max_clusters(self):
+        return self._max_culsters + 1
 
     @exception_handled
     def tune_cluster(self, icluster: int, change: Dict ):
