@@ -42,6 +42,9 @@ class Marker:
     def pids(self) -> np.ndarray:
         return self._pids
 
+    def set_pids(self, pids: np.ndarray):
+        self._pids = pids
+
     @property
     def mask(self) -> Optional[np.ndarray]:
         return self._mask
@@ -204,7 +207,7 @@ class MarkerManager( PointsInteractor ):
         marker = self._markers.pop( pid, None )
         if marker is not None:
             lm().deletePid( pid )
-            gpm().remove_point( pid )
+            gpm().remove_points( [pid] )
             pcm().deleteMarkers( [pid] )
         self.plot()
 

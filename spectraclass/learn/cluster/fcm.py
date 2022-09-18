@@ -54,14 +54,15 @@ class FCM(ClusterBase):
         lgm().log(f"FCM.cluster: update_nclusters")
 
     @property
-    def cluster_data(self) -> xa.DataArray:
-        cdata = np.expand_dims(np.argmax(self._fuzzy_cluster_data * self.cscale[:,:self._fuzzy_cluster_data.shape[1]], axis=1), 1) + 1
-        if self._threshold > 0.0: cdata[ self.threshold_mask ] = 0
-        crange = [cdata.min(),cdata.max()]
-        lgm().log( f"FCM.cluster_data: shape = {cdata.shape}, thresh = {self._threshold}, range = [{self._fuzzy_cluster_data.min()},{self._fuzzy_cluster_data.max()}]")
-        for iC in range( crange[0], crange[1]+1 ):
-            lgm().log(f" --> CLASS {iC}: npix= {np.count_nonzero(cdata==iC)}")
-        return xa.DataArray(cdata, dims=['samples', 'clusters'], name="clusters", coords=dict(samples=self._samples, clusters=[0]), attrs=self._attrs)
+    def cluster_data(self) -> Optional[xa.DataArray]:
+        if self._fuzzy_cluster_data is not None:
+            cdata = np.expand_dims(np.argmax(self._fuzzy_cluster_data * self.cscale[:,:self._fuzzy_cluster_data.shape[1]], axis=1), 1) + 1
+            if self._threshold > 0.0: cdata[ self.threshold_mask ] = 0
+            crange = [cdata.min(),cdata.max()]
+            lgm().log( f"FCM.cluster_data: shape = {cdata.shape}, thresh = {self._threshold}, range = [{self._fuzzy_cluster_data.min()},{self._fuzzy_cluster_data.max()}]")
+            for iC in range( crange[0], crange[1]+1 ):
+                lgm().log(f" --> CLASS {iC}: npix= {np.count_nonzero(cdata==iC)}")
+            return xa.DataArray(cdata, dims=['samples', 'clusters'], name="clusters", coords=dict(samples=self._samples, clusters=[0]), attrs=self._attrs)
 
     def fuzzy_cluster_data(self) -> xa.DataArray:
         return self._fuzzy_cluster_data

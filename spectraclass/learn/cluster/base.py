@@ -15,7 +15,7 @@ class  ClusterBase(TransformerMixin,ClusterMixin,BaseEstimator):
         self._threshold_mask = None
 
     @property
-    def cluster_data(self) -> xa.DataArray:
+    def cluster_data(self) -> Optional[xa.DataArray]:
         raise NotImplementedError("Call to abstract property of base class: ClusterBase.cluster_data")
 
     def rescale(self, index: int, sval: float ):
@@ -68,13 +68,17 @@ class GenericClusterBase(ClusterBase):
         raise NotImplementedError("Attempt to call abstract method")
 
     @property
-    def cluster_data(self) -> xa.DataArray:
-        cdata = self._cluster_data.squeeze()
-        if self._threshold > 0.0:  cdata = np.where( self.threshold_mask, cdata, 0 )
-        lgm().log( f"cluster_data: data.shape={self._cluster_data.shape}, threshold-mask.shape = {self.threshold_mask.shape}"
-                   f", threshold-mask.gtz = {np.count_nonzero(self.threshold_mask)}, cdata.shape = {cdata.shape},  #gtz = {np.count_nonzero(cdata)}")
-        cdata_array = xa.DataArray( cdata, dims=['samples'], name="cluster_data", coords=dict( samples=self._samples ), attrs=self._attrs )
-        return cdata_array.expand_dims( "cluster", 1 )
+    def cluster_data(self) -> Optional[xa.DataArray]:
+        if self._cluster_data is not None:
+            cdata = self._cluster_data.squeeze()
+            if self._threshold > 0.0:  cdata = np.where( self.threshold_mask, cdata, 0 )
+            lgm().log( f"cluster_data: data.shape={self._cluster_data.shape}, threshold-mask.shape = {self.threshold_mask.shape}"
+                       f", threshold-mask.gtz = {np.count_nonzero(self.threshold_mask)}, cdata.shape = {cdata.shape},  #gtz = {np.count_nonzero(cdata)}")
+            cdata_array = xa.DataArray( cdata, dims=['samples'], name="cluster_data", coords=dict( samples=self._samples ), attrs=self._attrs )
+            return cdata_array.expand_dims( "cluster", 1 )
+        else:
+            lgm().log( f"cluster_data: NULL" )
+
 
     def cluster( self, data: xa.DataArray, y=None ):
         self._attrs = data.attrs

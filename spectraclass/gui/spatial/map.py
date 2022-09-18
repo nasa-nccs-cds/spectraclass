@@ -313,15 +313,16 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def plot_cluster_image(self, clusters: xa.DataArray = None ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        block = tm().getBlock()
-        ncolors = clusters.shape[0]
-        color_bounds = np.linspace(-0.5, ncolors - 0.5, ncolors + 1)
-        self.clusters_image.set_data( clusters.to_numpy() )
-        self.clusters_image.cmap = clusters.attrs['cmap']
-        self.clusters_image.norm = mpl.colors.BoundaryNorm( color_bounds, ncolors, clip=True )
-        self.clusters_image.set_extent( block.extent )
-        self.clusters_image.changed()
-        self.update_canvas()
+        if clusters is not None:
+            block = tm().getBlock()
+            ncolors = clusters.shape[0]
+            color_bounds = np.linspace(-0.5, ncolors - 0.5, ncolors + 1)
+            self.clusters_image.set_data( clusters.to_numpy() )
+            self.clusters_image.cmap = clusters.attrs['cmap']
+            self.clusters_image.norm = mpl.colors.BoundaryNorm( color_bounds, ncolors, clip=True )
+            self.clusters_image.set_extent( block.extent )
+            self.clusters_image.changed()
+            self.update_canvas()
 
     def layer_managers( self, name: str ) -> List:
         from spectraclass.gui.pointcloud import PointCloudManager, pcm

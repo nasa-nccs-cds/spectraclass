@@ -62,6 +62,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._tuning_sliders: List[ClusterMagnitudeWidget] = []
         self.thresh_slider = None
         self._cluster_points: xa.DataArray = None
+        self._cluster_markers: Dict[int, Marker] = {}
         self._models: Dict[str,ClusterBase] = {}
         self._model_selector = ipw.Select( options=self.mids, description='Methods:', value=self.modelid, disabled=False,
                                           layout=ipw.Layout(width="500px"))
@@ -172,10 +173,12 @@ class ClusterManager(SCSingletonConfigurable):
     @exception_handled
     def get_cluster_map( self, layer: bool = False ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import tm
-        if self._cluster_raster is None:
+        if self.cluster_points is not None:
             block = tm().getBlock()
             self._cluster_raster: xa.DataArray = block.points2raster( self.cluster_points ).squeeze()
-        self._cluster_raster.attrs['cmap'] = self.get_colormap( layer )
+            self._cluster_raster.attrs['cmap'] = self.get_colormap( layer )
+        else:
+            lgm().log( "get_cluster_map: cluster_points=NULL")
         return self._cluster_raster
 
     @property
@@ -211,6 +214,10 @@ class ClusterManager(SCSingletonConfigurable):
             class_points = np.concatenate( (class_points, pids), axis=0 )
         return class_points.astype(np.int)
 
+    def get_cluster_pids(self, icluster: int ) -> np.ndarray:
+        mask = ( self._cluster_points.values.squeeze() == icluster )
+        return self._cluster_points.samples[mask].values
+
     @property
     def cluster_points(self) -> xa.DataArray:
         return self._cluster_points
@@ -226,6 +233,7 @@ class ClusterManager(SCSingletonConfigurable):
         cmap = self.get_cluster_map().values
         marker = Marker("clusters", self.get_points(cid), cid, mask=(cmap == icluster))
         lgm().log(f"#IA: mark_cluster[{icluster}]: ckey={ckey} cid={cid}, #pids = {marker.size}")
+        self._cluster_markers[icluster] = marker
         return marker
 
         # nodata_value = -2
@@ -263,13 +271,30 @@ class ClusterManager(SCSingletonConfigurable):
     @exception_handled
     def tune_cluster(self, icluster: int, change: Dict ):
         from spectraclass.gui.spatial.map import mm
+        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         self.rescale( icluster, change['new'] )
         mm().plot_cluster_image( self.get_cluster_map() )
+        lgm().log( f"#IA: tune_cluster, icluster={icluster}, value={change['new']}")
+        if icluster in self._cluster_markers.keys():
+            gpm().validate_plots( self._cluster_markers[icluster] )
 
     def rescale(self, icluster: int, threshold: float ):
         self.clear( reset=False )
         self.model.rescale(icluster, threshold )
         self._cluster_points = self.model.cluster_data
+        if self._cluster_points is not None:
+            if icluster == 0:
+                for iC in self._cluster_markers.keys(): self.update_cluster( iC )
+            else: self.update_cluster(icluster)
+
+    def update_cluster(self, icluster: int ):
+        lgm().log(f"#IA: update_cluster: marked-cids = {list(self._cluster_markers.keys())}")
+        marker: Marker = self._cluster_markers.get(icluster,None)
+        if marker is not None:
+            pids = self.get_cluster_pids( icluster )
+            marker.set_pids( pids )
+            lgm().log( f"#IA: update_cluster, npids={len(pids)}, cluster points shape = {self._cluster_points.shape}")
+
 
 class ClusterSelector:
     LEFT_BUTTON = 1

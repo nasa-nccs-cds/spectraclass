@@ -16,11 +16,22 @@ def sel( array: xa.DataArray, pids: List[int] ) -> xa.DataArray:
 
 class LineRec:
 
-    def __init__(self, line: Optional[Line2D], pid: int, cid: int, **kwargs ):
+    def __init__(self, line: Optional[Line2D], pid: int, cid: int, marker: Marker ):
         self.line: Optional[Line2D] = line
         self.pid: int = pid
         self.cid: int = cid
-        self.mpids: List[int] = kwargs.get( 'mpids', [self.pid] )
+        self._marker = marker
+
+    @property
+    def mpids(self) -> List[int]:
+        return [self.pid] if self._marker is None else self._marker.pids.tolist()
+
+    @property
+    def marker(self) -> Marker:
+        return self._marker
+
+    def validate(self, m: Marker) -> bool:
+        return (self._marker != m) or (self.pid in m.pids)
 
     def clear(self):
         if self.line is not None:
@@ -45,6 +56,7 @@ class mplGraphPlot(LinePlot):
         self.fig: plt.Figure = None
         self.selected_pid: int = -1
         self.lrecs: OrderedDict[int, LineRec] = OrderedDict()
+        self.hidden_lrecs: Dict[int, LineRec] = {}
         self.init_figure( **kwargs )
 
     @property
@@ -114,47 +126,63 @@ class mplGraphPlot(LinePlot):
         lgm().log(f"mplGraphPlot: Add Marker[{m.size}]: cid={m.cid}, pids[:10]={m.pids[:10]}")
         if m.size > 0:
             self.clearTransients()
-            if len(m.pids) == 1:    self.plot_line( m.pids[0], m.cid )
-            else:                   self.plot_lines( m.pids.tolist(), m.cid )
+#            if len(m.pids) == 1:    self.plot_line( m.pids[0], m.cid )
+#            else:                   self.plot_lines( m.pids.tolist(), m.cid )
+            self.plot_lines( m )
 
     @log_timing
-    def plot_line(self, pid: int, cid: int ):
-        from spectraclass.model.labels import LabelsManager, lm
-        from spectraclass.gui.control import UserFeedbackManager, ufm
-        selected: bool = (self.selected_pid >= 0)
-        selection = (pid == self.selected_pid)
-        alpha = (1.0 if selection else 0.2) if selected else 1.0
-        color = lm().graph_colors[cid]
-        lw = 2.0 if selection else 1.0
-        lrec = LineRec(None, pid, cid)
-        self.lrecs[pid] = lrec
-        x,y = self.lx(lrec.pid), self.ly(lrec.pid)
-        if y is not None:
-            lines = self.ax.plot( x, y, picker=True, pickradius=2, color=color, alpha=alpha, linewidth=lw )
-            lrec.line = lines[0]
-            if (not self._use_model) and (self.ry.size > 0):
-                self.rlines.extend( self.ax.plot( x, self.lry(lrec.pid), color="grey" ) )
-            self.ax.figure.canvas.draw_idle()
-        else:
-            ufm().show(f"Points out of bounds","red")
+    # def plot_line(self, pid: int, cid: int ):
+    #     from spectraclass.model.labels import LabelsManager, lm
+    #     from spectraclass.gui.control import UserFeedbackManager, ufm
+    #     selected: bool = (self.selected_pid >= 0)
+    #     selection = (pid == self.selected_pid)
+    #     alpha = (1.0 if selection else 0.2) if selected else 1.0
+    #     color = lm().graph_colors[cid]
+    #     lw = 2.0 if selection else 1.0
+    #     lrec = LineRec(None, pid, cid)
+    #     self.lrecs[pid] = lrec
+    #     x,y = self.lx(lrec.pid), self.ly(lrec.pid)
+    #     if y is not None:
+    #         lines = self.ax.plot( x, y, picker=True, pickradius=2, color=color, alpha=alpha, linewidth=lw )
+    #         lrec.line = lines[0]
+    #         if (not self._use_model) and (self.ry.size > 0):
+    #             self.rlines.extend( self.ax.plot( x, self.lry(lrec.pid), color="grey" ) )
+    #         self.ax.figure.canvas.draw_idle()
+    #     else:
+    #         ufm().show(f"Points out of bounds","red")
 
 
     @log_timing
-    def plot_lines(self, mpids: List[int], cid: int ):
+    def plot_lines(self, m: Marker ):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.control import UserFeedbackManager, ufm
+        cid: int = m.cid
         color = lm().graph_colors[cid]
-        skip_index = max( len(mpids)//self._max_graph_group_size, 1 )
-        pids = mpids[::skip_index]
+        skip_index = max( m.pids.size//self._max_graph_group_size, 1 )
+        pids = m.pids[::skip_index] if len(m.pids)>skip_index else m.pids
         x,y = self.lx(pids), self.ly(pids)
         if y is not None:
-            lrecs = [ LineRec(None, pid, cid, mpids=mpids) for pid in pids ]
+            lrecs = [ LineRec(None, pid, cid, m ) for pid in pids ] #  if pid not in self.lrecs ]
             for lrec in lrecs: self.lrecs[lrec.pid] = lrec
             lines = self.ax.plot( x, y, picker=True, pickradius=2, color=color, alpha=0.2, linewidth=1.0 )
             self.ax.figure.canvas.draw_idle()
             for (lrec, line) in zip(lrecs, lines): lrec.line = line
         else:
             ufm().show(f"Points out of bounds","red")
+
+    def validate_lines(self, m: Marker ):
+        lrec: LineRec = None
+        for pid, lrec in self.hidden_lrecs.items():
+            if (lrec.marker == m) and pid in m.pids:
+                self.hidden_lrecs.pop(pid)
+                self.plot_line(lrec)
+        invalid_lines = []
+        for (pid, lrec) in self.lrecs.items():
+            if lrec.marker == m:
+                if lrec.pid not in m.pids:
+                    invalid_lines.append( pid )
+        lgm().log( f"#TC: validate_lines[{m.cid}]: Removing {len(invalid_lines)} lines-> #pids: {len(m.pids)} -> {len(invalid_lines)}")
+        self.hide_points( invalid_lines )
 
     def expose_nearby_lines(self, pid: int, mpids: List[int], cid: int, eps = 0.05 ):
         target_line, line_group = sel(self._ploty,[pid]), sel(self._ploty,mpids)
@@ -263,6 +291,21 @@ class mplGraphPlot(LinePlot):
         if lrec is not None:
             lrec.clear()
             self.plot()
+
+    def remove_points( self, pids: List[int] ):
+        for pid in pids:
+            lrec = self.lrecs.pop( pid, None )
+            if lrec is not None:
+                lrec.clear()
+        self.plot()
+
+    def hide_points(self, pids: List[int] ):
+        for pid in pids:
+            lrec = self.lrecs.pop( pid, None )
+            if lrec is not None:
+                lrec.clear()
+                self.hidden_lrecs[pid] = lrec
+        self.plot()
 
     @property
     def nlines(self) -> int:

@@ -1,9 +1,6 @@
 from ..graph.manager import ActivationFlowManager
 from sklearn.decomposition import PCA, FastICA
-import tensorflow
-keras = tensorflow.keras
-from keras import losses, regularizers
-from tensorflow.keras.saving.saved_model.load import load as keras_load_model
+from tensorflow.keras import losses, regularizers
 from tensorflow.keras.layers import Input, Dense, Dropout, Lambda
 from tensorflow.keras.models import Model
 from tensorflow.keras import backend as K
@@ -85,9 +82,6 @@ class ReductionManager(SCSingletonConfigurable):
             return point_data
         else:
             lgm().log( f"umap_init: init = {self.init}")
-            if self.init == "autoencoder":
-                [( reduction, reproduction, _ )] = self.autoencoder_reduction( point_data, None, self.ndim, 50 )
-                mapper.init_embedding(reduction)
             mapper.init = self.init
             kwargs['nepochs'] = 1
             labels_data: np.ndarray = LabelsManager.instance().getLabelsArray().values
@@ -97,6 +91,18 @@ class ReductionManager(SCSingletonConfigurable):
             return xa.DataArray( mapper.embedding, dims=['samples','model'], coords=ecoords, attrs=point_data.attrs )
 
     def umap_embedding( self, **kwargs ) -> Optional[np.ndarray]:
+        from .cpu import UMAP
+        mapper: UMAP = self.getUMapper(self._dsid, self.ndim)
+        if 'nepochs' not in kwargs.keys():   kwargs['nepochs'] = self.nepochs
+        if 'alpha' not in kwargs.keys():   kwargs['alpha'] = self.alpha
+        self._state = self.PROCESSED
+        labels_data: np.ndarray = kwargs.get( 'labels', LabelsManager.instance().getLabelsArray()).values
+        lgm().log( f"Executing UMAP embedding with input data shape = {mapper.input_data.shape}, parms: {kwargs}")
+        labels_data[ labels_data == 0 ] = -1
+        mapper.embed( mapper.input_data, labels_data, **kwargs )
+        return mapper.embedding
+
+    def kmeans_embedding( self, **kwargs ) -> Optional[np.ndarray]:
         from .cpu import UMAP
         mapper: UMAP = self.getUMapper(self._dsid, self.ndim)
         if 'nepochs' not in kwargs.keys():   kwargs['nepochs'] = self.nepochs

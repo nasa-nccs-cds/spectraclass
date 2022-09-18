@@ -168,15 +168,20 @@ class PointCloudManager(SCSingletonConfigurable):
             node_data = model_data if refresh else None
             flow.setNodeData( node_data )
             embedding = rm().umap_init( model_data, **kwargs )
-            self.xyz = self.normalize(embedding)
+            self.xyz = self.pnorm(embedding)
         else:
             lgm().log(f"UMAP.init: model_data is empty",print=True)
             ecoords = dict( samples=[], model=np.arange(0,3) )
             attrs = {} if (model_data is None) else model_data.attrs
             self.xyz = xa.DataArray( np.empty([0,3]), dims=['samples','model'], coords=ecoords, attrs=attrs )
 
-    def normalize(self, point_data: xa.DataArray) -> xa.DataArray:
+    def pnorm(self, point_data: xa.DataArray) -> xa.DataArray:
         return (point_data - point_data.mean()) * (self.scale / point_data.std())
+
+    # def pnorm(self, data: xa.DataArray, dim: int = 1) -> xa.DataArray:
+    #     dave, dmag = np.nanmean(data.values, keepdims=True, axis=dim), np.nanstd(data.values, keepdims=True, axis=dim)
+    #     normed_data = (data.values - dave) / dmag
+    #     return data.copy(data=normed_data)
 
     def getColors( self, **kwargs ):
         from spectraclass.data.base import DataManager, dm
@@ -289,7 +294,7 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def update_plot(self, **kwargs):
         if 'points' in kwargs:
-            self.xyz = self.normalize( kwargs['points'] )
+            self.xyz = self.pnorm( kwargs['points'] )
         if self._gui is not None:
             lgm().log( " *** update point cloud data *** " )
             geometry =  self.getGeometry( **kwargs )
