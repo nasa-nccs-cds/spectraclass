@@ -271,12 +271,8 @@ class ClusterManager(SCSingletonConfigurable):
     @exception_handled
     def tune_cluster(self, icluster: int, change: Dict ):
         from spectraclass.gui.spatial.map import mm
-        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         self.rescale( icluster, change['new'] )
         mm().plot_cluster_image( self.get_cluster_map() )
-        lgm().log( f"#IA: tune_cluster, icluster={icluster}, value={change['new']}")
-        if icluster in self._cluster_markers.keys():
-            gpm().validate_plots( self._cluster_markers[icluster] )
 
     def rescale(self, icluster: int, threshold: float ):
         self.clear( reset=False )
@@ -288,11 +284,14 @@ class ClusterManager(SCSingletonConfigurable):
             else: self.update_cluster(icluster)
 
     def update_cluster(self, icluster: int ):
+        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         lgm().log(f"#IA: update_cluster: marked-cids = {list(self._cluster_markers.keys())}")
         marker: Marker = self._cluster_markers.get(icluster,None)
         if marker is not None:
+            gpm().remove_marker( marker )
             pids = self.get_cluster_pids( icluster )
             marker.set_pids( pids )
+            gpm().plot_graph(marker)
             lgm().log( f"#IA: update_cluster, npids={len(pids)}, cluster points shape = {self._cluster_points.shape}")
 
 

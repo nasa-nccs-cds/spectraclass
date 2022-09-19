@@ -44,7 +44,7 @@ class LineRec:
 
     @classmethod
     def lid( cls, line: Line2D ) -> int:
-        return id(line) # line.get_ydata().mean()
+        return id(line)
 
 class mplGraphPlot(LinePlot):
 
@@ -56,7 +56,7 @@ class mplGraphPlot(LinePlot):
         self.fig: plt.Figure = None
         self.selected_pid: int = -1
         self.lrecs: OrderedDict[int, LineRec] = OrderedDict()
-        self.hidden_lrecs: Dict[int, LineRec] = {}
+        self.marked_lrecs: Dict[ str, List[int] ] = {}
         self.init_figure( **kwargs )
 
     @property
@@ -162,27 +162,13 @@ class mplGraphPlot(LinePlot):
         pids = m.pids[::skip_index] if len(m.pids)>skip_index else m.pids
         x,y = self.lx(pids), self.ly(pids)
         if y is not None:
-            lrecs = [ LineRec(None, pid, cid, m ) for pid in pids ] #  if pid not in self.lrecs ]
-            for lrec in lrecs: self.lrecs[lrec.pid] = lrec
-            lines = self.ax.plot( x, y, picker=True, pickradius=2, color=color, alpha=0.2, linewidth=1.0 )
+            lines = self.ax.plot(x, y, picker=True, pickradius=2, color=color, alpha=0.2, linewidth=1.0)
+            self.marked_lrecs[m.oid] = pids.tolist()
+            for pid,line in zip(pids,lines):
+                self.lrecs[pid] = LineRec( line, pid, cid, m )
             self.ax.figure.canvas.draw_idle()
-            for (lrec, line) in zip(lrecs, lines): lrec.line = line
         else:
             ufm().show(f"Points out of bounds","red")
-
-    def validate_lines(self, m: Marker ):
-        lrec: LineRec = None
-        for pid, lrec in self.hidden_lrecs.items():
-            if (lrec.marker == m) and pid in m.pids:
-                self.hidden_lrecs.pop(pid)
-                self.plot_line(lrec)
-        invalid_lines = []
-        for (pid, lrec) in self.lrecs.items():
-            if lrec.marker == m:
-                if lrec.pid not in m.pids:
-                    invalid_lines.append( pid )
-        lgm().log( f"#TC: validate_lines[{m.cid}]: Removing {len(invalid_lines)} lines-> #pids: {len(m.pids)} -> {len(invalid_lines)}")
-        self.hide_points( invalid_lines )
 
     def expose_nearby_lines(self, pid: int, mpids: List[int], cid: int, eps = 0.05 ):
         target_line, line_group = sel(self._ploty,[pid]), sel(self._ploty,mpids)
@@ -278,34 +264,19 @@ class mplGraphPlot(LinePlot):
             mm().plot_markers_image( clear_highlights=True )
             self.plot(True)
 
-    def remove_region(self, marker: Marker ):
-        for pid in marker.pids:
-            lrec = self.lrecs.pop( pid, None )
-            if lrec is not None:
-                lrec.clear()
-        self.plot()
-        return marker
-
-    def remove_point( self, pid: int ):
-        lrec = self.lrecs.pop( pid, None )
-        if lrec is not None:
-            lrec.clear()
-            self.plot()
-
-    def remove_points( self, pids: List[int] ):
+    def remove_points( self, pids: List[int], **kwargs ):
+        plot = kwargs.get('plot',False)
         for pid in pids:
             lrec = self.lrecs.pop( pid, None )
             if lrec is not None:
                 lrec.clear()
-        self.plot()
+        if plot: self.plot()
 
-    def hide_points(self, pids: List[int] ):
-        for pid in pids:
-            lrec = self.lrecs.pop( pid, None )
-            if lrec is not None:
-                lrec.clear()
-                self.hidden_lrecs[pid] = lrec
-        self.plot()
+    def remove_marker(self, m: Marker, **kwargs ):
+        pids = self.marked_lrecs.pop(m.oid,[])
+        if len(pids):
+            lgm().log( f"Remove marker[{m.cid}]: {len(pids)} pids")
+            self.remove_points( pids, **kwargs )
 
     @property
     def nlines(self) -> int:

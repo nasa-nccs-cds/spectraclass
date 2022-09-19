@@ -55,15 +55,11 @@ class LinePlot(ABC):
         pass
 
     @abstractmethod
-    def validate_lines(self, m: Marker):
+    def remove_points(self, pids: List[int], **kwargs ):
         pass
 
     @abstractmethod
-    def remove_region(self, m: Marker):
-        pass
-
-    @abstractmethod
-    def remove_points(self, pids: List[int] ):
+    def remove_marker(self, marker: Marker, **kwargs):
         pass
 
     @classmethod
@@ -188,14 +184,11 @@ class GraphPlotManager(SCSingletonConfigurable):
         if current_graph is not None:
             current_graph.addMarker( marker )
 
-    def remove_marker(self, marker: Marker):
-        for graph in self._graphs: graph.remove_region( marker )
+    def remove_points( self, pids: List[int], **kwargs ):
+        for graph in self._graphs: graph.remove_points( pids, **kwargs )
 
-    def remove_points( self, pids: List[int] ):
-        for graph in self._graphs: graph.remove_points( pids )
-
-    def validate_plots( self, m: Marker ):
-        for graph in self._graphs: graph.validate_lines( m )
+    def remove_marker( self, marker: Marker, **kwargs ):
+        for graph in self._graphs: graph.remove_marker( marker, **kwargs )
 
     @classmethod
     def get_graph( cls, index: int, **kwargs ):

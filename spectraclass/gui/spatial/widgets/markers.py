@@ -25,6 +25,10 @@ class Marker:
         return (  self.image_index, self.block_coords )
 
     @property
+    def oid(self) -> str:
+        return hex(id(self))
+
+    @property
     def block_coords(self) -> Tuple:
         return tuple(self.block_index)
 
@@ -207,7 +211,7 @@ class MarkerManager( PointsInteractor ):
         marker = self._markers.pop( pid, None )
         if marker is not None:
             lm().deletePid( pid )
-            gpm().remove_points( [pid] )
+            gpm().remove_points( [pid], plot=True )
             pcm().deleteMarkers( [pid] )
         self.plot()
 
