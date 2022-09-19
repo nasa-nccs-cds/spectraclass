@@ -19,6 +19,7 @@ def clm() -> "ClusterManager":
     return ClusterManager.instance()
 
 class ClusterMagnitudeWidget(ipw.HBox):
+    height = 26
 
     def __init__(self, index: int, **kwargs ):
         color = f"rgb{ clm().cluster_color(index) }"
@@ -31,7 +32,7 @@ class ClusterMagnitudeWidget(ipw.HBox):
         self._index = index
         self.slider = ipw.FloatSlider( self.init_value, description="", min=range[0], max=range[1], step=step )
         self.label.on_click( self.reset )
-        ipw.HBox.__init__( self, [self.label,self.slider] )
+        ipw.HBox.__init__( self, [self.label,self.slider], layout=ipw.Layout( width="550px", height=f"{self.height}px"), overflow="hidden" )
         if handler is not None:
             self.on_change( handler )
             handler( self._index, dict(new=self.init_value) )
@@ -253,7 +254,7 @@ class ClusterManager(SCSingletonConfigurable):
     def gui(self) -> ipw.DOMWidget:
         selectors = [ self._model_selector,self._ncluster_selector ]
         for selector in selectors: selector.observe( self.on_parameter_change, names=['value'] )
-        return ipw.VBox( [ ipw.HBox( selectors, layout=ipw.Layout(width="600px", height="200px", border='2px solid firebrick') ), self.tuning_gui() ] )
+        return ipw.VBox( [ ipw.HBox( selectors, layout=ipw.Layout(width="600px", max_height="150px", border='2px solid firebrick') ), self.tuning_gui() ] )
 
     @exception_handled
     def tuning_gui(self) -> ipw.DOMWidget:
@@ -262,7 +263,9 @@ class ClusterManager(SCSingletonConfigurable):
             self._tuning_sliders= [ self.thresh_slider ]
             for icluster in range( 1, self._max_culsters+1 ):
                 self._tuning_sliders.append( ClusterMagnitudeWidget( icluster, handler=self.tune_cluster ) )
-        return  ipw.VBox( self._tuning_sliders, layout=ipw.Layout( width="600px", border='2px solid firebrick' ) )
+        tsh = len(self._tuning_sliders) * ( ClusterMagnitudeWidget.height + 2 )
+        slider_list = ipw.VBox(self._tuning_sliders, layout=ipw.Layout( width="600px", min_height=f"{tsh}px", overflow='hidden' ) )
+        return  ipw.HBox( [slider_list], layout=ipw.Layout( width="600px", height="200px", overflow='auto', border='2px solid firebrick' ) )
 
     @property
     def max_clusters(self):
@@ -285,13 +288,16 @@ class ClusterManager(SCSingletonConfigurable):
 
     def update_cluster(self, icluster: int ):
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         lgm().log(f"#IA: update_cluster: marked-cids = {list(self._cluster_markers.keys())}")
         marker: Marker = self._cluster_markers.get(icluster,None)
         if marker is not None:
             gpm().remove_marker( marker )
+            pcm().deleteMarkers( marker.pids.tolist() )
             pids = self.get_cluster_pids( icluster )
             marker.set_pids( pids )
             gpm().plot_graph(marker)
+            pcm().addMarker( marker )
             lgm().log( f"#IA: update_cluster, npids={len(pids)}, cluster points shape = {self._cluster_points.shape}")
 
 

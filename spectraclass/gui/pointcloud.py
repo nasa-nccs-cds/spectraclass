@@ -98,17 +98,17 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @log_timing
     def addMarker(self, marker: Marker ):
-        if marker.size > 0:
-            self.clear_transients()
-            lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}, pid range={[marker.pids.min(),marker.pids.max()]}")
-            for pid in marker.pids:
-                self.mark_point( pid, marker.cid )
-            self.update_marker_plot()
-
-    def deleteMarkers( self, pids: List[int] ):
-        for pid in pids:
-            self.marker_pids.pop( pid, 0 )
+        self.clear_transients()
+        lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}, #pids={marker.pids.size}")
+        for pid in marker.pids:
+            self.mark_point( pid, marker.cid )
         self.update_marker_plot()
+
+    def deleteMarkers( self, pids: List[int], **kwargs ):
+        plot = kwargs.get('plot',False)
+        rcnts = [ min( self.marker_pids.pop( pid, 0 ), 1 ) for pid in pids]
+        lgm().log(  f" *** PointCloudManager-> REMOVE MARKER, #pids={sum(rcnts)}")
+        if plot: self.update_marker_plot()
 
     def update_marker_plot(self):
         if self.marker_points is None:

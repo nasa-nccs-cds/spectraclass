@@ -212,7 +212,7 @@ class MarkerManager( PointsInteractor ):
         if marker is not None:
             lm().deletePid( pid )
             gpm().remove_points( [pid], plot=True )
-            pcm().deleteMarkers( [pid] )
+            pcm().deleteMarkers( [pid], plot=True )
         self.plot()
 
     @log_timing
