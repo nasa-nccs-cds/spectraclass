@@ -294,7 +294,9 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def update_plot(self, **kwargs):
         if 'points' in kwargs:
-            self.xyz = self.pnorm( kwargs['points'] )
+            embedding = kwargs['points']
+            lgm().log( f"PCM->plot embedding: shape = {embedding.shape}")
+            self.xyz = self.pnorm( embedding )
         if self._gui is not None:
             lgm().log( " *** update point cloud data *** " )
             geometry =  self.getGeometry( **kwargs )

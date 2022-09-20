@@ -18,6 +18,9 @@ class  ClusterBase(TransformerMixin,ClusterMixin,BaseEstimator):
     def cluster_data(self) -> Optional[xa.DataArray]:
         raise NotImplementedError("Call to abstract property of base class: ClusterBase.cluster_data")
 
+    def get_cluster_membership(self, model_data: xa.DataArray) -> xa.DataArray:
+        raise NotImplementedError("Call to abstract property of base class: ClusterBase.cluster_data")
+
     def rescale(self, index: int, sval: float ):
         if index > 0:
             lgm().log(f"Cluster[{index}].rescale: value = {sval}")
@@ -25,6 +28,13 @@ class  ClusterBase(TransformerMixin,ClusterMixin,BaseEstimator):
         else:
             self._threshold = sval
         self._threshold_mask = None
+
+    def embedding(self, ndim: int = 3 ) -> xa.DataArray:
+        from spectraclass.data.base import DataManager, dm
+        self.n_clusters = ndim
+        model_data: xa.DataArray = dm().getModelData()
+        self.cluster( model_data )
+        return self.get_cluster_membership( model_data )
 
     def reset(self):
         pass
@@ -95,6 +105,11 @@ class GenericClusterBase(ClusterBase):
             dmask = np.isin( self._samples, indices, assume_unique=True )
             self._cluster_distances[iC] = ( dmask, cluster_distance )
             self._max_cluster_distance = max( self._max_cluster_distance, cluster_distance.max() )
+
+    def get_cluster_membership(self, model_data: xa.DataArray) -> xa.DataArray:
+        coords = [np.linalg.norm(model_data.values - self._model.cluster_centers_[iC], axis=1) for iC in range(self.n_clusters)]
+        embed_data = np.stack(coords, axis=-1)
+        return xa.DataArray(embed_data, dims=['samples', 'model'], coords=dict(samples=self._samples, model=np.arange(self.n_clusters)))
 
     @property
     def threshold_mask( self ):

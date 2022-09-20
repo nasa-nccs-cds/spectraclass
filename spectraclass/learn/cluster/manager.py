@@ -164,6 +164,7 @@ class ClusterManager(SCSingletonConfigurable):
     def run_cluster_model( self, data: xa.DataArray ):
         lgm().log( f"Creating clusters from input data shape = {data.shape}")
         self.clear()
+        self.model.n_clusters = self.nclusters
         self.model.cluster(data)
         self._cluster_points = self.model.cluster_data
 
@@ -254,7 +255,33 @@ class ClusterManager(SCSingletonConfigurable):
     def gui(self) -> ipw.DOMWidget:
         selectors = [ self._model_selector,self._ncluster_selector ]
         for selector in selectors: selector.observe( self.on_parameter_change, names=['value'] )
-        return ipw.VBox( [ ipw.HBox( selectors, layout=ipw.Layout(width="600px", max_height="150px", border='2px solid firebrick') ), self.tuning_gui() ] )
+        selection_gui = ipw.HBox( selectors, layout=ipw.Layout(width="600px", max_height="150px", border='2px solid firebrick') )
+        config_panel = ipw.VBox( [ selection_gui, self.tuning_gui() ] )
+        actions_panel = ipw.VBox( self.action_buttons(), layout=ipw.Layout(width="150px", border='2px solid firebrick') )
+        return ipw.HBox( [ config_panel, actions_panel ] )
+
+    def action_buttons(self):
+        buttons = []
+        for task in [ "cluster", "embed" ]:
+            button = ipw.Button( description=task, border= '1px solid gray', layout = ipw.Layout( height="30px", width="auto" ) )
+            button.on_click( partial( self.on_action, task ) )
+            buttons.append( button )
+        return buttons
+
+    @exception_handled
+    def on_action(self, action: str, *args, **kwargs ):
+        from spectraclass.application.controller import app
+        if action == "embed":
+            self.create_embedding()
+        elif action == "cluster":
+            app().cluster()
+
+    def create_embedding(self, ndim: int = 3):
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
+        from spectraclass.gui.control import UserFeedbackManager, ufm
+        ufm().show( f"Creating embedding with method '{self.mid}'")
+        embedding: xa.DataArray = self.model.embedding(ndim)
+        pcm().update_plot( points=embedding )
 
     @exception_handled
     def tuning_gui(self) -> ipw.DOMWidget:

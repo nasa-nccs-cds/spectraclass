@@ -82,6 +82,9 @@ class FCM(ClusterBase):
             self.threshold_mask = cluster_data_peak < self._threshold
             lgm().log(f"FCM.threshold: cluster data shape = {self._fuzzy_cluster_data.shape}, #gtz = {np.count_nonzero(self.threshold_mask)} ")
 
+    def get_cluster_membership(self, model_data: xa.DataArray) -> xa.DataArray:
+        return xa.DataArray( self._fuzzy_cluster_data, dims=['samples', 'model'], coords=dict(samples=self._samples, model=np.arange(self.n_clusters)) )
+
     def fit(self, X: NDArray) -> None:
         self.rng = np.random.default_rng(self.random_state)
         n_samples = X.shape[0]

@@ -8,6 +8,7 @@ from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type, Iter
 class KMeansCluster(GenericClusterBase):
     def update_model(self):
         params = dict( n_clusters=self._n_clusters, random_state=self.random_state, compute_labels=True, batch_size=self.batch_size )
+        lgm().log( f"KMeansCluster.update_model, params={params}")
         self._model = cluster.MiniBatchKMeans(**params)
 
 class BisectingKMeans(GenericClusterBase):
