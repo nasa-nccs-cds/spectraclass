@@ -314,6 +314,7 @@ class MapManager(SCSingletonConfigurable):
     def plot_cluster_image(self, clusters: xa.DataArray = None ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         if clusters is not None:
+            lgm().log( f"Create cluster image, shape={clusters.shape}")
             block = tm().getBlock()
             ncolors = clusters.shape[0]
             color_bounds = np.linspace(-0.5, ncolors - 0.5, ncolors + 1)

@@ -22,13 +22,13 @@ class ClusterMagnitudeWidget(ipw.HBox):
     height = 26
 
     def __init__(self, index: int, **kwargs ):
-        color = f"rgb{ clm().cluster_color(index) }"
+        cluster_color = f"rgb{ clm().cluster_color(index) }"
         self.init_value = kwargs.get( 'value', 1.0 )
         handler = kwargs.get( 'handler', None )
         range = kwargs.get( 'range', [0.0,2.0] )
         step = kwargs.get( 'step', 0.05 )
         cname = "Threshold" if index == 0 else f"Cluster-{index}"
-        self.label = ipw.Button( description=cname, style=dict( button_color=color ) )
+        self.label = ipw.Button( description=cname, style=dict( button_color=cluster_color ) )
         self._index = index
         self.slider = ipw.FloatSlider( self.init_value, description="", min=range[0], max=range[1], step=step )
         self.label.on_click( self.reset )
@@ -39,6 +39,9 @@ class ClusterMagnitudeWidget(ipw.HBox):
 
     def set_color(self, color: str ):
         self.label.style.button_color = color
+
+    def reset_color(self ):
+        self.label.style.button_color = f"rgb{ clm().cluster_color( self._index, False ) }"
 
     def on_change(self, handler ):
         self.slider.observe( partial( handler, self._index ), 'value' )
@@ -117,9 +120,10 @@ class ClusterManager(SCSingletonConfigurable):
     def get_colormap( self, layer: bool ):
         return self.get_layer_colormap() if layer else self.get_cluster_colormap()
 
-    def get_cluster_colors( self ) ->  np.ndarray:
+    def get_cluster_colors( self, updated=True ) ->  np.ndarray:
         colors: np.ndarray = self._cluster_colors.copy()
-        for (icluster, value) in self.marked_colors.items(): colors[icluster] = value
+        if updated:
+            for (icluster, value) in self.marked_colors.items(): colors[icluster] = value
         return colors
 
     def get_cluster_colormap( self ) -> LinearSegmentedColormap:
@@ -140,10 +144,10 @@ class ClusterManager(SCSingletonConfigurable):
         ( tindex, bindex, icluster ) = ckey
         return icluster if ( (tindex==tm().image_index) and (bindex==tm().block_coords) )  else -1
 
-    def cluster_color(self, index: int ) -> Tuple[int,int,int]:
+    def cluster_color(self, index: int, updated = True ) -> Tuple[int,int,int]:
         if index == 0: return ( 1, 1, 1 )
         else:
-            colors = self.get_cluster_colors()
+            colors = self.get_cluster_colors(updated)
             rgb: np.ndarray = colors[ index ] * 255.99
             return tuple( rgb.astype(np.int).tolist() )
 
@@ -162,13 +166,15 @@ class ClusterManager(SCSingletonConfigurable):
         if reset: self.model.reset()
 
     def run_cluster_model( self, data: xa.DataArray ):
-        lgm().log( f"Creating clusters from input data shape = {data.shape}")
+        self.nclusters = self._ncluster_selector.value
+        lgm().log( f"Creating {self.nclusters} clusters from input data shape = {data.shape}")
         self.clear()
         self.model.n_clusters = self.nclusters
         self.model.cluster(data)
         self._cluster_points = self.model.cluster_data
 
     def cluster(self, data: xa.DataArray ) -> xa.DataArray:
+        self.reset_clusters()
         self.run_cluster_model( data )
         return self.get_cluster_map()
 
@@ -283,6 +289,17 @@ class ClusterManager(SCSingletonConfigurable):
         embedding: xa.DataArray = self.model.embedding(ndim)
         pcm().update_plot( points=embedding )
 
+    def reset_clusters(self):
+        from spectraclass.application.controller import app
+        self._marked_colors = {}
+        self._cluster_points = None
+        for (icluster, marker) in self._cluster_markers.items():
+            if marker.active():
+                app().remove_marker(marker)
+                self.get_marked_clusters(marker.cid).remove(icluster)
+        for slider in self._tuning_sliders:
+            slider.reset_color()
+
     @exception_handled
     def tuning_gui(self) -> ipw.DOMWidget:
         if not self._tuning_sliders:
@@ -306,7 +323,7 @@ class ClusterManager(SCSingletonConfigurable):
 
     def rescale(self, icluster: int, threshold: float ):
         self.clear( reset=False )
-        self.model.rescale(icluster, threshold )
+        self.model.rescale( icluster, threshold )
         self._cluster_points = self.model.cluster_data
         if self._cluster_points is not None:
             if icluster == 0:

@@ -314,6 +314,12 @@ class LabelsManager(SCSingletonConfigurable):
         ufm().show( f"Saving labels to file: {dm().labels_file}")
         return label_dset
 
+    def graphLabelData(self):
+        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm, LinePlot
+        graph: LinePlot = gpm().current_graph()
+        for (cid,pids) in self.get_label_data().items():
+            graph.addMarker( Marker("labels", pids, cid) )
+
     @classmethod
     def getSortedLabels(self, labels_dset: xa.Dataset ) -> Tuple[np.ndarray,np.ndarray]:
         labels: np.ndarray = labels_dset['C'].values

@@ -181,7 +181,7 @@ class ClassificationManager(SCSingletonConfigurable):
     @exception_handled
     def create_selection_panel(self, **kwargs ):
         self.selection_label = ipw.Label(value='Learning Model:')
-        self.selection = ipw.RadioButtons(  options=self.mids, disabled=False, layout={'width': 'max-content'}, value=self.mid )
+        self.selection = ipw.RadioButtons(  options=self.mids, disabled=False, layout = ipw.Layout( height="auto", width="50px" ), value=self.mid )
         self.selection.observe( self.set_model_callback, "value" )
 
     def set_model_callback(self, event: Dict ):
@@ -240,20 +240,30 @@ class ClassificationManager(SCSingletonConfigurable):
                 lgm().log(f"MODEL TABLE <DEL>: Selected index: {model_index[0]}")
                 self.model_table.delete( model_index[0] )
 
-    def gui(self):
+    def action_buttons(self):
+        buttons = []
+        for task in [ "reset", "graph", "save" ]:
+            button = ipw.Button( description=task, border= '1px solid gray', layout = ipw.Layout( height="30px", width="auto" ) )
+            button.on_click( partial( self.on_action, task ) )
+            buttons.append( button )
+        return buttons
+
+    @exception_handled
+    def on_action(self, action: str, *args, **kwargs ):
         from spectraclass.model.labels import LabelsManager, lm
+        if action == "reset":
+            self.model.clear()
+        elif action == "graph":
+            lm().graphLabelData()
+        elif action == "save":
+            lm().saveLabelData()
+
+    def gui(self):
         if self.selection is None: self.create_selection_panel()
-
-        clear_button = ipw.Button(description='Reset', border='1px solid gray')
-        clear_button.layout = ipw.Layout(width='auto', flex="1 0 auto")
-        clear_button.on_click( self.model.clear )
-
-        save_button = ipw.Button(description='Save Labels', border='1px solid gray')
-        save_button.layout = ipw.Layout(width='auto', flex="1 0 auto")
-        save_button.on_click( lm().saveLabelData )
-
-        buttonbox = ipw.VBox( [clear_button,save_button] )
-        return ipw.HBox( [self.selection_label, self.selection, buttonbox ] )
+        buttons = self.action_buttons()
+        actions_panel = ipw.VBox( buttons, layout=ipw.Layout(width="150px", border='2px solid firebrick') )
+        selection_panel = ipw.HBox( [self.selection_label, self.selection ], layout=ipw.Layout(width="600px", max_height="250px", border='2px solid firebrick') )
+        return ipw.HBox( [selection_panel, actions_panel ] )
         # distanceMetric = base.createComboSelector("Distance.Metric: ", ["mahal","euclid"], "dev/distance/metric", "mahal")
         # distanceMethod = base.createComboSelector("Distance.Method: ", ["centroid","nearest"], "dev/distance/method", "centroid")
         # return base.createGroupBox("dev", [model, distanceMetric, distanceMethod ] )
