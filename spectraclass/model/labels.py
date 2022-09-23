@@ -316,9 +316,13 @@ class LabelsManager(SCSingletonConfigurable):
 
     def graphLabelData(self):
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm, LinePlot
+        from spectraclass.learn.manager import ClassificationManager, cm
         graph: LinePlot = gpm().current_graph()
-        for (cid,pids) in self.get_label_data().items():
-            graph.addMarker( Marker("labels", pids, cid) )
+        if cm().classification is not None:
+            for cid in self.get_cids():
+                classmask: np.ndarray = (cm().classification.values == cid)
+                pids: np.ndarray = cm().classification.samples.values[classmask]
+                graph.addMarker( Marker("labels", pids, cid) )
 
     @classmethod
     def getSortedLabels(self, labels_dset: xa.Dataset ) -> Tuple[np.ndarray,np.ndarray]:
@@ -405,6 +409,9 @@ class LabelsManager(SCSingletonConfigurable):
             pids = label_map.get( m.cid, set() )
             label_map[m.cid] = pids.union( set(m.pids) )
         return label_map
+
+    def get_cids( self ) -> Set[int]:
+        return set( [m.cid for m in self.markers] )
 
     def get_label_map( self, **kwargs ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm

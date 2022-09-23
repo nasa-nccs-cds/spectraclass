@@ -181,7 +181,7 @@ class ClassificationManager(SCSingletonConfigurable):
     @exception_handled
     def create_selection_panel(self, **kwargs ):
         self.selection_label = ipw.Label(value='Learning Model:')
-        self.selection = ipw.RadioButtons(  options=self.mids, disabled=False, layout = ipw.Layout( height="auto", width="50px" ), value=self.mid )
+        self.selection = ipw.RadioButtons(  options=self.mids, disabled=False, layout = ipw.Layout( height="auto", width="100px" ), value=self.mid )
         self.selection.observe( self.set_model_callback, "value" )
 
     def set_model_callback(self, event: Dict ):
@@ -242,7 +242,7 @@ class ClassificationManager(SCSingletonConfigurable):
 
     def action_buttons(self):
         buttons = []
-        for task in [ "reset", "graph", "save" ]:
+        for task in [ "learn", "apply", "reset", "graph", "save" ]:
             button = ipw.Button( description=task, border= '1px solid gray', layout = ipw.Layout( height="30px", width="auto" ) )
             button.on_click( partial( self.on_action, task ) )
             buttons.append( button )
@@ -251,18 +251,27 @@ class ClassificationManager(SCSingletonConfigurable):
     @exception_handled
     def on_action(self, action: str, *args, **kwargs ):
         from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.application.controller import app
         if action == "reset":
             self.model.clear()
         elif action == "graph":
             lm().graphLabelData()
         elif action == "save":
             lm().saveLabelData()
+        elif action == "learn":
+            ufm().show("Learning Classification Mapping... ")
+            self.learn_classification()
+            ufm().show("Classification Mapping learned")
+        elif action == "apply":
+            ufm().show("Applying Classification Mapping... ")
+            self.apply_classification()
+            ufm().show("Classification Mapping applied")
 
     def gui(self):
         if self.selection is None: self.create_selection_panel()
         buttons = self.action_buttons()
         actions_panel = ipw.VBox( buttons, layout=ipw.Layout(width="150px", border='2px solid firebrick') )
-        selection_panel = ipw.HBox( [self.selection_label, self.selection ], layout=ipw.Layout(width="600px", max_height="250px", border='2px solid firebrick') )
+        selection_panel = ipw.HBox( [self.selection_label, self.selection ], layout=ipw.Layout( width="300px", border='2px solid firebrick') )
         return ipw.HBox( [selection_panel, actions_panel ] )
         # distanceMetric = base.createComboSelector("Distance.Metric: ", ["mahal","euclid"], "dev/distance/metric", "mahal")
         # distanceMethod = base.createComboSelector("Distance.Method: ", ["centroid","nearest"], "dev/distance/method", "centroid")
@@ -288,5 +297,9 @@ class ClassificationManager(SCSingletonConfigurable):
     def apply_classification( self, **kwargs  ):
         lgm().log( f"apply_classification: MODEL({hex(id(self.model))}) = {self.mid} ")
         self.model.apply_classification( **kwargs  )
+
+    @property
+    def classification(self) -> xa.DataArray:
+        return self.model.classification
 
 

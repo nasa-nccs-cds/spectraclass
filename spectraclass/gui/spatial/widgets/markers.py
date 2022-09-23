@@ -18,7 +18,7 @@ class Marker:
         self.props = kwargs
         self.block_index = kwargs.get( 'block_index', tm().block_index )
         self.image_index = kwargs.get( 'image_index', tm().image_index )
-        self._pids: np.ndarray = pids if isinstance( pids, np.ndarray ) else np.array( pids, dtype=np.int64 )
+        self._pids: np.ndarray = pids if isinstance( pids, np.ndarray ) else np.array( list(pids), dtype=np.int64 )
         self._mask: Optional[np.ndarray] = kwargs.get( 'mask', None )
 
     def bid(self) -> Tuple[int,Tuple]:

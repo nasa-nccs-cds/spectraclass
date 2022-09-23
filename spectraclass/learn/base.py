@@ -22,6 +22,7 @@ class LearningModel:
         self._score: Optional[np.ndarray] = None
         self.config = kwargs
         self._keys = []
+        self.classification: xa.DataArray = None
 
     def clear(self):
         raise Exception( "abstract method LearningModel.clear called")
@@ -114,12 +115,12 @@ class LearningModel:
             lgm().log( f" APPLY classification: block={block.block_coords}" )
             input_data: xa.DataArray = self.get_input_data()
             prediction: np.ndarray = self.predict( input_data.values, log=True, **kwargs )
-            classification = xa.DataArray(prediction, dims=['samples', 'classes'], coords=dict(samples=input_data.coords['samples'], classes=range(prediction.shape[1])))
-            if classification.ndim == 1: classification = classification.reshape( [classification.size, 1] )
-            overlay_image: xa.DataArray = block.points2raster(classification)
+            self.classification = xa.DataArray(prediction, dims=['samples', 'classes'], coords=dict(samples=input_data.coords['samples'], classes=range(prediction.shape[1])))
+            if self.classification.ndim == 1: self.classification = self.classification.reshape( [self.classification.size, 1] )
+            overlay_image: xa.DataArray = block.points2raster(self.classification)
             mm().plot_labels_image(overlay_image)
             lm().addAction("classify", "application")
-            return classification
+            return self.classification
         except NotFittedError:
             ufm().show( "Must learn a mapping before applying a classification", "red")
 

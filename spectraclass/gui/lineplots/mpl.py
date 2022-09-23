@@ -84,7 +84,7 @@ class mplGraphPlot(LinePlot):
     def init_figure(self, **kwargs):
         if self.fig is None:
             if not self.standalone: plt.ioff()
-            self.fig: plt.Figure = plt.figure( self.index, figsize = (6, 4) )
+            self.fig: plt.Figure = plt.figure( self.index+10, figsize = (6, 4) )
             if len(self.fig.axes) == 0: self.fig.add_subplot(111)
             self.ax = self.fig.axes[0]
             self.ax.grid(True)

@@ -178,10 +178,16 @@ class GraphPlotManager(SCSingletonConfigurable):
         if self._wGui is None: return None
         return self._graphs[ self._wGui.selected_index ]
 
+    @property
+    def current_graph_index(self) -> int:
+        if self._wGui is None: return -1
+        return self._wGui.selected_index
+
     @log_timing
     def plot_graph( self, marker: Marker ):
         current_graph: LinePlot = self.current_graph()
         if current_graph is not None:
+            lgm().log( f"GraphPlotManager: Adding marker to graph[{self._wGui.selected_index}]")
             current_graph.addMarker( marker )
 
     def remove_points( self, pids: List[int], **kwargs ):
