@@ -3,7 +3,7 @@ import tensorflow as tf
 # import tensorflow as tf
 # keras = tf.keras
 from tensorflow.keras.models import Model
-from keras import Input
+from tensorflow.keras import Input
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from tensorflow.keras import datasets, layers, models
 from typing import List, Tuple, Optional, Dict
