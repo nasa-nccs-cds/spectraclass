@@ -15,21 +15,16 @@ class CNN(Network):
     def _build_model(self, **kwargs) -> Tuple[Model,Dict]:
         from spectraclass.learn.models.spatial import SpatialModelWrapper
         nfeatures = kwargs.pop('nfeatures', 32 )
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.model.labels import lm
-        block: Block = tm().getBlock()
-        input_shape = block.data.transpose('y', 'x', 'band').shape
+        input_shape = SpatialModelWrapper.get_input_shape()
         nclasses = lm().nLabels
-        lgm().log( f"CNN.build: input_shape={input_shape}, nfeatures={nfeatures}, nclasses={nclasses}" )
         ks = kwargs.pop('kernel_size',3)
         model = models.Sequential()
         model.add( Input( shape=input_shape ) )
-        model.add( layers.Conv2D( nfeatures, (ks,ks), activation='tanh', padding="same" ) )
+        model.add( layers.Conv2D( nfeatures, (ks,ks), activation='relu', padding="same" ) )
         model.add( layers.Reshape( SpatialModelWrapper.flatten(input_shape,nfeatures) ) )
-        model.add( layers.Dense( nfeatures, activation='tanh' ) )
-#        model.add( layers.Dense( nfeatures//2, activation='tanh') )
+        model.add( layers.Dense( nfeatures, activation='relu' ) )
         model.add( layers.Dense( nclasses, activation='softmax' ) )
         return model, kwargs
-
 
 

@@ -511,7 +511,7 @@ class MapManager(SCSingletonConfigurable):
                 tm().setBlock( block_index )
             self.block: Block = tm().getBlock()
             if (self.block is not None):
-                lgm().log(f" *** Loading Block{self.block.block_coords}")
+                ufm().show(f" Loading Block{self.block.block_coords}" )
                 self.block_index = block_index
                 dm().clear_project_cache()
                 pcm().reset()

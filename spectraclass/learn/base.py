@@ -169,7 +169,7 @@ class KerasLearningModel(LearningModel):
     def fit( self, data: np.ndarray, class_data: np.ndarray, **kwargs ):
         args = dict( epochs=self.nepochs, callbacks=self.callbacks, verbose=2, **self.config, **kwargs )
         if class_data.ndim == 1: class_data = self.index_to_one_hot( class_data )
-        lgm().log( f"KerasLearningModel.fit: data{data.shape} labels{class_data.shape} args={args}" )
+        lgm().log( f"KerasLearningModel[{self.mid}].fit: data{data.shape} labels{class_data.shape} args={args}" )
         ufm().show( "Running learning algorithm... " )
         self._model.fit( data, class_data, **args )
 
