@@ -57,31 +57,34 @@ class SpatialModelWrapper(KerasLearningModel):
         return label_weights
 
     @exception_handled
-    def get_training_set(self, **kwargs ) -> Tuple[np.ndarray,np.ndarray,Optional[np.ndarray],Optional[np.ndarray]]:
+    def get_training_set(self, **kwargs ) -> Tuple[Optional[np.ndarray],Optional[np.ndarray],Optional[np.ndarray],Optional[np.ndarray]]:
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.data.base import DataManager, dm
         from spectraclass.learn.base import LearningModel
         training_data, training_labels, sample_weight, test_mask = None, None, None, None
         label_blocks: List[Block] = lm().getTrainingBlocks()
-        lgm().log(f">>> get_training_set: blocks={[b.index for b in label_blocks]}")
-        for block in label_blocks:
-            label_map: np.ndarray  = lm().get_label_map( block=block ).values.flatten()
-            base_data: xa.DataArray = block.getModelData(True) if dm().use_model_data else block.getSpectralData(True)
-            tdims = [ base_data.dims[1], base_data.dims[2], base_data.dims[0] ]
-            tdata: np.ndarray = base_data.transpose(*tdims).fillna(0.0).expand_dims('batch', 0).values
-            tlabels = np.expand_dims( LearningModel.index_to_one_hot( label_map ), 0 )
-            weights, mask = self.get_sample_weight( label_map )
-            lgm().log(f"    ->>> {(block.tile_index,block.block_coords)}->base_data: shape={base_data.shape} "
-                      f"dims={base_data.dims} tdims={tdims}, nlabels={np.count_nonzero(training_labels)}, "
-                      f"data_shape: {tdata.shape}, label_shape: {tlabels.shape}, weights_shape: {weights.shape},  mask_shape: {mask.shape}")
-            training_data   = tdata   if (training_data   is None) else np.append( training_data,   tdata,   axis=0 )
-            training_labels = tlabels if (training_labels is None) else np.append( training_labels, tlabels, axis=0 )
-            sample_weight   = weights if (sample_weight   is None) else np.append( sample_weight, weights, axis=0 )
-            test_mask       = mask    if (test_mask       is None) else np.append( test_mask, mask, axis=0 )
-            self.set_training_layer_index( block, training_data.shape[0] - 1 )
-        lgm().log( f">>> MERGED datashape: {training_data.shape}, label_shape: {training_labels.shape}, "
-                   f"weights_shape: {sample_weight.shape},  mask_shape: {test_mask.shape}" )
-        return ( training_data, training_labels, sample_weight, test_mask )
+        if len(label_blocks) == 0:
+            ufm().show( "Must label some points for learning","red")
+        else:
+            lgm().log(f">>> get_training_set: blocks={[b.index for b in label_blocks]}")
+            for block in label_blocks:
+                label_map: np.ndarray  = lm().get_label_map( block=block ).values.flatten()
+                base_data: xa.DataArray = block.getModelData(True) if dm().use_model_data else block.getSpectralData(True)
+                tdims = [ base_data.dims[1], base_data.dims[2], base_data.dims[0] ]
+                tdata: np.ndarray = base_data.transpose(*tdims).fillna(0.0).expand_dims('batch', 0).values
+                tlabels = np.expand_dims( LearningModel.index_to_one_hot( label_map ), 0 )
+                weights, mask = self.get_sample_weight( label_map )
+                lgm().log(f"    ->>> {(block.tile_index,block.block_coords)}->base_data: shape={base_data.shape} "
+                          f"dims={base_data.dims} tdims={tdims}, nlabels={np.count_nonzero(training_labels)}, "
+                          f"data_shape: {tdata.shape}, label_shape: {tlabels.shape}, weights_shape: {weights.shape},  mask_shape: {mask.shape}")
+                training_data   = tdata   if (training_data   is None) else np.append( training_data,   tdata,   axis=0 )
+                training_labels = tlabels if (training_labels is None) else np.append( training_labels, tlabels, axis=0 )
+                sample_weight   = weights if (sample_weight   is None) else np.append( sample_weight, weights, axis=0 )
+                test_mask       = mask    if (test_mask       is None) else np.append( test_mask, mask, axis=0 )
+                self.set_training_layer_index( block, training_data.shape[0] - 1 )
+            lgm().log( f">>> MERGED datashape: {training_data.shape}, label_shape: {training_labels.shape}, "
+                       f"weights_shape: {sample_weight.shape},  mask_shape: {test_mask.shape}" )
+            return ( training_data, training_labels, sample_weight, test_mask )
 
     @classmethod
     def block_data(cls) -> xa.DataArray:
@@ -124,9 +127,10 @@ class SpatialModelWrapper(KerasLearningModel):
     def learn_classification( self,**kwargs ):
         t1 = time.time()
         self.training_data, self.training_labels, self.sample_weight, self.test_mask = self.get_training_set( **kwargs )
-        lgm().log(f"Learning mapping with shapes: spectral_data{self.training_data.shape}, class_data{self.training_labels.shape}, sample_weight{self.sample_weight.shape}")
-        self.fit( self.training_data, self.training_labels, sample_weight=self.sample_weight, **kwargs )
-        lgm().log(f"Completed Spatial learning in {time.time() - t1} sec.")
+        if self.training_data is not None:
+            lgm().log(f"Learning mapping with shapes: spectral_data{self.training_data.shape}, class_data{self.training_labels.shape}, sample_weight{self.sample_weight.shape}")
+            self.fit( self.training_data, self.training_labels, sample_weight=self.sample_weight, **kwargs )
+            lgm().log(f"Completed Spatial learning in {time.time() - t1} sec.")
 
     @classmethod
     def concat( cls, base_array: np.ndarray, new_array: np.ndarray) -> np.ndarray:
