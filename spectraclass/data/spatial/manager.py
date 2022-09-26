@@ -224,11 +224,12 @@ class SpatialDataManager(ModeDataManager):
         coords = { c: np.empty([1]) for c in [ 'x', 'y', 'band', 'samples', 'model' ] }
         return xa.Dataset( data_vars=data_vars, coords=coords )
 
+    @exception_handled
     def process_block( self, block: Block  ) -> Optional[xa.Dataset]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block_data_file = dm().modal.dataFile(block=block)
         if os.path.exists(block_data_file):
-  #          lgm().log(f"** Reading BLOCK{block.cindex} ")
+            lgm().log(f"** Reading BLOCK{block.cindex}: {block_data_file} ")
             return xa.open_dataset( block_data_file )
         else:
             ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
@@ -291,8 +292,9 @@ class SpatialDataManager(ModeDataManager):
                 ufm().show( f"Preprocessing data blocks for image {dm().modal.image_name}", "blue" )
                 for block in self.tiles.tile.getBlocks():
                     result_dataset = self.process_block( block )
-                    block_sizes[ block.cindex ] = result_dataset.attrs[ 'block_size']
-                    if nbands is None: nbands = result_dataset.attrs[ 'nbands']
+                    if result_dataset is not None:
+                        block_sizes[ block.cindex ] = result_dataset.attrs[ 'block_size']
+                        if nbands is None: nbands = result_dataset.attrs[ 'nbands']
             dm().modal.write_metadata(block_sizes, attrs)
             dm().modal.autoencoder_preprocess( bands=nbands, **kwargs )
 
