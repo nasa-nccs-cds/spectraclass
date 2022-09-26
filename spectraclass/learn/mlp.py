@@ -10,7 +10,7 @@ import traitlets as tl
 import traitlets.config as tlc
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
-from keras import datasets, layers, models
+from tensorflow.keras import datasets, layers, models
 from spectraclass.learn.models.network import Network, ModelType
 
 class MLP(Network):
