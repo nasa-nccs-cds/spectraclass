@@ -147,10 +147,10 @@ class KerasLearningModel(LearningModel):
 
     def set_learning_parameters( self, **kwargs ) -> Dict:
         from spectraclass.learn.models.network import Network
-        self.opt = str(kwargs.pop('opt', 'adam')).lower()
+        self.opt = str(kwargs.pop('opt', 'sgd')).lower()   # 'adam' 'sgd' 'rmsprop'
         self.loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
         self.nepochs = kwargs.pop( 'nepochs', 200 )
-        self.test_size = kwargs.pop( 'test_size', 0.1 )
+        self.test_size = kwargs.pop( 'test_size', 0.0 )
         self.network: Network = kwargs.pop( 'network', None )
         return kwargs
 

@@ -72,7 +72,6 @@ class LogManager(SCSingletonConfigurable):
         self._log_stream = open(self.log_file, 'w')
         print( f"Opening log file:  '{self.log_file}'" )
 
-
     def get_keras_logger(self) -> CSVLogger:
         if self._keras_logger is None:
             log_file = f'{self.log_dir}/{self._name}{self._lid}.keras.csv'
