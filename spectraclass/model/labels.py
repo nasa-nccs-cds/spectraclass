@@ -314,11 +314,14 @@ class LabelsManager(SCSingletonConfigurable):
         ufm().show( f"Saving labels to file: {dm().labels_file}")
         return label_dset
 
+    @exception_handled
     def graphLabelData(self):
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm, LinePlot
         from spectraclass.learn.manager import ClassificationManager, cm
         graph: LinePlot = gpm().current_graph()
+        lgm().log(f"graphLabelData: graph index = {graph.index}, has classification = {cm().classification is not None}")
         if cm().classification is not None:
+            lgm().log( f"graphLabelData: #cids = {len(self.get_cids())}")
             for cid in self.get_cids():
                 classmask: np.ndarray = (cm().classification.values == cid)
                 pids: np.ndarray = cm().classification.samples.values[classmask]
