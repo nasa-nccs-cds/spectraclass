@@ -126,34 +126,30 @@ class mplGraphPlot(LinePlot):
         lgm().log(f"mplGraphPlot: Add Marker[{m.size}]: cid={m.cid}, pids[:10]={m.pids[:10]}")
         if m.size > 0:
             self.clearTransients()
-#            if len(m.pids) == 1:    self.plot_line( m.pids[0], m.cid )
-#            else:                   self.plot_lines( m.pids.tolist(), m.cid )
-            self.plot_lines( m )
+            if len(m.pids) == 1:    self.highlight_line(m)
+            else:                   self.plot_lines( m )
 
     @log_timing
-    # def plot_line(self, pid: int, cid: int ):
-    #     from spectraclass.model.labels import LabelsManager, lm
-    #     from spectraclass.gui.control import UserFeedbackManager, ufm
-    #     selected: bool = (self.selected_pid >= 0)
-    #     selection = (pid == self.selected_pid)
-    #     alpha = (1.0 if selection else 0.2) if selected else 1.0
-    #     color = lm().graph_colors[cid]
-    #     lw = 2.0 if selection else 1.0
-    #     lrec = LineRec(None, pid, cid)
-    #     self.lrecs[pid] = lrec
-    #     x,y = self.lx(lrec.pid), self.ly(lrec.pid)
-    #     if y is not None:
-    #         lines = self.ax.plot( x, y, picker=True, pickradius=2, color=color, alpha=alpha, linewidth=lw )
-    #         lrec.line = lines[0]
-    #         if (not self._use_model) and (self.ry.size > 0):
-    #             self.rlines.extend( self.ax.plot( x, self.lry(lrec.pid), color="grey" ) )
-    #         self.ax.figure.canvas.draw_idle()
-    #     else:
-    #         ufm().show(f"Points out of bounds","red")
-
+    def highlight_line(self, m: Marker):
+        from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.gui.control import UserFeedbackManager, ufm
+        cid, pid = m.cid, m.pids[0]
+        self.selected_pid = pid
+        alpha, lw = 1.0, 3.0
+        color = lm().graph_colors[cid]
+        x,y = self.lx(pid), self.ly(pid)
+        if y is not None:
+            lines = self.ax.plot( x, y, picker=True, pickradius=2, color=color, alpha=alpha, linewidth=lw )
+            self.lrecs[pid] = LineRec(lines[0], pid, cid, m)
+            self.marked_lrecs[m.oid] = [pid]
+            if (not self._use_model) and (self.ry.size > 0):
+                self.rlines.extend( self.ax.plot( x, self.lry(pid), color="grey" ) )
+            self.ax.figure.canvas.draw_idle()
+        else:
+            ufm().show(f"Points out of bounds","red")
 
     @log_timing
-    def plot_lines(self, m: Marker ):
+    def plot_lines(self, m: Marker ):    # highlight lines, emphasize anomalies
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.control import UserFeedbackManager, ufm
         cid: int = m.cid

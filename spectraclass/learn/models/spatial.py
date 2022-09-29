@@ -114,12 +114,12 @@ class SpatialModelWrapper(KerasLearningModel):
             block: Block = tm().getBlock()
             classifcation: np.ndarray = self.predict( input_data.values, log=True, **kwargs )
             lgm().log( f" APPLY classification: block={block.block_coords}, result shape = {classifcation.shape}, vrange = [{classifcation.min()}, {classifcation.max()}] " )
-            classification = xa.DataArray(  classifcation, dims=[ 'blocks', 'y', 'x' ],
+            self.classification = xa.DataArray(  classifcation, dims=[ 'blocks', 'y', 'x' ],
                                             coords=dict( blocks = range(classifcation.shape[0]), y= input_data.coords['y'], x= input_data.coords['x'] ) )
 #            block_index = self.get_training_layer_index( block )
-            mm().plot_labels_image( classification[0] )
+            mm().plot_labels_image( self.classification[0] )
             lm().addAction("classify", "application")
-            return classification
+            return self.classification
         except NotFittedError:
             ufm().show( "Must learn a mapping before applying a classification", "red")
 

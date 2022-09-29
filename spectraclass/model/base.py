@@ -13,6 +13,13 @@ class SCSingletonConfigurable(tlc.Configurable):
         self._contingent_configuration_()
         self.config_instances.append( self )
 
+    def process_event(self, name: str, args: Dict ):
+        pass
+
+    def submit_event(self, name: str, args: Dict ):
+        for inst in self.config_instances:
+            inst.process_event( name, args )
+
     @classmethod
     def instance(cls, *args, **kwargs):
         if cls._instance is None:

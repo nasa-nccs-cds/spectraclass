@@ -187,7 +187,7 @@ class GraphPlotManager(SCSingletonConfigurable):
     def plot_graph( self, marker: Marker ):
         current_graph: LinePlot = self.current_graph()
         if current_graph is not None:
-            lgm().log( f"GraphPlotManager: Adding marker to graph[{self._wGui.selected_index}]")
+            lgm().log( f"GraphPlotManager: Adding marker to graph[{marker.cid}], size={marker.size}")
             current_graph.addMarker( marker )
 
     def remove_points( self, pids: List[int], **kwargs ):

@@ -314,17 +314,28 @@ class LabelsManager(SCSingletonConfigurable):
         ufm().show( f"Saving labels to file: {dm().labels_file}")
         return label_dset
 
+    def getClassification(self) -> Optional[xa.DataArray]:
+        from spectraclass.learn.manager import ClassificationManager, cm
+        from spectraclass.data.spatial.tile.manager import tm
+        if cm().classification is None:
+            return None
+        elif cm().classification.dims[0] == 'samples':
+            return cm().classification
+        else:
+            class_data, _, _ = tm().getBlock().raster2points( cm().classification )
+            return class_data
+
     @exception_handled
     def graphLabelData(self):
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm, LinePlot
-        from spectraclass.learn.manager import ClassificationManager, cm
         graph: LinePlot = gpm().current_graph()
-        lgm().log(f"graphLabelData: graph index = {graph.index}, has classification = {cm().classification is not None}")
-        if cm().classification is not None:
-            lgm().log( f"graphLabelData: #cids = {len(self.get_cids())}")
+        class_data: Optional[xa.DataArray] = self.getClassification()
+        if class_data is not None:
             for cid in self.get_cids():
-                classmask: np.ndarray = (cm().classification.values == cid)
-                pids: np.ndarray = cm().classification.samples.values[classmask]
+                classmask: np.ndarray = (class_data.values.flatten() == cid)
+                lgm().log(f"graphLabelData: cid={cid}, #pids={np.count_nonzero(classmask)}, dims={list(class_data.dims)}, coords={list(class_data.coords.keys())}")
+                samples: xa.DataArray = class_data.coords['samples']
+                pids: np.ndarray = samples.values[classmask]
                 graph.addMarker( Marker("labels", pids, cid) )
 
     @classmethod
