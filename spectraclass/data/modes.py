@@ -789,7 +789,8 @@ class ModeDataManager(SCSingletonConfigurable):
         for f in os.listdir(self.datasetDir):
             file = os.path.join(self.datasetDir, f)
             if path.isfile( file ):
-                os.remove( file )
+                try: os.remove( file )
+                except: pass
 
     def leafletRasterPath( self, **kwargs ) -> str:
         from spectraclass.data.base import DataManager, dm
