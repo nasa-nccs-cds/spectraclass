@@ -20,12 +20,12 @@ def rescale( x: np.ndarray ):
     if xs.mean() == 0.0: return xs
     return xs / xs.mean()
 
-def sel( array: xa.DataArray, pids: Union[int,List[int],np.ndarray,xa.DataArray] ) -> np.ndarray:
+def sel( array: xa.DataArray, pids: Union[int,List[int],np.ndarray,xa.DataArray] ) -> xa.DataArray:
     if isinstance( pids, np.ndarray ): pids = pids.tolist()
     elif isinstance( pids, xa.DataArray ): pids = pids.values.tolist()
     elif not isinstance( pids, (list, tuple, set) ): pids = [ pids ]
     lgm().log( f"LinePlot.sel---> array[{array.dims}] shape: {array.shape}, range: {[array.values.min(), array.values.max()]}, pids[:10]={pids[:10]}")
-    return array.sel( dict(samples=pids) ).values
+    return array.sel( dict(samples=pids) )
 
 class LinePlot(ABC):
 
@@ -95,32 +95,32 @@ class LinePlot(ABC):
     def lx( self, pids: Union[int,List[int]] ) -> np.ndarray:
         xv: xa.DataArray = self._mx if self._use_model else self._x
         if xv.ndim == 1:   return  xv.values
-        else:              return  sel( xv, pids ).squeeze()
+        else:              return  sel( xv, pids ).values.squeeze()
 
     def ly( self, pids: Union[int,List[int]] ) -> Optional[np.ndarray]:
         try:
             ydata: xa.DataArray = self._mploty if self._use_model else self._ploty
-            return sel( ydata, pids ).squeeze().transpose()
+            return sel( ydata, pids ).values.squeeze().transpose()
         except KeyError:
             return None
 
     def lry(self, pid ) -> np.ndarray:
-        return sel( self._rploty, pid ).squeeze()
+        return sel( self._rploty, pid ).values.squeeze()
 
     @property
     def x(self) -> np.ndarray:
         xv = self._mx if self._use_model else self._x
-        if xv.ndim == 1:   return  xv
-        else:              return  sel( xv, self.pids )
+        if xv.ndim == 1:   return  xv.values
+        else:              return  sel( xv, self.pids ).values
 
     @property
     def y( self ) -> np.ndarray:
         ydata = self._mploty if self._use_model else self._ploty
-        return sel( ydata, self.pids ).transpose()
+        return sel( ydata, self.pids ).values.transpose()
 
     @property
     def ry( self ) ->  np.ndarray:
-        return sel( self._rploty, self.tpids ).transpose()
+        return sel( self._rploty, self.tpids ).values.transpose()
 
     def normalize(self, data: np.ndarray ) -> np.ndarray:
         axis = 1 if (data.ndim > 1) else 0

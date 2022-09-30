@@ -148,8 +148,11 @@ class mplGraphPlot(LinePlot):
         else:
             ufm().show(f"Points out of bounds","red")
 
+    def subset(self):
+        pass
+
     @log_timing
-    def plot_lines(self, m: Marker ):    # highlight lines, emphasize anomalies
+    def plot_lines(self, m: Marker ):    # emphasize anomalies with subset
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.control import UserFeedbackManager, ufm
         cid: int = m.cid
