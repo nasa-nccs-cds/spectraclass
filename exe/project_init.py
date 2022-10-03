@@ -14,13 +14,12 @@ else:
     block_size = 150
     method = "aec" # "aec" "vae"
     model_dims = 32
-    reprocess_data = False
 
-    dm.modal.ext = "_img"
+    dm.modal.images_glob = "*201907*_img"
     dm.proc_type = "skl"
     dm.modal.refresh_model = True
     TileManager.block_size = block_size
-    TileManager.reprocess = reprocess_data
+    TileManager.reprocess = False
     AvirisDataManager.model_dims = model_dims
     AvirisDataManager.reduce_method = method
     AvirisDataManager.modelkey = f"b{block_size}.{method}"
