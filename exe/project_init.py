@@ -15,7 +15,7 @@ else:
     method = "aec" # "aec" "vae"
     model_dims = 32
 
-    dm.modal.images_glob = "ang201908*rfl/ang*_rfl_v2p9/ang*_corr_v2p9_img"
+    dm.modal.images_glob = "ang201908*rfl/ang*_rfl_v2v2/ang*_corr_v2v2_img"
     dm.proc_type = "skl"
     dm.modal.refresh_model = True
     TileManager.block_size = block_size
