@@ -14,13 +14,15 @@ else:
     block_size = 150
     method = "aec" # "aec" "vae"
     model_dims = 32
+    version = "v2v2"
 
-    dm.modal.images_glob = "ang201908*rfl/ang*_rfl_v2v2/ang*_corr_v2v2_img"
+    dm.modal.images_glob = f"ang201908*rfl/ang*_rfl_{version}/ang*_corr_{version}_img"
     dm.proc_type = "skl"
     dm.modal.refresh_model = True
     TileManager.block_size = block_size
     TileManager.reprocess = False
     AvirisDataManager.model_dims = model_dims
+    AvirisDataManager.version = version
     AvirisDataManager.reduce_method = method
     AvirisDataManager.modelkey = f"b{block_size}.{method}"
     print( f"Init project {project}, mode = {mode}, modelkey = {AvirisDataManager.modelkey}")
