@@ -19,7 +19,7 @@ else:
 
     dm.modal.images_glob = f"ang{month}*rfl/ang*_rfl_{version}/ang*_corr_{version}_img"
     dm.proc_type = "skl"
-    dm.modal.refresh_model = True
+    dm.modal.refresh_model = False
     TileManager.block_size = block_size
     TileManager.reprocess = False
     AvirisDataManager.model_dims = model_dims
