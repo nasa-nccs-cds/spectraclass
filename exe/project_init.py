@@ -18,12 +18,12 @@ else:
     month = "201908"
 
     dm.modal.images_glob = f"ang{month}*rfl/ang*_rfl_{version}/ang*_corr_{version}_img"
+    AvirisDataManager.version = version
     dm.proc_type = "skl"
     dm.modal.refresh_model = False
     TileManager.block_size = block_size
     TileManager.reprocess = False
     AvirisDataManager.model_dims = model_dims
-    AvirisDataManager.version = version
     AvirisDataManager.reduce_method = method
     AvirisDataManager.modelkey = f"b{block_size}.{method}"
     print( f"Init project {project}, mode = {mode}, modelkey = {AvirisDataManager.modelkey}")
