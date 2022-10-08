@@ -14,11 +14,11 @@ else:
     block_size = 150
     method = "aec" # "aec" "vae"
     model_dims = 32
-    version = "v2p9"
-    month = "201707"
+    version = "v2v2"
+    month = "201908"
 
+    dm.modal.data_dir = "/Users/tpmaxwel/Development/Data/Aviris/adapt"
     dm.modal.images_glob = f"ang{month}*rfl/ang*_rfl_{version}/ang*_corr_{version}_img"
-    dm.modal.data_dir = "/Users/tpmaxwel/Development/Data/Aviris"
     AvirisDataManager.version = version
     dm.proc_type = "skl"
     dm.modal.refresh_model = False
