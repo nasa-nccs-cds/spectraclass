@@ -1,10 +1,7 @@
 from enum import Enum
 from typing import List, Tuple, Optional, Dict, Union, Type
 from spectraclass.learn.base import LearningModel
-# import tensorflow as tf
-# keras = tf.keras
-from tensorflow.keras.models import Model
-from tensorflow.keras.callbacks import Callback
+import tensorflow as tf
 
 class ModelType(Enum):
      SPATIAL = 1
@@ -29,7 +26,7 @@ class Network:
     def name(self):
         return self._name
 
-    def build_model(self) -> Tuple[Model,Dict]:
+    def build_model(self) -> Tuple[tf.keras.models.Model,Dict]:
         return self._build_model(**self._parms)
 
     def build( self ) -> "LearningModel":
@@ -45,7 +42,7 @@ class Network:
                 self._learning_model = self._learning_model_class(self._name, callbacks=[NetworkCallback(self)], **self._parms)
         return self._learning_model
 
-    def _build_model( self, **kwargs ) -> Tuple[Model,Dict]:
+    def _build_model( self, **kwargs ) -> Tuple[tf.keras.models.Model,Dict]:
         raise NotImplementedError( "Attempt to call abstract method '_build_model' on Network object")
 
     def epoch_callback(self, epoch):
@@ -63,10 +60,10 @@ class Network:
     def on_predict_end(self):
         pass
 
-class NetworkCallback(Callback):
+class NetworkCallback(tf.keras.callbacks.Callback):
 
     def __init__(self, network: Network ):
-        Callback.__init__(self)
+        tf.keras.callbacks.Callback.__init__(self)
         self._network: Network = network
 
     def on_train_end(self, logs=None):

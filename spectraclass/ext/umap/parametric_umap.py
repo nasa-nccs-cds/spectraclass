@@ -69,9 +69,7 @@ class ParametricUMAP(UMAP):
         decoder=None,
         parametric_embedding=True,
         parametric_reconstruction=False,
-        parametric_reconstruction_loss_fcn=tf.keras.losses.BinaryCrossentropy(
-            from_logits=True
-        ),
+        parametric_reconstruction_loss_fcn=tf.keras.losses.BinaryCrossentropy(from_logits=True),
         parametric_reconstruction_loss_weight=1.0,
         autoencoder_loss=False,
         reconstruction_validation=None,

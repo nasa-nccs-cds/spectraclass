@@ -5,18 +5,7 @@ from os import path
 from pathlib import Path
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from sklearn.decomposition import PCA, FastICA
-#import tensorflow as tf
-
-#keras = tf.keras
-from tensorflow.keras import losses, regularizers
-from tensorflow.keras.layers import Input, Dense, Dropout, Lambda
-from tensorflow.keras.models import Model
-from tensorflow.keras import backend as K
-from tensorflow.keras.losses import mse, binary_crossentropy
-from tensorflow.keras.regularizers import l2
-from tensorflow.keras.optimizers import Adam, SGD, RMSprop
-from tensorflow.keras.initializers import RandomNormal, Zeros
-from tensorflow.keras.callbacks import History
+import tensorflow as tf
 import xarray as xa
 import traitlets as tl
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
@@ -52,9 +41,9 @@ def nsamples( trainingsets: List[np.ndarray ]):
 def get_optimizer( **kwargs ):
     oid = kwargs.get( 'optimizer','rmsprop').lower()
     lr = kwargs.get( 'lr', 1e-3 )
-    if   oid == "rmsprop": return RMSprop( learning_rate=lr )
-    elif oid == "adam":    return Adam(    learning_rate=lr )
-    elif oid == "sgd":     return SGD(     learning_rate=lr )
+    if   oid == "rmsprop": return tf.keras.optimizers.RMSprop( learning_rate=lr )
+    elif oid == "adam":    return tf.keras.optimizers.Adam(    learning_rate=lr )
+    elif oid == "sgd":     return tf.keras.optimizers.SGD(     learning_rate=lr )
     else: raise Exception( f" Unknown optimizer: {oid}")
 
 def vae_loss( inputs, outputs, n_features, z_mean, z_log ):
@@ -66,10 +55,10 @@ def vae_loss( inputs, outputs, n_features, z_mean, z_log ):
     capacity = 0.0
     reconstruction_loss = mse( inputs, outputs )
     reconstruction_loss *= n_features
-    kl_loss = 1 + z_log - K.square(z_mean) - K.exp(z_log)
-    kl_loss = -0.5 * K.sum(kl_loss, axis=-1)
-    kl_loss = gamma * K.abs( kl_loss - capacity )
-    return K.mean(reconstruction_loss + kl_loss)
+    kl_loss = 1 + z_log - tf.keras.backend.K.square(z_mean) - tf.keras.backend.K.exp(z_log)
+    kl_loss = -0.5 * tf.keras.backend.K.sum(kl_loss, axis=-1)
+    kl_loss = gamma * tf.keras.backend.K.abs( kl_loss - capacity )
+    return tf.keras.backend.K.mean(reconstruction_loss + kl_loss)
 
 class ModeDataManager(SCSingletonConfigurable):
     from spectraclass.application.controller import SpectraclassController
@@ -265,26 +254,26 @@ class ModeDataManager(SCSingletonConfigurable):
         lgm().log(f"#AEC: RM BUILD AEC NETWORK: {input_dims} -> {model_dims}")
         winit: float = kwargs.get( 'winit', 0.001 )
         reduction_factor = 2
-        inputlayer = Input( shape=[input_dims] )
+        inputlayer = tf.keras.layers.Input( shape=[input_dims] )
         activation = kwargs.get( 'activation', 'tanh' )
         optimizer =  get_optimizer( **kwargs )
-        dargs = dict( kernel_initializer=RandomNormal(stddev=winit), bias_initializer=Zeros() )
+        dargs = dict( kernel_initializer=tf.keras.initializers.RandomNormal(stddev=winit), bias_initializer=tf.keras.initializers.Zeros() )
         layer_dims, layer = int(round(input_dims / reduction_factor)), inputlayer
         while layer_dims > model_dims:
-            layer = Dense(layer_dims, activation=activation, **dargs )(layer)
-            if dropout_rate > 0.0: layer = Dropout(dropout_rate)(layer)
+            layer = tf.keras.layers.Dense(layer_dims, activation=activation, **dargs )(layer)
+            if dropout_rate > 0.0: layer = tf.keras.layers.Dropout(dropout_rate)(layer)
             layer_dims = int(round(layer_dims / reduction_factor))
-        encoded = x = Dense(model_dims, activation=activation, **dargs )(layer)
+        encoded = x = tf.keras.layers.Dense(model_dims, activation=activation, **dargs )(layer)
         layer_dims = int(round(model_dims * reduction_factor))
         while layer_dims < input_dims:
-            layer = Dense(layer_dims, activation=activation, **dargs )(layer)
-            if dropout_rate > 0.0: layer = Dropout(dropout_rate)(layer)
+            layer = tf.keras.layers.Dense(layer_dims, activation=activation, **dargs )(layer)
+            if dropout_rate > 0.0: layer = tf.keras.layers.Dropout(dropout_rate)(layer)
             layer_dims = int(round(layer_dims * reduction_factor))
-        decoded = Dense(input_dims, activation='linear', **dargs )(layer)
+        decoded = tf.keras.layers.Dense(input_dims, activation='linear', **dargs )(layer)
         #        modelcheckpoint = ModelCheckpoint('xray_auto.weights', monitor='loss', verbose=1, save_best_only=True, save_weights_only=True, mode='auto', period=1)
         #        earlystopping = EarlyStopping(monitor='loss', min_delta=0., patience=100, verbose=1, mode='auto')
-        self._autoencoder = Model(inputs=[inputlayer], outputs=[decoded])
-        self._encoder = Model(inputs=[inputlayer], outputs=[encoded])
+        self._autoencoder = tf.keras.models.Model(inputs=[inputlayer], outputs=[decoded])
+        self._encoder = tf.keras.models.Model(inputs=[inputlayer], outputs=[encoded])
         if verbose:
             self._autoencoder.summary()
             self._encoder.summary()
@@ -292,10 +281,7 @@ class ModeDataManager(SCSingletonConfigurable):
         lgm().log(f" BUILD Autoencoder network: input_dims = {input_dims} ")
 
     def sampling(self, args):
-        # import tensorflow as tf
-        # keras = tf.keras
-        from tensorflow.keras.models import Model
-        from tensorflow.keras import backend as K
+
         """Reparametrisation by sampling from Gaussian, N(0,I)
         To sample from epsilon = Norm(0,I) instead of from likelihood Q(z|X)
         with latent variables z: z = z_mean + sqrt(var) * epsilon
@@ -311,10 +297,10 @@ class ModeDataManager(SCSingletonConfigurable):
             Sampled latent variable.
         """
         z_mean, z_log = args
-        batch = K.shape(z_mean)[0]  # batch size
-        dim = K.int_shape(z_mean)[1]  # latent dimension
-        epsilon = K.random_normal(shape=(batch, dim))  # mean=0, std=1.0
-        return z_mean + K.exp(0.5 * z_log) * epsilon
+        batch = tf.keras.backend.K.shape(z_mean)[0]  # batch size
+        dim = tf.keras.backend.K.int_shape(z_mean)[1]  # latent dimension
+        epsilon = tf.keras.backend.K.random_normal(shape=(batch, dim))  # mean=0, std=1.0
+        return z_mean + tf.keras.backend.K.exp(0.5 * z_log) * epsilon
 
     def _build_vae_model(self, input_dims: int, **kwargs ):
         model_dims: int = kwargs.get('dims', self.model_dims)
@@ -325,35 +311,35 @@ class ModeDataManager(SCSingletonConfigurable):
         verbose = 0
         dropout_rate = kwargs.get('dropout',0.01)
         l2_regularizer = kwargs.get('regularizer',0.01)
-        inputs = Input(shape=(input_dims,))
-        layer = Dense(input_dims, activation=hidden_activation)(inputs)
+        inputs = tf.keras.layers.Input(shape=(input_dims,))
+        layer = tf.keras.layers.Dense(input_dims, activation=hidden_activation)(inputs)
         layer_dims = int(round(input_dims / reduction_factor))
         while layer_dims > model_dims:
-            layer = Dense(layer_dims, activation=hidden_activation, activity_regularizer=l2(l2_regularizer))(layer)
-            layer = Dropout(dropout_rate)(layer)
+            layer = tf.keras.layers.Dense(layer_dims, activation=hidden_activation, activity_regularizer=tf.keras.regularizers.l2(l2_regularizer))(layer)
+            layer = tf.keras.layers.Dropout(dropout_rate)(layer)
             layer_dims = int(round(layer_dims / reduction_factor))
 
-        z_mean = Dense(model_dims)(layer)
-        z_log = Dense(model_dims)(layer)
-        z = Lambda(self.sampling, output_shape=(model_dims,))([z_mean, z_log])
+        z_mean = tf.keras.layers.Dense(model_dims)(layer)
+        z_log = tf.keras.layers.Dense(model_dims)(layer)
+        z = tf.keras.layers.Lambda(self.sampling, output_shape=(model_dims,))([z_mean, z_log])
 
-        self._encoder = Model(inputs, [z_mean, z_log, z])
+        self._encoder = tf.keras.models.Model(inputs, [z_mean, z_log, z])
         if verbose >= 1: self._encoder.summary()
 
-        latent_inputs = Input(shape=(model_dims,))
-        layer = Dense(model_dims, activation=hidden_activation)(latent_inputs)
+        latent_inputs = tf.keras.layers.Input(shape=(model_dims,))
+        layer = tf.keras.layers.Dense(model_dims, activation=hidden_activation)(latent_inputs)
         layer_dims = int(round(model_dims * reduction_factor))
         while layer_dims < input_dims:
-            layer = Dense(layer_dims, activation=hidden_activation)(layer)
-            layer = Dropout(dropout_rate)(layer)
+            layer = tf.keras.layers.Dense(layer_dims, activation=hidden_activation)(layer)
+            layer = tf.keras.layers.Dropout(dropout_rate)(layer)
             layer_dims = int(round(layer_dims * reduction_factor))
 
-        outputs = Dense(input_dims, activation=output_activation)(layer)
+        outputs = tf.keras.layers.Dense(input_dims, activation=output_activation)(layer)
 
-        self._decoder = Model(latent_inputs, outputs)
+        self._decoder = tf.keras.models.Model(latent_inputs, outputs)
         if verbose >= 1: self._decoder.summary()
         outputs = self._decoder(self._encoder(inputs)[2])
-        self._autoencoder = Model(inputs, outputs)
+        self._autoencoder = tf.keras.models.Model(inputs, outputs)
         self._autoencoder.add_loss( vae_loss( inputs, outputs, input_dims, z_mean, z_log ) )
         self._autoencoder.compile( optimizer=optimizer )
         self._decoder.compile( optimizer=optimizer )
@@ -421,7 +407,7 @@ class ModeDataManager(SCSingletonConfigurable):
                         lgm().log(
                             f"  ITER[{iter}]: Processing block{block.block_coords}, data shape = {point_data.shape}",
                             print=True)
-                        history: History = self._autoencoder.fit(point_data.data, point_data.data,initial_epoch=initial_epoch,
+                        history: tf.keras.callbacks.History = self._autoencoder.fit(point_data.data, point_data.data,initial_epoch=initial_epoch,
                                                                  epochs=initial_epoch + nepoch, batch_size=256, shuffle=True)
                         initial_epoch = initial_epoch + nepoch
                         lgm().log(f" Trained autoencoder in {time.time() - t0} sec", print=True)
@@ -460,7 +446,7 @@ class ModeDataManager(SCSingletonConfigurable):
                     if ntrainsamples > point_data.shape[0]:
                         focused_training_data = np.concatenate( focused_datsets )
                         lgm().log( f" --> Focused Training with #samples = {ntrainsamples}", print=True)
-                        history: History = self._autoencoder.fit( focused_training_data, focused_training_data, initial_epoch=initial_epoch,
+                        history: tf.keras.callbacks.History = self._autoencoder.fit( focused_training_data, focused_training_data, initial_epoch=initial_epoch,
                                                                   epochs=initial_epoch + nepoch, batch_size=256, shuffle=True)
                         initial_epoch = initial_epoch + nepoch
                         focused_datsets = []
@@ -468,7 +454,7 @@ class ModeDataManager(SCSingletonConfigurable):
         if ntrainsamples > 0:
             focused_training_data = np.concatenate( focused_datsets )
             lgm().log(f" --> Focused Training with #samples = {ntrainsamples}", print=True)
-            history: History = self._autoencoder.fit(focused_training_data, focused_training_data, initial_epoch=initial_epoch,
+            history: tf.keras.callbacks.History = self._autoencoder.fit(focused_training_data, focused_training_data, initial_epoch=initial_epoch,
                                                      epochs=initial_epoch + nepoch, batch_size=256, shuffle=True)
         return True
 
