@@ -1,10 +1,13 @@
 nfeatures = 64
 import tensorflow as tf
+import numpy as np
+import xarray as xa
 from spectraclass.model.labels import lm
 from spectraclass.learn.models.spatial import SpatialModelWrapper
 from spectraclass.data.base import DataManager
-from spectraclass.data.spatial.tile.manager import TileManager
+from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.data.spatial.modes import AvirisDataManager
+from spectraclass.data.spatial.tile.tile import Block, Tile
 
 dm: DataManager = DataManager.initialize( "img_mgr", 'aviris' )
 location = "desktop"
@@ -60,3 +63,9 @@ model.add(tf.keras.layers.Conv2D(nfeatures, (ks, ks), activation='relu', padding
 model.add(tf.keras.layers.Reshape(SpatialModelWrapper.flatten(input_shape, nfeatures)))
 model.add(tf.keras.layers.Dense(nfeatures, activation='relu'))
 model.add(tf.keras.layers.Dense(nclasses, activation='softmax'))
+
+block: Block = tm().getBlock()
+bdata: xa.DataArray = block.data.transpose('y','x','band').fillna(0.0)
+input_batch: np.ndarray = bdata.expand_dims('batch',0).values
+
+print( input_batch.shape )
