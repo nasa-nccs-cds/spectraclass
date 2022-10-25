@@ -225,12 +225,13 @@ class SpatialDataManager(ModeDataManager):
         return xa.Dataset( data_vars=data_vars, coords=coords )
 
     @exception_handled
-    def process_block( self, block: Block  ) -> Optional[xa.Dataset]:
+    def process_block( self, block: Block, has_metadata: bool  ) -> Optional[xa.Dataset]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block_data_file = dm().modal.dataFile(block=block)
         if os.path.exists(block_data_file):
-            lgm().log(f"** Reading BLOCK{block.cindex}: {block_data_file} ")
-            return xa.open_dataset( block_data_file )
+            if not has_metadata:
+                lgm().log(f"** Reading BLOCK{block.cindex}: {block_data_file} ")
+                return xa.open_dataset( block_data_file )
         else:
             ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
             coord_data = {}
@@ -287,15 +288,17 @@ class SpatialDataManager(ModeDataManager):
             if tm().reprocess:
                 dm().modal.removeDataset()
 
+            has_metadata = (self.metadata is not None)
             for image_index in range( dm().modal.num_images ):
                 self.set_current_image( image_index )
                 ufm().show( f"Preprocessing data blocks for image {dm().modal.image_name}", "blue" )
                 for block in self.tiles.tile.getBlocks():
-                    result_dataset = self.process_block( block )
+                    result_dataset = self.process_block( block, has_metadata )
                     if result_dataset is not None:
                         block_sizes[ block.cindex ] = result_dataset.attrs[ 'block_size']
                         if nbands is None: nbands = result_dataset.attrs[ 'nbands']
-            dm().modal.write_metadata(block_sizes, attrs)
+            if not has_metadata:
+                dm().modal.write_metadata(block_sizes, attrs)
             dm().modal.autoencoder_preprocess( bands=nbands, **kwargs )
 
         except Exception as err:

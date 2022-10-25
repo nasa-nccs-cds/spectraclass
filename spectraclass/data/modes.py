@@ -609,7 +609,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def prepare_inputs(self, **kwargs ) -> Dict[Tuple,int]:
         raise NotImplementedError()
 
-    def process_block(self, block  ) -> xa.Dataset:
+    def process_block(self, block, has_metadata: bool  ) -> xa.Dataset:
         raise NotImplementedError()
 
     def reduce(self, train_data: xa.DataArray, **kwargs ) -> Tuple[xa.DataArray,xa.DataArray]:
