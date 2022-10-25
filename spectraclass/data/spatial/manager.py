@@ -238,14 +238,14 @@ class SpatialDataManager(ModeDataManager):
             ufm().show( f" *** Processing Block{block.block_coords}" )
             try:
                 blocks_point_data, coord_data = block.getPointData()
-                lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}", print=True)
+                lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}")
             except NoDataInBounds:
                 blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
 
             if blocks_point_data.size == 0: return None
             raw_data: xa.DataArray = block.data
             data_vars = dict( raw=raw_data )
-            lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.shape[0]} samples", print=True )
+            lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.shape[0]} samples" )
             data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y', 'x'], coords={d: raw_data.coords[d] for d in ['x', 'y']} )
             result_dataset = xa.Dataset(data_vars)
             result_dataset.attrs['tile_shape'] = tm().tile.data.shape
