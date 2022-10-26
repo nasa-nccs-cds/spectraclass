@@ -35,7 +35,6 @@ model_dims = 32
 version = "v2v2"
 month = "201908"
 
-dm.modal.data_dir = "/Users/tpmaxwel/Development/Data/Aviris/adapt"
 dm.modal.ext =  "_img"
 dm.use_model_data = True
 dm.proc_type = "skl"
