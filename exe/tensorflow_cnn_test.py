@@ -2,6 +2,7 @@ nfeatures = 64
 import tensorflow as tf
 import numpy as np
 import xarray as xa
+from spectraclass.learn.base import LearningModel
 from spectraclass.learn.models.spatial import SpatialModelWrapper
 from spectraclass.data.base import DataManager
 from spectraclass.data.spatial.modes import AvirisDataManager
@@ -10,23 +11,27 @@ from typing import List, Union, Tuple, Optional, Dict, Callable
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.model.labels import LabelsManager, Action, lm
 
-def get_training_set( nclasses ) -> Tuple[np.ndarray, np.ndarray]:
+def get_training_set( nclasses ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     block: Block = tm().getBlock()
     base_data: xa.DataArray = block.getModelData(True)
     tdims = [base_data.dims[1], base_data.dims[2], base_data.dims[0]]
     training_data: np.ndarray = base_data.transpose(*tdims).fillna(0.0).expand_dims('batch', 0).values
     grid_size = training_data.shape[1]*training_data.shape[2]
-    training_labels: np.ndarray = np.random.randint( 0, nclasses, [1,grid_size,nclasses] )
-    return (training_data, training_labels )
+    labels: np.ndarray = np.random.randint( 0, nclasses, [grid_size] )
+    training_labels = np.expand_dims(LearningModel.index_to_one_hot(labels), 0)
+    label_mask = np.expand_dims( (labels > 0), 0 )
+    sample_weights: np.ndarray = np.where(label_mask, 1.0, 0.0)
+    test_mask = np.full(label_mask.shape, False)
+    return (training_data, training_labels, sample_weights, test_mask )
 
 dm: DataManager = DataManager.initialize( "img_mgr", 'aviris' )
-location = "explore"
+location = "desktop"
 if location == "explore":
     dm.modal.cache_dir = "/explore/nobackup/projects/ilab/cache"
     dm.modal.data_dir = "/css/above/daac.ornl.gov/daacdata/above/ABoVE_Airborne_AVIRIS_NG/data/"
 elif location == "desktop":
     dm.modal.cache_dir = "/Volumes/Shared/Cache"
-    dm.modal.data_dir = "/Users/tpmaxwel/Development/Data/Aviris"
+    dm.modal.data_dir = "/Users/tpmaxwel/Development/Data/Aviris/adapt"
 else: raise Exception( f"Unknown location: {location}")
 
 block_size = 150
@@ -77,5 +82,5 @@ model.add(tf.keras.layers.Dense(nfeatures, activation='relu'))
 model.add(tf.keras.layers.Dense(nclasses, activation='softmax'))
 model.compile( optimizer=opt, loss=loss, metrics=['accuracy'] )
 
-training_data, training_labels = get_training_set( len(classes)+1 )
-model.fit( training_data, training_labels, epochs=nepochs )
+training_data, training_labels, sample_weights, test_mask = get_training_set( len(classes)+1 )
+model.fit( training_data, training_labels, sample_weight=sample_weights, epochs=nepochs )
