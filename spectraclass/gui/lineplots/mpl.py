@@ -226,9 +226,7 @@ class mplGraphPlot(LinePlot):
         from spectraclass.gui.spatial.map import MapManager, mm
         line: Line2D = event.artist
         selected_lrec = self.get_lrec( line )
-        if selected_lrec is None:
-            lgm().log( f"\nonpick: line={LineRec.lid(line)}, lines={self.ids}, inlist={LineRec.lid(line) in self.ids}")
-        else:
+        if selected_lrec is not None:
             self.selected_pid = selected_lrec.pid
             mm().highlight_points( [self.selected_pid], [selected_lrec.cid] )
             self.plot()
