@@ -5,8 +5,7 @@ import numpy as np
 import os, copy
 from sklearn.model_selection import train_test_split
 from datetime import datetime
-# import tensorflow as tf
-# keras = tf.keras
+import tensorflow as tf
 from tensorflow.keras.models import Model
 from typing import List, Tuple, Optional, Dict
 from spectraclass.gui.control import UserFeedbackManager, ufm
@@ -19,6 +18,7 @@ class LearningModel:
 
     def __init__(self, name: str,  **kwargs ):
         self.mid =  name
+        self.device = "cpu"
         self._score: Optional[np.ndarray] = None
         self.config = kwargs
         self._keys = []
@@ -83,8 +83,9 @@ class LearningModel:
         if np.count_nonzero( training_labels > 0 ) == 0:
             ufm().show( "Must label some points before learning the classification" )
             return None
-        lgm().log(f"Learning mapping with shapes: spectral_data{training_data.shape}, class_data{training_labels.shape}")
-        self.fit( training_data, training_labels, sample_weight=sample_weight, **kwargs )
+        lgm().log(f"Learning mapping with shapes: spectral_data{training_data.shape}, class_data{training_labels.shape}, sample_weight{sample_weight.shape}")
+        with tf.device(f'/{self.device}:0'):
+            self.fit( training_data, training_labels, sample_weight=sample_weight, **kwargs )
         lgm().log(f"Completed learning in {time.time() - t1} sec.")
 
     @classmethod

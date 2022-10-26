@@ -11,7 +11,7 @@ from typing import List, Union, Tuple, Optional, Dict, Callable
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.model.labels import LabelsManager, Action, lm
 
-def get_training_set( nclasses ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def get_training_set( nclasses ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     block: Block = tm().getBlock()
     base_data: xa.DataArray = block.getModelData(True)
     tdims = [base_data.dims[1], base_data.dims[2], base_data.dims[0]]
@@ -21,8 +21,7 @@ def get_training_set( nclasses ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np
     training_labels = np.expand_dims(LearningModel.index_to_one_hot(labels), 0)
     label_mask = np.expand_dims( (labels > 0), 0 )
     sample_weights: np.ndarray = np.where(label_mask, 1.0, 0.0)
-    test_mask = np.full(label_mask.shape, False)
-    return (training_data, training_labels, sample_weights, test_mask )
+    return (training_data, training_labels, sample_weights )
 
 dm: DataManager = DataManager.initialize( "img_mgr", 'aviris' )
 location = "explore"
@@ -83,6 +82,8 @@ model.add(tf.keras.layers.Dense(nfeatures, activation='relu'))
 model.add(tf.keras.layers.Dense(nclasses, activation='softmax'))
 model.compile( optimizer=opt, loss=loss, metrics=['accuracy'] )
 
-training_data, training_labels, sample_weights, test_mask = get_training_set( len(classes)+1 )
+training_data, training_labels, sample_weights = get_training_set( len(classes)+1 )
+print( f"Learning mapping with shapes: spectral_data{training_data.shape}, class_data{training_labels.shape}, sample_weight{sample_weights.shape}")
+
 with tf.device(f'/{device}:0'):
     model.fit( training_data, training_labels, sample_weight=sample_weights, epochs=nepochs )
