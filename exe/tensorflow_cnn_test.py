@@ -2,12 +2,22 @@ nfeatures = 64
 import tensorflow as tf
 import numpy as np
 import xarray as xa
-from spectraclass.model.labels import lm
 from spectraclass.learn.models.spatial import SpatialModelWrapper
 from spectraclass.data.base import DataManager
-from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.data.spatial.modes import AvirisDataManager
 from spectraclass.data.spatial.tile.tile import Block, Tile
+from typing import List, Union, Tuple, Optional, Dict, Callable
+from spectraclass.data.spatial.tile.manager import TileManager, tm
+from spectraclass.model.labels import LabelsManager, Action, lm
+
+def get_training_set( nclasses: int ) -> Tuple[np.ndarray, np.ndarray]:
+    block = tm().getBlock()
+    base_data: xa.DataArray = block.getModelData(True)
+    tdims = [base_data.dims[1], base_data.dims[2], base_data.dims[0]]
+    training_data: np.ndarray = base_data.transpose(*tdims).fillna(0.0).expand_dims('batch', 0).values
+    grid_size = training_data.shape[1]*training_data.shape[2]
+    training_labels: np.ndarray = np.random.randint( 0, nclasses, [1,grid_size,nclasses] )
+    return (training_data, training_labels )
 
 dm: DataManager = DataManager.initialize( "img_mgr", 'aviris' )
 location = "desktop"
@@ -49,13 +59,16 @@ dm.loadCurrentProject()
 classes = [ ('Class-1', "cyan"),
             ('Class-2', "green"),
             ('Class-3', "magenta"),
-            ('Class-4', "blue")]
+            ('Class-4', "blue") ]
 
 lm().setLabels( classes )
 
 input_shape = SpatialModelWrapper.get_input_shape()
 nclasses = lm().nLabels
 ks =  3
+nepochs = 100
+opt = tf.keras.optimizers.Adam(1e-3)
+loss = 'categorical_crossentropy'
 
 model = tf.keras.models.Sequential()
 model.add(tf.keras.layers.Input(shape=input_shape))
@@ -63,9 +76,7 @@ model.add(tf.keras.layers.Conv2D(nfeatures, (ks, ks), activation='relu', padding
 model.add(tf.keras.layers.Reshape(SpatialModelWrapper.flatten(input_shape, nfeatures)))
 model.add(tf.keras.layers.Dense(nfeatures, activation='relu'))
 model.add(tf.keras.layers.Dense(nclasses, activation='softmax'))
+model.compile( optimizer=opt, loss=loss, metrics=['accuracy'] )
 
-block: Block = tm().getBlock()
-bdata: xa.DataArray = block.data.transpose('y','x','band').fillna(0.0)
-input_batch: np.ndarray = bdata.expand_dims('batch',0).values
-
-print( input_batch.shape )
+training_data, training_labels = get_training_set( len(classes)+1 )
+model.fit( training_data, training_labels, epochs=nepochs )
