@@ -142,6 +142,7 @@ class KerasLearningModel(LearningModel):
         LearningModel.__init__( self, name, **self.set_learning_parameters( **kwargs ) )
         self.callbacks: List[Callback] = callbacks if callbacks else []
         self.callbacks.append( lgm().get_keras_logger() )
+        self.device = "cpu"
 #        self._init_model: Model = model
         self._model: Model = model
         self.compile()
@@ -173,7 +174,8 @@ class KerasLearningModel(LearningModel):
         if class_data.ndim == 1: class_data = self.index_to_one_hot( class_data )
         lgm().log( f"KerasLearningModel[{self.mid}].fit: data{data.shape} labels{class_data.shape} args={args}" )
         ufm().show( "Running learning algorithm... " )
-        self._model.fit( data, class_data, **args )
+        with tf.device(f'/{self.device}:0'):
+            self._model.fit( data, class_data, **args )
 
     @exception_handled
     def load( self, model_name: str, **kwargs ):
@@ -191,12 +193,14 @@ class KerasLearningModel(LearningModel):
         pass
 
     def predict( self, data: np.ndarray, **kwargs ) -> np.ndarray:
-        return self._model.predict( data, **kwargs )
+        with tf.device(f'/{self.device}:0'):
+            return self._model.predict( data, **kwargs )
 
     def apply( self, data: np.ndarray, **kwargs ) -> np.ndarray:
         waves = [ w.mean() for w in self._model.get_layer(0).get_weights() ]
         lgm().log( f"KerasLearningModel[{hex(id(self))}:{hex(id(self._model))}].apply: weights = {waves}")
-        return self._model( data, **kwargs )
+        with tf.device(f'/{self.device}:0'):
+            return self._model( data, **kwargs )
 
     def clear(self):
         self.compile()
