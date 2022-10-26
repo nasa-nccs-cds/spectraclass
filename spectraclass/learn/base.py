@@ -142,8 +142,8 @@ class KerasLearningModel(LearningModel):
         LearningModel.__init__( self, name, **self.set_learning_parameters( **kwargs ) )
         self.callbacks: List[Callback] = callbacks if callbacks else []
         self.callbacks.append( lgm().get_keras_logger() )
-        self._init_model: Model = model
-        self._model: Model = None
+#        self._init_model: Model = model
+        self._model: Model = model
         self.compile()
 
     def set_learning_parameters( self, **kwargs ) -> Dict:
@@ -161,7 +161,7 @@ class KerasLearningModel(LearningModel):
         self.compile()
 
     def compile(self):
-        self._model = copy.deepcopy( self._init_model )
+#        self._model = copy.deepcopy( self._init_model )
         self._model.compile(optimizer=self.opt, loss=self.loss, metrics=['accuracy'], **self.config )
 
     # def train_test_split(self, data: np.ndarray, class_data: np.ndarray, test_size: float ) -> List[np.ndarray]:

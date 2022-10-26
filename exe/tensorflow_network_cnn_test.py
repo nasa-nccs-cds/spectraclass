@@ -28,7 +28,7 @@ def get_training_set( nclasses ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     return (training_data, training_labels, sample_weights )
 
 dm: DataManager = DataManager.initialize( "img_mgr", 'aviris' )
-location = "explore"
+location = "desktop"
 if location == "explore":
     dm.modal.cache_dir = "/explore/nobackup/projects/ilab/cache"
     dm.modal.data_dir = "/css/above/daac.ornl.gov/daacdata/above/ABoVE_Airborne_AVIRIS_NG/data/"
