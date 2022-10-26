@@ -70,6 +70,7 @@ lm().setLabels( classes )
 input_shape = SpatialModelWrapper.get_input_shape()
 nclasses = lm().nLabels
 ks =  3
+device = 'cpu'
 nepochs = 100
 opt = tf.keras.optimizers.Adam(1e-3)
 loss = 'categorical_crossentropy'
@@ -83,4 +84,5 @@ model.add(tf.keras.layers.Dense(nclasses, activation='softmax'))
 model.compile( optimizer=opt, loss=loss, metrics=['accuracy'] )
 
 training_data, training_labels, sample_weights, test_mask = get_training_set( len(classes)+1 )
-model.fit( training_data, training_labels, sample_weight=sample_weights, epochs=nepochs )
+with tf.device(f'/{device}:0'):
+    model.fit( training_data, training_labels, sample_weight=sample_weights, epochs=nepochs )
