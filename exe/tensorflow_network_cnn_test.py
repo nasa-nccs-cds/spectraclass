@@ -10,6 +10,7 @@ from spectraclass.data.spatial.tile.tile import Block, Tile
 from typing import List, Union, Tuple, Optional, Dict, Callable
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.model.labels import LabelsManager, Action, lm
+from spectraclass.learn.cnn import CNN
 
 def count_nan( array: np.ndarray ) -> int:
     return np.count_nonzero( np.isnan(array) )
@@ -71,23 +72,15 @@ lm().setLabels( classes )
 
 input_shape = SpatialModelWrapper.get_input_shape()
 nclasses = lm().nLabels
-ks =  3
 device = 'cpu'
 nepochs = 100
-opt = tf.keras.optimizers.Adam(1e-3)
-loss = 'categorical_crossentropy'
 
-model = tf.keras.models.Sequential()
-model.add(tf.keras.layers.Input(shape=input_shape))
-model.add(tf.keras.layers.Conv2D(nfeatures, (ks, ks), activation='relu', padding="same"))
-model.add(tf.keras.layers.Reshape(SpatialModelWrapper.flatten(input_shape, nfeatures)))
-model.add(tf.keras.layers.Dense(nfeatures, activation='relu'))
-model.add(tf.keras.layers.Dense(nclasses, activation='softmax'))
-model.compile( optimizer=opt, loss=loss, metrics=['accuracy'] )
+cnn =  CNN( 'cnn', nfeatures=nfeatures )
+model: LearningModel = cnn.build()
 
 training_data, training_labels, sample_weights = get_training_set( len(classes)+1 )
 print( f"Learning mapping with shapes: spectral_data{training_data.shape}, class_data{training_labels.shape}, sample_weight{sample_weights.shape}")
 print( f"#NaN: spectral_data={count_nan(training_data)}, class_data={count_nan(training_labels)}, sample_weight={count_nan(sample_weights)}")
 
 with tf.device(f'/{device}:0'):
-    model.fit( training_data, training_labels, sample_weight=sample_weights, epochs=nepochs )
+    model.fit( training_data, training_labels, sample_weight=sample_weights )

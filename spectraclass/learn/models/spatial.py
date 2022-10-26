@@ -125,10 +125,12 @@ class SpatialModelWrapper(KerasLearningModel):
 
     @exception_handled
     def learn_classification( self,**kwargs ):
+        def count_nan(array: np.ndarray): return np.count_nonzero( np.isnan(array) )
         t1 = time.time()
         self.training_data, self.training_labels, self.sample_weight, self.test_mask = self.get_training_set( **kwargs )
         if self.training_data is not None:
             lgm().log(f"Learning mapping with shapes: spectral_data{self.training_data.shape}, class_data{self.training_labels.shape}, sample_weight{self.sample_weight.shape}")
+            lgm().log( f"#NaN: spectral_data={count_nan(self.training_data)}, class_data={count_nan(self.training_labels)}, sample_weight={count_nan(self.sample_weight)}")
             self.fit( self.training_data, self.training_labels, sample_weight=self.sample_weight, **kwargs )
             lgm().log(f"Completed Spatial learning in {time.time() - t1} sec.")
 
