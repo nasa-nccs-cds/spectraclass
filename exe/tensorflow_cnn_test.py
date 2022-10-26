@@ -11,7 +11,7 @@ from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.model.labels import LabelsManager, Action, lm
 
 def get_training_set( nclasses: int ) -> Tuple[np.ndarray, np.ndarray]:
-    block = tm().getBlock()
+    block: Block = tm().getBlock()
     base_data: xa.DataArray = block.getModelData(True)
     tdims = [base_data.dims[1], base_data.dims[2], base_data.dims[0]]
     training_data: np.ndarray = base_data.transpose(*tdims).fillna(0.0).expand_dims('batch', 0).values
@@ -20,9 +20,9 @@ def get_training_set( nclasses: int ) -> Tuple[np.ndarray, np.ndarray]:
     return (training_data, training_labels )
 
 dm: DataManager = DataManager.initialize( "img_mgr", 'aviris' )
-location = "desktop"
-if location == "adapt":
-    dm.modal.cache_dir = "/adapt/nobackup/projects/ilab/cache"
+location = "explore"
+if location == "explore":
+    dm.modal.cache_dir = "/explore/nobackup/projects/ilab/cache"
     dm.modal.data_dir = "/css/above/daac.ornl.gov/daacdata/above/ABoVE_Airborne_AVIRIS_NG/data/"
 elif location == "desktop":
     dm.modal.cache_dir = "/Volumes/Shared/Cache"
