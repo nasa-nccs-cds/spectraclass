@@ -10,7 +10,7 @@ from typing import List, Union, Tuple, Optional, Dict, Callable
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.model.labels import LabelsManager, Action, lm
 
-def get_training_set( nclasses: int ) -> Tuple[np.ndarray, np.ndarray]:
+def get_training_set( nclasses ) -> Tuple[np.ndarray, np.ndarray]:
     block: Block = tm().getBlock()
     base_data: xa.DataArray = block.getModelData(True)
     tdims = [base_data.dims[1], base_data.dims[2], base_data.dims[0]]
