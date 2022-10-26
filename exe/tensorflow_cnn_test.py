@@ -42,7 +42,7 @@ month = "201908"
 
 dm.modal.ext =  "_img"
 dm.use_model_data = True
-dm.proc_type = "skl"
+dm.proc_type = "cpu"
 dm.modal.images_glob = f"ang{month}*rfl/ang*_rfl_{version}/ang*_corr_{version}_img"
 TileManager.block_size = block_size
 TileManager.block_index = [1,7]
