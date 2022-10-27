@@ -116,6 +116,7 @@ class LearningModel:
             lgm().log( f" APPLY classification: block={block.block_coords}" )
             input_data: xa.DataArray = self.get_input_data()
             prediction: np.ndarray = self.predict( input_data.values, log=True, **kwargs )
+            lgm().log( f"CNN result: shape={prediction.shape}, nz={np.count_nonzero(prediction)}, nnan={np.count_nonzero(np.isnan(prediction))}" )
             self.classification = xa.DataArray(prediction, dims=['samples', 'classes'], coords=dict(samples=input_data.coords['samples'], classes=range(prediction.shape[1])))
             if self.classification.ndim == 1: self.classification = self.classification.reshape( [self.classification.size, 1] )
             overlay_image: xa.DataArray = block.points2raster(self.classification)
@@ -143,7 +144,6 @@ class KerasLearningModel(LearningModel):
         self.callbacks: List[Callback] = callbacks if callbacks else []
         self.callbacks.append( lgm().get_keras_logger() )
         self.device = "cpu"
-#        self._init_model: Model = model
         self._model: Model = model
         self.compile()
 
@@ -158,11 +158,10 @@ class KerasLearningModel(LearningModel):
 
     def rebuild(self):
         if self.network is not None:
-            self._init_model, largs = self.network.build_model()
+            self._model, largs = self.network.build_model()
         self.compile()
 
     def compile(self):
-#        self._model = copy.deepcopy( self._init_model )
         lgm().log(f"Compiling model with opt={self.opt}, loss={self.loss}")
         self._model.compile(optimizer=self.opt, loss=self.loss, metrics=['accuracy'], **self.config )
 
@@ -203,4 +202,4 @@ class KerasLearningModel(LearningModel):
             return self._model( data, **kwargs )
 
     def clear(self):
-        self.compile()
+        self.rebuild()
