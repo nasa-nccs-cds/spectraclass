@@ -114,7 +114,7 @@ class SpatialModelWrapper(KerasLearningModel):
             block: Block = tm().getBlock()
             classifcation: np.ndarray = self.predict( input_data.values, log=True, **kwargs )
             lgm().log( f" APPLY classification: block={block.block_coords}, result shape = {classifcation.shape}, vrange = [{classifcation.min()}, {classifcation.max()}] " )
-            lgm().log( f" APPLY classification result: shape={classifcation.shape}, nz={np.count_nonzero(classifcation)}, nnan={np.count_nonzero(np.isnan(classifcation))}")
+        #    lgm().log( f" APPLY classification result: shape={classifcation.shape}, nz={np.count_nonzero(classifcation)}, nnan={np.count_nonzero(np.isnan(classifcation))}")
             self.classification = xa.DataArray(  classifcation, dims=[ 'blocks', 'y', 'x' ],
                                             coords=dict( blocks = range(classifcation.shape[0]), y= input_data.coords['y'], x= input_data.coords['x'] ) )
 #            block_index = self.get_training_layer_index( block )
