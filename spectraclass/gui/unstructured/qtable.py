@@ -290,11 +290,12 @@ class TableManager(SCSingletonConfigurable):
     def _createTableTabs(self) -> ipw.Tab:
         wTab = ipw.Tab()
         self._tables.append( self._createTable( 0 ))
-        wTab.set_title( 0, 'Catalog')
         for iC, ctitle in enumerate( LabelsManager.instance().labels[1:], 1 ):
             self._tables.append(  self._createTable( iC ) )
-            wTab.set_title( iC, ctitle )
         wTab.children = self._tables
+        wTab.set_title( 0, 'Catalog')
+        for iC, ctitle in enumerate( LabelsManager.instance().labels[1:], 1 ):
+            wTab.set_title( iC, ctitle )
         return wTab
 
     def refresh(self):

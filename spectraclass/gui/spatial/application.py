@@ -43,9 +43,9 @@ class Spectraclass(SpectraclassController):
         children = [ pcm().gui() ]
         for vname in cviz().names: tabNames.append(vname)
         for viz in cviz().guis: children.append(viz)
+        wTab.children = children
         for iT, title in enumerate(tabNames):
             wTab.set_title(iT, title)
-        wTab.children = children
         return wTab
 
     def mark(self):

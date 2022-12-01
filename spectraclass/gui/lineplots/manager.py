@@ -207,7 +207,8 @@ class GraphPlotManager(SCSingletonConfigurable):
         wTab = ipw.Tab( layout = ip.Layout( width='auto', flex='0 0 500px' ) )
         for iG in range(self._ngraphs):
             self._graphs.append( self.get_graph( iG, **kwargs ) )
-            wTab.set_title(iG, str(iG))
         wTab.children = [ g.gui() for g in self._graphs ]
+        for iG in range(self._ngraphs):
+            wTab.set_title(iG, str(iG))
         return wTab
 

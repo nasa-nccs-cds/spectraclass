@@ -78,9 +78,10 @@ class ParametersManager(SCSingletonConfigurable):
         tabNames = [  "layers", "selection", "learning", "threshold", "persist", "cluster" ]
         children = []
         for iT, title in enumerate( tabNames ):
-            wTab.set_title( iT, title )
             children.append( self.createPanel(title) )
         wTab.children = children
+        for iT, title in enumerate( tabNames ):
+            wTab.set_title( iT, title )
         return wTab
 
     def createPanel(self, title: str ):
