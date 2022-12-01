@@ -150,10 +150,10 @@ class TileServiceImage(AxesImage):
     def hold_limits( self ):
         data_lim = self.axes.dataLim.frozen().get_points()
         view_lim = self.axes.viewLim.frozen().get_points()
-        other = (self.axes.ignore_existing_data_limits, self.axes._autoscaleXon, self.axes._autoscaleYon)
+        other = (self.axes.ignore_existing_data_limits) # , self.axes._autoscaleXon, self.axes._autoscaleYon
         try:
             yield
         finally:
             self.axes.dataLim.set_points(data_lim)
             self.axes.viewLim.set_points(view_lim)
-            (self.axes.ignore_existing_data_limits, self.axes._autoscaleXon, self.axes._autoscaleYon) = other
+            (self.axes.ignore_existing_data_limits ) = other # , self.axes._autoscaleXon, self.axes._autoscaleYon

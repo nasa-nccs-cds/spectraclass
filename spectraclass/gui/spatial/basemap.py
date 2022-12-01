@@ -114,13 +114,13 @@ class TileServiceBasemap(SCSingletonConfigurable):
     def hold_limits(self, hold=True):
         data_lim = self.gax.dataLim.frozen().get_points()
         view_lim = self.gax.viewLim.frozen().get_points()
-        other = (self.gax.ignore_existing_data_limits, self.gax._autoscaleXon, self.gax._autoscaleYon)
+        other = (self.gax.ignore_existing_data_limits) #, self.gax._autoscaleXon, self.gax._autoscaleYon)
         try:
             yield
         finally:
             if hold:
                 self.gax.dataLim.set_points(data_lim)
                 self.gax.viewLim.set_points(view_lim)
-                ( self.gax.ignore_existing_data_limits, self.gax._autoscaleXon, self.gax._autoscaleYon ) = other
+                ( self.gax.ignore_existing_data_limits ) = other # , self.gax._autoscaleXon, self.gax._autoscaleYon
 
 
