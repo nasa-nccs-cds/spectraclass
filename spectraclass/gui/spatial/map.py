@@ -285,6 +285,7 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def plot_labels_image(self, classification: xa.DataArray = None ):
+        lgm().log(f"  plot labels image, shape = {None if classification is None else classification.shape}")
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         if classification is None:
             if self._classification_data is not None:

@@ -525,7 +525,8 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def set_current_image(self, image_index: int ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        lgm().log( f"Setting active_image[{self._active_image}]: {self.image_name}")
+        msg = f"Setting active_image[{self._active_image}]: {self.image_name}"
+        lgm().log( msg ); ufm().show( msg )
         self._active_image = image_index
         tm().tile.initialize()
 
@@ -562,7 +563,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def on_image_change( self, event: Dict ):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.spatial.map import MapManager, mm
-        self._active_image = self.file_selector.index
+        self.set_current_image( self.file_selector.index )
         dm().clear_project_cache()
         mm().update_plots(True)
 
@@ -748,7 +749,8 @@ class ModeDataManager(SCSingletonConfigurable):
                 xdataset = self.loadDataFile(**kwargs)
             block: Block = tm().getBlock()
             if xdataset is None:
-                xdataset = self.process_block( block )
+                has_metadata = (self.metadata is not None)
+                xdataset = self.process_block( block, has_metadata )
             if len(xdataset.variables.keys()) == 0:
                 lgm().log(f"Warning: Attempt to Load empty dataset {self.dataFile( **kwargs )}", print=True)
                 return None
