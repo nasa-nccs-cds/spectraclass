@@ -9,7 +9,7 @@ class CNN(Network):
 
     def _build_model(self, **kwargs) -> Tuple[tf.keras.models.Model,Dict]:
         from spectraclass.learn.models.spatial import SpatialModelWrapper
-        nfeatures = kwargs.pop('nfeatures', 64 )
+        nfeatures = kwargs.pop('nfeatures', 32 )
         from spectraclass.model.labels import lm
         input_shape = SpatialModelWrapper.get_input_shape()
         nclasses = lm().nLabels
@@ -18,7 +18,8 @@ class CNN(Network):
         model.add( tf.keras.layers.Input( shape=input_shape ) )
         model.add( tf.keras.layers.Conv2D( nfeatures, (ks,ks), activation='relu', padding="same" ) )
         model.add( tf.keras.layers.Reshape( SpatialModelWrapper.flatten(input_shape,nfeatures) ) )
-        model.add( tf.keras.layers.Dense( nfeatures, activation='relu' ) )
+        model.add( tf.keras.layers.Dense( 2*nfeatures, activation='relu' ) )
+        model.add(tf.keras.layers.Dense( nfeatures, activation='relu') )
         model.add( tf.keras.layers.Dense( nclasses, activation='softmax' ) )
         return model, kwargs
 

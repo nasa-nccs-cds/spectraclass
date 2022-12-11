@@ -337,7 +337,7 @@ class ClusterManager(SCSingletonConfigurable):
         marker: Marker = self._cluster_markers.get(icluster,None)
         if marker is not None:
             gpm().remove_marker( marker )
-            pcm().deleteMarkers( marker.pids.tolist() )
+            pcm().deleteMarkers(marker.gids.tolist())
             pids = self.get_cluster_pids( icluster )
             marker.set_pids( pids )
             gpm().plot_graph(marker)

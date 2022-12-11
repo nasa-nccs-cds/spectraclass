@@ -67,6 +67,8 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.data.spatial.tile.manager import tm
+        block = tm().getBlock()
         pids = lm().getPids( iclass )
         gpm().plot_graph( Marker( "marker", pids, iclass ) )
         mm().set_region_class( iclass )
@@ -168,17 +170,18 @@ class SpectraclassController(SCSingletonConfigurable):
 
     @log_timing
     def propagate_selection(self, niters=1):
-        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.gui.spatial.map import MapManager, mm
-        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.data.spatial.tile.tile import Block, Tile
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
+        block: Block = tm().getBlock()
         ufm().show("Generalizing markers")
-        lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> SPREAD ")
         flow: ActivationFlow = afm().getActivationFlow()
         lm().log_markers("pre-spread")
         self._flow_class_map: np.ndarray = lm().getLabelsArray().data
         catalog_pids = np.arange(0, self._flow_class_map.shape[0])
+        lgm().log(f"SPREAD: flow_class_map shape={self._flow_class_map.shape}, catalog_pids shape={catalog_pids.shape} ")
         converged = flow.spread( self._flow_class_map, niters )
 
         if converged is not None:
@@ -186,10 +189,11 @@ class SpectraclassController(SCSingletonConfigurable):
             all_classes = ( lm().current_cid == 0 )
             for cid, label in enumerate( lm().labels ):
                 if all_classes or ( lm().current_cid == cid ):
-                    new_indices: np.ndarray = catalog_pids[ self._flow_class_map == cid ]
-                    if new_indices.size > 0:
-                        lgm().log(f" @@@ spread_selection: cid={cid}, label={label}, #new_indices={len(new_indices)}" )
-                        lm().mark_points( new_indices, cid, "labels" )
+                    new_pids: np.ndarray = catalog_pids[ self._flow_class_map == cid ]
+                    if new_pids.size > 0:
+                        lgm().log(f" @@@ spread_selection: cid={cid}, label={label}, #new_indices={len(new_pids)}" )
+                        gids: np.ndarray = block.pids2gids( new_pids )
+                        lm().mark_points( gids, cid, "labels" )
                         lm().addAction( "spread", "application", cid=cid )
             mm().plot_labels_image( lm().get_label_map() )
         lm().log_markers("post-spread")
@@ -228,13 +232,13 @@ class SpectraclassController(SCSingletonConfigurable):
         if marker is not None:
             lm().clearMarker( marker )
             gpm().remove_marker( marker )
-            if self.pcm_active: pcm().deleteMarkers( marker.pids.tolist() )
+            if self.pcm_active: pcm().deleteMarkers(marker.gids.tolist())
 
     def get_marked_pids(self) -> Dict[int,Set[int]]:
         from spectraclass.model.labels import LabelsManager, Action, lm
         marked_pids = {}
         for marker in lm().markers:
-            new_pids = marker.pids[ np.where(marker.pids >= 0) ].tolist()
+            new_pids = marker.gids[ np.where(marker.gids >= 0)].tolist()
             current_pids = marked_pids.get( marker.cid, set() )
             marked_pids[ marker.cid ] = current_pids.union( set(new_pids) )
         return marked_pids

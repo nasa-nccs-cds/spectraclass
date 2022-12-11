@@ -34,11 +34,11 @@ class dsGraphPlot(LinePlot):
     @log_timing
     @exception_handled
     def addMarker( self, m: Marker ):
-        lgm().log(f"mplGraphPlot: Add Marker[{m.size}]: cid={m.cid}, pids[:10]={m.pids[:10]}")
+        lgm().log(f"mplGraphPlot: Add Marker[{m.size}]: cid={m.cid}, pids[:10]={m.gids[:10]}")
         if m.size > 0:
             self.clearTransients()
             self._markers.append( m )
-            for pid in m.pids:
+            for pid in m.gids:
                 self._curves[pid] = hv.Curve( self.ly(pid) )
             self.plot()
 
@@ -46,14 +46,14 @@ class dsGraphPlot(LinePlot):
     def pids(self) -> List[int]:
         rv = []
         for m in self._markers:
-            rv.extend( m.pids )
+            rv.extend(m.gids)
         return rv
 
     @property
     def tpids(self) -> List[int]:
         rv = []
         for m in self._markers:
-            if m.cid == 0: rv.extend( m.pids )
+            if m.cid == 0: rv.extend(m.gids)
         return rv
 
     @log_timing

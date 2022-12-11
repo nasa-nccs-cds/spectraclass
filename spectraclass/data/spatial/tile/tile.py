@@ -342,7 +342,7 @@ class Block(DataContainer):
         self.initialize()
         self.init_task = None
         self._index_array: xa.DataArray = None
-        self._pid_array: np.ndarray = None
+        self._gid_array: np.ndarray = None
         self._flow = None
         self._samples_axis: Optional[xa.DataArray] = None
         self._point_data: Optional[xa.DataArray] = None
@@ -412,10 +412,10 @@ class Block(DataContainer):
         return xa.full_like( self.data[0].squeeze(drop=True), default_value, dtype=np.int )
 
     @property
-    def pid_array(self):
-        if self._pid_array is None:
-            self._pid_array = self.get_pid_array()
-        return self._pid_array
+    def gid_array(self):
+        if self._gid_array is None:
+            self._gid_array = self.get_gid_array()
+        return self._gid_array
 
     def dsid( self ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
@@ -543,10 +543,16 @@ class Block(DataContainer):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         return f"{tm().tileName()}_b-{tm().block_size}-{self.block_coords[0]}-{self.block_coords[1]}"
 
-    def get_pid_array(self) -> np.ndarray:
+    def get_gid_array(self) -> np.ndarray:
         d0: np.ndarray = self.data.values[0].squeeze().flatten()
-        pids = np.arange(d0.size)
-        return pids[ ~np.isnan(d0) ]
+        gids = np.arange(d0.size)
+        return gids[ ~np.isnan(d0) ]
+
+    def pid2gid(self, pid: int ) -> int:
+        return self.gid_array[pid]
+
+    def pids2gids(self, pids: np.ndarray ) -> np.ndarray:
+        return self.gid_array[ pids ]
 
     @property
     def shape(self) -> Tuple[int,...]:
@@ -660,7 +666,9 @@ class Block(DataContainer):
         raster_data = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
         rmask = self.mask if (tmask is None) else tmask
         pmask = self.get_threshold_mask( raster=False, reduced=True )
-        raster_data[ rmask ] = points_data.data[ pmask ]
+        lgm().log(  f"  --> raster_data, shape={raster_data.shape}; rmask, shape={rmask.shape}")
+        lgm().log(  f"  --> points_data, shape={points_data.shape}; pmask, shape={None if pmask is None else pmask.shape}")
+        raster_data[ rmask ] = points_data.data[ pmask ] if pmask is not None else points_data.data
         raster_data = raster_data.transpose().reshape([points_data.shape[1], self.data.shape[1], self.data.shape[2]])
         return xa.DataArray( raster_data, coords, dims, points_data.name, points_data.attrs )
 

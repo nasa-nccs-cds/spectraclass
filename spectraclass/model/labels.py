@@ -178,7 +178,7 @@ class LabelsManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import tm
         self.clearTransientMarkers(marker)
         self._markers.append( marker )
-        lgm().log(f"LabelsManager[{tm().image_index}:{tm().block_index}].addMarker: cid={marker.cid}, #pids={len(marker.pids)}, active = {marker.active()}, block={marker.block_index}, image={marker.image_index}" )
+        lgm().log(f"LabelsManager[{tm().image_index}:{tm().block_index}].addMarker: cid={marker.cid}, #pids={len(marker.gids)}, active = {marker.active()}, block={marker.block_index}, image={marker.image_index}")
 
     def popMarker(self, mtype: str = None ) -> Optional[Marker]:
         for iM in range( len(self._markers)-1, -1, -1 ):
@@ -244,13 +244,13 @@ class LabelsManager(SCSingletonConfigurable):
     def getMarker( self, pid: int ) -> Optional[Marker]:
         lgm().log( f" ^^^^^^^^^ getMarker[{pid}] -> markers = {self.markers}")
         for marker in self.markers:
-            if pid in marker.pids: return marker
+            if pid in marker.gids: return marker
         return None
 
     def log_markers(self, msg: str ):
         log_strs = []
         for m in self.markers:
-            log_strs.append( f"[{m.cid}:{m.pids[0]}]" if m.size == 1 else  f"M{m.cid}-{m.size}" )
+            log_strs.append( f"[{m.cid}:{m.gids[0]}]" if m.size == 1 else f"M{m.cid}-{m.size}")
         lgm().log( f"  ----------------------------> log_markers[{msg}]: {' '.join(log_strs)}")
 
     def updateLabels(self):
@@ -259,14 +259,14 @@ class LabelsManager(SCSingletonConfigurable):
         lgm().log( f" NMarkers = {len(mks)}")
         self._labels_data[:] = 0
         for marker in mks:
-            lgm().log(f" MARKER[{marker.cid}]: #pids = {len(marker.pids)}")
-            self._labels_data.loc[ dict( samples=marker.pids ) ] = marker.cid
+            lgm().log(f" MARKER[{marker.cid}]: #pids = {len(marker.gids)}")
+            self._labels_data.loc[ dict(samples=marker.gids)] = marker.cid
 
     def getTrainingLabels(self) -> Dict[ Tuple, np.ndarray ]:
         label_data = {}
         for marker in self._markers:
             key = ( marker.image_index, marker.block_coords, marker.cid )
-            label_data[key] = marker.pids if (key not in label_data) else np.append( label_data[key], marker.pids, axis=0 )
+            label_data[key] = marker.gids if (key not in label_data) else np.append(label_data[key], marker.gids, axis=0)
         return label_data
 
     def getTrainingBlocks(self) -> List[Block]:
@@ -291,6 +291,7 @@ class LabelsManager(SCSingletonConfigurable):
     @exception_handled
     def loadLabelData( self, labels_dset: Union[str,bool] ):
         from spectraclass.data.base import DataManager, dm
+        from spectraclass.data.spatial.tile.manager import tm
         if isinstance(labels_dset, str): dm().labels_dset = labels_dset
         lgm().log( f'Loading labels file: {dm().labels_file}', print=True )
         labels_dset: xa.Dataset = xa.open_dataset( dm().labels_file )
@@ -302,7 +303,9 @@ class LabelsManager(SCSingletonConfigurable):
                 label_mask = (labels_var == cid).values.flatten()
                 if np.count_nonzero( label_mask ) > 0:
                     pids = point_index[ label_mask ]
-                    marker = Marker( 'marker', pids, cid, block_index=(int(bidx0),int(bidx1)), image_index=int(image_idx) )
+                    bindex = (int(bidx0),int(bidx1))
+                    block = tm().getBlock(bindex=bindex)
+                    marker = Marker( 'marker', pids, cid, block_index=bindex, image_index=int(image_idx) )
                     self.addMarker( marker )
 
     def saveLabelData( self, lid: str = None, **kwargs ) -> xa.Dataset:
@@ -328,6 +331,8 @@ class LabelsManager(SCSingletonConfigurable):
     @exception_handled
     def graphLabelData(self):
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm, LinePlot
+        from spectraclass.data.spatial.tile.manager import tm
+        block = tm().getBlock()
         graph: LinePlot = gpm().current_graph()
         class_data: Optional[xa.DataArray] = self.getClassification()
         if class_data is not None:
@@ -388,18 +393,18 @@ class LabelsManager(SCSingletonConfigurable):
         marker = self.markers[ -1 ] if len( self.markers ) else None
         return marker
 
-    def getPids( self, cid = -1 ) -> List[int]:
-        pids = []
+    def getGids( self, cid = -1 ) -> List[int]:
+        gids = []
         icid =  self.current_cid if cid < 0 else cid
         for m in self.markers:
-            if (icid == m.cid): pids.extend( m.pids )
-        return pids
+            if (icid == m.cid): gids.extend(m.gids)
+        return gids
 
-    def getMarkedPids( self ) -> List[int]:
-        pids = []
+    def getMarkedGids( self ) -> List[int]:
+        gids = []
         for m in self.markers:
-            if (m.cid > 0): pids.extend( m.pids )
-        return pids
+            if (m.cid > 0): gids.extend(m.gids)
+        return gids
 
     def getLabelMap( self, update_directory_table = False ) -> Dict[int,Set[int]]:
         from spectraclass.gui.unstructured.table import tbm
@@ -407,21 +412,21 @@ class LabelsManager(SCSingletonConfigurable):
         if update_directory_table: tbm().clear_table(0)
         for m in self.markers:
             pids = label_map.get( m.cid, set() )
-            label_map[m.cid] = pids.union( set(m.pids) )
+            label_map[m.cid] = pids.union(set(m.gids))
             for cid, lmap in label_map.items():
                 if (cid > 0) and (cid != m.cid):
-                    common_items = lmap.intersection(m.pids)
+                    common_items = lmap.intersection(m.gids)
                     if len( common_items ):
                         label_map[cid] = lmap.difference(common_items)
             if update_directory_table:
-                tbm().edit_table( 0, m.pids, "cid", m.cid )
+                tbm().edit_table(0, m.gids, "cid", m.cid)
         return label_map
 
     def get_label_data( self ) -> Dict[int,Set[int]]:
         label_map = {}
         for m in self.markers:
             pids = label_map.get( m.cid, set() )
-            label_map[m.cid] = pids.union( set(m.pids) )
+            label_map[m.cid] = pids.union(set(m.gids))
         return label_map
 
     def get_cids( self ) -> Set[int]:
@@ -440,18 +445,22 @@ class LabelsManager(SCSingletonConfigurable):
             if marker.relevant(mtype,block=block):
                 if marker.mask is not None:
                     fmask = marker.mask.flatten()
-                    lgm().log(f" Setting {np.count_nonzero(fmask)} labels for cid = {marker.cid}, block={block.index}")
+                    lgm().log(f" Setting {np.count_nonzero(fmask)} labels for cid = {marker.cid}, block={block.index}, WITH  MASK")
                     np.ravel(cmap)[ fmask ] = marker.cid
                 else:
-                    lgm().log( f" Setting {len(marker.pids)} labels for cid = {marker.cid}, block={block.index}" )
-                    for pid in marker.pids:
+                    lgm().log( f" Setting {len(marker.gids)} labels for cid = {marker.cid}, block={block.index}, NO MASK, projected= {projected}")
+                    for gid in marker.gids:
                         if projected:
-                            idx = block.gid2indices(pid)
+                            idx = block.gid2indices( gid )
                             cmap[ idx['iy'], idx['ix'] ] = marker.cid
                         else:
                             pass
         lgm().log(f" get_label_map, #labeled points = {np.count_nonzero(cmap)}")
         return xcmap.copy(data=cmap)
+
+ #   from spectraclass.data.spatial.tile.manager import tm
+ #   block = tm().getBlock()
+ #   block.getSelectedPoint(self, cy: float, cx: float )
 
     @log_timing
     def update_label_map( self, mask: xa.DataArray, cid: int,  **kwargs ) -> xa.DataArray:
@@ -461,9 +470,9 @@ class LabelsManager(SCSingletonConfigurable):
         lgm().log( f" **UPDATE LABEL MAP: {len(self.markers)} markers")
         for marker in self.markers:
             if marker.type not in ["cluster"]:
-                lgm().log( f"update_label_map->MARKER[{marker.type}]: Setting {len(marker.pids)} labels for cid = {marker.cid}" )
+                lgm().log( f"update_label_map->MARKER[{marker.type}]: Setting {len(marker.gids)} labels for cid = {marker.cid}")
          # -->       points2raster
-                for pid in marker.pids:
+                for pid in marker.gids:
                     idx = block.gid2indices(pid)
                     cmap[ idx['iy'], idx['ix'] ] = marker.cid
         cmap[ mask ] = cid
@@ -518,37 +527,37 @@ class LabelsManager(SCSingletonConfigurable):
             from spectraclass.data.base import DataManager
             model_data: xa.DataArray = DataManager.instance().getModelData()
             seed_points = xa.full_like( model_data[:, 0], 0, np.dtype(np.int32) )
-            seed_points[ self.currentMarker.pids ] = 1
+            seed_points[ self.currentMarker.gids] = 1
             return seed_points
 
     @exception_handled
-    def mark_points( self, point_ids: np.ndarray, cid: int, type: str = "markers" ) -> Optional[Marker]:
+    def mark_points( self, gids: np.ndarray, cid: int, type: str = "markers" ) -> Optional[Marker]:
         from spectraclass.gui.control import UserFeedbackManager, ufm
         from spectraclass.gui.spatial.widgets.markers import Marker
         icid: int = cid if cid > -1 else self.current_cid
-        if point_ids is None:
+        if gids is None:
             if self.currentMarker is None:
                 lgm().log( f" LM: mark_points -> NO POINTS SELECTED")
                 ufm().show("Must select point(s) to mark.", "red")
                 return None
             self.currentMarker.cid = icid
-            point_ids = self.currentMarker.pids
+            gids = self.currentMarker.gids
 
-        lgm().log( f" LM: mark_points -> npts = {point_ids.size}, id range = {[point_ids.min(), point_ids.max()]}")
-        new_pids: np.ndarray = self.getNewPids( point_ids, icid )
-        marker = Marker( type, new_pids, cid )
+        lgm().log( f" LM: mark_points -> npts = {gids.size}, id range = {[gids.min(), gids.max()]}")
+        new_gids: np.ndarray = self.getNewGids(gids, icid)
+        marker = Marker( type, new_gids, cid )
         self.addMarker( marker )
         return marker
 
-    def getNewPids(self, point_ids: np.ndarray, cid: int ) -> np.ndarray:
-        current_pids: np.ndarray = np.array( self.getPids( cid ) )
-        if len(current_pids) == 0:
-            return point_ids
-        elif point_ids.size == 1:
-            new_pids = [] if point_ids[0] in current_pids else point_ids
+    def getNewGids(self, gids: np.ndarray, cid: int) -> np.ndarray:
+        current_gids: np.ndarray = np.array( self.getGids( cid ) )
+        if len(current_gids) == 0:
+            return gids
+        elif gids.size == 1:
+            new_pids = [] if gids[0] in current_gids else gids
             return np.array( new_pids )
         else:
-            shared_values_mask = np.isin( point_ids, current_pids, assume_unique=True )
-            return point_ids[ np.invert( shared_values_mask ) ]
+            shared_values_mask = np.isin(gids, current_gids, assume_unique=True)
+            return gids[ np.invert(shared_values_mask)]
 
 

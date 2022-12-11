@@ -24,14 +24,14 @@ class LineRec:
 
     @property
     def mpids(self) -> List[int]:
-        return [self.pid] if self._marker is None else self._marker.pids.tolist()
+        return [self.pid] if self._marker is None else self._marker.gids.tolist()
 
     @property
     def marker(self) -> Marker:
         return self._marker
 
     def validate(self, m: Marker) -> bool:
-        return (self._marker != m) or (self.pid in m.pids)
+        return (self._marker != m) or (self.pid in m.gids)
 
     def clear(self):
         if self.line is not None:
@@ -123,17 +123,17 @@ class mplGraphPlot(LinePlot):
     @log_timing
     @exception_handled
     def addMarker( self, m: Marker ):
-        lgm().log(f"mplGraphPlot: Add Marker[{m.size}]: cid={m.cid}, pids[:10]={m.pids[:10]}")
+        lgm().log(f"mplGraphPlot: Add Marker[{m.size}]: cid={m.cid}, pids[:10]={m.gids[:10]}")
         if m.size > 0:
             self.clearTransients()
-            if len(m.pids) == 1:    self.highlight_line(m)
+            if len(m.gids) == 1:    self.highlight_line(m)
             else:                   self.plot_lines( m )
 
     @log_timing
     def highlight_line(self, m: Marker):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.control import UserFeedbackManager, ufm
-        cid, pid = m.cid, m.pids[0]
+        cid, pid = m.cid, m.gids[0]
         self.selected_pid = pid
         alpha, lw = 1.0, 3.0
         color = lm().graph_colors[cid]
@@ -157,8 +157,8 @@ class mplGraphPlot(LinePlot):
         from spectraclass.gui.control import UserFeedbackManager, ufm
         cid: int = m.cid
         color = lm().graph_colors[cid]
-        skip_index = max( m.pids.size//self._max_graph_group_size, 1 )
-        pids = m.pids[::skip_index] if len(m.pids)>skip_index else m.pids
+        skip_index = max(m.gids.size // self._max_graph_group_size, 1)
+        pids = m.gids[::skip_index] if len(m.gids) > skip_index else m.gids
         x,y = self.lx(pids), self.ly(pids)
         if y is not None:
             lines = self.ax.plot(x, y, picker=True, pickradius=2, color=color, alpha=0.2, linewidth=1.0)

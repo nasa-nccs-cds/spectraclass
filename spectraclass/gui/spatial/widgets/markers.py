@@ -43,7 +43,7 @@ class Marker:
         return self.active(**kwargs) and ((mtype is None) or (self.type == mtype))
 
     @property
-    def pids(self) -> np.ndarray:
+    def gids(self) -> np.ndarray:
         return self._pids
 
     def set_pids(self, pids: np.ndarray):
@@ -68,7 +68,7 @@ class Marker:
         return self.props.get(key,None)
 
     def __eq__(self, m ):
-        rv = isinstance( m, Marker ) and ( m.cid == self.cid ) and ( m.pids == self.pids )
+        rv = isinstance( m, Marker ) and ( m.cid == self.cid ) and (m.gids == self.gids)
         return rv.all() if isinstance( rv, np.ndarray ) else rv
 
     def __ne__(self, m ):
@@ -158,17 +158,17 @@ class MarkerManager( PointsInteractor ):
         lgm().log(f" *** get_points(probe={probes}): #markers = {len(self._markers)}" )
         for marker in self._markers.values():
             valid =  (marker.cid == 0) if probes else (marker.cid > 0)
-            lgm().log(f" *** >>> Marker[{marker.cid}] valid={valid} pids={marker.pids} point={marker['point']}")
+            lgm().log(f" *** >>> Marker[{marker.cid}] valid={valid} pids={marker.gids} point={marker['point']}")
             if (marker.type == "marker") and valid:
                 point = marker['point']
                 if point is not None:
-                    lgm().log(f" *** >>> point = {marker.pids}")
+                    lgm().log(f" *** >>> point = {marker.gids}")
                     ycoords.append(point[1])
                     xcoords.append(point[0])
                     colors.append(lm().colors[marker.cid])
                 else:
-                    lgm().log( f" *** >>> markers = {marker.pids}")
-                    for pid in marker.pids:
+                    lgm().log( f" *** >>> markers = {marker.gids}")
+                    for pid in marker.gids:
                         coords = self.block.gid2coords(pid)
                         if (coords is not None) and self.block.inBounds( coords['y'], coords['x'] ):   #  and not ( labeled and (c==0) ):
                             ycoords.append( coords['y'] )
@@ -187,14 +187,14 @@ class MarkerManager( PointsInteractor ):
         for mid in list(self._markers.keys()):
             if self._markers[mid].cid == 0:
                 self._markers.pop( mid )
-        self._markers[marker.pids[0]] = marker
+        self._markers[marker.gids[0]] = marker
 
     @exception_handled
     def add( self, marker: Marker ):
         from spectraclass.application.controller import app
         if not self._adding_marker:
             self._adding_marker = True
-            if (marker is None) or (len(marker.pids) == 0):
+            if (marker is None) or (len(marker.gids) == 0):
                 lgm().log("NULL Marker: point select is probably out of bounds.")
             else:
                 app().add_marker("map", marker)
@@ -219,7 +219,9 @@ class MarkerManager( PointsInteractor ):
     def mark_point(self, gid, **kwargs ) -> Optional[Tuple[float,float]]:
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.data.spatial.tile.manager import tm
         if gid >= 0:
+            block = tm().getBlock()
             cid = kwargs.get( 'cid', lm().current_cid )
             point = kwargs.get('point', mm().get_point_coords( gid ) )
             lgm().log( f"mark_point[{cid}], gid={gid}, point={point}")

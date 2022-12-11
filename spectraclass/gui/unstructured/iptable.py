@@ -366,7 +366,7 @@ class TableManager(SCSingletonConfigurable):
         from spectraclass.application.controller import app
         from spectraclass.gui.spatial.widgets.markers import Marker
         marker = Marker("marker", [pid], cid, point=point)
-        if (marker is None) or (len(marker.pids) == 0):
+        if (marker is None) or (len(marker.gids) == 0):
             lgm().log("NULL Marker: point select is probably out of bounds.")
         else:
             self.selection[pid] = True
@@ -399,7 +399,7 @@ class TableManager(SCSingletonConfigurable):
         new_pids = set( pids.tolist() )
         for (cid,table) in enumerate(self._tables):
             if cid > 0:
-                current_pids: Set[int] = set( table.pids().tolist() )
+                current_pids: Set[int] = set(table.gids().tolist())
                 if cid == lm().current_cid:
                     updated_pids = current_pids.union(new_pids)
                 else:

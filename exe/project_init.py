@@ -11,7 +11,7 @@ else:
     project: str = sys.argv[2]    #   e.g. 'demo1', 'demo2', 'demo3', or 'demo4'
     dm: DataManager = DataManager.initialize(project, mode)
 
-    block_size = 150
+    block_size = 200
     method = "aec" # "aec" "vae"
     model_dims = 32
     version = "v2p9"

@@ -84,6 +84,8 @@ class PointCloudManager(SCSingletonConfigurable):
         return marked_pid
 
     def update_marked_points( self, page_selection: np.ndarray, index: np.ndarray, cid: int ):
+        from spectraclass.data.spatial.tile.manager import tm
+        block = tm().getBlock()
         add_pids, remove_ids = [], []
         for id in range( index.shape[0] ):
             if page_selection[id]:
@@ -99,8 +101,8 @@ class PointCloudManager(SCSingletonConfigurable):
     @log_timing
     def addMarker(self, marker: Marker ):
         self.clear_transients()
-        lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}, #pids={marker.pids.size}")
-        for pid in marker.pids:
+        lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}, #pids={marker.gids.size}")
+        for pid in marker.gids:
             self.mark_point( pid, marker.cid )
         self.update_marker_plot()
 
