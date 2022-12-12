@@ -215,16 +215,18 @@ class PointCloudManager(SCSingletonConfigurable):
     @exception_handled
     def getMarkerGeometry( self, **kwargs ) -> p3js.BufferGeometry:
         probes = kwargs.get('probes',False)
-        cids = list(self.probe_gids.values() if probes else self.marker_gids.values())
-        colors = lm().get_rgb_colors( cids, probes )
         gids = np.array(list(self.probe_gids.keys() if probes else self.marker_gids.keys()))
         if gids.size == 0:
             positions = np.empty( shape=[0,3], dtype=np.int )
+            colors = np.empty( shape=[0,3], dtype=np.uint8 )
         else:
             srange, ssize = [self.xyz.samples.values.min(),self.xyz.samples.values.max()], self.xyz.samples.values.size
             xrange = [ self.xyz.values.min(), self.xyz.values.max() ]
             lgm().log(f"*** getMarkerGeometry->gids: size = {gids.size}, gid range = {[gids.min(),gids.max()]}; samples: size = {ssize}, range={srange}; data range = {xrange}")
             mask = np.isin( self.xyz.samples.values, gids, assume_unique=True )
+            sgids = self.xyz.samples.values[mask]
+            cids = self.probe_gids if probes else self.marker_gids
+            colors = lm().get_rgb_colors( [cids[gid] for gid in sgids], probes)
             positions = self.xyz.values[mask]
         attrs = dict( position=p3js.BufferAttribute( positions, normalized=False ), color=p3js.BufferAttribute( colors ) )
         return p3js.BufferGeometry( attributes=attrs )
