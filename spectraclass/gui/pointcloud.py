@@ -33,9 +33,9 @@ class PointCloudManager(SCSingletonConfigurable):
         self._xyz: xa.DataArray = None
         self.points: p3js.Points = None
         self.marker_points: Optional[p3js.Points] = None
-        self.marker_pids = {}
+        self.marker_gids = {}
         self.probe_points: Optional[p3js.Points] = None
-        self.probe_pids = {}
+        self.probe_gids = {}
         self.scene: p3js.Scene = None
         self.renderer: p3js.Renderer = None
         self.raycaster = p3js.Raycaster()
@@ -68,30 +68,28 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @exception_handled
     def clear_transients(self):
-        self.probe_pids = {}
+        self.probe_gids = {}
 
     @exception_handled
-    def mark_point( self, pid: int, cid: int ):
-        if cid == 0:    self.probe_pids[pid] = cid
-        else:           self.marker_pids[pid] = cid
-        return pid
+    def mark_point( self, gid: int, cid: int ):
+        if cid == 0:    self.probe_gids[gid] = cid
+        else:           self.marker_gids[gid] = cid
+        return gid
 
     @exception_handled
-    def unmark_point( self, pid: int ) -> int:
-        marked_pid = self.marker_pids.pop(pid, -1)
+    def unmark_point( self, gid: int ) -> int:
+        marked_pid = self.marker_gids.pop(gid, -1)
         if marked_pid == -1:
-            marked_pid = self.probe_pids.pop(pid, -1)
+            marked_pid = self.probe_gids.pop(gid, -1)
         return marked_pid
 
-    def update_marked_points( self, page_selection: np.ndarray, index: np.ndarray, cid: int ):
-        from spectraclass.data.spatial.tile.manager import tm
-        block = tm().getBlock()
+    def update_marked_points( self, page_selection: np.ndarray, gids: np.ndarray, cid: int ):
         add_pids, remove_ids = [], []
-        for id in range( index.shape[0] ):
+        for id in range( gids.shape[0] ):
             if page_selection[id]:
-                add_pids.append(   self.mark_point( index[id], cid ) )
+                add_pids.append(   self.mark_point( gids[id], cid ) )
             else:
-                rpid = self.unmark_point( index[id] )
+                rpid = self.unmark_point( gids[id] )
                 if rpid >= 0: remove_ids.append( rpid )
         if len( add_pids ):
             lm().addMarker( Marker( "marker", add_pids, cid ) )
@@ -102,14 +100,14 @@ class PointCloudManager(SCSingletonConfigurable):
     def addMarker(self, marker: Marker ):
         self.clear_transients()
         lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}, #pids={marker.gids.size}")
-        for pid in marker.gids:
-            self.mark_point( pid, marker.cid )
+        for gid in marker.gids:
+            self.mark_point( gid, marker.cid )
         self.update_marker_plot()
 
-    def deleteMarkers( self, pids: List[int], **kwargs ):
+    def deleteMarkers( self, gids: List[int], **kwargs ):
         plot = kwargs.get('plot',False)
-        rcnts = [ min( self.marker_pids.pop( pid, 0 ), 1 ) for pid in pids]
-        lgm().log(  f" *** PointCloudManager-> REMOVE MARKER, #pids={sum(rcnts)}")
+        for gid in gids:
+            self.marker_gids.pop(gid, 0)
         if plot: self.update_marker_plot()
 
     def update_marker_plot(self):
@@ -217,16 +215,16 @@ class PointCloudManager(SCSingletonConfigurable):
     @exception_handled
     def getMarkerGeometry( self, **kwargs ) -> p3js.BufferGeometry:
         probes = kwargs.get('probes',False)
-        pids = list( self.probe_pids.values() if probes else self.marker_pids.values() )
-        colors = lm().get_rgb_colors( pids, probes )
-        idxs = np.array( list( self.probe_pids.keys() if probes else self.marker_pids.keys() ) )
-        if idxs.size == 0:
+        cids = list(self.probe_gids.values() if probes else self.marker_gids.values())
+        colors = lm().get_rgb_colors( cids, probes )
+        gids = np.array(list(self.probe_gids.keys() if probes else self.marker_gids.keys()))
+        if gids.size == 0:
             positions = np.empty( shape=[0,3], dtype=np.int )
         else:
             srange, ssize = [self.xyz.samples.values.min(),self.xyz.samples.values.max()], self.xyz.samples.values.size
             xrange = [ self.xyz.values.min(), self.xyz.values.max() ]
-            lgm().log(f"*** getMarkerGeometry->idxs: size = {idxs.size}, range = {[idxs.min(),idxs.max()]}; samples: size = {ssize}, range={srange}; data range = {xrange}")
-            mask = np.isin( self.xyz.samples.values, idxs, assume_unique=True )
+            lgm().log(f"*** getMarkerGeometry->gids: size = {gids.size}, gid range = {[gids.min(),gids.max()]}; samples: size = {ssize}, range={srange}; data range = {xrange}")
+            mask = np.isin( self.xyz.samples.values, gids, assume_unique=True )
             positions = self.xyz.values[mask]
         attrs = dict( position=p3js.BufferAttribute( positions, normalized=False ), color=p3js.BufferAttribute( colors ) )
         return p3js.BufferGeometry( attributes=attrs )
@@ -290,7 +288,7 @@ class PointCloudManager(SCSingletonConfigurable):
     def get_index_from_point(self, point: List[float] ) -> int:
         spt = sum(point)
         loc_array: np.ndarray = np.abs( self.point_locator - spt )
-        indx = np.argmin( loc_array )
+        indx = np.argmin( loc_array )[0]
         lgm().log( f"get_index_from_point[{indx}]: Loc array range=[{loc_array.min()},{loc_array.max()}], spt={loc_array[indx]}, pos={self.xyz[indx]}")
         return indx
 

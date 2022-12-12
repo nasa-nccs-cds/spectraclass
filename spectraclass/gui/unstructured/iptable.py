@@ -421,10 +421,10 @@ class TableManager(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
         cid = lm().current_cid
-        pids = self.index[selection]
-        gpm().plot_graph( Marker( "marker", pids,  cid ) )
+        gids = self.index[selection]
+        gpm().plot_graph( Marker( "marker", gids,  cid ) )
         pcm().update_marked_points( selection, self.index, cid )
-        self.set_cid( pids, cid )
+        self.set_cid( gids, cid )
         self.table.refresh()
 
     @property

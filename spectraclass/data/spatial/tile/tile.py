@@ -608,6 +608,10 @@ class Block(DataContainer):
         yIndices, xIndices = self.multi_coords2indices(cy, cx)
         return  self.data.values[ :, yIndices, xIndices ].transpose()
 
+    def gid2pid(self, gid: int ) -> int:
+        pids: np.ndarray = np.asarray(self.gid_array == gid).nonzero()[0]
+        return -1 if pids.size == 0 else pids[0]
+
     def getSelectedPointIndices( self, cy: List[float], cx: List[float] ) -> np.ndarray:
         yIndices, xIndices = self.multi_coords2indices(cy, cx)
         return  yIndices * self.shape[1] + xIndices
