@@ -57,9 +57,9 @@ class Spectraclass(SpectraclassController):
         super(Spectraclass, self).propagate_selection()
         lgm().log(f"      *UNSTRUCTURED CONTROLLER -> SPREAD ")
 
-    def add_marker(self, source: str, marker: Marker):
+    def add_marker(self, marker: Marker):
         from spectraclass.gui.unstructured.table import tbm
-        super(Spectraclass, self).add_marker( source, marker )
+        super(Spectraclass, self).add_marker( marker )
         lgm().log(f"      *UNSTRUCTURED CONTROLLER -> ADD_MARKER ")
 
 

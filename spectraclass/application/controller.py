@@ -214,7 +214,7 @@ class SpectraclassController(SCSingletonConfigurable):
             ufm().show("Done Coloring by Distance")
 
     @exception_handled
-    def add_marker(self, source: str, marker: Marker):
+    def add_marker(self, marker: Marker):
         from spectraclass.model.labels import LabelsManager, Action, lm
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm

@@ -339,7 +339,7 @@ class ClusterManager(SCSingletonConfigurable):
             gpm().remove_marker( marker )
             pcm().deleteMarkers(marker.gids.tolist())
             pids = self.get_cluster_pids( icluster )
-            marker.set_pids( pids )
+            marker.set_gids(pids)
             gpm().plot_graph(marker)
             pcm().addMarker( marker )
             lgm().log( f"#IA: update_cluster, npids={len(pids)}, cluster points shape = {self._cluster_points.shape}")
@@ -383,7 +383,7 @@ class ClusterSelector:
                 lgm().log(f"#IA: mark_cluster: [{ix},{iy}]->{gid}, cid={cid}, cluster = {icluster}")
                 if icluster >= 0:
                     marker: Marker = clm().mark_cluster(gid, cid, icluster)
-                    app().add_marker( "cluster", marker )
+                    app().add_marker( marker )
                     mm().plot_cluster_image( clm().get_cluster_map() )
 #                    labels_image: xa.DataArray = lm().get_label_map()
 #                    mm().plot_markers_image()

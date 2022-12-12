@@ -73,9 +73,9 @@ class Spectraclass(SpectraclassController):
         if super(Spectraclass, self).propagate_selection()  is not None:
             mm().plot_markers_image()
 
-    def add_marker(self, source: str, marker: Marker):
+    def add_marker(self, marker: Marker):
         from spectraclass.gui.spatial.map import MapManager, mm
-        super(Spectraclass, self).add_marker( source, marker )
+        super(Spectraclass, self).add_marker( marker )
         lgm().log("spatial controller: add_marker")
         mm().plot_markers_image()
 

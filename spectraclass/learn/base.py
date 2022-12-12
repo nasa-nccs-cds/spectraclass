@@ -83,7 +83,6 @@ class LearningModel:
         if np.count_nonzero( training_labels > 0 ) == 0:
             ufm().show( "Must label some points before learning the classification" )
             return None
-        lgm().log(f"Learning mapping with shapes: spectral_data{training_data.shape}, class_data{training_labels.shape}, sample_weight{sample_weight.shape}")
         with tf.device(f'/{self.device}:0'):
             self.fit( training_data, training_labels, sample_weight=sample_weight, **kwargs )
         lgm().log(f"Completed learning in {time.time() - t1} sec.")
@@ -115,8 +114,7 @@ class LearningModel:
             block = tm().getBlock()
             lgm().log( f" APPLY classification: block={block.block_coords}" )
             input_data: xa.DataArray = self.get_input_data()
-            prediction: np.ndarray = self.predict( input_data.values, log=True, **kwargs )
-            lgm().log( f"CNN result: shape={prediction.shape}, nz={np.count_nonzero(prediction)}, nnan={np.count_nonzero(np.isnan(prediction))}" )
+            prediction: np.ndarray = self.predict( input_data.values, **kwargs )
             self.classification = xa.DataArray(prediction, dims=['samples', 'classes'], coords=dict(samples=input_data.coords['samples'], classes=range(prediction.shape[1])))
             if self.classification.ndim == 1: self.classification = self.classification.reshape( [self.classification.size, 1] )
             overlay_image: xa.DataArray = block.points2raster(self.classification)

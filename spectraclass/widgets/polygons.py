@@ -110,7 +110,7 @@ class PolygonInteractor:
             self.prec.remove()
         else:
             self.markers[self.prec] = marker
-            app().add_marker( "map", marker )
+            app().add_marker( marker )
         self.draw()
         self.prec = None
 

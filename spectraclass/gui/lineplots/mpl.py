@@ -22,6 +22,12 @@ class LineRec:
         self.cid: int = cid
         self._marker = marker
 
+    def set_width(self, lw: float ):
+        self.line.set_linewidth(lw)
+
+    def set_alpha(self, a: float ):
+        self.line.set_alpha(a)
+
     @property
     def mpids(self) -> List[int]:
         return [self.pid] if self._marker is None else self._marker.gids.tolist()
@@ -139,6 +145,9 @@ class mplGraphPlot(LinePlot):
         color = lm().graph_colors[cid]
         x,y = self.lx(pid), self.ly(pid)
         if y is not None:
+            for lrec in self.lrecs.values():
+                lrec.set_width(1.0)
+                lrec.set_alpha(0.5)
             lines = self.ax.plot( x, y, picker=True, pickradius=2, color=color, alpha=alpha, linewidth=lw )
             self.lrecs[pid] = LineRec(lines[0], pid, cid, m)
             self.marked_lrecs[m.oid] = [pid]

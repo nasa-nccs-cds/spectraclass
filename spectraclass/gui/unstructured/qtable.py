@@ -209,7 +209,7 @@ class TableManager(SCSingletonConfigurable):
         item_str = "" if len(pids) > 8 else f",  pids={pids}"
         lgm().log( f" **TABLE-> gui.selection_changed, nitems={len(pids)}{item_str}" )
         cid = lm().current_cid if self.mark_on_selection else 0
-        app().add_marker( "table", Marker( pids, cid ) )
+        app().add_marker( Marker( pids, cid ) )
 
     def _createTable( self, tab_index: int ) -> qgrid.QgridWidget:
         assert self._dataFrame is not None, " TableManager has not been initialized "

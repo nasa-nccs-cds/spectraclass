@@ -101,9 +101,6 @@ class LabelsManager(SCSingletonConfigurable):
     def clear_classification( self ):
         self._classification = None
 
-    def clear_pids(self, cid: int, pids: np.ndarray, **kwargs):
-        pass
-
     @property
     def current_class(self) -> str:
         return self._labels[ self._selected_class ]
@@ -177,6 +174,8 @@ class LabelsManager(SCSingletonConfigurable):
     def addMarker(self, marker: Marker ):
         from spectraclass.data.spatial.tile.manager import tm
         self.clearTransientMarkers(marker)
+        for m in self._markers:
+            m.clear_gids(marker.gids)
         self._markers.append( marker )
         lgm().log(f"LabelsManager[{tm().image_index}:{tm().block_index}].addMarker: cid={marker.cid}, #pids={len(marker.gids)}, active = {marker.active()}, block={marker.block_index}, image={marker.image_index}")
 
@@ -369,7 +368,7 @@ class LabelsManager(SCSingletonConfigurable):
         if pid >= 0 :
             empty_markers = []
             for marker in self.markers:
-                marker.deletePid(pid)
+                marker.clear_gid(pid)
                 if marker.empty: empty_markers.append( marker )
             for m in empty_markers:
                 lgm().log( f"LM: Removing marker: {m}")
@@ -533,6 +532,7 @@ class LabelsManager(SCSingletonConfigurable):
     @exception_handled
     def mark_points( self, gids: np.ndarray, cid: int, type: str = "markers" ) -> Optional[Marker]:
         from spectraclass.gui.control import UserFeedbackManager, ufm
+        from spectraclass.application.controller import app
         from spectraclass.gui.spatial.widgets.markers import Marker
         icid: int = cid if cid > -1 else self.current_cid
         if gids is None:
@@ -544,9 +544,8 @@ class LabelsManager(SCSingletonConfigurable):
             gids = self.currentMarker.gids
 
         lgm().log( f" LM: mark_points -> npts = {gids.size}, id range = {[gids.min(), gids.max()]}")
-        new_gids: np.ndarray = self.getNewGids(gids, icid)
-        marker = Marker( type, new_gids, cid )
-        self.addMarker( marker )
+        marker = Marker( type, gids, icid )
+        app().add_marker( marker )
         return marker
 
     def getNewGids(self, gids: np.ndarray, cid: int) -> np.ndarray:

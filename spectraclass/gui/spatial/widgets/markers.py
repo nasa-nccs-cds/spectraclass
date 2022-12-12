@@ -11,14 +11,14 @@ def pid( instance ): return hex(id(instance))[-4:]
 
 class Marker:
 
-    def __init__(self, type: str, pids: Union[np.ndarray,Iterable], cid: int, **kwargs ):
+    def __init__(self, type: str, gids: Union[np.ndarray,Iterable], cid: int, **kwargs ):
         from spectraclass.data.spatial.tile.manager import tm
         self.cid = cid
         self.type = type
         self.props = kwargs
         self.block_index = kwargs.get( 'block_index', tm().block_index )
         self.image_index = kwargs.get( 'image_index', tm().image_index )
-        self._pids: np.ndarray = pids if isinstance( pids, np.ndarray ) else np.array( list(pids), dtype=np.int64 )
+        self._gids: np.ndarray = gids if isinstance(gids, np.ndarray) else np.array(list(gids), dtype=np.int64)
         self._mask: Optional[np.ndarray] = kwargs.get( 'mask', None )
 
     def bid(self) -> Tuple[int,Tuple]:
@@ -44,10 +44,10 @@ class Marker:
 
     @property
     def gids(self) -> np.ndarray:
-        return self._pids
+        return self._gids
 
-    def set_pids(self, pids: np.ndarray):
-        self._pids = pids
+    def set_gids(self, gids: np.ndarray):
+        self._gids = gids
 
     @property
     def mask(self) -> Optional[np.ndarray]:
@@ -56,7 +56,7 @@ class Marker:
     @property
     def colors(self) -> List[str]:
         from spectraclass.model.labels import LabelsManager, lm
-        return [ lm().colors[ self.cid ] ] * self._pids.size
+        return [ lm().colors[ self.cid ] ] * self._gids.size
 
     def isTransient(self):
         return self.cid == 0
@@ -79,23 +79,23 @@ class Marker:
 
     @property
     def size(self):
-        return self._pids.size
+        return self._gids.size
 
     @property
     def empty(self):
-        return self._pids.size == 0
+        return self._gids.size == 0
 
-    def deletePid( self, pid: int ) -> bool:
+    def clear_gid(self, pid: int) -> bool:
         try:
-            new_PIDS = self._pids[ self._pids != pid ]
-       #     lgm().log( f"  ********>> Marker[{self.cid}].deletePid[{pid}]: {self._pids.tolist()} -> {new_PIDS.tolist()}")
-            self._pids = new_PIDS
+            new_PIDS = self._gids[self._gids != pid]
+       #     lgm().log( f"  ********>> Marker[{self.cid}].deletePid[{pid}]: {self._gids.tolist()} -> {new_PIDS.tolist()}")
+            self._gids = new_PIDS
             return True
         except: return False
 
-    def deletePids( self, dpids: np.ndarray ) -> bool:
+    def clear_gids(self, dpids: np.ndarray) -> bool:
         try:
-            self._pids = np.setdiff1d( self._pids, dpids )
+            self._gids = np.setdiff1d(self._gids, dpids)
             return True
         except: return False
 
@@ -106,7 +106,7 @@ class Marker:
         if self.size > 10:
             return f"Marker[{self.cid}]-{self.size} )"
         else:
-            return f"Marker[{self.cid}]: {self._pids.tolist()} )"
+            return f"Marker[{self.cid}]: {self._gids.tolist()} )"
 
 class MarkerManager( PointsInteractor ):
 
@@ -197,7 +197,7 @@ class MarkerManager( PointsInteractor ):
             if (marker is None) or (len(marker.gids) == 0):
                 lgm().log("NULL Marker: point select is probably out of bounds.")
             else:
-                app().add_marker("map", marker)
+                app().add_marker( marker )
                 self._add_marker( marker )
                 self.plot()
         else:
@@ -219,9 +219,7 @@ class MarkerManager( PointsInteractor ):
     def mark_point(self, gid, **kwargs ) -> Optional[Tuple[float,float]]:
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.map import MapManager, mm
-        from spectraclass.data.spatial.tile.manager import tm
         if gid >= 0:
-            block = tm().getBlock()
             cid = kwargs.get( 'cid', lm().current_cid )
             point = kwargs.get('point', mm().get_point_coords( gid ) )
             lgm().log( f"mark_point[{cid}], gid={gid}, point={point}")
