@@ -40,18 +40,22 @@ class LinePlot(ABC):
     def __init__( self, index: int, **kwargs ):
         self.index: int = index
         self.standalone: bool = kwargs.pop('standalone', False)
-        self.init_data( **kwargs )
+        self.init_data()
 
     def use_model_data( self, use: bool ):
         self._use_model = use
         self.clear()
 
     @abstractmethod
-    def clear(self):
+    def clear( self, **kwargs ):
         pass
 
     @abstractmethod
     def addMarker( self, m: Marker ):
+        pass
+
+    @abstractmethod
+    def plot(self, clear_selection=False, **kwargs):
         pass
 
     @abstractmethod
@@ -72,7 +76,7 @@ class LinePlot(ABC):
         pass
 
     @classmethod
-    def init_data(cls, **kwargs ):
+    def init_data(cls ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         if cls._x is None:
             project_data: Dict[str,Union[xa.DataArray,List,Dict]]  = dm().loadCurrentProject("graph")
@@ -167,12 +171,9 @@ class GraphPlotManager(SCSingletonConfigurable):
         for g in self._graphs: g.use_model_data( use )
 
     def clear(self):
+        lgm().log( f" $CLEAR: GPM-> {len(self._graphs)} graphs " )
         for g in self._graphs:
-            g.clear()
-
-    def refresh(self):
-        LinePlot.refresh()
-        lgm().log(f" GraphPlotManager refresh ")
+            g.plot( True, reset=True )
 
     def current_graph(self) -> Optional[LinePlot]:
         if self._wGui is None: return None

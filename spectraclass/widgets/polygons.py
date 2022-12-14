@@ -55,6 +55,7 @@ class PolygonInteractor:
         if not self.in_poly(event):
             x, y = event.xdata, event.ydata
             self.poly_index = self.poly_index + 1
+            lgm().log(f"POLY->create: cid = {self._cid}, color = {self._fill_color}")
             self.prec = PolyRec( self.poly_index, self.ax, x, y, self._fill_color, self.poly_changed )
             self.polys.append( self.prec )
             self.creating = True

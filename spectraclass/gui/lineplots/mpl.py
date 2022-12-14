@@ -41,6 +41,8 @@ class LineRec:
 
     def clear(self):
         if self.line is not None:
+ #           lgm().log( f" $CLEAR: removing line for pid={self.pid}, cid={self.cid}")
+            self.line.set_visible(False)
             self.line.remove()
             self.line = None
 
@@ -110,11 +112,16 @@ class mplGraphPlot(LinePlot):
         unmark_button.on_click( self.delete_selection )
         return ipw.HBox([ mark_button, unmark_button ] )
 
-    def clear(self, reset: bool = True ):
+    def clear(self, **kwargs ):
+        reset = kwargs.get('reset',True)
+        lgm().log(f" $CLEAR: Graph-{self.index}, {len(self.lrecs)} lines, reset={reset}")
         for lrec in self.lrecs.values(): lrec.clear()
         for rline in self.rlines: rline.remove()
-        self.rlines = []
-        if reset: self.lrecs = OrderedDict()
+        if reset:
+            self.lrecs = OrderedDict()
+            self.rlines = []
+            self.marked_lrecs = {}
+            self.ax.clear()
 
     def clearTransients(self):
         new_lrecs = {}
@@ -209,7 +216,7 @@ class mplGraphPlot(LinePlot):
         return  [ lrec.cid for lrec in self.lrecs.values() ]
 
     @log_timing
-    def plot( self, clear_selection = False ):
+    def plot( self, clear_selection = False, **kwargs ):
         self.ax.title.text = self.title
         if clear_selection: self.selected_pid = -1
         ps = self.get_plotspecs()
@@ -219,15 +226,16 @@ class mplGraphPlot(LinePlot):
         except Exception as err:
             lgm().log(f"set_prop_cycle: color={colors}, alpha=alphas, linewidth={linewidths}")
             lgm().log( f"## Error setting property cycle: {err}")
-        self.update_graph()
+        self.update_graph(**kwargs)
 
-    @log_timing
+    @exception_handled
     def update_graph(self, **kwargs ):
-        self.clear( False )
+        self.clear( reset=kwargs.get('reset',False) )
         lines: List[Line2D] = self.ax.plot( self.x, self.y, picker=True, pickradius=2, **kwargs )
         if (not self._use_model) and (self.ry.size > 0):
             self.rlines: List[Line2D] = self.ax.plot( self.x, self.ry, color="grey", **kwargs )
         for (line, lrec) in zip(lines, self.lrecs.values()): lrec.line = line
+        lgm().log(f" $CLEAR: Plotting {len(self.lrecs)} lines")
         self.fig.canvas.draw()
 
     @exception_handled
@@ -260,7 +268,7 @@ class mplGraphPlot(LinePlot):
         if event.inaxes == self.ax:
             if event.key == 'backspace': self.delete_selection()
 
-    def delete_selection(self):
+    def delete_selection( self, *args ):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.map import MapManager, mm
         lrec = self.lrecs.pop( self.selected_pid, None )

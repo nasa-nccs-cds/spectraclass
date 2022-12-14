@@ -310,7 +310,14 @@ class PointCloudManager(SCSingletonConfigurable):
                     self.probe_points.geometry = self.getMarkerGeometry(probes=True)
 
     def clear(self):
-        self.update_plot()
+        lgm().log(f"  $CLEAR: PCM")
+        self.marker_gids = {}
+        self.probe_gids = {}
+        if self.marker_points is not None:
+            self.marker_points.geometry = self.getMarkerGeometry()
+        if self.probe_points is not None:
+            self.marker_points.geometry = self.getMarkerGeometry(probes=True)
+
 
     def color_by_value(self, values: np.ndarray = None, **kwargs):
         #        is_distance = kwargs.get('distance', False)

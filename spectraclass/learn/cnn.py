@@ -19,7 +19,7 @@ class CNN(Network):
         model.add( tf.keras.layers.Conv2D( nfeatures, (ks,ks), activation='relu', padding="same" ) )
         model.add( tf.keras.layers.Reshape( SpatialModelWrapper.flatten(input_shape,nfeatures) ) )
         model.add( tf.keras.layers.Dense( 2*nfeatures, activation='relu' ) )
-        model.add(tf.keras.layers.Dense( nfeatures, activation='relu') )
+        model.add( tf.keras.layers.Dense( nfeatures, activation='relu') )
         model.add( tf.keras.layers.Dense( nclasses, activation='softmax' ) )
         return model, kwargs
 

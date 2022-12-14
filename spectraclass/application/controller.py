@@ -67,10 +67,8 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.map import MapManager, mm
-        from spectraclass.data.spatial.tile.manager import tm
-        block = tm().getBlock()
-        pids = lm().getPids( iclass )
-        gpm().plot_graph( Marker( "marker", pids, iclass ) )
+        gids = lm().getGids( iclass )
+        gpm().plot_graph( Marker( "marker", gids, iclass ) )
         mm().set_region_class( iclass )
 
     def gui( self, **kwargs ):
@@ -87,7 +85,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.spatial.map import MapManager, mm
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> MASK ")
-        mm().create_mask( lm().current_cid )
+#        mm().create_mask( lm().current_cid )
 
     @exception_handled
     def clear(self):
@@ -107,7 +105,7 @@ class SpectraclassController(SCSingletonConfigurable):
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
         from spectraclass.reduction.embedding import ReductionManager, rm
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> EMBED ")
-        ufm().show( "Computing 3D embedding")
+        ufm().show( "Computing 3D embedding" )
         embedding = rm().umap_embedding()
         if self.pcm_active: pcm().update_plot( points=embedding )
         ufm().clear()

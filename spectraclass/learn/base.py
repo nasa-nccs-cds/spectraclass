@@ -149,7 +149,7 @@ class KerasLearningModel(LearningModel):
         from spectraclass.learn.models.network import Network
         self.opt = str(kwargs.pop( 'opt', 'adam' )).lower()   # 'adam' 'rmsprop'
         self.loss = str(kwargs.pop('loss', 'categorical_crossentropy')).lower()
-        self.nepochs = kwargs.pop( 'nepochs', 200 )
+        self.nepochs = kwargs.pop( 'nepochs', 300 )
         self.test_size = kwargs.pop( 'test_size', 0.0 )
         self.network: Network = kwargs.pop( 'network', None )
         return kwargs
