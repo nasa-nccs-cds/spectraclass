@@ -113,7 +113,7 @@ class mplGraphPlot(LinePlot):
         return ipw.HBox([ mark_button, unmark_button ] )
 
     def clear(self, **kwargs ):
-        reset = kwargs.get('reset',True)
+        reset = kwargs.get( 'reset', True )
         lgm().log(f" $CLEAR: Graph-{self.index}, {len(self.lrecs)} lines, reset={reset}")
         for lrec in self.lrecs.values(): lrec.clear()
         for rline in self.rlines: rline.remove()
