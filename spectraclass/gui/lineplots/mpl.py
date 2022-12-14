@@ -69,11 +69,11 @@ class mplGraphPlot(LinePlot):
 
     @property
     def ids(self) -> List[float]:
-        return [lrec.id for lrec in self.lrecs.values()]
+        return [lrec.id for pid, lrec in self.lrecs.items()]
 
     def get_lrec( self, line: Line2D ) -> Optional[LineRec]:
         lid = LineRec.lid( line )
-        for lrec in self.lrecs.values():
+        for pid, lrec in self.lrecs.items():
             if lrec.id == lid: return lrec
         return None
 
@@ -115,7 +115,7 @@ class mplGraphPlot(LinePlot):
     def clear(self, **kwargs ):
         reset = kwargs.get( 'reset', True )
         lgm().log(f" $CLEAR: Graph-{self.index}, {len(self.lrecs)} lines, reset={reset}")
-        for lrec in self.lrecs.values(): lrec.clear()
+        for (pid,lrec) in list(self.lrecs.items()): lrec.clear()
         for rline in self.rlines: rline.remove()
         if reset:
             self.lrecs = OrderedDict()
@@ -178,7 +178,7 @@ class mplGraphPlot(LinePlot):
         x,y = self.lx(pids), self.ly(pids)
         if y is not None:
             lines = self.ax.plot(x, y, picker=True, pickradius=2, color=color, alpha=0.2, linewidth=1.0)
-            self.marked_lrecs[m.oid] = pids.tolist()
+            self.marked_lrecs[m.oid] = list(pids.tolist())
             for pid,line in zip(pids,lines):
                 self.lrecs[pid] = LineRec( line, pid, cid, m )
             self.ax.figure.canvas.draw_idle()
