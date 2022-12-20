@@ -35,5 +35,5 @@ c.TextureManager.textures = [{'type': 'gabor', 'bands': [1, 3], 'nfeatures': 1},
 c.ClusterManager.modelid = "kmeans"
 c.ClusterManager.nclusters = 7
 c.ClusterManager.random_state = 0
-c.ClassificationManager.mid = "cnn"
+c.ClassificationManager.mid = "cnn2d"
 c.ClassificationManager.nfeatures = 32

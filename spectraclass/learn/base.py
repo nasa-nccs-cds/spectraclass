@@ -112,9 +112,13 @@ class LearningModel:
         raise Exception( "abstract method LearningModel.fit called")
 
     def get_input_data(self) -> xa.DataArray:
-        from spectraclass.data.base import DataManager, dm
-        embedding: xa.DataArray = dm().getModelData()
-        return embedding
+        from spectraclass.data.spatial.tile.tile import Block
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        input_data: xa.DataArray = None
+        block: Block = tm().getBlock()
+        if   self.mtype == ModelType.MODEL:      input_data = block.model_data
+        elif self.mtype == ModelType.SPECTRAL:   input_data = block.getPointData()[0]
+        return input_data
 
     @exception_handled
     def apply_classification( self, **kwargs ) -> xa.DataArray:
