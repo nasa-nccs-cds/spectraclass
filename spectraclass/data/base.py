@@ -1,6 +1,7 @@
 import warnings
 warnings.simplefilter("ignore", FutureWarning)
 import numpy as np
+import shutil
 import ipywidgets as ipw
 from typing import List, Union, Tuple, Optional, Dict, Type
 import os, warnings
@@ -134,8 +135,17 @@ class DataManager(SCSingletonConfigurable):
 
     def _configure_(self, name: str, mode: str ):
         self.name = name
-        self.config_files.append( ( self.defaults_dir, "config.py" ) )
-        self.config_files.append( ( self.config_dir(  mode ), f"{name}.py" ) )
+        self.config_files.append( [ self.defaults_dir, "config.py" ] )
+        user_config_file = [ self.config_dir(  mode ), f"{name}.py" ]
+        ucfile = os.path.join(*user_config_file)
+        if not os.path.isfile( ucfile ):
+            def_ucfile = os.path.join( os.path.dirname(os.getcwd()), "defaults", mode, f"{name}.py" )
+            if os.path.isfile( def_ucfile ):
+                lgm().log( f"Installing config file from {def_ucfile} to {ucfile}", print=True )
+                shutil.copyfile( def_ucfile, ucfile )
+            else:
+                lgm().log(f"Default config file not found: {def_ucfile}", print=True)
+        self.config_files.append( user_config_file )
         for ( cfg_dir, fname) in self.config_files:
             cfg_file = os.path.join( cfg_dir, fname )
             if os.path.isfile(cfg_file):
@@ -143,7 +153,7 @@ class DataManager(SCSingletonConfigurable):
                 loader = PyFileConfigLoader( fname, path=cfg_dir )
                 self.update_config( loader.load_config() )
             else:
-                lgm().log(f" ---> Config file not found: {cfg_file}")
+                lgm().log(f" ---> Config file not found: {cfg_file}", print=True)
 
     def getCurrentConfig(self):
         cfg = Config()
