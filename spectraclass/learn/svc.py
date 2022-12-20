@@ -8,6 +8,7 @@ from typing import List, Tuple, Optional, Dict
 import numpy as np
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from .base import LearningModel
+from spectraclass.learn.base import ModelType
 
 class SVCLearningModel(LearningModel):
 
@@ -15,7 +16,7 @@ class SVCLearningModel(LearningModel):
         self.norm = kwargs.pop( 'norm', True )
         self.tol = kwargs.pop( 'tol', 1e-5 )
         self.kernel = kwargs.pop('kernel', "linear" ) # curve rbf linear
-        LearningModel.__init__(self, "svc",  **kwargs )
+        LearningModel.__init__(self, "svc", ModelType.MODEL,  **kwargs )
         self.parms  = kwargs
         self._score: Optional[np.ndarray] = None
         self.create_model()

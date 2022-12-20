@@ -9,14 +9,14 @@ import tensorflow as tf
 from tensorflow.keras.models import Model
 from typing import List, Tuple, Optional, Dict
 from spectraclass.gui.control import UserFeedbackManager, ufm
-from spectraclass.learn.base import KerasLearningModel
+from spectraclass.learn.base import KerasLearningModel, ModelType
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from tensorflow.keras import datasets, layers, models
 
 class SpatialModelWrapper(KerasLearningModel):
 
     def __init__(self, name: str,  model: models.Model, **kwargs ):
-        KerasLearningModel.__init__( self, name,  model, kwargs.pop('callbacks'), **kwargs )
+        KerasLearningModel.__init__( self, name,  ModelType.SPATIAL, model, kwargs.pop('callbacks'), **kwargs )
         self.test_mask = None
         self.training_data = None
         self.training_labels = None
@@ -126,7 +126,6 @@ class SpatialModelWrapper(KerasLearningModel):
 
     @exception_handled
     def learn_classification( self,**kwargs ):
-        def count_nan(array: np.ndarray): return np.count_nonzero( np.isnan(array) )
         t1 = time.time()
         self.training_data, self.training_labels, self.sample_weight, self.test_mask = self.get_training_set( **kwargs )
         if self.training_data is not None:

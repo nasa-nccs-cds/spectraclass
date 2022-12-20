@@ -15,7 +15,7 @@ import ipywidgets as ipw
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from spectraclass.model.base import SCSingletonConfigurable
-from .base import LearningModel
+from .base import LearningModel, ModelType
 
 def cm():
     return ClassificationManager.instance()
@@ -160,6 +160,8 @@ class Cluster:
 class ClassificationManager(SCSingletonConfigurable):
     mid = tl.Unicode("mlp").tag(config=True, sync=True)
     nfeatures =  tl.Int(32).tag(config=True, sync=True)
+    cnn_layers = tl.List( default_value=[(8,5,3),(8,5,3),(8,5,3)] ).tag(config=True, sync=True)
+    dense_layers = tl.List( default_value=[32,16] ).tag(config=True, sync=True)
 
     def __init__(self,  **kwargs ):
         super(ClassificationManager, self).__init__(**kwargs)
@@ -188,21 +190,22 @@ class ClassificationManager(SCSingletonConfigurable):
         self.mid = event['new']
 
     def import_models(self):
-        from .cnn import CNN
+        from .cnn import CNN, SpectralCNN
         from .svc import SVCLearningModel
         from .mlp import MLP
         from spectraclass.data.base import DataManager, dm
         lgm().log("#IA: INIT MODELS")
         self.addNetwork( MLP( 'mlp', nfeatures=dm().modal.model_dims) )
-        self.addNetwork( CNN( 'cnn', nfeatures=self.nfeatures ) )
+        self.addNetwork( CNN( 'cnn2d', nfeatures=self.nfeatures ) )
+        self.addNetwork( SpectralCNN('cnn1d', cnn_layers=self.cnn_layers, dense_layers=self.dense_layers))
         self._models['svc'] = SVCLearningModel()
 
     def addLearningModel(self, mid: str, model: LearningModel ):
         self._models[ mid ] = model
 
-    def addNNModel(self, mid: str, model: Model, **kwargs):
+    def addNNModel(self, mid: str, type: ModelType, model: Model, **kwargs):
         from spectraclass.learn.base import KerasLearningModel
-        self._models[ mid ] = KerasLearningModel(mid, model, **kwargs)
+        self._models[ mid ] = KerasLearningModel(mid, type, model, **kwargs)
 
     def addNetwork(self, network ):
         lgm().log( f"#IA: ADD NETWORK MODEL: {network.name}" )

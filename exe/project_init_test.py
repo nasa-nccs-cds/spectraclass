@@ -1,6 +1,8 @@
 from spectraclass.data.base import DataManager
 from spectraclass.data.spatial.tile.manager import TileManager
 from spectraclass.data.spatial.modes import AvirisDataManager
+from spectraclass.model.labels import LabelsManager, lm
+from spectraclass.gui.spatial.map import MapManager, mm
 import sys
 
 if len(sys.argv) != 3:
@@ -17,7 +19,7 @@ else:
     version = "v2v2"
     month = "201908"
 
-    dm.modal.data_dir = "/Users/tpmaxwel/Development/Data/Aviris/adapt"
+    dm.modal.data_dir = "/Users/tpmaxwel/Development/Data/Aviris"
     dm.modal.images_glob = f"ang{month}*rfl/ang*_rfl_{version}/ang*_corr_{version}_img"
     AvirisDataManager.version = version
     dm.proc_type = "skl"
@@ -30,5 +32,14 @@ else:
     print( f"Init project {project}, mode = {mode}, modelkey = {AvirisDataManager.modelkey}")
 
     dm.prepare_inputs()
+    classes = [('Class-1', "cyan"),
+               ('Class-2', "green"),
+               ('Class-3', "magenta"),
+               ('Class-4', "blue")]
+
+    lm().setLabels(classes)
+    dm.modal.initialize_dimension_reduction()
+
+    maps = mm().gui()
 
 

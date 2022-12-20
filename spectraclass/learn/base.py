@@ -13,11 +13,19 @@ from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timin
 from tensorflow.keras import datasets, layers, models
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.utils import to_categorical
+from enum import Enum
+
+class ModelType(Enum):
+    SPATIAL = 1
+    MODEL = 2
+    SPECTRAL = 3
+    CUSTOM = 4
 
 class LearningModel:
 
-    def __init__(self, name: str,  **kwargs ):
+    def __init__(self, name: str,  mtype: ModelType, **kwargs ):
         self.mid =  name
+        self.mtype = mtype
         self.device = "cpu"
         self._score: Optional[np.ndarray] = None
         self.config = kwargs
@@ -63,14 +71,18 @@ class LearningModel:
     def get_training_set(self, **kwargs ) -> Tuple[np.ndarray,np.ndarray,Optional[np.ndarray],Optional[np.ndarray]]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.model.labels import LabelsManager, Action, lm
+        input_data: xa.DataArray = None
         label_data = lm().getTrainingLabels()
         training_data, training_labels = None, None
-        for ( (tindex, bindex, cid), pids ) in label_data.items():
-            model_data: xa.DataArray = tm().getBlock( tindex=tindex, bindex=bindex ).model_data
-            training_mask: np.ndarray = np.isin( model_data.samples.values, pids )
-            tdata: np.ndarray = model_data.values[ training_mask ]
-            tlabels: np.ndarray = np.full([pids.size], cid)
-            lgm().log( f"Adding training data: tindex={tindex} bindex={bindex} cid={cid} #pids={pids.size} data.shape={tdata.shape} labels.shape={tlabels.shape} mask.shape={training_mask.shape}")
+        for ( (tindex, bindex, cid), gids ) in label_data.items():
+            block = tm().getBlock( tindex=tindex, bindex=bindex )
+            if   self.mtype == ModelType.MODEL:     input_data = block.model_data
+            elif self.mtype == ModelType.SPECTRAL:  input_data = block.getPointData()[0].expand_dims("channels",2)
+            else:    raise Exception( f"Unusable input data type to get_training_set: {self.mtype}")
+            training_mask: np.ndarray = np.isin( input_data.samples.values, gids )
+            tdata: np.ndarray = input_data.values[ training_mask ]
+            tlabels: np.ndarray = np.full([gids.size], cid)
+            lgm().log( f"Adding training data: tindex={tindex} bindex={bindex} cid={cid} #gids={gids.size} data.shape={tdata.shape} labels.shape={tlabels.shape} mask.shape={training_mask.shape}")
             training_data   = tdata   if (training_data   is None) else np.append( training_data,   tdata,   axis=0 )
             training_labels = tlabels if (training_labels is None) else np.append( training_labels, tlabels, axis=0 )
         lgm().log(f"SHAPES--> training_data: {training_data.shape}, training_labels: {training_labels.shape}" )
@@ -137,8 +149,8 @@ class LearningModel:
 
 class KerasLearningModel(LearningModel):
 
-    def __init__(self, name: str, model: Model, callbacks: List[Callback] = None,  **kwargs ):
-        LearningModel.__init__( self, name, **self.set_learning_parameters( **kwargs ) )
+    def __init__(self, name: str, mtype: ModelType, model: Model, callbacks: List[Callback] = None,  **kwargs ):
+        LearningModel.__init__( self, name, mtype, **self.set_learning_parameters( **kwargs ) )
         self.callbacks: List[Callback] = callbacks if callbacks else []
         self.callbacks.append( lgm().get_keras_logger() )
         self.device = "cpu"

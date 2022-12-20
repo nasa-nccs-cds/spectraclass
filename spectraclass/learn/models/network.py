@@ -1,12 +1,6 @@
-from enum import Enum
 from typing import List, Tuple, Optional, Dict, Union, Type
-from spectraclass.learn.base import LearningModel
+from spectraclass.learn.base import LearningModel, ModelType
 import tensorflow as tf
-
-class ModelType(Enum):
-     SPATIAL = 1
-     SAMPLES = 2
-     CUSTOM = 3
 
 class Network:
     TYPE: Union[ModelType,Type[LearningModel]] = None
@@ -35,9 +29,9 @@ class Network:
         if self._type == ModelType.SPATIAL:
                 model, bparms = self.build_model()
                 self._learning_model = SpatialModelWrapper( self._name, model, callbacks=[NetworkCallback(self)], network=self, **bparms )
-        if self._type == ModelType.SAMPLES:
+        if self._type in [ModelType.MODEL, ModelType.SPECTRAL]:
                 model, bparms = self.build_model()
-                self._learning_model = KerasLearningModel( self._name, model, callbacks=[NetworkCallback(self)], network=self, **bparms )
+                self._learning_model = KerasLearningModel( self._name, self._type, model, callbacks=[NetworkCallback(self)], network=self, **bparms )
         if self._type == ModelType.CUSTOM:
                 self._learning_model = self._learning_model_class(self._name, callbacks=[NetworkCallback(self)], **self._parms)
         return self._learning_model
