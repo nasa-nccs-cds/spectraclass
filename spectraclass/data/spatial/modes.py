@@ -39,8 +39,11 @@ class AvirisDataManager(SpatialDataManager):
     @classmethod
     def extract_image_name( cls, image_path: str ) -> str:
         basename = Path(image_path).stem
-        if basename.startswith("ang"): basename = basename[3:]
-        return basename.split("_")[0]
+        if basename.startswith("ang"):
+            basename = basename[3:]
+        if not image_path.endswith(".tif"):
+            basename =  basename.split("_")[0]
+        return basename
 
     @property
     def default_images_glob(self):
@@ -51,7 +54,8 @@ class AvirisDataManager(SpatialDataManager):
         from spectraclass.data.base import DataManager, dm
         assert len( self.image_names ) > 0, f"Error, unable to find any images in the data_dir: {dm().modal.data_dir}"
         base_name = self.image_names[self._active_image]
-        return f"ang{base_name}rfl/ang{base_name}_rfl_{self.version}/ang{base_name}_corr_{self.version}{self.ext}"
+        if self.ext == ".tif": return f"{base_name}{self.ext}"
+        else: return f"ang{base_name}rfl/ang{base_name}_rfl_{self.version}/ang{base_name}_corr_{self.version}{self.ext}"
 
 class KeelinDataManager(SpatialDataManager):
     from spectraclass.gui.spatial.application import Spectraclass

@@ -74,7 +74,6 @@ class ModeDataManager(SCSingletonConfigurable):
     dset_name = tl.Unicode( "" ).tag(config=True)
     cache_dir = tl.Unicode( "" ).tag(config=True)
     data_dir = tl.Unicode( "" ).tag(config=True)
-    ext = tl.Unicode( ".tif" ).tag(config=True)
     class_file = tl.Unicode("NONE").tag(config=True, sync=True)
 
     model_dims = tl.Int(16).tag(config=True, sync=True)
@@ -106,6 +105,10 @@ class ModeDataManager(SCSingletonConfigurable):
         self._autoencoder = None
         self._encoder = None
         self._metadata: Dict = None
+
+    @property
+    def ext(self):
+        return self.images_glob[-4:]
 
     @property
     def metadata(self) -> Dict:
@@ -532,7 +535,8 @@ class ModeDataManager(SCSingletonConfigurable):
 
     @classmethod
     def extract_image_name( cls, image_path: str ) -> str:
-        return Path(image_path).stem
+        name = Path(image_path).stem
+        return name
 
     @property
     def num_images(self):
