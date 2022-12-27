@@ -69,13 +69,14 @@ lm().setLabels( classes )
 input_shape = SpatialModelWrapper.get_input_shape()
 nclasses = lm().nLabels
 ks =  (5,3,3)
-nfeatures = 5
 strides = (3,1,1)
 device = 'cpu'
-CNN1 = tf.keras.layers.Conv3D( filters=nfeatures, kernel_size=ks, activation='relu', padding="valid", strides=strides )
+CNN1 = tf.keras.layers.Conv3D( filters=5, kernel_size=ks, activation='relu', padding="same", strides=strides )
+CNN2 = tf.keras.layers.Conv3D( filters=4, kernel_size=ks, activation='relu', padding="same", strides=strides )
+CNN3 = tf.keras.layers.Conv3D( filters=3, kernel_size=ks, activation='relu', padding="same", strides=strides )
 
 block: Block = tm().getBlock()
-spatial_data: xa.DataArray = block.getSpectralData( raster=True )
+spatial_data: xa.DataArray = block.getSpectralData( raster=True ).expand_dims("samples",0).expand_dims("channels",4)
 
 with tf.device(f'/{device}:0'):
     print(f"training_set shape = {spatial_data.shape}")
@@ -83,3 +84,7 @@ with tf.device(f'/{device}:0'):
     input: tf.Tensor = tf.convert_to_tensor( spatial_data.values )
     result1: tf.Tensor = CNN1( input )
     print(f"result1 shape = {result1.shape}")
+    result2: tf.Tensor = CNN2( result1 )
+    print(f"result2 shape = {result2.shape}")
+    result3: tf.Tensor = CNN3( result2 )
+    print(f"result3 shape = {result3.shape}")

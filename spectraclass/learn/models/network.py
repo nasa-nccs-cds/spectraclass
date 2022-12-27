@@ -26,9 +26,9 @@ class Network:
     def build( self ) -> "LearningModel":
         from .spatial import SpatialModelWrapper
         from spectraclass.learn.base import KerasLearningModel
-        if self._type == ModelType.SPATIAL:
+        if self._type in [ModelType.SPATIAL, ModelType.SPECTRALSPATIAL]:
                 model, bparms = self.build_model()
-                self._learning_model = SpatialModelWrapper( self._name, model, callbacks=[NetworkCallback(self)], network=self, **bparms )
+                self._learning_model = SpatialModelWrapper( self._name, self._type, model, callbacks=[NetworkCallback(self)], network=self, **bparms )
         if self._type in [ModelType.MODEL, ModelType.SPECTRAL]:
                 model, bparms = self.build_model()
                 self._learning_model = KerasLearningModel( self._name, self._type, model, callbacks=[NetworkCallback(self)], network=self, **bparms )

@@ -15,8 +15,8 @@ from tensorflow.keras import datasets, layers, models
 
 class SpatialModelWrapper(KerasLearningModel):
 
-    def __init__(self, name: str,  model: models.Model, **kwargs ):
-        KerasLearningModel.__init__( self, name,  ModelType.SPATIAL, model, kwargs.pop('callbacks'), **kwargs )
+    def __init__(self, name: str, mtype: ModelType, model: models.Model, **kwargs ):
+        KerasLearningModel.__init__( self, name,  mtype, model, kwargs.pop('callbacks'), **kwargs )
         self.test_mask = None
         self.training_data = None
         self.training_labels = None

@@ -19,7 +19,8 @@ class ModelType(Enum):
     SPATIAL = 1
     MODEL = 2
     SPECTRAL = 3
-    CUSTOM = 4
+    SPECTRALSPATIAL = 4
+    CUSTOM = 5
 
 class LearningModel:
 

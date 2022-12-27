@@ -190,7 +190,7 @@ class ClassificationManager(SCSingletonConfigurable):
         self.mid = event['new']
 
     def import_models(self):
-        from .cnn import CNN, SpectralCNN
+        from .cnn import CNN, SpectralCNN, CNN3D
         from .svc import SVCLearningModel
         from .mlp import MLP
         from spectraclass.data.base import DataManager, dm
@@ -198,6 +198,7 @@ class ClassificationManager(SCSingletonConfigurable):
         self.addNetwork( MLP( 'mlp', nfeatures=dm().modal.model_dims) )
         self.addNetwork( CNN( 'cnn2d', nfeatures=self.nfeatures ) )
         self.addNetwork( SpectralCNN('cnn1d', cnn_layers=self.cnn_layers, dense_layers=self.dense_layers))
+        self.addNetwork( CNN3D('cnn3d', cnn_layers=self.cnn_layers, dense_layers=self.dense_layers))
         self._models['svc'] = SVCLearningModel()
 
     def addLearningModel(self, mid: str, model: LearningModel ):
