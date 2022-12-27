@@ -20,6 +20,7 @@ dm: DataManager = DataManager.initialize( "img_mgr", 'aviris' )
 location = "laptop"
 version = "v2p9"  # "v2v2" "v2p9"
 month = "201707" # "201707" "201908"
+dm.modal.valid_aviris_bands = [ [5,193], [214,283], [319,10000] ]
 
 if location == "adapt":
     dm.modal.cache_dir = "/adapt/nobackup/projects/ilab/cache"
@@ -33,18 +34,19 @@ elif location == "laptop":
     dm.modal.cache_dir = "/Volumes/archive/Cache"
     dm.modal.data_dir = "/Volumes/Shared/Data/Aviris/IndianPines/aviris_hyperspectral_data"
     dm.modal.images_glob = "*_AVIRIS_IndianPine_Site3.tif"
+    dm.modal.valid_aviris_bands = [ [0,500], ]
 else: raise Exception( f"Unknown location: {location}")
 
-block_size = 200
+block_size = 250
 method = "aec" # "vae"
 model_dims = 32
 dm.use_model_data = True
 dm.proc_type = "skl"
 
 TileManager.block_size = block_size
-TileManager.block_index = [0,5]
+TileManager.block_index = [0,0]
 AvirisDataManager.version = version
-dm.modal.valid_aviris_bands = [ [5,193], [214,283], [319,10000] ]
+
 dm.modal.model_dims = model_dims
 dm.modal.reduce_method = method
 dm.modal.reduce_nepoch = 3
@@ -66,9 +68,9 @@ lm().setLabels( classes )
 
 input_shape = SpatialModelWrapper.get_input_shape()
 nclasses = lm().nLabels
-ks =  5
-nfeatures = 8
-strides = 3
+ks =  (5,3,3)
+nfeatures = 5
+strides = (3,1,1)
 device = 'cpu'
 CNN1 = tf.keras.layers.Conv3D( filters=nfeatures, kernel_size=ks, activation='relu', padding="valid", strides=strides )
 
@@ -80,5 +82,4 @@ with tf.device(f'/{device}:0'):
     nb = spatial_data.shape[1]
     input: tf.Tensor = tf.convert_to_tensor( spatial_data.values )
     result1: tf.Tensor = CNN1( input )
-    nb = osize(nb,ks,strides)
-    print(f"result1 shape = {result1.shape}, nb = {nb}")
+    print(f"result1 shape = {result1.shape}")

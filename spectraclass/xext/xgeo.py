@@ -81,7 +81,11 @@ class XGeo(XExtension):
 
     def get_dest_transform(self, src_crs, dst_crs, src_shape ):
         bounds = [np.nanmin(self.xcoords), np.nanmin(self.ycoords), np.nanmax(self.xcoords), np.nanmax(self.ycoords)]
-        (x0, y0, x1, y1) = transform_bounds( src_crs, dst_crs, *bounds )  # 0:left, 1:bottom, 2:right, 3:top
+        try:
+            (x0, y0, x1, y1) = transform_bounds( src_crs, dst_crs, *bounds )  # 0:left, 1:bottom, 2:right, 3:top
+        except Exception as err:
+            lgm().log( f"Error transforming coordinates: {err}")
+            (x0, y0, x1, y1) = bounds
         dst_shape = [src_shape[0], math.ceil(src_shape[1] * sqrt2), math.ceil(src_shape[2] * sqrt2)]
         dx, dy = (x1 - x0) / (dst_shape[2] - 1), (y1 - y0) / (dst_shape[1] - 1),
         return [dx, 0.0, x0, 0.0, -dy, y1]
