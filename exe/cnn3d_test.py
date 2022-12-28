@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import xarray as xa
-from spectraclass.learn.manager import ClassificationManager, cm
+from spectraclass.learn.manager import ClassificationManager
 from spectraclass.learn.models.spatial import SpatialModelWrapper
 from spectraclass.data.base import DataManager
 from spectraclass.data.spatial.modes import AvirisDataManager
@@ -17,6 +17,12 @@ def osize( isize: int, ks: int, s: int ) -> int:
     return ((isize-ks)//s) + 1
 
 dm: DataManager = DataManager.initialize( "img_mgr", 'aviris' )
+classes = [ ('Class-1', "cyan"),
+            ('Class-2', "green"),
+            ('Class-3', "magenta"),
+            ('Class-4', "blue") ]
+lm().setLabels( classes )
+
 location = "laptop"
 version = "v2p9"  # "v2v2" "v2p9"
 month = "201707" # "201707" "201908"
@@ -46,7 +52,6 @@ dm.proc_type = "skl"
 TileManager.block_size = block_size
 TileManager.block_index = [0,0]
 AvirisDataManager.version = version
-ClassificationManager.mid = "cnn3d"
 dm.modal.model_dims = model_dims
 dm.modal.reduce_method = method
 dm.modal.reduce_nepoch = 3
@@ -59,32 +64,36 @@ dm.modal.refresh_model = False
 dm.modal.modelkey = f"b{block_size}.{method}"
 
 dm.loadCurrentProject()
-classes = [ ('Class-1', "cyan"),
-            ('Class-2', "green"),
-            ('Class-3', "magenta"),
-            ('Class-4', "blue") ]
-
-lm().setLabels( classes )
+cm: ClassificationManager = ClassificationManager.instance()
+cm.mid = "cnn3d"
+cm.cnn_layers = [(5,5,3),(4,5,3),(3,5,3)]
 nclasses = lm().nLabels
-ks =  (5,3,3)
-strides = (3,1,1)
-device = 'cpu'
-CNN1 = tf.keras.layers.Conv3D( filters=5, kernel_size=ks, activation='relu', padding="same", strides=strides )
-CNN2 = tf.keras.layers.Conv3D( filters=4, kernel_size=ks, activation='relu', padding="same", strides=strides )
-CNN3 = tf.keras.layers.Conv3D( filters=3, kernel_size=ks, activation='relu', padding="same", strides=strides )
+use_manager = True
 
-training_data, training_labels, sample_weight, test_mask = cm().model.get_training_set()
+if use_manager:
 
-block: Block = tm().getBlock()
-spatial_data: xa.DataArray = block.getSpectralData( raster=True ).expand_dims("samples",0).expand_dims("channels",4)
+    cm.learn_classification()
+    cm.apply_classification()
 
-with tf.device(f'/{device}:0'):
-    print(f"training_set shape = {spatial_data.shape}")
-    nb = spatial_data.shape[1]
-    input: tf.Tensor = tf.convert_to_tensor( spatial_data.values )
-    result1: tf.Tensor = CNN1( input )
-    print(f"result1 shape = {result1.shape}")
-    result2: tf.Tensor = CNN2( result1 )
-    print(f"result2 shape = {result2.shape}")
-    result3: tf.Tensor = CNN3( result2 )
-    print(f"result3 shape = {result3.shape}")
+else:
+
+    ks = (5, 3, 3)
+    strides = (3, 1, 1)
+    device = 'cpu'
+    CNN1 = tf.keras.layers.Conv3D( filters=5, kernel_size=ks, activation='relu', padding="same", strides=strides )
+    CNN2 = tf.keras.layers.Conv3D( filters=4, kernel_size=ks, activation='relu', padding="same", strides=strides )
+    CNN3 = tf.keras.layers.Conv3D( filters=3, kernel_size=ks, activation='relu', padding="same", strides=strides )
+
+    block: Block = tm().getBlock()
+    spatial_data: xa.DataArray = block.getSpectralData( raster=True ).expand_dims("samples",0).expand_dims("channels",4)
+
+    with tf.device(f'/{device}:0'):
+        print(f"training_set shape = {spatial_data.shape}")
+        nb = spatial_data.shape[1]
+        input: tf.Tensor = tf.convert_to_tensor( spatial_data.values )
+        result1: tf.Tensor = CNN1( input )
+        print(f"result1 shape = {result1.shape}")
+        result2: tf.Tensor = CNN2( result1 )
+        print(f"result2 shape = {result2.shape}")
+        result3: tf.Tensor = CNN3( result2 )
+        print(f"result3 shape = {result3.shape}")

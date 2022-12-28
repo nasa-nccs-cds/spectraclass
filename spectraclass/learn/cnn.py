@@ -59,6 +59,7 @@ class CNN3D(Network):
         from spectraclass.learn.models.spatial import SpatialModelWrapper
         from spectraclass.model.labels import lm
         input_shape = SpatialModelWrapper.get_spatialspectral_shape()
+        gsize = input_shape[1]*input_shape[2]
         nb, nfeatures = input_shape[0], -1
         nclasses = lm().nLabels
         cnn_layers = kwargs.pop('cnn_layers', [(5,5,3),(4,5,3),(3,5,3)] )
@@ -68,7 +69,8 @@ class CNN3D(Network):
         for (nf,ks,s) in cnn_layers:
             model.add( tf.keras.layers.Conv3D(filters=nf, kernel_size=(ks,3,3), activation='relu', padding="valid", strides=(s,1,1) ) )
             nb, nfeatures =  nb//s, nf
-        oshape = [ nb*nfeatures ]
+        model.add( tf.keras.layers.Permute( (2,3,1,4) ) )
+        oshape = [ gsize, nb*nfeatures ]
         lgm().log( f"Reshape: input={input_shape}, model_output={model.output_shape}, nb={nb}, nf={nfeatures}, oshape={oshape}")
         model.add( tf.keras.layers.Reshape( oshape ) )
         for nf in dense_layers:
