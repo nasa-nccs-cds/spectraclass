@@ -56,10 +56,9 @@ class CNN3D(Network):
     TYPE = ModelType.SPECTRALSPATIAL
 
     def _build_model(self, **kwargs) -> Tuple[tf.keras.models.Model,Dict]:
-        from spectraclass.data.spatial.tile.manager import tm
+        from spectraclass.learn.models.spatial import SpatialModelWrapper
         from spectraclass.model.labels import lm
-        pd: xa.DataArray = tm().getBlock().getPointData()[0]
-        input_shape: List[int] = list(pd.expand_dims("channels",2).shape[1:])
+        input_shape = SpatialModelWrapper.get_spatialspectral_shape()
         nb, nfeatures = input_shape[0], -1
         nclasses = lm().nLabels
         cnn_layers = kwargs.pop('cnn_layers', [(5,5,3),(4,5,3),(3,5,3)] )

@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import xarray as xa
-from spectraclass.learn.base import LearningModel
+from spectraclass.learn.manager import ClassificationManager, cm
 from spectraclass.learn.models.spatial import SpatialModelWrapper
 from spectraclass.data.base import DataManager
 from spectraclass.data.spatial.modes import AvirisDataManager
@@ -46,7 +46,7 @@ dm.proc_type = "skl"
 TileManager.block_size = block_size
 TileManager.block_index = [0,0]
 AvirisDataManager.version = version
-
+ClassificationManager.mid = "cnn3d"
 dm.modal.model_dims = model_dims
 dm.modal.reduce_method = method
 dm.modal.reduce_nepoch = 3
@@ -65,8 +65,6 @@ classes = [ ('Class-1', "cyan"),
             ('Class-4', "blue") ]
 
 lm().setLabels( classes )
-
-input_shape = SpatialModelWrapper.get_input_shape()
 nclasses = lm().nLabels
 ks =  (5,3,3)
 strides = (3,1,1)
@@ -74,6 +72,8 @@ device = 'cpu'
 CNN1 = tf.keras.layers.Conv3D( filters=5, kernel_size=ks, activation='relu', padding="same", strides=strides )
 CNN2 = tf.keras.layers.Conv3D( filters=4, kernel_size=ks, activation='relu', padding="same", strides=strides )
 CNN3 = tf.keras.layers.Conv3D( filters=3, kernel_size=ks, activation='relu', padding="same", strides=strides )
+
+training_data, training_labels, sample_weight, test_mask = cm().model.get_training_set()
 
 block: Block = tm().getBlock()
 spatial_data: xa.DataArray = block.getSpectralData( raster=True ).expand_dims("samples",0).expand_dims("channels",4)

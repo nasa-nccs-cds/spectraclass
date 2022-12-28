@@ -77,8 +77,12 @@ class LearningModel:
         training_data, training_labels = None, None
         for ( (tindex, bindex, cid), gids ) in label_data.items():
             block = tm().getBlock( tindex=tindex, bindex=bindex )
-            if   self.mtype == ModelType.MODEL:     input_data = block.model_data
-            elif self.mtype == ModelType.SPECTRAL:  input_data = block.getPointData()[0].expand_dims("channels",2)
+            if   self.mtype == ModelType.MODEL:
+                input_data = block.model_data
+            elif self.mtype == ModelType.SPECTRAL:
+                input_data = block.getPointData()[0].expand_dims("channels",2)
+            elif self.mtype == ModelType.SPECTRALSPATIAL:
+                input_data = block.getSpectralData(raster=True).expand_dims("samples", 0).expand_dims("channels", 4)
             else:    raise Exception( f"Unusable input data type to get_training_set: {self.mtype}")
             training_mask: np.ndarray = np.isin( input_data.samples.values, gids )
             tdata: np.ndarray = input_data.values[ training_mask ]

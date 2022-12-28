@@ -71,7 +71,7 @@ class SpatialModelWrapper(KerasLearningModel):
                 label_map: np.ndarray  = lm().get_label_map( block=block ).values.flatten()
                 base_data: xa.DataArray = block.getModelData(True) if dm().use_model_data else block.getSpectralData(True)
                 tdims = [ base_data.dims[1], base_data.dims[2], base_data.dims[0] ]
-                tdata: np.ndarray = base_data.transpose(*tdims).fillna(0.0).expand_dims('batch', 0).values
+                tdata: xa.DataArray = base_data.transpose(*tdims).fillna(0.0).expand_dims('batch', 0)
                 tlabels = np.expand_dims( LearningModel.index_to_one_hot( label_map ), 0 )
                 weights, mask = self.get_sample_weight( label_map )
                 lgm().log(f"    ->>> {(block.tile_index,block.block_coords)}->base_data: shape={base_data.shape} "
@@ -102,6 +102,12 @@ class SpatialModelWrapper(KerasLearningModel):
         input_shape =  list( cls.block_data().shape )
         if dm().use_model_data: input_shape[-1] = dm().modal.model_dims
         return tuple( input_shape )
+
+    @classmethod
+    def get_spatialspectral_shape(cls) -> Tuple[int,...]:
+        from spectraclass.gui.spatial.map import MapManager, mm
+        rdata: xa.DataArray = mm().getRasterData(False).expand_dims("channels",3)
+        return  tuple( rdata.shape )
 
     @exception_handled
     def apply_classification( self, **kwargs ) -> xa.DataArray:
