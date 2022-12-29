@@ -4,7 +4,6 @@ from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timin
 import logging, os
 import matplotlib as mpl
 from matplotlib.backend_bases import MouseEvent, KeyEvent
-from spectraclass.gui.spatial.widgets.markers import Marker
 from matplotlib.colors import Normalize
 from matplotlib.figure import Figure
 from matplotlib.backend_bases import NavigationToolbar2, _Mode

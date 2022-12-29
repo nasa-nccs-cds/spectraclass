@@ -2,12 +2,11 @@ import tensorflow as tf
 import numpy as np
 import xarray as xa
 from spectraclass.learn.manager import ClassificationManager
-from spectraclass.learn.models.spatial import SpatialModelWrapper
+from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.data.base import DataManager
-from spectraclass.data.spatial.modes import AvirisDataManager
 from spectraclass.data.spatial.tile.tile import Block, Tile
 from typing import List, Union, Tuple, Optional, Dict, Callable
-from spectraclass.data.spatial.tile.manager import TileManager, tm
+from spectraclass.data.spatial.tile.manager import TileManager
 from spectraclass.model.labels import LabelsManager, Action, lm
 
 def count_nan( array: np.ndarray ) -> int:
@@ -17,6 +16,7 @@ def osize( isize: int, ks: int, s: int ) -> int:
     return ((isize-ks)//s) + 1
 
 dm: DataManager = DataManager.initialize( "img_mgr", 'aviris' )
+tm: TileManager = TileManager.instance()
 classes = [ ('Class-1', "cyan"),
             ('Class-2', "green"),
             ('Class-3', "magenta"),
@@ -49,9 +49,9 @@ model_dims = 32
 dm.use_model_data = True
 dm.proc_type = "skl"
 
-TileManager.block_size = block_size
-TileManager.block_index = [0,0]
-AvirisDataManager.version = version
+tm.block_size = block_size
+tm.block_index = [0,0]
+dm.modal.version = version
 dm.modal.model_dims = model_dims
 dm.modal.reduce_method = method
 dm.modal.reduce_nepoch = 3
@@ -71,7 +71,8 @@ nclasses = lm().nLabels
 use_manager = True
 
 if use_manager:
-
+    for ic in [1,2,3,4]:
+        lm().addMarker( Marker( "test", [100*ic], ic ) )
     cm.learn_classification()
     cm.apply_classification()
 
@@ -84,7 +85,7 @@ else:
     CNN2 = tf.keras.layers.Conv3D( filters=4, kernel_size=ks, activation='relu', padding="same", strides=strides )
     CNN3 = tf.keras.layers.Conv3D( filters=3, kernel_size=ks, activation='relu', padding="same", strides=strides )
 
-    block: Block = tm().getBlock()
+    block: Block = tm.getBlock()
     spatial_data: xa.DataArray = block.getSpectralData( raster=True ).expand_dims("samples",0).expand_dims("channels",4)
 
     with tf.device(f'/{device}:0'):

@@ -65,6 +65,7 @@ class SpatialModelWrapper(KerasLearningModel):
         label_blocks: List[Block] = lm().getTrainingBlocks()
         if len(label_blocks) == 0:
             ufm().show( "Must label some points for learning","red")
+            lgm().log( "Must label some points for learning", print=True )
         else:
             lgm().log(f">>> get_training_set: blocks={[b.index for b in label_blocks]}")
             for block in label_blocks:
@@ -84,7 +85,7 @@ class SpatialModelWrapper(KerasLearningModel):
                 self.set_training_layer_index( block, training_data.shape[0] - 1 )
             lgm().log( f">>> MERGED datashape: {training_data.shape}, label_shape: {training_labels.shape}, "
                        f"weights_shape: {sample_weight.shape},  mask_shape: {test_mask.shape}" )
-            return ( training_data, training_labels, sample_weight, test_mask )
+        return ( training_data, training_labels, sample_weight, test_mask )
 
     @classmethod
     def block_data(cls) -> xa.DataArray:
