@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import xarray as xa
-from spectraclass.learn.manager import ClassificationManager
+from spectraclass.learn.manager import ClassificationManager, cm
 from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.data.base import DataManager
 from spectraclass.data.spatial.tile.tile import Block, Tile
@@ -23,7 +23,7 @@ classes = [ ('Class-1', "cyan"),
             ('Class-4', "blue") ]
 lm().setLabels( classes )
 
-location = "laptop"
+location = "desktop"
 version = "v2p9"  # "v2v2" "v2p9"
 month = "201707" # "201707" "201908"
 dm.modal.valid_aviris_bands = [ [5,193], [214,283], [319,10000] ]
@@ -44,37 +44,28 @@ elif location == "laptop":
 else: raise Exception( f"Unknown location: {location}")
 
 block_size = 250
-method = "aec" # "vae"
-model_dims = 32
-dm.use_model_data = True
+dm.use_model_data = False
 dm.proc_type = "skl"
 
 tm.block_size = block_size
 tm.block_index = [0,0]
 dm.modal.version = version
-dm.modal.model_dims = model_dims
-dm.modal.reduce_method = method
-dm.modal.reduce_nepoch = 3
-dm.modal.reduce_focus_nepoch = 10
-dm.modal.reduce_niter = 1
-dm.modal.reduce_focus_ratio = 10.0
-dm.modal.reduce_dropout = 0.0
-dm.modal.reduce_learning_rate = 1e-4
 dm.modal.refresh_model = False
-dm.modal.modelkey = f"b{block_size}.{method}"
+dm.modal.modelkey = f"b{block_size}.aec"
 
 dm.loadCurrentProject()
-cm: ClassificationManager = ClassificationManager.instance()
-cm.mid = "cnn3d"
-cm.cnn_layers = [(5,5,3),(4,5,3),(3,5,3)]
+ClassificationManager.nepochs = 5
+ClassificationManager.mid = "cnn3d"
+ClassificationManager.cnn_layers =[(4, 5, 3), (4, 5, 3), (3, 5, 3)]
+ClassificationManager.dense_layers = [32, 16]
 nclasses = lm().nLabels
 use_manager = True
 
 if use_manager:
     for ic in [1,2,3,4]:
         lm().addMarker( Marker( "test", [100*ic], ic ) )
-    cm.learn_classification()
-    cm.apply_classification()
+    cm().learn_classification()
+    cm().apply_classification()
 
 else:
 

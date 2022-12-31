@@ -63,6 +63,7 @@ class SpatialModelWrapper(KerasLearningModel):
         from spectraclass.learn.base import LearningModel
         training_data, training_labels, sample_weight, test_mask = None, None, None, None
         label_blocks: List[Block] = lm().getTrainingBlocks()
+        use_spectral_data = (self.mtype == ModelType.SPECTRALSPATIAL) or not dm().use_model_data
         if len(label_blocks) == 0:
             ufm().show( "Must label some points for learning","red")
             lgm().log( "Must label some points for learning", print=True )
@@ -70,13 +71,16 @@ class SpatialModelWrapper(KerasLearningModel):
             lgm().log(f">>> get_training_set: blocks={[b.index for b in label_blocks]}")
             for block in label_blocks:
                 label_map: np.ndarray  = lm().get_label_map( block=block ).values.flatten()
-                base_data: xa.DataArray = block.getModelData(True) if dm().use_model_data else block.getSpectralData(True)
-                tdims = [ base_data.dims[1], base_data.dims[2], base_data.dims[0] ]
-                tdata: xa.DataArray = base_data.transpose(*tdims).fillna(0.0).expand_dims('batch', 0)
+                base_data: xa.DataArray = block.getSpectralData(True) if use_spectral_data else block.getModelData(True)
+                if self.mtype == ModelType.SPECTRALSPATIAL:
+                    tdata: xa.DataArray = base_data.fillna(0.0).expand_dims('batch', 0)
+                else:
+                    tdims = [ base_data.dims[1], base_data.dims[2], base_data.dims[0] ]
+                    tdata: xa.DataArray = base_data.transpose(*tdims).fillna(0.0).expand_dims('batch', 0)
                 tlabels = np.expand_dims( LearningModel.index_to_one_hot( label_map ), 0 )
                 weights, mask = self.get_sample_weight( label_map )
                 lgm().log(f"    ->>> {(block.tile_index,block.block_coords)}->base_data: shape={base_data.shape} "
-                          f"dims={base_data.dims} tdims={tdims}, nlabels={np.count_nonzero(training_labels)}, "
+                          f"dims={base_data.dims} tdims={tdata.dims}, nlabels={np.count_nonzero(training_labels)}, "
                           f"data_shape: {tdata.shape}, label_shape: {tlabels.shape}, weights_shape: {weights.shape},  mask_shape: {mask.shape}")
                 training_data   = tdata   if (training_data   is None) else np.append( training_data,   tdata,   axis=0 )
                 training_labels = tlabels if (training_labels is None) else np.append( training_labels, tlabels, axis=0 )
@@ -93,9 +97,15 @@ class SpatialModelWrapper(KerasLearningModel):
         rdata: xa.DataArray = mm().data
         return  rdata.transpose( rdata.dims[1], rdata.dims[2], rdata.dims[0] )
 
-    @classmethod
-    def get_input_data(cls) -> xa.DataArray:
-        return cls.block_data().fillna(0.0).expand_dims('batch', 0)
+    def get_input_data(self) -> xa.DataArray:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        input_data: xa.DataArray = None
+        if self.mtype == ModelType.SPATIAL:
+            input_data = self.block_data().fillna(0.0).expand_dims('batch', 0)
+        elif self.mtype == ModelType.SPECTRALSPATIAL:
+            block: Block = tm().getBlock()
+            input_data = block.getSpectralData(raster=True).expand_dims("samples", 0)  ## .expand_dims("channels", 4)
+        return input_data
 
     @classmethod
     def get_input_shape(cls) -> Tuple[int,...]:
@@ -120,13 +130,10 @@ class SpatialModelWrapper(KerasLearningModel):
             input_data: xa.DataArray = self.get_input_data()
             block: Block = tm().getBlock()
             classifcation: np.ndarray = self.predict( input_data.values, log=True, **kwargs )
-            lgm().log( f" APPLY classification: block={block.block_coords}, result shape = {classifcation.shape}, vrange = [{classifcation.min()}, {classifcation.max()}] " )
-        #    lgm().log( f" APPLY classification result: shape={classifcation.shape}, nz={np.count_nonzero(classifcation)}, nnan={np.count_nonzero(np.isnan(classifcation))}")
+            lgm().log( f" APPLY classification: block={block.block_coords}, result shape = {classifcation.shape}, "
+                       f"vrange = [{classifcation.min()}, {classifcation.max()}] " )
             self.classification = xa.DataArray(  classifcation, dims=[ 'blocks', 'y', 'x' ],
-                                            coords=dict( blocks = range(classifcation.shape[0]), y= input_data.coords['y'], x= input_data.coords['x'] ) )
-#            block_index = self.get_training_layer_index( block )
-            mm().plot_labels_image( self.classification[0] )
-            lm().addAction("classify", "application")
+                        coords=dict( blocks = range(classifcation.shape[0]), y= input_data.coords['y'], x= input_data.coords['x'] ) )
             return self.classification
         except NotFittedError:
             ufm().show( "Must learn a mapping before applying a classification", "red")

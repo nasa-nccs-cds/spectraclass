@@ -121,8 +121,12 @@ class LearningModel:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         input_data: xa.DataArray = None
         block: Block = tm().getBlock()
-        if   self.mtype == ModelType.MODEL:      input_data = block.model_data
-        elif self.mtype == ModelType.SPECTRAL:   input_data = block.getPointData()[0]
+        if   self.mtype == ModelType.MODEL:
+            input_data = block.model_data
+        elif self.mtype == ModelType.SPECTRAL:
+            input_data = block.getPointData()[0]
+        elif self.mtype == ModelType.SPECTRALSPATIAL:
+            input_data = block.getSpectralData(raster=True).expand_dims("samples", 0) ## .expand_dims("channels", 4)
         return input_data
 
     @exception_handled
@@ -132,14 +136,11 @@ class LearningModel:
             from spectraclass.data.spatial.tile.manager import TileManager, tm
             from spectraclass.gui.spatial.map import MapManager, mm
             from spectraclass.model.labels import LabelsManager, Action, lm
-            block = tm().getBlock()
-            lgm().log( f" APPLY classification: block={block.block_coords}" )
+            lgm().log( f" APPLY classification" )
             input_data: xa.DataArray = self.get_input_data()
             prediction: np.ndarray = self.predict( input_data.values, **kwargs )
             self.classification = xa.DataArray(prediction, dims=['samples', 'classes'], coords=dict(samples=input_data.coords['samples'], classes=range(prediction.shape[1])))
             if self.classification.ndim == 1: self.classification = self.classification.reshape( [self.classification.size, 1] )
-            overlay_image: xa.DataArray = block.points2raster(self.classification)
-            mm().plot_labels_image(overlay_image)
             lm().addAction("classify", "application")
             return self.classification
         except NotFittedError:

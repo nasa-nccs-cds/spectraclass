@@ -61,12 +61,12 @@ class CNN3D(Network):
         input_shape = SpatialModelWrapper.get_spatialspectral_shape()
         cnnos, nfeatures = [], -1
         nclasses = lm().nLabels
-        cnn_layers = kwargs.pop('cnn_layers', [(5,5,3),(4,5,3),(3,5,3)] )
+        cnn_layers = kwargs.pop('cnn_layers', [(3,5,3),(3,5,3),(3,5,3)] )
         dense_layers = kwargs.pop('dense_layers', [32, 16])
         model = tf.keras.models.Sequential()
         model.add( tf.keras.layers.Input( shape=input_shape ) )
         for (nf,ks,s) in cnn_layers:
-            cnn_layer = tf.keras.layers.Conv3D(filters=nf, kernel_size=(ks,3,3), activation='relu', padding="valid", strides=(s,1,1) )
+            cnn_layer = tf.keras.layers.Conv3D(filters=nf, kernel_size=(ks,3,3), activation='relu', padding="same", strides=(s,1,1) )
             model.add( cnn_layer )
             cnnos = cnn_layer.output_shape
         model.add( tf.keras.layers.Permute( (2,3,1,4) ) )

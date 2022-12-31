@@ -128,9 +128,14 @@ class SpectraclassController(SCSingletonConfigurable):
 
     def classify(self) -> xa.DataArray:
         from spectraclass.learn.manager import ClassificationManager, cm
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.gui.spatial.map import MapManager, mm
         ufm().show("Applying Classification Mapping... ")
         result = cm().apply_classification()
         ufm().show( "Classification Mapping applied" )
+        block = tm().getBlock()
+        overlay_image: xa.DataArray = block.points2raster( result )
+        mm().plot_labels_image(overlay_image)
         return result
 
     @log_timing
