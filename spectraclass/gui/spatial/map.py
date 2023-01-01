@@ -40,6 +40,8 @@ def fs(flist):
 def svalid( data: np.ndarray):
     return f"#valid: {np.count_nonzero(~np.isnan(data))}/{data.size}"
 
+srng = lambda x: f"({x.min()},{x.max()})"
+
 class MapManager(SCSingletonConfigurable):
     init_band = tl.Int(10).tag(config=True, sync=True)
     upper_threshold = tl.Float(1.0).tag(config=True, sync=True)
@@ -68,17 +70,20 @@ class MapManager(SCSingletonConfigurable):
         self._cidpress = -1
         self.cspecs=None
         self._classification_data: xa.DataArray = None
+        self._class_confidence: xa.DataArray = None
         self.layers = LayersManager( self.on_layer_change )
         self.band_slider: Slider = None
         self.model_slider: Slider = None
         self._spectral_image: Optional[AxesImage] = None
         self.label_map: Optional[xa.DataArray] = None     # Map of classification labels from ML
         self.labels_image: Optional[AxesImage] = None
+        self.confidence_image: Optional[AxesImage] = None
         self.clusters_image: Optional[AxesImage] = None
         self.layers.add( 'basemap', 1.0, True)
         self.layers.add( 'bands', 1.0, True )
         self.layers.add( 'markers', 0.5, True )
         self.layers.add( 'labels', 0.5, False )
+        self.layers.add( 'confidence', 0.5, False )
         self.layers.add( 'clusters', 0.5, False )
         self.observe(self.on_threshold_change, names=["lower_threshold", "upper_threshold"])
         self.menu_actions = OrderedDict( Layers = [ [ "Increase Labels Alpha", 'Ctrl+>', None, partial( self.update_image_alpha, "labels", True ) ],
@@ -200,6 +205,7 @@ class MapManager(SCSingletonConfigurable):
         self.cspecs = lm().get_labels_colormap()
         self.labels_image = self.template.plot.imshow( ax=self.base.gax, alpha=self.layers('labels').visibility, zorder=3.0,
                                                         cmap=self.cspecs['cmap'], add_colorbar=False, norm=self.cspecs['norm'] )
+        self.confidence_image = self.template.plot.imshow( ax=self.base.gax, alpha=0.0, zorder=4.0, cmap='jet', add_colorbar=False )
         self.init_cluster_image()
 
     def clearLabels( self):
@@ -208,6 +214,7 @@ class MapManager(SCSingletonConfigurable):
              self.points_selection.plot()
              if self.labels_image is not None:
                 self.labels_image.set_alpha(0.0)
+                self.confidence_image.set_alpha(0.0)
 
     def init_cluster_image(self):
          self.clusters_image = self.template.plot.imshow( ax=self.base.gax, alpha=self.layers('clusters').visibility, add_colorbar=False, zorder=4.0 )
@@ -282,15 +289,22 @@ class MapManager(SCSingletonConfigurable):
     def classification_data(self) -> Optional[np.ndarray]:
         return self._classification_data.values if self._classification_data is not None else None
 
+    @property
+    def class_confidence(self) -> Optional[np.ndarray]:
+        return self._class_confidence.values if self._class_confidence is not None else None
+
     @exception_handled
-    def plot_labels_image(self, classification: xa.DataArray = None ):
-        lgm().log(f"  plot labels image, shape = {None if classification is None else classification.shape}")
+    def plot_labels_image(self, classification: xa.DataArray = None, confidence: xa.DataArray = None ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         if classification is None:
             if self._classification_data is not None:
                 self._classification_data = xa.zeros_like( self._classification_data )
+            if self._class_confidence is not None:
+                self._class_confidence = xa.zeros_like( self._class_confidence )
         else:
+            lgm().log( f"  plot labels image, shape = {classification.shape}, dims = {classification.dims}")
             self._classification_data = classification.fillna(0.0).squeeze()
+            self._class_confidence = confidence
             if self._classification_data.ndim == 3:
                 self._classification_data = self.one_hot_to_index( self._classification_data )
 
@@ -299,15 +313,27 @@ class MapManager(SCSingletonConfigurable):
             block: Block = tm().getBlock()
             if self.labels_image is None:
                 alpha, cmap, norm = self.layers.alpha("labels"), self.cspecs['cmap'], self.cspecs['norm']
-                lgm().log(f"  create labels image, shape={self._classification_data.shape}, dims={self._classification_data.dims}, vrange={vrange}, cmap={cmap}, norm={norm}  ")
+                lgm().log(f"  create labels image, shape={self._classification_data.shape}, dims={self._classification_data.dims}, "
+                          f" vrange={srng(self._classification_data.values)}, cmap={cmap}, norm={norm}  ")
                 self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=alpha, cmap=cmap, norm=norm, zorder=3.0, add_colorbar=False)
             else:
-
-                lgm().log(f"  update labels image, block={block.block_coords}, shape={self._classification_data.shape}, vrange={vrange}  ")
+                lgm().log(f"  update labels image, block={block.block_coords}, shape={self._classification_data.shape}, vrange={srng(self._classification_data.values)}  ")
                 self.labels_image.set_data( self._classification_data.values )
                 self.labels_image.set_extent( block.extent )
                 self.labels_image.changed()
 
+            if self._class_confidence is not None:
+                lgm().log(f"  plot confidence image, shape = {self._class_confidence.shape}, range = {srng(self._class_confidence)}")
+                block: Block = tm().getBlock()
+                alpha = self.layers.alpha("confidence")
+                if self.confidence_image is None:
+                    self.confidence_image = self._class_confidence.plot.imshow( ax=self.base.gax, alpha=alpha, cmap="jet",
+                                                                                zorder=4.0, add_colorbar=False)
+                else:
+                    self.confidence_image.set_data( self._class_confidence.values )
+                    self.confidence_image.set_extent( block.extent )
+                    self.confidence_image.set_alpha( alpha )
+                    self.confidence_image.changed()
             self.update_canvas()
 
     @exception_handled
@@ -327,11 +353,12 @@ class MapManager(SCSingletonConfigurable):
 
     def layer_managers( self, name: str ) -> List:
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
-        if   name == "basemap":   mgrs = [ self.base ]
-        elif name == "labels":    mgrs = [ self.labels_image ]
-        elif name == "clusters":  mgrs = [ self.clusters_image ]
-        elif name == "bands":     mgrs = [ self.spectral_image ]
-        elif name == "markers":   mgrs = [ self.points_selection, self.region_selection, self.cluster_selection, pcm() ]
+        if   name == "basemap":    mgrs = [ self.base ]
+        elif name == "labels":     mgrs = [ self.labels_image ]
+        elif name == "confidence": mgrs = [ self.confidence_image ]
+        elif name == "clusters":   mgrs = [ self.clusters_image ]
+        elif name == "bands":      mgrs = [ self.spectral_image ]
+        elif name == "markers":    mgrs = [ self.points_selection, self.region_selection, self.cluster_selection, pcm() ]
         else: raise Exception( f"Unknown Layer: {name}")
         return mgrs
 

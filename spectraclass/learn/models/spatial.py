@@ -121,20 +121,22 @@ class SpatialModelWrapper(KerasLearningModel):
         return  tuple( rdata.shape )
 
     @exception_handled
-    def apply_classification( self, **kwargs ) -> xa.DataArray:
+    def apply_classification( self, **kwargs ) -> Tuple[xa.DataArray,xa.DataArray]:
         try:
             from spectraclass.gui.pointcloud import PointCloudManager, pcm
             from spectraclass.data.spatial.tile.manager import TileManager, tm
             from spectraclass.gui.spatial.map import MapManager, mm
             from spectraclass.model.labels import LabelsManager, Action, lm
             input_data: xa.DataArray = self.get_input_data()
+            gridc = dict( y= input_data.coords['y'], x= input_data.coords['x'] )
             block: Block = tm().getBlock()
-            classifcation: np.ndarray = self.predict( input_data.values, log=True, **kwargs )
+            classifcation, confidence = self.predict( input_data.values, log=True, **kwargs )
             lgm().log( f" APPLY classification: block={block.block_coords}, result shape = {classifcation.shape}, "
                        f"vrange = [{classifcation.min()}, {classifcation.max()}] " )
             self.classification = xa.DataArray(  classifcation, dims=[ 'blocks', 'y', 'x' ],
-                        coords=dict( blocks = range(classifcation.shape[0]), y= input_data.coords['y'], x= input_data.coords['x'] ) )
-            return self.classification
+                        coords=dict( blocks = range(classifcation.shape[0]), **gridc ) )
+            self.confidence = xa.DataArray(  confidence, dims=[ 'y', 'x' ], coords=gridc )
+            return self.classification, self.confidence
         except NotFittedError:
             ufm().show( "Must learn a mapping before applying a classification", "red")
 
@@ -159,7 +161,7 @@ class SpatialModelWrapper(KerasLearningModel):
     @exception_handled
     def epoch_callback(self, epoch):
         if (self.test_mask is not None) and (self.test_size > 0.0):
-            prediction = self.predict( self.training_data )
+            prediction, confidence = self.predict( self.training_data )
             for iBlock in range( self.training_data.shape[0] ):
                 labels = self.training_labels[iBlock].argmax(axis=-1)
                 classification_results = np.equal( prediction[iBlock].flatten(), labels )
@@ -167,8 +169,9 @@ class SpatialModelWrapper(KerasLearningModel):
                 accuracy = np.count_nonzero( test_results ) / test_results.size
                 lgm().log( f"Epoch[{epoch}]-> BLOCK-{iBlock}: Test[{test_results.size}] accuracy: {accuracy:.4f}" )
 
-    def predict( self, data: np.ndarray, **kwargs ):
+    def predict( self, data: np.ndarray, **kwargs ) -> Tuple[np.ndarray,Optional[np.ndarray]]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        srng = lambda x: f"({x.min()},{x.max()})"
         log = kwargs.get('log',False)
         block: Block = tm().getBlock()
         if log:
@@ -177,9 +180,17 @@ class SpatialModelWrapper(KerasLearningModel):
         bshape: List[int] = list(block.shape[1:])
         predictresult: np.ndarray = self._model.predict(data)
         classresult: np.ndarray = predictresult.argmax(axis=-1)
+        predictresult.sort(axis=-1)
+        predictresult = predictresult.squeeze()
+        maxvalue, next_maxvalue = predictresult[:,-1], predictresult[:,-2]
+        confidence = ((maxvalue-next_maxvalue)/predictresult.max())
         raster_mask = ~block.raster_mask.flatten()
-        lgm().log(f" **** predict: data shape = {data.shape}, predict-result shape = {predictresult.shape}, class-result shape = {classresult.shape},  bshape = {bshape}, raster_mask shape = {raster_mask.shape}")
+        lgm().log(f" **** predict: data shape = {data.shape}, predict-result shape = {predictresult.shape} "
+                  f"\n ---> class-result shape = {classresult.shape},  bshape = {bshape}, raster_mask shape = {raster_mask.shape} "
+                  f"\n ---> confidence shape = {confidence.shape}, confidence range = {srng(confidence)} "
+                  f"\n ---> maxvalue shape = {maxvalue.shape}, maxvalue range = {srng(maxvalue)}, next_maxvalue range = {srng(next_maxvalue)} "
+                  f"\n ---> maxvalue samples = {maxvalue[0:5]}, next_maxvalue samples = {next_maxvalue[0:5]} ")
         for iB in range( classresult.shape[0] ):
             classresult[ iB, raster_mask ] = 0
         result = classresult.reshape( [data.shape[0]] + bshape )
-        return result
+        return result, confidence.reshape( bshape )

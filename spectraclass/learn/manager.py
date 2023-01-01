@@ -300,8 +300,17 @@ class ClassificationManager(SCSingletonConfigurable):
 
     @exception_handled
     def apply_classification( self, **kwargs  ):
-        lgm().log( f"apply_classification: MODEL({hex(id(self.model))}) = {self.mid} ")
-        self.model.apply_classification( **kwargs  )
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.gui.spatial.map import MapManager, mm
+        ufm().show("Applying Classification Mapping... ")
+        (classification, confidence) = self.model.apply_classification( **kwargs  )
+        if 'samples' in classification.dims:
+            classification: xa.DataArray = tm().getBlock().points2raster( classification )
+        if 'samples' in confidence.dims:
+            confidence: xa.DataArray = tm().getBlock().points2raster( confidence )
+        mm().plot_labels_image( classification, confidence )
+        ufm().show( "Classification Mapping applied" )
+        return classification
 
     @property
     def classification(self) -> xa.DataArray:

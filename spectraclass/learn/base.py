@@ -32,6 +32,7 @@ class LearningModel:
         self.config = kwargs
         self._keys = []
         self.classification: xa.DataArray = None
+        self.confidence: xa.DataArray = None
 
     def clear(self):
         raise Exception( "abstract method LearningModel.clear called")
@@ -130,7 +131,7 @@ class LearningModel:
         return input_data
 
     @exception_handled
-    def apply_classification( self, **kwargs ) -> xa.DataArray:
+    def apply_classification( self, **kwargs ) -> Tuple[xa.DataArray,xa.DataArray]:
         try:
             from spectraclass.gui.pointcloud import PointCloudManager, pcm
             from spectraclass.data.spatial.tile.manager import TileManager, tm
@@ -138,11 +139,15 @@ class LearningModel:
             from spectraclass.model.labels import LabelsManager, Action, lm
             lgm().log( f" APPLY classification" )
             input_data: xa.DataArray = self.get_input_data()
-            prediction: np.ndarray = self.predict( input_data.values, **kwargs )
-            self.classification = xa.DataArray(prediction, dims=['samples', 'classes'], coords=dict(samples=input_data.coords['samples'], classes=range(prediction.shape[1])))
-            if self.classification.ndim == 1: self.classification = self.classification.reshape( [self.classification.size, 1] )
+            prediction, pred_confidence = self.predict( input_data.values, **kwargs )
+            if pred_confidence.ndim == 1: pred_confidence = np.expand_dims(pred_confidence, 1)
+            if prediction.ndim == 1: prediction = np.expand_dims(prediction, 1)
+            self.classification = xa.DataArray( prediction, dims=['samples', 'classes'],
+                                               coords=dict(samples=input_data.coords['samples'], classes=range(prediction.shape[1])))
             lm().addAction("classify", "application")
-            return self.classification
+            self.confidence = xa.DataArray( pred_confidence, dims=['samples', 'classes'],
+                                           coords=dict(samples=input_data.coords['samples'], classes=range(pred_confidence.shape[1])))
+            return self.classification, self.confidence
         except NotFittedError:
             ufm().show( "Must learn a mapping before applying a classification", "red")
 
@@ -211,9 +216,10 @@ class KerasLearningModel(LearningModel):
     def epoch_callback(self, epoch):
         pass
 
-    def predict( self, data: np.ndarray, **kwargs ) -> np.ndarray:
+    def predict( self, data: np.ndarray, **kwargs ) -> Tuple[np.ndarray,Optional[np.ndarray]]:
         with tf.device(f'/{self.device}:0'):
-            return self._model.predict( data, **kwargs )
+            result = self._model.predict( data, **kwargs )
+            return ( result, None )
 
     def apply( self, data: np.ndarray, **kwargs ) -> np.ndarray:
         waves = [ w.mean() for w in self._model.get_layer(0).get_weights() ]
