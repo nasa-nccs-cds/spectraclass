@@ -8,22 +8,26 @@ from spectraclass.learn.base import ModelType
 def osize( isize: int, ks: int, s: int  ) -> int:
     return ((isize-ks)//s) + 1
 
-class CNN(Network):
+class CNN2D(Network):
     TYPE = ModelType.SPATIAL
 
     def _build_model(self, **kwargs) -> Tuple[tf.keras.models.Model,Dict]:
         from spectraclass.learn.models.spatial import SpatialModelWrapper
-        nfeatures = kwargs.pop('nfeatures', 32 )
+        cnn_layers = kwargs.pop('cnn_layers', [(8,3,1)] )
+        dense_layers = kwargs.pop('dense_layers', [32, 16])
+        activation = kwargs.pop('activation', 'relu')
+        nfeatures = -1
         from spectraclass.model.labels import lm
         input_shape = SpatialModelWrapper.get_input_shape()
         nclasses = lm().nLabels
-        ks = kwargs.pop('kernel_size',3)
         model = tf.keras.models.Sequential()
         model.add( tf.keras.layers.Input( shape=input_shape ) )
-        model.add( tf.keras.layers.Conv2D( nfeatures, (ks,ks), activation='relu', padding="same" ) )
+        for (nf, ks, s) in cnn_layers:
+            model.add( tf.keras.layers.Conv2D( nf, (ks,ks), activation=activation, padding="same", strides=s ) )
+            nfeatures = nf
         model.add( tf.keras.layers.Reshape( SpatialModelWrapper.flatten(input_shape,nfeatures) ) )
-        model.add( tf.keras.layers.Dense( 2*nfeatures, activation='relu' ) )
-        model.add( tf.keras.layers.Dense( nfeatures, activation='relu') )
+        for nf in dense_layers:
+            model.add( tf.keras.layers.Dense( nf, activation='relu' ) )
         model.add( tf.keras.layers.Dense( nclasses, activation='softmax' ) )
         return model, kwargs
 

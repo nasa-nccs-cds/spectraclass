@@ -39,19 +39,34 @@ class Network:
     def _build_model( self, **kwargs ) -> Tuple[tf.keras.models.Model,Dict]:
         raise NotImplementedError( "Attempt to call abstract method '_build_model' on Network object")
 
-    def epoch_callback(self, epoch):
-        self._learning_model.epoch_callback( epoch )
+    def epoch_callback(self, epoch, logs):
+        self._learning_model.epoch_callback( epoch, logs )
 
-    def on_train_end(self):
+    def on_train_end(self, logs):
         pass
 
-    def on_epoch_end(self, epoch ):
+    def on_train_begin(self, logs):
+        self.metrics = {}
+        for metric in logs:
+            self.metrics[metric] = []
+
+    def on_epoch_end(self, epoch, logs):
+        # Storing metrics
+        for metric in logs:
+            if metric in self.metrics:
+                self.metrics[metric].append(logs.get(metric))
+            else:
+                self.metrics[metric] = [logs.get(metric)]
+
+    # for i, metric in enumerate(metrics):
+    #     axs[i].plot(range(1, epoch + 2),
+    #                 self.metrics[metric],
+    #                 label=metric)
+
+    def on_batch_end(self, batch, logs):
         pass
 
-    def on_batch_end(self, batch):
-        pass
-
-    def on_predict_end(self):
+    def on_predict_end(self, logs):
         pass
 
 class NetworkCallback(tf.keras.callbacks.Callback):
@@ -60,15 +75,18 @@ class NetworkCallback(tf.keras.callbacks.Callback):
         tf.keras.callbacks.Callback.__init__(self)
         self._network: Network = network
 
+    def on_train_begin(self, logs=None):
+        self._network.on_train_begin(logs)
+
     def on_train_end(self, logs=None):
-        self._network.on_train_end()
+        self._network.on_train_end(logs)
 
     def on_epoch_end(self, epoch, logs=None):
-        self._network.on_epoch_end(epoch)
-        self._network.epoch_callback(epoch)
+        self._network.on_epoch_end(epoch,logs)
+        self._network.epoch_callback(epoch,logs)
 
     def on_batch_end(self, batch, logs=None):
-        self._network.on_batch_end(batch)
+        self._network.on_batch_end(batch,logs)
 
     def on_predict_end(self, logs=None):
-        self._network.on_predict_end()
+        self._network.on_predict_end(logs)

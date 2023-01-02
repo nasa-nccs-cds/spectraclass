@@ -83,10 +83,10 @@ class MapManager(SCSingletonConfigurable):
         self.clusters_image: Optional[AxesImage] = None
         self.layers.add( 'basemap', 1.0, True)
         self.layers.add( 'bands', 1.0, True )
-        self.layers.add( 'markers', 0.5, True )
-        self.layers.add( 'labels', 0.5, False )
-        self.layers.add( 'confidence', 0.5, False )
-        self.layers.add( 'clusters', 0.5, False )
+        self.layers.add( 'markers', 1.0, True )
+        self.layers.add( 'labels', 1.0, False )
+        self.layers.add( 'confidence', 1.0, False )
+        self.layers.add( 'clusters', 1.0   , False )
         self.observe(self.on_threshold_change, names=["lower_threshold", "upper_threshold"])
         self.menu_actions = OrderedDict( Layers = [ [ "Increase Labels Alpha", 'Ctrl+>', None, partial( self.update_image_alpha, "labels", True ) ],
                                                     [ "Decrease Labels Alpha", 'Ctrl+<', None, partial( self.update_image_alpha, "labels", False ) ],
@@ -209,8 +209,7 @@ class MapManager(SCSingletonConfigurable):
         self.cspecs = lm().get_labels_colormap()
         self.labels_image = self.class_template.plot.imshow( ax=self.base.gax, alpha=self.layers('labels').visibility, zorder=3.0,
                                                         cmap=self.cspecs['cmap'], add_colorbar=False, norm=self.cspecs['norm'] )
-        self.confidence_image = self.raster_template.plot.imshow( ax=self.base.gax, alpha=0.0, zorder=4.0,
-                                                        cmap='jet', add_colorbar=False, vmin=0.0, vmax=0.5 )
+        self.confidence_image = self.raster_template.plot.imshow( ax=self.base.gax, alpha=0.0, zorder=4.0, cmap='jet', add_colorbar=False )
         self.init_cluster_image()
 
     def clearLabels( self):
@@ -301,6 +300,7 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def plot_labels_image(self, classification: xa.DataArray = None, confidence: xa.DataArray = None ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from matplotlib.colors import Normalize
         if classification is None:
             if self._classification_data is not None:
                 self._classification_data = xa.zeros_like( self._classification_data )
@@ -315,25 +315,26 @@ class MapManager(SCSingletonConfigurable):
 
         if self._classification_data is not None:
             vrange = [ self._classification_data.values.min(), self._classification_data.values.max() ]
-            block: Block = tm().getBlock()
-            if self.labels_image is None:
-                alpha, cmap, norm = self.layers.alpha("labels"), self.cspecs['cmap'], self.cspecs['norm']
-                lgm().log(f"  create labels image, shape={self._classification_data.shape}, dims={self._classification_data.dims}, "
-                          f" vrange={srng(self._classification_data.values)}, cmap={cmap}, norm={norm}  ")
-                self.labels_image = self._classification_data.plot.imshow( ax=self.base.gax, alpha=alpha, cmap=cmap, norm=norm, zorder=3.0, add_colorbar=False)
-            else:
-                lgm().log(f"  update labels image, block={block.block_coords}, shape={self._classification_data.shape}, vrange={srng(self._classification_data.values)}  ")
-                self.labels_image.set_data( self._classification_data.values )
-                self.labels_image.set_extent( block.extent )
-                self.labels_image.changed()
+            extent = tm().getBlock().extent
+            lgm().log(f"  update labels image, shape={self._classification_data.shape}, vrange={vrange}  ")
+            self.labels_image.set_data( self._classification_data.values )
+            self.labels_image.set_extent( extent )
+            self.labels_image.changed()
 
             if self._class_confidence is not None:
-                lgm().log(f"  plot confidence image, shape = {self._class_confidence.shape}, range = {srng(self._class_confidence)}")
-                block: Block = tm().getBlock()
-                alpha = self.layers.alpha("confidence")
-                self.confidence_image.set_data( self._class_confidence.values.squeeze() )
-                self.confidence_image.set_extent( block.extent )
-                self.confidence_image.set_alpha( alpha )
+                cdata = self._class_confidence.values.squeeze()
+                nanmask = np.isnan(cdata)
+                cdata[ nanmask ] = 0.0
+                confdata = cdata # -np.log( 1.0-cdata )
+                crange = [ confdata.min(), confdata.max() ]
+                h,e = np.histogram( confdata, range=crange, bins=20 )
+                lgm().log(f"---> plot confidence image, shape = {confdata.shape}, range = {crange}, nnan = {np.count_nonzero(nanmask)}"
+                          f"\n  * histogram = {h.tolist()}"
+                          f"\n  * edges = {e.tolist()}")
+                self.confidence_image.set_data( confdata )
+                self.confidence_image.set_extent( extent )
+                self.confidence_image.set_norm( Normalize( *crange ) )
+                self.confidence_image.set_alpha( self.layers.alpha("confidence") )
                 self.confidence_image.changed()
             self.update_canvas()
 

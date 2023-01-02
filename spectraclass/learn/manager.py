@@ -159,10 +159,7 @@ class Cluster:
 
 class ClassificationManager(SCSingletonConfigurable):
     mid = tl.Unicode("mlp").tag(config=True, sync=True)
-    nfeatures =  tl.Int(32).tag(config=True, sync=True)
     nepochs = tl.Int(70).tag(config=True, sync=True)
-    cnn_layers = tl.List( default_value=[(8,5,3),(8,5,3),(8,5,3)] ).tag(config=True, sync=True)
-    dense_layers = tl.List( default_value=[32,32] ).tag(config=True, sync=True)
 
     def __init__(self,  **kwargs ):
         super(ClassificationManager, self).__init__(**kwargs)
@@ -191,16 +188,15 @@ class ClassificationManager(SCSingletonConfigurable):
         self.mid = event['new']
 
     def import_models(self):
-        from .cnn import CNN, SpectralCNN, CNN3D
-        from .svc import SVCLearningModel
-        from .mlp import MLP
-        from spectraclass.data.base import DataManager, dm
+        # from .cnn import CNN2D, SpectralCNN, CNN3D
+        # from .svc import SVCLearningModel
+        # from .mlp import MLP
         lgm().log("#IA: INIT MODELS")
-        self.addNetwork( MLP( 'mlp', nfeatures=dm().modal.model_dims) )
-        self.addNetwork( CNN( 'cnn2d', nfeatures=self.nfeatures ) )
-        self.addNetwork( SpectralCNN('cnn1d', cnn_layers=self.cnn_layers, dense_layers=self.dense_layers))
-        self.addNetwork( CNN3D('cnn3d', cnn_layers=self.cnn_layers, dense_layers=self.dense_layers, nepochs=self.nepochs))
-        self._models['svc'] = SVCLearningModel()
+        # self.addNetwork(MLP( 'mlp', **self.model_parameters))
+        # self.addNetwork( CNN( 'cnn2d', **self.model_parameters ) )
+        # self.addNetwork( SpectralCNN('cnn1d', **self.model_parameters ) )
+        # self.addNetwork( CNN3D('cnn3d', **self.model_parameters ) )
+        # self._models['svc'] = SVCLearningModel()
 
     def addLearningModel(self, mid: str, model: LearningModel ):
         self._models[ mid ] = model

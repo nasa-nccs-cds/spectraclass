@@ -171,7 +171,7 @@ class SpatialModelWrapper(KerasLearningModel):
 
     def predict( self, data: np.ndarray, **kwargs ) -> Tuple[np.ndarray,Optional[np.ndarray]]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        srng = lambda x: f"({x.min()},{x.max()})"
+        srng = lambda x: f"({np.nanmin(x)},{np.nanmax(x)})"
         log = kwargs.get('log',False)
         block: Block = tm().getBlock()
         if log:
@@ -179,11 +179,12 @@ class SpatialModelWrapper(KerasLearningModel):
             lgm().log(f"SpatialModel[{hex(id(self))}:{hex(id(self._model))}].apply: block={block.block_coords} weights={waves}")
         bshape: List[int] = list(block.shape[1:])
         predictresult: np.ndarray = self._model.predict(data)
+        predictresult[ np.isnan(predictresult) ] = -9999
         classresult: np.ndarray = predictresult.argmax(axis=-1)
         predictresult.sort(axis=-1)
         predictresult = predictresult.squeeze()
         maxvalue, next_maxvalue = predictresult[:,-1], predictresult[:,-2]
-        confidence = ((maxvalue-next_maxvalue)/predictresult.max())
+        confidence = ((maxvalue-next_maxvalue)/np.nanmax(predictresult))
         raster_mask = ~block.raster_mask.flatten()
         lgm().log(f" **** predict: data shape = {data.shape}, predict-result shape = {predictresult.shape} "
                   f"\n ---> class-result shape = {classresult.shape},  bshape = {bshape}, raster_mask shape = {raster_mask.shape} "

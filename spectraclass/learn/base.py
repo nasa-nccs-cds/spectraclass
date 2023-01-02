@@ -37,7 +37,7 @@ class LearningModel:
     def clear(self):
         raise Exception( "abstract method LearningModel.clear called")
 
-    def epoch_callback(self, epoch):
+    def epoch_callback( self, epoch, logs ):
         pass
 
     def rebuild(self):
@@ -218,12 +218,16 @@ class KerasLearningModel(LearningModel):
 
     def predict( self, data: np.ndarray, **kwargs ) -> Tuple[np.ndarray,Optional[np.ndarray]]:
         with tf.device(f'/{self.device}:0'):
+            crng = lambda x: [ np.nanmin( x ), np.nanmax( x ) ]
             predictresult = self._model.predict( data, **kwargs )
+            predictresult[ np.isnan(predictresult) ] = -9999
             classresult: np.ndarray = predictresult.argmax(axis=-1)
             predictresult.sort(axis=-1)
             predictresult = predictresult.squeeze()
             maxvalue, next_maxvalue = predictresult[:, -1], predictresult[:, -2]
-            confidence = ((maxvalue - next_maxvalue) / predictresult.max())
+            confidence = maxvalue - next_maxvalue
+            lgm().log( f" predict-> computed confidence: crange = {crng(confidence)}" )
+            lgm().log( f"  ** maxvalue crange = {crng(maxvalue)}, next_maxvalue crange = {crng(next_maxvalue)}")
             return ( classresult, confidence )
 
     def apply( self, data: np.ndarray, **kwargs ) -> np.ndarray:
