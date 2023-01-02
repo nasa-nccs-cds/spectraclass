@@ -62,6 +62,8 @@ class MapManager(SCSingletonConfigurable):
         self.block_index = None
         self.silent_thresholds = False
         self._adding_marker = False
+        self.class_template = None
+        self.raster_template = None
         self.points_selection: MarkerManager = None
         self.cluster_selection: ClusterSelector = None
         self.region_selection: PolygonInteractor = None
@@ -197,15 +199,18 @@ class MapManager(SCSingletonConfigurable):
         return xa.Dataset( self.label_map )
 
     def initLabels(self):
-        self.template = xa.full_like( self.block.data[0].squeeze( drop=True ), 0, dtype=np.dtype(np.int32) ) # .where( template.notnull(), nodata_value )
-        self.label_map: xa.DataArray = self.template
+        template = self.block.data[0].squeeze( drop=True )
+        self.class_template =  xa.full_like( template, 0, dtype=np.dtype(np.int32) )
+        self.raster_template = xa.full_like( template, 0.0, dtype=np.dtype(np.float) )
+        self.label_map: xa.DataArray = self.class_template
 #        self.label_map.attrs['_FillValue'] = nodata_value
         self.label_map.name = f"{self.block.data.name}_labels"
         self.label_map.attrs[ 'long_name' ] =  "labels"
         self.cspecs = lm().get_labels_colormap()
-        self.labels_image = self.template.plot.imshow( ax=self.base.gax, alpha=self.layers('labels').visibility, zorder=3.0,
+        self.labels_image = self.class_template.plot.imshow( ax=self.base.gax, alpha=self.layers('labels').visibility, zorder=3.0,
                                                         cmap=self.cspecs['cmap'], add_colorbar=False, norm=self.cspecs['norm'] )
-        self.confidence_image = self.template.plot.imshow( ax=self.base.gax, alpha=0.0, zorder=4.0, cmap='jet', add_colorbar=False )
+        self.confidence_image = self.raster_template.plot.imshow( ax=self.base.gax, alpha=0.0, zorder=4.0,
+                                                        cmap='jet', add_colorbar=False, vmin=0.0, vmax=0.5 )
         self.init_cluster_image()
 
     def clearLabels( self):
@@ -217,7 +222,7 @@ class MapManager(SCSingletonConfigurable):
                 self.confidence_image.set_alpha(0.0)
 
     def init_cluster_image(self):
-         self.clusters_image = self.template.plot.imshow( ax=self.base.gax, alpha=self.layers('clusters').visibility, add_colorbar=False, zorder=4.0 )
+         self.clusters_image = self.class_template.plot.imshow( ax=self.base.gax, alpha=self.layers('clusters').visibility, add_colorbar=False, zorder=4.0 )
 
     @property
     def toolbarMode(self) -> str:
@@ -326,14 +331,10 @@ class MapManager(SCSingletonConfigurable):
                 lgm().log(f"  plot confidence image, shape = {self._class_confidence.shape}, range = {srng(self._class_confidence)}")
                 block: Block = tm().getBlock()
                 alpha = self.layers.alpha("confidence")
-                if self.confidence_image is None:
-                    self.confidence_image = self._class_confidence.plot.imshow( ax=self.base.gax, alpha=alpha, cmap="jet",
-                                                                                zorder=4.0, add_colorbar=False)
-                else:
-                    self.confidence_image.set_data( self._class_confidence.values )
-                    self.confidence_image.set_extent( block.extent )
-                    self.confidence_image.set_alpha( alpha )
-                    self.confidence_image.changed()
+                self.confidence_image.set_data( self._class_confidence.values.squeeze() )
+                self.confidence_image.set_extent( block.extent )
+                self.confidence_image.set_alpha( alpha )
+                self.confidence_image.changed()
             self.update_canvas()
 
     @exception_handled

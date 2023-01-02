@@ -218,8 +218,13 @@ class KerasLearningModel(LearningModel):
 
     def predict( self, data: np.ndarray, **kwargs ) -> Tuple[np.ndarray,Optional[np.ndarray]]:
         with tf.device(f'/{self.device}:0'):
-            result = self._model.predict( data, **kwargs )
-            return ( result, None )
+            predictresult = self._model.predict( data, **kwargs )
+            classresult: np.ndarray = predictresult.argmax(axis=-1)
+            predictresult.sort(axis=-1)
+            predictresult = predictresult.squeeze()
+            maxvalue, next_maxvalue = predictresult[:, -1], predictresult[:, -2]
+            confidence = ((maxvalue - next_maxvalue) / predictresult.max())
+            return ( classresult, confidence )
 
     def apply( self, data: np.ndarray, **kwargs ) -> np.ndarray:
         waves = [ w.mean() for w in self._model.get_layer(0).get_weights() ]
