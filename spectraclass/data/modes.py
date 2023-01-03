@@ -528,7 +528,7 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def set_current_image(self, image_index: int ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        msg = f"Setting active_image[{self._active_image}]: {self.image_name}"
+        msg = f"Setting active image[{self._active_image}]: {self.image_name}"
         lgm().log( msg ); ufm().show( msg )
         self._active_image = image_index
         tm().tile.initialize()

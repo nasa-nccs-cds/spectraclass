@@ -29,6 +29,10 @@ class AvirisDataManager(SpatialDataManager):
             elif ib % 2 == 1: self.VALID_BANDS.append( [ bv0, bv1 ] )
             else: bv0 = bv1
 
+    def on_image_change( self, event: Dict ):
+        super(AvirisDataManager, self).on_image_change( event )
+        self.tile_selector.on_image_change( event )
+
     def gui(self):
         if self.ext == "_img":
             if self.tile_selector is None:

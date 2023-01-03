@@ -66,6 +66,7 @@ class AvirisTileSelector:
         if self.band_plot is None:  self.band_plot = self.ax.imshow( band_array, zorder=2.0, cmap="jet")
         else:                       self.band_plot.set_data( band_array )
         self.band_plot.set_clim(*vrange)
+        self.add_block_selection()
         self.select_block()
 
     @log_timing
@@ -80,8 +81,6 @@ class AvirisTileSelector:
     def gui(self):
         plt.ioff()
         self.update_image()
-        self.add_block_selection()
-        self.select_block()
         plt.ion()
         return self.band_plot.figure.canvas
 
