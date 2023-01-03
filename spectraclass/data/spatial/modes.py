@@ -9,6 +9,7 @@ class AvirisDataManager(SpatialDataManager):
     from spectraclass.gui.spatial.application import Spectraclass
     valid_aviris_bands = tl.List( default_value=[ 0,100000] ).tag(config=True, sync=True)
     version = tl.Unicode( "v2p9" )
+    ext = tl.Unicode('.tif').tag(config=True, sync=True)
 
     MODE = "aviris"
     METAVARS = []

@@ -75,7 +75,6 @@ class ModeDataManager(SCSingletonConfigurable):
     cache_dir = tl.Unicode( "" ).tag(config=True)
     data_dir = tl.Unicode( "" ).tag(config=True)
     class_file = tl.Unicode("NONE").tag(config=True, sync=True)
-    ext = tl.Unicode('.tif').tag(config=True, sync=True)
 
     model_dims = tl.Int(16).tag(config=True, sync=True)
     subsample_index = tl.Int(1).tag(config=True, sync=True)
