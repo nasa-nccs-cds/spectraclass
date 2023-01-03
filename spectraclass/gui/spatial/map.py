@@ -533,7 +533,7 @@ class MapManager(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
-        needs_update = (self.block_index == None) or (tuple(block_index) != tuple(tm().block_index))
+        needs_update = (self.block_index == None) or (block_index == None) or (tm().block_index == None) or (tuple(block_index) != tuple(tm().block_index))
         if needs_update:
             lgm().log( f"Loading Block{block_index}, tm.index={tm().block_index}, current.index={self.block_index}")
             if block_index is not None:
