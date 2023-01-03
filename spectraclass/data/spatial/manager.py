@@ -59,18 +59,22 @@ class SpatialDataManager(ModeDataManager):
         dx2, dy2 = (xc[1]-xc[0])/2, (yc[0]-yc[1])/2
         return [ xc[0]-dx2,  xc[-1]+dx2,  yc[-1]-dy2,  yc[0]+dy2 ]
 
-    def gui(self, **kwargs):
+    @property
+    def tile_selection_basemap(self):
         from spectraclass.gui.spatial.basemap import TileServiceBasemap
         if self._tile_selection_basemap is None:
             self._tile_selection_basemap = TileServiceBasemap( block_selection=True )
             (x0, x1, y0, y1) = self.tiles.tile.extent
-            self._tile_selection_basemap.setup_plot( "Block Selection", (x0, x1), (y0, y1), index=99, size=6.0, slider=False, **kwargs )
-        return self._tile_selection_basemap.gui()
+            self._tile_selection_basemap.setup_plot( "Block Selection", (x0, x1), (y0, y1), index=99, size=6.0, slider=False )
+        return self._tile_selection_basemap
+
+    def gui(self, **kwargs):
+        return self.tile_selection_basemap.gui()
 
     def update_extent(self):
         (x0, x1, y0, y1) = self.tiles.tile.extent
-        self._tile_selection_basemap.set_bounds( (x0, x1), (y0, y1) )
-        self._tile_selection_basemap.update()
+        self.tile_selection_basemap.set_bounds( (x0, x1), (y0, y1) )
+        self.tile_selection_basemap.update()
 
     def getConstantXArray(self, fill_value: float, shape: Tuple[int], dims: Tuple[str], **kwargs) -> xa.DataArray:
         coords = kwargs.get( "coords", { dim: np.arange(shape[id]) for id, dim in enumerate(dims) } )
