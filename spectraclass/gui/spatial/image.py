@@ -80,21 +80,19 @@ class TileServiceImage(AxesImage):
         for tx in range( block_dims[0] ):
             for ty in range( block_dims[1] ):
                 block: Block = tm().tile.getDataBlock( tx, ty )
-                nvalid = tm().tile.block_nvalid( block.block_coords )
-                if nvalid > 0:
-                    selected = ( (tx,ty) == tm().block_index )
-                    cached = block.has_data_file( True )
-                    xc, yc = x0 + width*tx, y0+height*ty
-                    status = 'selected' if selected else ( 'cached' if cached else 'existing' )
-                    lw = 2 if ( selected or cached ) else 1
-                    alpha = min( self.base_alpha * ( nvalid/max_nvalid ), 1.0 )
-                    r = Rectangle( (xc,yc), width, height, fill=False, edgecolor=self.block_colors[status], lw=lw, alpha=alpha )
-                    setattr( r, 'block_index', (tx,ty) )
-                    r.set_picker( True )
-                    self.axes.add_patch( r )
-                    self._blocks.append( r )
-                    if selected: self._selected_block = r
-             #       lgm().log( f" BLOCK[{bc}]: xc={xc:.1f}, yc={yc:.1f}, size=({width:.1f},{height:.1f})\n  ->> Axis bounds: xlim={self.axes.get_xlim()}, ylim={self.axes.get_ylim()}", print=True )
+                selected = ( (tx,ty) == tm().block_index )
+                cached = block.has_data_file( True )
+                xc, yc = x0 + width*tx, y0+height*ty
+                status = 'selected' if selected else ( 'cached' if cached else 'existing' )
+                lw = 2 if ( selected or cached ) else 1
+                alpha = 0.5 # min( self.base_alpha * ( nvalid/max_nvalid ), 1.0 )
+                r = Rectangle( (xc,yc), width, height, fill=False, edgecolor=self.block_colors[status], lw=lw, alpha=alpha )
+                setattr( r, 'block_index', (tx,ty) )
+                r.set_picker( True )
+                self.axes.add_patch( r )
+                self._blocks.append( r )
+                if selected: self._selected_block = r
+         #       lgm().log( f" BLOCK[{bc}]: xc={xc:.1f}, yc={yc:.1f}, size=({width:.1f},{height:.1f})\n  ->> Axis bounds: xlim={self.axes.get_xlim()}, ylim={self.axes.get_ylim()}", print=True )
 
     def on_press(self, event: MouseEvent =None):
         self.user_is_interacting = True
