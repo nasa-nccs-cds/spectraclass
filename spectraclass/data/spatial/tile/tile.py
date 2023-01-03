@@ -474,8 +474,8 @@ class Block(DataContainer):
                 elif 'samples' in dataset.coords:
                     nsamples = dataset.coords['samples'].size
                 else:
-                    lgm().log(f" BLOCK{self.block_coords}: NO SAMPLES COORD-> coords={dataset.coords.keys()}")
-                    nsamples = 0
+                    lgm().log(f" BLOCK{self.block_coords}: NO SAMPLES COORD-> coords= {list(dataset.coords.keys())}")
+                    nsamples = 9999
                 lgm().log( f" BLOCK{self.block_coords} data_samples={nsamples}")
                 file_exists = (nsamples > 0)
         return file_exists
