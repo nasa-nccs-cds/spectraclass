@@ -8,7 +8,7 @@ from spectraclass.reduction.embedding import rm
 from spectraclass.data.base import ModeDataManager
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Set
 import matplotlib.pyplot as plt
-import os, time, json
+import stat, os, time, json
 from spectraclass.data.spatial.tile.tile import Block, Tile
 from rioxarray.exceptions import NoDataInBounds
 from collections import OrderedDict
@@ -261,8 +261,11 @@ class SpatialDataManager(ModeDataManager):
                 da.attrs['long_name'] = ".".join([blocks_point_data.attrs['file_name'], varname])
             for vname, v in data_vars.items():
                 lgm().log( f" ---> {vname}: shape={v.shape}, size={v.size}, dims={v.dims}, coords={[':'.join([cid, str(c.shape)]) for (cid, c) in v.coords.items()]}")
-            os.makedirs(os.path.dirname(block_data_file), exist_ok=True)
+            write_dir = os.path.dirname(block_data_file)
+            os.makedirs(write_dir, exist_ok=True)
+            os.chmod( write_dir, stat.S_IRWXG | stat.S_IRWXO )
             result_dataset.to_netcdf(block_data_file)
+            os.chmod( block_data_file, stat.S_IRWXG | stat.S_IRWXO )
             return result_dataset
 
     def get_scaling( self, sums: List[xa.DataArray] ) -> xa.DataArray:
