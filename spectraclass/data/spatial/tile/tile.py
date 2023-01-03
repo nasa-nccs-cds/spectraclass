@@ -448,7 +448,7 @@ class Block(DataContainer):
             raster_slice = self.tile.data[:, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ]
             raster_slice.attrs['transform'] = self.translate_transform( raster_slice.attrs['transform'] )
             raw_raster = raster_slice if (raster_slice.size == 0) else TileManager.process_tile_data( raster_slice )
-            lgm().log(f"BLOCK{self.block_coords}: load-slice ybounds={ybounds}, xbounds={xbounds}, raster shape={raw_raster.shape}")
+            lgm().log(f" *** BLOCK{self.block_coords}: load-slice ybounds={ybounds}, xbounds={xbounds}, raster shape={raw_raster.shape}")
         block_raster = self._apply_mask( raw_raster )
         block_raster.attrs['block_coords'] = self.block_coords
         block_raster.attrs['tile_shape'] = tm().tile.data.shape
