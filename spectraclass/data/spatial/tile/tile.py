@@ -469,7 +469,13 @@ class Block(DataContainer):
         file_exists = path.isfile(self.data_file)
         if file_exists:
             with xa.open_dataset(self.data_file) as dataset:
-                nsamples = 0 if (len( dataset.coords ) == 0) else dataset.coords['samples'].size
+                if (len(dataset.coords) == 0):
+                    nsamples = 0
+                elif 'samples' in dataset.coords:
+                    nsamples = dataset.coords['samples'].size
+                else:
+                    lgm().log(f" BLOCK{self.block_coords}: NO SAMPLES COORD-> coords={dataset.coords.keys()}")
+                    nsamples = 0
                 lgm().log( f" BLOCK{self.block_coords} data_samples={nsamples}")
                 file_exists = (nsamples > 0)
         return file_exists
