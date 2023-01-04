@@ -36,7 +36,6 @@ c.ClusterManager.modelid = "kmeans"
 c.ClusterManager.nclusters = 10
 c.ClusterManager.random_state = 0
 c.ClassificationManager.mid = "cnn2d"
-c.ClassificationManager.nfeatures = 32
 c.AvirisDataManager.class_file = "NONE"
 c.AvirisDataManager.dset_name = ""
 c.AvirisDataManager.ext = "_img"

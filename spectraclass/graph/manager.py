@@ -83,8 +83,8 @@ class ActivationFlowManager(SCSingletonConfigurable):
                 metric_specs = self.metric.split("-")
                 kwargs = dict( metric = metric_specs[0] )
                 kwargs['p'] = int(metric_specs[1]) if len( metric_specs ) > 1 else 2
-                print( f"ActivationFlow.instance: shape={point_data.shape}, nn={self.nneighbors}, args={kwargs}")
                 result = ActivationFlow.instance( point_data, self.nneighbors, **kwargs )
                 self.instances[dsid] = result
+                lgm().log( f"COMPLETED ActivationFlow: shape={point_data.shape}, nn={self.nneighbors}, args={kwargs}" )
         return result
 
