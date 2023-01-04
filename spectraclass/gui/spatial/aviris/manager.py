@@ -20,8 +20,8 @@ class AvirisTileSelector:
         self.init_band = kwargs.get( "init_band", 160 )
         self.grid_color = kwargs.get("grid_color", 'white')
         self.selection_color = kwargs.get("selection_color", 'black')
-        self.grid_alpha = kwargs.get("grid_alpha", 1.0 )
-        self.slw = kwargs.get("slw", 3)
+        self.grid_alpha = kwargs.get("grid_alpha", 0.5 )
+        self.slw = kwargs.get("slw", 2)
         self.colorstretch = 2.0
         self._blocks: Dict[Tuple[int,int],Rectangle] = {}
         self._transformed_block_data = None
@@ -105,7 +105,7 @@ class AvirisTileSelector:
             for by in range( block_dims[1] ):
                 selected = ( (bx,by) == self._selected_block )
                 ix, iy = bx*block_size, by*block_size
-                lw = self.slw if ( selected ) else 4
+                lw = self.slw if ( selected ) else 1
                 color = self.selection_color if ( selected ) else self.grid_color
                 r = Rectangle( (iy, ix), block_size, block_size, fill=False, edgecolor=color, lw=lw, alpha=self.grid_alpha )
                 setattr( r, 'block_index', (bx,by) )
