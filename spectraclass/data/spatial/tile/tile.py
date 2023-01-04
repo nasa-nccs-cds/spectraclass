@@ -676,9 +676,17 @@ class Block(DataContainer):
         raster_data = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
         rmask = self.mask if (tmask is None) else tmask
         pmask = self.get_threshold_mask( raster=False, reduced=True )
-        lgm().log(  f"  --> raster_data, shape={raster_data.shape}; rmask, shape={rmask.shape}, #nz={np.count_nonzero(rmask)}")
-        lgm().log(  f"  --> points_data, shape={points_data.shape}; pmask, shape={None if pmask is None else pmask.shape}, #nz={0 if pmask is None else np.count_nonzero(pmask)}")
-        raster_data[ rmask ] = points_data.data[ pmask ] if pmask is not None else points_data.data
+        rnz = np.count_nonzero(rmask)
+        if (pmask is None) or (rnz == points_data.shape[0]):
+            raster_data[ rmask ] = points_data.data
+        else:
+            pnz = np.count_nonzero(pmask)
+            if pnz != rnz:
+                lgm().log( f"\n\n ERROR: mask shape mismatch:  {rnz} vs {pnz}")
+                lgm().log(  f"  --> raster_data, shape={raster_data.shape}; rmask, shape={rmask.shape}, #nz={rnz}")
+                lgm().log(  f"  --> points_data, shape={points_data.shape}; pmask, shape={pmask.shape}, #nz={pnz}\n\n")
+            else:
+                raster_data[ rmask ] = points_data.data[ pmask ]
         raster_data = raster_data.transpose().reshape([points_data.shape[1], self.data.shape[1], self.data.shape[2]])
         return xa.DataArray( raster_data, coords, dims, points_data.name, points_data.attrs )
 
