@@ -99,18 +99,22 @@ class AvirisTileSelector:
         transform = tm().tile.data.attrs['transform']
         block_size = tm().block_size
         block_dims = tm().block_dims
-        lgm().log(f"  add_block_selection: block_size={block_size}, block_dims={block_dims}, transform={transform} ")
-        for tx in range( block_dims[0] ):
-            for ty in range( block_dims[1] ):
-                selected = ( (tx,ty) == self._selected_block )
-                ix, iy = tx*block_size, ty*block_size
+        lgm().log(f"  add_block_selection: block_size={block_size}, block_dims={block_dims}, transform={transform}, "
+                  f" color={self.selection_color}/{self.grid_color}, lw={self.slw}/1, alpha={self.grid_alpha}, "
+                  f" xbound={self.ax.get_xbound()}, ybound={self.ax.get_ybound()} ")
+        for bx in range( block_dims[0] ):
+            for by in range( block_dims[1] ):
+                selected = ( (bx,by) == self._selected_block )
+                ix, iy = bx*block_size, by*block_size
+                tx = transform[2] + ix * transform[0] + iy * transform[1]
+                ty = transform[5] + ix * transform[3] + iy * transform[4]
                 lw = self.slw if ( selected ) else 1
                 color = self.selection_color if ( selected ) else self.grid_color
                 r = Rectangle( (iy, ix), block_size, block_size, fill=False, edgecolor=color, lw=lw, alpha=self.grid_alpha )
                 setattr( r, 'block_index', (tx,ty) )
                 r.set_picker( True )
                 self.ax.add_patch( r )
-                self._blocks[(tx,ty)] = r
+                self._blocks[(bx,by)] = r
 
     def highlight_block( self, r: Rectangle ):
         srec = self.selected_block
