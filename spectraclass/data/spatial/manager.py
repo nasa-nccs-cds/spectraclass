@@ -234,12 +234,15 @@ class SpatialDataManager(ModeDataManager):
         block_data_file = dm().modal.dataFile(block=block)
         if os.path.exists(block_data_file):
             if not has_metadata:
-                lgm().log(f"** Reading BLOCK{block.cindex}: {block_data_file} ")
+                lgm().log(f"** Reading BLOCK{block.cindex}: {block_data_file} ", print=True )
                 return xa.open_dataset( block_data_file )
+            else:
+                lgm().log(f"** Skipping processed BLOCK{block.cindex}: {block_data_file} ", print=True )
         else:
             ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
             coord_data = {}
             ufm().show( f" *** Processing Block{block.block_coords}" )
+            lgm().log(  f" *** Processing Block{block.block_coords}", print=True)
             try:
                 blocks_point_data, coord_data = block.getPointData()
                 lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}")
@@ -298,9 +301,10 @@ class SpatialDataManager(ModeDataManager):
             has_metadata = (self.metadata is not None)
             for image_index in range( dm().modal.num_images ):
                 self.set_current_image( image_index )
-                lgm().log(f" Processing image {dm().modal.image_name}", print=True)
+                blocks = self.tiles.tile.getBlocks()
+                lgm().log(f" Processing image {dm().modal.image_name} with {len(blocks)} blocks.", print=True)
                 ufm().show( f"Preprocessing data blocks for image {dm().modal.image_name}", "blue" )
-                for block in self.tiles.tile.getBlocks():
+                for block in blocks:
                     result_dataset = self.process_block( block, has_metadata )
                     if result_dataset is not None:
                         block_sizes[ block.cindex ] = result_dataset.attrs[ 'block_size']
