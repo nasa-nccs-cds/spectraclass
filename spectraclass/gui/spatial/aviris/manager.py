@@ -20,7 +20,7 @@ class AvirisTileSelector:
         self.init_band = kwargs.get( "init_band", 160 )
         self.grid_color = kwargs.get("grid_color", 'white')
         self.selection_color = kwargs.get("selection_color", 'black')
-        self.grid_alpha = kwargs.get("grid_alpha", 0.5 )
+        self.grid_alpha = kwargs.get("grid_alpha", 1.0 )
         self.slw = kwargs.get("slw", 3)
         self.colorstretch = 2.0
         self._blocks: Dict[Tuple[int,int],Rectangle] = {}
@@ -63,7 +63,7 @@ class AvirisTileSelector:
         band_array = self.get_band_data()
         vmean, vstd = np.nanmean(band_array), np.nanstd( band_array )
         vrange = [ max(vmean-2*vstd, 0.0), vmean+2*vstd ]
-        if self.band_plot is None:  self.band_plot = self.ax.imshow( band_array, zorder=2.0, cmap="jet")
+        if self.band_plot is None:  self.band_plot = self.ax.imshow( band_array, cmap="jet")
         else:                       self.band_plot.set_data( band_array )
         self.band_plot.set_clim(*vrange)
         self.add_block_selection()
@@ -96,22 +96,19 @@ class AvirisTileSelector:
     @exception_handled
     def add_block_selection(self):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        transform = tm().tile.data.attrs['transform']
         block_size = tm().block_size
         block_dims = tm().block_dims
-        lgm().log(f"  add_block_selection: block_size={block_size}, block_dims={block_dims}, transform={transform}, "
+        lgm().log(f"  add_block_selection: block_size={block_size}, block_dims={block_dims}, "
                   f" color={self.selection_color}/{self.grid_color}, lw={self.slw}/1, alpha={self.grid_alpha}, "
                   f" xbound={self.ax.get_xbound()}, ybound={self.ax.get_ybound()} ")
         for bx in range( block_dims[0] ):
             for by in range( block_dims[1] ):
                 selected = ( (bx,by) == self._selected_block )
                 ix, iy = bx*block_size, by*block_size
-                tx = transform[2] + ix * transform[0] + iy * transform[1]
-                ty = transform[5] + ix * transform[3] + iy * transform[4]
-                lw = self.slw if ( selected ) else 1
+                lw = self.slw if ( selected ) else 4
                 color = self.selection_color if ( selected ) else self.grid_color
                 r = Rectangle( (iy, ix), block_size, block_size, fill=False, edgecolor=color, lw=lw, alpha=self.grid_alpha )
-                setattr( r, 'block_index', (tx,ty) )
+                setattr( r, 'block_index', (bx,by) )
                 r.set_picker( True )
                 self.ax.add_patch( r )
                 self._blocks[(bx,by)] = r
