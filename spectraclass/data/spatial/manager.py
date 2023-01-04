@@ -290,7 +290,7 @@ class SpatialDataManager(ModeDataManager):
         tm().autoprocess = False
         attrs, block_sizes = {}, {}
         nbands = None
-        lgm().log(f" Preparing inputs", print=True)
+        lgm().log(f" Preparing inputs, reprocess={tm().reprocess}", print=True)
         try:
             if tm().reprocess:
                 dm().modal.removeDataset()
@@ -298,6 +298,7 @@ class SpatialDataManager(ModeDataManager):
             has_metadata = (self.metadata is not None)
             for image_index in range( dm().modal.num_images ):
                 self.set_current_image( image_index )
+                lgm().log(f" Processing image {dm().modal.image_name}", print=True)
                 ufm().show( f"Preprocessing data blocks for image {dm().modal.image_name}", "blue" )
                 for block in self.tiles.tile.getBlocks():
                     result_dataset = self.process_block( block, has_metadata )
