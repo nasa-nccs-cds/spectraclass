@@ -53,6 +53,7 @@ class DataManager(SCSingletonConfigurable):
     use_model_data = tl.Bool(False).tag(config=True, sync=True)
     _mode_data_managers_: Dict = {}
     refresh_data = tl.Bool(False).tag(config=True, sync=True)
+    preprocess = tl.Bool(False).tag(config=True, sync=True)
 
     def __init__(self):
         self.config_files = []
@@ -126,6 +127,7 @@ class DataManager(SCSingletonConfigurable):
             self.save_config()
 
     def app(self) -> SpectraclassController:
+        if self.preprocess: self.prepare_inputs()
         return self.modal.application.instance()
 
     @property
