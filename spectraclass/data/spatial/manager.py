@@ -269,10 +269,11 @@ class SpatialDataManager(ModeDataManager):
             for vname, v in data_vars.items():
                 lgm().log( f" ---> {vname}: shape={v.shape}, size={v.size}, dims={v.dims}, coords={[':'.join([cid, str(c.shape)]) for (cid, c) in v.coords.items()]}")
             write_dir = os.path.dirname(block_data_file)
+            open_perm = stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO
             os.makedirs(write_dir, exist_ok=True)
-            os.chmod( write_dir, stat.S_IRWXG | stat.S_IRWXO )
+            os.chmod( write_dir, open_perm )
             result_dataset.to_netcdf(block_data_file)
-            os.chmod( block_data_file, stat.S_IRWXG | stat.S_IRWXO )
+            os.chmod( block_data_file, open_perm )
             return result_dataset
 
     def get_scaling( self, sums: List[xa.DataArray] ) -> xa.DataArray:
