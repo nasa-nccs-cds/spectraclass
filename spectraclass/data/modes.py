@@ -383,8 +383,8 @@ class ModeDataManager(SCSingletonConfigurable):
         initial_epoch = 0
         if not weights_loaded:
             for iter in range(niter):
-                self.general_training( initial_epoch, **kwargs )
-                self.focused_training(initial_epoch, **kwargs)
+                initial_epoch = self.general_training( initial_epoch, **kwargs )
+                initial_epoch = self.focused_training( initial_epoch, **kwargs )
             aefiles = self.autoencoder_files(**kwargs)
             if self.refresh_model:
                 for aef in aefiles:
@@ -400,21 +400,21 @@ class ModeDataManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.tile import Block, Tile
         for image_index in range(dm().modal.num_images):
             dm().modal.set_current_image(image_index)
-            lgm().log(f"Preprocessing data blocks{tm().block_dims} for image {dm().modal.image_name}", print=True)
+            lgm().log(f"Autoencoder general training: data blocks{tm().block_dims} for image {dm().modal.image_name}", print=True)
             blocks: List[Block] = tm().tile.getBlocks()
             for iB, block in enumerate(blocks):
                 if (target_block is None) or (target_block == block.block_coords):
                     t0 = time.time()
                     point_data, grid = block.getPointData()
                     if point_data.shape[0] > 0:
-                        lgm().log(
-                            f"  ITER[{iter}]: Processing block{block.block_coords}, data shape = {point_data.shape}",
-                            print=True)
-                        history: tf.keras.callbacks.History = self._autoencoder.fit(point_data.data, point_data.data,initial_epoch=initial_epoch,
+                        lgm().log( f" ** ITER[{iter}]: Processing block{block.block_coords}, data shape = {point_data.shape}", print=True)
+                        history: tf.keras.callbacks.History = self._autoencoder.fit(point_data.data, point_data.data, initial_epoch=initial_epoch,
                                                                  epochs=initial_epoch + nepoch, batch_size=256, shuffle=True)
                         initial_epoch = initial_epoch + nepoch
                         lgm().log(f" Trained autoencoder in {time.time() - t0} sec", print=True)
                     block.initialize()
+        return initial_epoch
+
     def focused_training(self, initial_epoch = 0, **kwargs) -> bool:
         from spectraclass.data.base import DataManager, dm
         from spectraclass.data.spatial.tile.tile import Block, Tile
@@ -459,7 +459,7 @@ class ModeDataManager(SCSingletonConfigurable):
             lgm().log(f" --> Focused Training with #samples = {ntrainsamples}", print=True)
             history: tf.keras.callbacks.History = self._autoencoder.fit(focused_training_data, focused_training_data, initial_epoch=initial_epoch,
                                                      epochs=initial_epoch + nepoch, batch_size=256, shuffle=True)
-        return True
+        return initial_epoch
 
     def get_focused_dataset(self, train_data: np.ndarray, anomaly: np.ndarray, threshold: float ) -> np.ndarray:
         rng = np.random.default_rng()
