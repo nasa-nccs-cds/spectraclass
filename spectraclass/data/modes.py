@@ -81,6 +81,7 @@ class ModeDataManager(SCSingletonConfigurable):
     reduce_method = tl.Unicode("vae").tag(config=True, sync=True)
     reduce_anom_focus = tl.Float( 0.25 ).tag(config=True, sync=True)
     reduce_nepoch = tl.Int(5).tag(config=True, sync=True)
+    reduce_nimages = tl.Int(1).tag(config=True, sync=True)
     reduce_dropout = tl.Float( 0.01 ).tag(config=True, sync=True)
     reduce_learning_rate = tl.Float(1e-3).tag(config=True, sync=True)
     reduce_focus_nepoch = tl.Int(20).tag(config=True, sync=True)
@@ -398,10 +399,11 @@ class ModeDataManager(SCSingletonConfigurable):
         nepoch: int = kwargs.get( 'nepoch', self.reduce_nepoch )
         from spectraclass.data.base import DataManager, dm
         from spectraclass.data.spatial.tile.tile import Block, Tile
-        for image_index in range(dm().modal.num_images):
+        num_reduce_images = min( dm().modal.num_images, self.reduce_nimages )
+        for image_index in range( num_reduce_images ):
             dm().modal.set_current_image(image_index)
-            lgm().log(f"Autoencoder general training: data blocks{tm().block_dims} for image {dm().modal.image_name}", print=True)
             blocks: List[Block] = tm().tile.getBlocks()
+            lgm().log(f"Autoencoder general training: {len(blocks)} blocks for image[{image_index}/{num_reduce_images}]: {dm().modal.image_name}", print=True)
             for iB, block in enumerate(blocks):
                 if (target_block is None) or (target_block == block.block_coords):
                     t0 = time.time()
@@ -423,9 +425,11 @@ class ModeDataManager(SCSingletonConfigurable):
         if (anom_focus == 0.0) or (nepoch==0): return False
 
         anomalies = {}
-        for image_index in range(dm().modal.num_images):
+        num_reduce_images = min(dm().modal.num_images, self.reduce_nimages)
+        for image_index in range(num_reduce_images):
             dm().modal.set_current_image(image_index)
             blocks: List[Block] = tm().tile.getBlocks()
+            lgm().log(f"Autoencoder focussed training: {len(blocks)} blocks for image[{image_index}/{num_reduce_images}]: {dm().modal.image_name}", print=True)
             for iB, block in enumerate(blocks):
                 point_data, grid = block.getPointData()
                 if point_data.shape[0] > 0:
