@@ -82,6 +82,7 @@ class ModeDataManager(SCSingletonConfigurable):
     reduce_anom_focus = tl.Float( 0.25 ).tag(config=True, sync=True)
     reduce_nepoch = tl.Int(5).tag(config=True, sync=True)
     reduce_nimages = tl.Int(1).tag(config=True, sync=True)
+    reduce_target_block = tl.Tuple[int,int]((-1,-1)).tag(config=True, sync=True)
     reduce_dropout = tl.Float( 0.01 ).tag(config=True, sync=True)
     reduce_learning_rate = tl.Float(1e-3).tag(config=True, sync=True)
     reduce_focus_nepoch = tl.Int(20).tag(config=True, sync=True)
@@ -395,7 +396,6 @@ class ModeDataManager(SCSingletonConfigurable):
             lgm().log(f"autoencoder_preprocess completed, saved model weights to files={aefiles}", print=True)
 
     def general_training(self, initial_epoch = 0, **kwargs ):
-        target_block = kwargs.get( 'target_block', None )
         nepoch: int = kwargs.get( 'nepoch', self.reduce_nepoch )
         from spectraclass.data.base import DataManager, dm
         from spectraclass.data.spatial.tile.tile import Block, Tile
@@ -405,7 +405,7 @@ class ModeDataManager(SCSingletonConfigurable):
             blocks: List[Block] = tm().tile.getBlocks()
             lgm().log(f"Autoencoder general training: {len(blocks)} blocks for image[{image_index}/{num_reduce_images}]: {dm().modal.image_name}", print=True)
             for iB, block in enumerate(blocks):
-                if (target_block is None) or (target_block == block.block_coords):
+                if (self.reduce_target_block[0] < 0) or (self.reduce_target_block == block.block_coords):
                     t0 = time.time()
                     point_data, grid = block.getPointData()
                     if point_data.shape[0] > 0:
