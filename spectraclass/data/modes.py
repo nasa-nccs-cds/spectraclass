@@ -431,32 +431,34 @@ class ModeDataManager(SCSingletonConfigurable):
             blocks: List[Block] = tm().tile.getBlocks()
             lgm().log(f"Autoencoder focussed training: {len(blocks)} blocks for image[{image_index}/{num_reduce_images}]: {dm().modal.image_name}", print=True)
             for iB, block in enumerate(blocks):
-                point_data, grid = block.getPointData()
-                if point_data.shape[0] > 0:
-                    reproduced_data: np.ndarray = self._autoencoder.predict( point_data.values )
-                    anomalies[(image_index,iB)] = self.get_anomaly( point_data.data, reproduced_data )
+                if (self.reduce_target_block[0] < 0) or (self.reduce_target_block == block.block_coords):
+                    point_data, grid = block.getPointData()
+                    if point_data.shape[0] > 0:
+                        reproduced_data: np.ndarray = self._autoencoder.predict( point_data.values )
+                        anomalies[(image_index,iB)] = self.get_anomaly( point_data.data, reproduced_data )
         full_anomaly: np.ndarray = np.concatenate( list(anomalies.values()) )
         t = self.get_anomaly_threshold(full_anomaly, anom_focus)
         lgm().log(f"autoencoder focus({anom_focus}) training: anomaly threshold = {t}", print=True)
         focused_datsets = []
-        for image_index in range(dm().modal.num_images):
+        for image_index in range(num_reduce_images):
             dm().modal.set_current_image(image_index)
             blocks: List[Block] = tm().tile.getBlocks()
             for iB, block in enumerate(blocks):
-                point_data, grid = block.getPointData()
-                if point_data.shape[0] > 0:
-                    anomaly = anomalies[(image_index,iB)]
-                    focused_point_data = self.get_focused_dataset(point_data.data, anomaly, t )
-                    focused_datsets.append( focused_point_data )
-                    ntrainsamples = nsamples( focused_datsets )
-                    lgm().log(f" --> BLOCK[{image_index}:{block.block_coords}]: ntrainsamples = {ntrainsamples}", print=True)
-                    if ntrainsamples > point_data.shape[0]:
-                        focused_training_data = np.concatenate( focused_datsets )
-                        lgm().log( f" --> Focused Training with #samples = {ntrainsamples}", print=True)
-                        history: tf.keras.callbacks.History = self._autoencoder.fit( focused_training_data, focused_training_data, initial_epoch=initial_epoch,
-                                                                  epochs=initial_epoch + nepoch, batch_size=256, shuffle=True)
-                        initial_epoch = initial_epoch + nepoch
-                        focused_datsets = []
+                if (self.reduce_target_block[0] < 0) or (self.reduce_target_block == block.block_coords):
+                    point_data, grid = block.getPointData()
+                    if point_data.shape[0] > 0:
+                        anomaly = anomalies[(image_index,iB)]
+                        focused_point_data = self.get_focused_dataset(point_data.data, anomaly, t )
+                        focused_datsets.append( focused_point_data )
+                        ntrainsamples = nsamples( focused_datsets )
+                        lgm().log(f" --> BLOCK[{image_index}:{block.block_coords}]: ntrainsamples = {ntrainsamples}", print=True)
+                        if ntrainsamples > point_data.shape[0]:
+                            focused_training_data = np.concatenate( focused_datsets )
+                            lgm().log( f" --> Focused Training with #samples = {ntrainsamples}", print=True)
+                            history: tf.keras.callbacks.History = self._autoencoder.fit( focused_training_data, focused_training_data, initial_epoch=initial_epoch,
+                                                                      epochs=initial_epoch + nepoch, batch_size=256, shuffle=True)
+                            initial_epoch = initial_epoch + nepoch
+                            focused_datsets = []
         ntrainsamples = nsamples( focused_datsets )
         if ntrainsamples > 0:
             focused_training_data = np.concatenate( focused_datsets )
