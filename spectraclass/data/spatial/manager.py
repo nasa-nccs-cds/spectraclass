@@ -234,15 +234,15 @@ class SpatialDataManager(ModeDataManager):
         block_data_file = dm().modal.dataFile(block=block)
         if os.path.exists(block_data_file):
             if not has_metadata:
-                lgm().log(f"** Reading BLOCK{block.cindex}: {block_data_file} ", print=True )
+                lgm().log(f"** Reading BLOCK{block.cindex}: {block_data_file} " )
                 return xa.open_dataset( block_data_file )
             else:
-                lgm().log(f"** Skipping processed BLOCK{block.cindex}: {block_data_file} ", print=True )
+                lgm().log(f"** Skipping processed BLOCK{block.cindex}: {block_data_file} " )
+                return None
         else:
             ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
             coord_data = {}
             ufm().show( f" *** Processing Block{block.block_coords}" )
-            lgm().log(  f" *** Processing Block{block.block_coords}", print=True)
             try:
                 blocks_point_data, coord_data = block.getPointData()
                 lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}")

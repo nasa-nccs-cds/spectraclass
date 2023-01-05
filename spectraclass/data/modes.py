@@ -759,8 +759,8 @@ class ModeDataManager(SCSingletonConfigurable):
             if xdataset is None:
                 has_metadata = (self.metadata is not None)
                 xdataset = self.process_block( block, has_metadata )
-            if len(xdataset.variables.keys()) == 0:
-                lgm().log(f"Warning: Attempt to Load empty dataset {self.dataFile( **kwargs )}", print=True)
+            if (xdataset is None) or (len(xdataset.variables.keys()) == 0):
+                lgm().log(f"Warning: Attempt to Load empty dataset {self.dataFile( **kwargs )}")
                 return None
             else:
                 lgm().log(f" ---> Opening Dataset {self.dsid()}")
