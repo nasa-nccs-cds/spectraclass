@@ -100,7 +100,7 @@ class skActivationFlow(ActivationFlow):
 
     def getGraph(self ):
         if self._knn_graph is None:
-            self._knn_graph = skNearestNeighbors()
+            self._knn_graph = skNearestNeighbors(n_jobs=-1)
             self._knn_graph.fit( self.nodes )
         return self._knn_graph
 
