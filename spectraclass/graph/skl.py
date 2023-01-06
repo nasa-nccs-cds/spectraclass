@@ -98,10 +98,12 @@ class skActivationFlow(ActivationFlow):
         else:
             lgm().log("No data available for this block")
 
-    def getGraph(self ):
+    def getGraph(self, njobs=4 ):
         if self._knn_graph is None:
-            self._knn_graph = skNearestNeighbors(n_jobs=-1)
+            t0 = time.time()
+            self._knn_graph = skNearestNeighbors(n_jobs=njobs)
             self._knn_graph.fit( self.nodes )
+            lgm().log(f"skNearestNeighbors fit in {time.time()-t0} sec, njobs = {njobs}")
         return self._knn_graph
 
     def spread( self, sample_data: np.ndarray, nIter: int = 1, **kwargs ) -> Optional[bool]:
