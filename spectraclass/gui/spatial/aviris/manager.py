@@ -71,7 +71,7 @@ class AvirisTileSelector:
 
     @log_timing
     def on_image_change( self, event: Dict ):
-        ufm().show( f"Loading image {self.image_name}" )
+        ufm().show( f" ** Loading image {self.image_name}" )
         self.clear_block_cache()
         self.update_image()
 
@@ -256,7 +256,7 @@ class AvirisDatasetManager:
 
     @log_timing
     def on_image_change( self, event: Dict ):
-        ufm().show( f"Loading image {self.image_name}" )
+        ufm().show( f" *** Loading image {self.image_name}" )
         self.clear_block_cache()
         self.update_image()
 
