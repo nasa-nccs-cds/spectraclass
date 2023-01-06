@@ -415,6 +415,7 @@ class MapManager(SCSingletonConfigurable):
         if self.base is not None:
             fdata: xa.DataArray = self.frame_data
             if fdata is not None:
+                t0 = time.time()
                 lgm().log(f"set_color_bounds: full data range = {[np.nanmin(fdata.values),np.nanmax(fdata.values)]}")
                 drange = self.get_color_bounds(fdata)
                 alpha = self.layers('bands').visibility
@@ -428,8 +429,9 @@ class MapManager(SCSingletonConfigurable):
                     self._spectral_image.set_alpha(alpha)
 #                with self.base.hold_limits():
                 self._spectral_image.set_extent(self.block.extent)
-                lgm().log(f"UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}, model_data={self._use_model_data}" )
                 self.update_canvas()
+                lgm().log(f"UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, "
+                          f"xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}, model_data={self._use_model_data}, time = {time.time()-t0}" )
                 pcm().update_plot(cdata=fdata, norm=norm)
             else: lgm().log(f"UPDATE spectral_image: fdata is None")
         else: lgm().log(f"UPDATE spectral_image: base is None")
@@ -542,6 +544,7 @@ class MapManager(SCSingletonConfigurable):
             self.block: Block = tm().getBlock()
             if (self.block is not None):
                 ufm().show(f" --> Loading Block{self.block.block_coords}" )
+                t0 = time.time()
                 self.block_index = block_index
                 dm().clear_project_cache()
                 pcm().reset()
@@ -557,8 +560,10 @@ class MapManager(SCSingletonConfigurable):
                 self.y_axis_name = self.data.dims[self.y_axis]
                 gpm().refresh()
                 clm().clear()
+                t1 = time.time()
                 if update:  self.update_plots()
-                ufm().show(f" ** Block Loaded ** ")
+                t2 = time.time()
+                ufm().show(f" ** Block Loaded: {t1-t0:.2f} {t2-t1:.2f} ")
 
     def gui(self,**kwargs):
         if self.base is None:

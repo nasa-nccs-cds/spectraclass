@@ -100,7 +100,7 @@ class AvirisTileSelector:
         block_dims = tm().block_dims
         lgm().log(f"  add_block_selection: block_size={block_size}, block_dims={block_dims}, "
                   f" color={self.selection_color}/{self.grid_color}, lw={self.slw}/1, alpha={self.grid_alpha}, "
-                  f" xbound={self.ax.get_xbound()}, ybound={self.ax.get_ybound()} ")
+                  f" xbound={self.ax.get_xbound()}, ybound={self.ax.get_ybound()}, selected_block={self._selected_block} ")
         for bx in range( block_dims[0] ):
             for by in range( block_dims[1] ):
                 selected = ( (bx,by) == self._selected_block )

@@ -295,12 +295,12 @@ class PointCloudManager(SCSingletonConfigurable):
         return indx
 
     def update_plot(self, **kwargs):
+        t0 = time.time()
         if 'points' in kwargs:
             embedding = kwargs['points']
             lgm().log( f"PCM->plot embedding: shape = {embedding.shape}")
             self.xyz = self.pnorm( embedding )
         if self._gui is not None:
-            lgm().log( " *** update point cloud data *** " )
             geometry =  self.getGeometry( **kwargs )
             if geometry is not None:
                 self.points.geometry = geometry
@@ -308,6 +308,7 @@ class PointCloudManager(SCSingletonConfigurable):
                     self.marker_points.geometry = self.getMarkerGeometry()
                 if self.probe_points is not None:
                     self.probe_points.geometry = self.getMarkerGeometry(probes=True)
+            lgm().log( f" *** update point cloud data: time = {time.time()-t0} " )
 
     def clear(self):
         lgm().log(f"  $CLEAR: PCM")

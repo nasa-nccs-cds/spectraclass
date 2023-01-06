@@ -81,8 +81,6 @@ class TileServiceBasemap(SCSingletonConfigurable):
 
         return standalone
 
-
-
     @exception_handled
     def on_click(self, event):
         lgm().log( f'   TileServiceBasemap[{event.inaxes}].button_click: [{event.xdata} {event.ydata}]' )

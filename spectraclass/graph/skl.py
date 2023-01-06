@@ -93,6 +93,7 @@ class skActivationFlow(ActivationFlow):
             lgm().log(f" --->  $$$D: setNodeData D=> {self.D.__class__}:{self.D.dtype}",print=True)
             dt = (time.time()-t0)
             lgm().log(f"Computed NN skGraph with {self._knn_graph.n_neighbors} neighbors and {nodes_data.shape[0]} verts in {dt} sec ({dt / 60} min)",print=True)
+            lgm().trace("\nNN-skGraph")
         else:
             lgm().log("No data available for this block")
 
