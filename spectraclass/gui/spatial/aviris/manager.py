@@ -27,6 +27,7 @@ class AvirisTileSelector:
         self._transformed_block_data = None
         self._selected_block: Tuple[int,int] = (0,0)
         self.band_plot: AxesImage = None
+        self._select_rec = None
         self._axes: Axes = None
 
     @property
@@ -109,6 +110,7 @@ class AvirisTileSelector:
                 color = self.selection_color if ( selected ) else self.grid_color
                 r = Rectangle( (iy, ix), block_size, block_size, fill=False, edgecolor=color, lw=lw, alpha=self.grid_alpha )
                 setattr( r, 'block_index', (bx,by) )
+                if selected: self._select_rec = r
                 r.set_picker( True )
                 self.ax.add_patch( r )
                 self._blocks[(bx,by)] = r
@@ -125,6 +127,7 @@ class AvirisTileSelector:
     @log_timing
     def select_block(self, r: Rectangle = None ):
         from spectraclass.gui.spatial.map import MapManager, mm
+        if r is None: r = self._select_rec
         if r is not None:
             self.highlight_block(r)
             self.clear_block_cache()
