@@ -82,7 +82,7 @@ class ModeDataManager(SCSingletonConfigurable):
     reduce_anom_focus = tl.Float( 0.25 ).tag(config=True, sync=True)
     reduce_nepoch = tl.Int(5).tag(config=True, sync=True)
     reduce_nimages = tl.Int(100).tag(config=True, sync=True)
-    reduce_target_block = tl.Tuple(default_value=(-1,-1)).tag(config=True, sync=True)
+    reduce_nblocks = tl.Int(250).tag(config=True, sync=True)
     reduce_dropout = tl.Float( 0.01 ).tag(config=True, sync=True)
     reduce_learning_rate = tl.Float(1e-3).tag(config=True, sync=True)
     reduce_focus_nepoch = tl.Int(20).tag(config=True, sync=True)
@@ -405,7 +405,7 @@ class ModeDataManager(SCSingletonConfigurable):
             blocks: List[Block] = tm().tile.getBlocks()
             lgm().log(f"Autoencoder general training: {len(blocks)} blocks for image[{image_index}/{num_reduce_images}]: {dm().modal.image_name}", print=True)
             for iB, block in enumerate(blocks):
-                if (self.reduce_target_block[0] < 0) or (self.reduce_target_block == block.block_coords):
+                if iB < self.reduce_nblocks:
                     t0 = time.time()
                     point_data, grid = block.getPointData()
                     if point_data.shape[0] > 0:
@@ -431,7 +431,7 @@ class ModeDataManager(SCSingletonConfigurable):
             blocks: List[Block] = tm().tile.getBlocks()
             lgm().log(f"Autoencoder focussed training: {len(blocks)} blocks for image[{image_index}/{num_reduce_images}]: {dm().modal.image_name}", print=True)
             for iB, block in enumerate(blocks):
-                if (self.reduce_target_block[0] < 0) or (self.reduce_target_block == block.block_coords):
+                if iB < self.reduce_nblocks:
                     point_data, grid = block.getPointData()
                     if point_data.shape[0] > 0:
                         reproduced_data: np.ndarray = self._autoencoder.predict( point_data.values )
@@ -444,7 +444,7 @@ class ModeDataManager(SCSingletonConfigurable):
             dm().modal.set_current_image(image_index)
             blocks: List[Block] = tm().tile.getBlocks()
             for iB, block in enumerate(blocks):
-                if (self.reduce_target_block[0] < 0) or (self.reduce_target_block == block.block_coords):
+                if iB < self.reduce_nblocks:
                     point_data, grid = block.getPointData()
                     if point_data.shape[0] > 0:
                         anomaly = anomalies[(image_index,iB)]
