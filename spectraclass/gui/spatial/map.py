@@ -535,35 +535,38 @@ class MapManager(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
-        needs_update = (self.block_index == None) or (block_index == None) or (tm().block_index == None) or (tuple(block_index) != tuple(tm().block_index))
-        if needs_update:
-            lgm().log( f"Loading Block{block_index}, tm.index={tm().block_index}, current.index={self.block_index}")
-            if block_index is not None:
-                ufm().show(f" *** Setting Block{block_index}")
-                tm().setBlock( block_index )
-            self.block: Block = tm().getBlock()
-            if (self.block is not None):
-                ufm().show(f" --> Loading Block{self.block.block_coords}" )
-                t0 = time.time()
-                self.block_index = block_index
-                dm().clear_project_cache()
-                pcm().reset()
-                update = kwargs.get( 'update', False )
-                lgm().log(f" -------------------- Loading block: {self.block.block_coords}  -------------------- " )
-                if self.base is not None:
-                    self.base.set_bounds(self.block.xlim, self.block.ylim)
-                self.band_axis = kwargs.pop('band', 0)
-                self.z_axis_name = self.data.dims[self.band_axis]
-                self.x_axis = kwargs.pop('x', 2)
-                self.x_axis_name = self.data.dims[self.x_axis]
-                self.y_axis = kwargs.pop('y', 1)
-                self.y_axis_name = self.data.dims[self.y_axis]
-                gpm().refresh()
-                clm().clear()
-                t1 = time.time()
-                if update:  self.update_plots()
-                t2 = time.time()
-                ufm().show(f" ** Block Loaded: {t1-t0:.2f} {t2-t1:.2f} ")
+        if block_index is  None:
+            lgm().log(f"setBlock: NULL Block" )
+        else:
+            needs_update = (tuple(block_index) != tuple(tm().block_index))
+            if needs_update:
+                lgm().log( f"Loading Block{block_index}, tm.index={tm().block_index}, current.index={self.block_index}")
+                if block_index is not None:
+                    ufm().show(f" *** Setting Block{block_index}")
+                    tm().setBlock( block_index )
+                self.block: Block = tm().getBlock()
+                if (self.block is not None):
+                    ufm().show(f" --> Loading Block{self.block.block_coords}" )
+                    t0 = time.time()
+                    self.block_index = block_index
+                    dm().clear_project_cache()
+                    pcm().reset()
+                    update = kwargs.get( 'update', False )
+                    lgm().log(f" -------------------- Loading block: {self.block.block_coords}  -------------------- " )
+                    if self.base is not None:
+                        self.base.set_bounds(self.block.xlim, self.block.ylim)
+                    self.band_axis = kwargs.pop('band', 0)
+                    self.z_axis_name = self.data.dims[self.band_axis]
+                    self.x_axis = kwargs.pop('x', 2)
+                    self.x_axis_name = self.data.dims[self.x_axis]
+                    self.y_axis = kwargs.pop('y', 1)
+                    self.y_axis_name = self.data.dims[self.y_axis]
+                    gpm().refresh()
+                    clm().clear()
+                    t1 = time.time()
+                    if update:  self.update_plots()
+                    t2 = time.time()
+                    ufm().show(f" ** Block Loaded: {t1-t0:.2f} {t2-t1:.2f} ")
 
     def gui(self,**kwargs):
         if self.base is None:
