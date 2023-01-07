@@ -24,6 +24,8 @@ class TileServiceBasemap(SCSingletonConfigurable):
         super(TileServiceBasemap, self).__init__()
         self.tile_server_url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/WMTS'
         self.crs: str = TileManager.crs
+        self.msax = None
+        self.bsax = None
         self.tile_service: WebMapTileService = None
         self.layer: str = None
         self.basemap: TileServiceImage = None
