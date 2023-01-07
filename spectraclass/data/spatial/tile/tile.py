@@ -397,17 +397,17 @@ class Block(DataContainer):
             for trecs in self._trecs:
                 for iFrame, trec in trecs.items():
                     if trec.tmask is not None:
-                        ntmask = trec.tmask if (ntmask is None) else (ntmask | trec.tmask)
+                        ntmask = trec.tmask.values if (ntmask is None) else (ntmask | trec.tmask.values)
             if ntmask is not None:
                 self._tmask = ~ntmask
                 self._tmask = self._tmask & self.raster_mask
             else:
                 self._tmask = self.raster_mask
         if not raster:
-            ptmask = self._tmask.values.flatten()
+            ptmask = self._tmask.flatten()
             if reduced: ptmask = ptmask[self._point_mask]
             return ptmask
-        return self._tmask.values
+        return self._tmask
 
     def classmap(self, default_value: int =0 ) -> xa.DataArray:
         return xa.full_like( self.data[0].squeeze(drop=True), default_value, dtype=np.int )

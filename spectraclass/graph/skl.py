@@ -98,7 +98,7 @@ class skActivationFlow(ActivationFlow):
         else:
             lgm().log("No data available for this block")
 
-    def getGraph(self, njobs=2 ):
+    def getGraph(self, njobs=3 ):
         if self._knn_graph is None:
             t0 = time.time()
             self._knn_graph = skNearestNeighbors(n_jobs=njobs)
