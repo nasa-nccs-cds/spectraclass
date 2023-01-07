@@ -391,7 +391,7 @@ class Block(DataContainer):
         return ( mask_list, value )
 
     @exception_handled
-    def get_threshold_mask( self, raster=False, reduced=True ) -> np.ndarray:
+    def get_threshold_mask( self, raster=False, reduced=True ) -> Optional[np.ndarray]:
         if self._tmask is None:
             ntmask = None
             for trecs in self._trecs:
@@ -400,10 +400,10 @@ class Block(DataContainer):
                         ntmask = trec.tmask.values if (ntmask is None) else (ntmask | trec.tmask.values)
             if ntmask is not None:
                 self._tmask = ~ntmask
-                self._tmask = self._tmask & self.raster_mask
-            else:
-                self._tmask = self.raster_mask
-        if not raster:
+            #     self._tmask = self._tmask & self.raster_mask
+            # else:
+            #     self._tmask = self.raster_mask
+        if (not raster) and (self._tmask is not None):
             ptmask = self._tmask.flatten()
             if reduced: ptmask = ptmask[self._point_mask]
             return ptmask
