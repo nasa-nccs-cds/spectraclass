@@ -56,7 +56,7 @@ class MapManager(SCSingletonConfigurable):
     def __init__( self, **kwargs ):   # class_labels: [ [label, RGBA] ... ]
         super(MapManager, self).__init__()
         self._debug = False
-        self._base: TileServiceBasemap = None
+        self.base: TileServiceBasemap = None
         self._currentFrame = 0
         self.block: Block = None
         self.block_index = None
@@ -564,21 +564,16 @@ class MapManager(SCSingletonConfigurable):
                 t2 = time.time()
                 ufm().show(f" ** Block Loaded: {t1-t0:.2f} {t2-t1:.2f} ")
 
-    @property
-    def base(self) -> TileServiceBasemap:
-        if self._base is None:
-            self._base = TileServiceBasemap()
-        return self._base
-
     def gui(self,**kwargs):
         if self.base is None:
             self.setBlock()
             [x0, x1, y0, y1] = self.block.extent
-            standalone = self.base.setup_plot( "Label Construction", (x0,x1), (y0,y1), index=100, **kwargs )
+            self.base = TileServiceBasemap()
+            standalone = self.base.setup_plot("Label Construction", (x0, x1), (y0, y1), index=100, **kwargs)
             self.init_map()
-            self.region_selection = PolygonInteractor( self.base.gax )
-            self.points_selection = MarkerManager( self.base.gax )
-            self.cluster_selection = ClusterSelector( self.base.gax )
+            self.region_selection = PolygonInteractor(self.base.gax)
+            self.points_selection = MarkerManager(self.base.gax)
+            self.cluster_selection = ClusterSelector(self.base.gax)
             self.init_hover()
             if not standalone:
                 self.create_selection_panel()
