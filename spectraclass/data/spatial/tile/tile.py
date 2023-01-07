@@ -678,6 +678,8 @@ class Block(DataContainer):
         rmask = self.mask if (tmask is None) else tmask
         pmask = self.get_threshold_mask( raster=False, reduced=True )
         rnz = np.count_nonzero(rmask)
+        lgm().log(f" **>> pmask: {np.count_nonzero(pmask)}/{pmask.shape}, rmask: {np.count_nonzero(rmask)}/{rmask.shape},"
+                  f" raster_mask: {np.count_nonzero(self.raster_mask)}/{self.raster_mask.shape} " )
         if (pmask is None) or (rnz == points_data.shape[0]):
             raster_data[ rmask ] = points_data.data
         else:
