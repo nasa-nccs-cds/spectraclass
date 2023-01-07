@@ -401,12 +401,13 @@ class Block(DataContainer):
             if ntmask is not None:
                 self._tmask = ~ntmask
                 self._tmask = self._tmask & self.raster_mask
-        if self._tmask is not None:
-            if not raster:
-                ptmask = self._tmask.values.flatten()
-                if reduced: ptmask = ptmask[self._point_mask]
-                return ptmask
-            return self._tmask.values
+            else:
+                self._tmask = self.raster_mask
+        if not raster:
+            ptmask = self._tmask.values.flatten()
+            if reduced: ptmask = ptmask[self._point_mask]
+            return ptmask
+        return self._tmask.values
 
     def classmap(self, default_value: int =0 ) -> xa.DataArray:
         return xa.full_like( self.data[0].squeeze(drop=True), default_value, dtype=np.int )
