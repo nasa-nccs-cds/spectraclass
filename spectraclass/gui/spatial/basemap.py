@@ -31,6 +31,10 @@ class TileServiceBasemap(SCSingletonConfigurable):
         self.figsize = 6.0
         self._block_selection = kwargs.get( 'block_selection', False )
 
+    def update_slider_visibility(self, use_model_data: bool):
+        if self.msax is not None:
+            self.msax.set_visible( use_model_data )
+            self.bsax.set_visible( not use_model_data )
 
     # def set_extent(self, xr: List[float], yr: List[float], **kwargs):
     #     crs = kwargs.get( 'crs', self.crs )
