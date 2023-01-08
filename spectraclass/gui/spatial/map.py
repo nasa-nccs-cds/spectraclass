@@ -442,8 +442,9 @@ class MapManager(SCSingletonConfigurable):
 #        self._spectral_image.remove()
 #        self._spectral_image = None
         plot_name = os.path.basename( dm().dsid() )
-        self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame + 1}")
-        self.plot_axes.title.set_fontsize(8)
+        if self.plot_axes is not None:
+            self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame + 1}")
+            self.plot_axes.title.set_fontsize(8)
         self.setBlock()
 
     @exception_handled
@@ -453,7 +454,6 @@ class MapManager(SCSingletonConfigurable):
         self.reset_plot()
         self.update_thresholds()
         self.update_spectral_image()
-        lgm().log(f" update_plots --> AXIS: xlim={fs(self.plot_axes.get_xlim())}, ylim={fs(self.plot_axes.get_ylim())}")
 
     def update_canvas(self):
         self.figure.canvas.draw_idle()
@@ -487,8 +487,8 @@ class MapManager(SCSingletonConfigurable):
         return self.base.figure
 
     @property
-    def plot_axes(self) -> Axes:
-        return self.base.gax
+    def plot_axes(self) -> Optional[Axes]:
+        return None if (self.base is None) else self.base.gax
 
     def slider_axes(self, use_model = False ) -> Axes:
         return self.base.msax if use_model else self.base.bsax
