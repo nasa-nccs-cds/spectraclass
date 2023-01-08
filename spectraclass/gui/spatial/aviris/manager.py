@@ -250,6 +250,7 @@ class AvirisDatasetManager:
         return band_array
 
     def update_image( self ):
+        from spectraclass.gui.spatial.map import MapManager, mm
         band_array = self.get_band_data()
         self.dm.modal.set_current_image( self.image_index )
         vmean, vstd = np.nanmean(band_array), np.nanstd( band_array )
@@ -257,7 +258,8 @@ class AvirisDatasetManager:
         if self.band_plot is None:  self.band_plot = self.ax.imshow( band_array, zorder=2.0, cmap="jet")
         else:                       self.band_plot.set_data( band_array )
         self.band_plot.set_clim(*vrange)
-        self.select_block()
+        mm().image_update()
+        self.select_block( new_image = True )
 
     @log_timing
     def on_image_change( self, event: Dict ):
