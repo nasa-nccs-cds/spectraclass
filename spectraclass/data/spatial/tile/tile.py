@@ -677,9 +677,9 @@ class Block(DataContainer):
         raster_data = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
         rmask = self.mask if (tmask is None) else tmask
         pmask = self.get_threshold_mask( raster=False, reduced=True )
-        rnz = np.count_nonzero(rmask)
+        if self.mask is not None:        lgm().log(f" **>> mask: {np.count_nonzero(self.mask)}/{ self.mask.shape}")
+        rnz = np.count_nonzero(rmask);   lgm().log(f" **>> rmask: {np.count_nonzero(rmask)}/{rmask.shape}" )
         if pmask is not None:            lgm().log(f" **>> pmask: {np.count_nonzero(pmask)}/{pmask.shape}" )
-        if rmask is not None:            lgm().log(f" **>> rmask: {np.count_nonzero(rmask)}/{rmask.shape}" )
         if self.raster_mask is not None: lgm().log(f" **>> raster_mask: {np.count_nonzero(self.raster_mask)}/{self.raster_mask.shape} " )
         if (pmask is None) or (rnz == points_data.shape[0]):
             raster_data[ rmask ] = points_data.data
