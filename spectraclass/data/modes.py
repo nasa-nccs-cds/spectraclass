@@ -505,9 +505,9 @@ class ModeDataManager(SCSingletonConfigurable):
         lgm().log(f" ----> encoder_input: shape = {train_input.shape}, val[5][5] = {train_input.values[:5][:5]} ")
         lgm().log(f" ----> reproduction: shape = {reproduced_data.shape}, val[5][5] = {reproduced_data[:5][:5]} ")
         lgm().log(f" ----> encoding: shape = {encoded_data.shape}, val[5][5] = {encoded_data[:5][:5]}, std = {encoded_data.std(0)} ")
-        anomaly = np.abs( train_input.values - reproduced_data ).sum( axis=-1, keepdims=False )
-        dmask = anomaly > 0.0
-        lgm().log( f" ----> ANOMALY: shape = {anomaly.shape}, range = [{anomaly.min(where=dmask,initial=np.inf)},{anomaly.max()}] ")
+#        anomaly = np.abs( train_input.values - reproduced_data ).sum( axis=-1, keepdims=False )
+#        dmask = anomaly > 0.0
+#        lgm().log( f" ----> ANOMALY: shape = {anomaly.shape}, range = [{anomaly.min(where=dmask,initial=np.inf)},{anomaly.max()}] ")
         return (encoded_data, reproduced_data)
 
     @property

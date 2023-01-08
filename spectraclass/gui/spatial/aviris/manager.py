@@ -61,6 +61,7 @@ class AvirisTileSelector:
         return band_array
 
     def update_image( self ):
+        from spectraclass.gui.spatial.map import MapManager, mm
         band_array = self.get_band_data()
         vmean, vstd = np.nanmean(band_array), np.nanstd( band_array )
         vrange = [ max(vmean-2*vstd, 0.0), vmean+2*vstd ]
@@ -68,6 +69,7 @@ class AvirisTileSelector:
         else:                       self.band_plot.set_data( band_array )
         self.band_plot.set_clim(*vrange)
         self.add_block_selection()
+        mm().image_update()
         self.select_block()
 
     @log_timing

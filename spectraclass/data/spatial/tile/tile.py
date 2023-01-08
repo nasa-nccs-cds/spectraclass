@@ -391,7 +391,25 @@ class Block(DataContainer):
         return ( mask_list, value )
 
     @exception_handled
-    def get_threshold_mask( self, raster=False, reduced=True ) -> Optional[np.ndarray]:
+    def get_threshold_mask( self, raster=False, reduced=True ) -> np.ndarray:
+        if self._tmask is None:
+            ntmask = None
+            for trecs in self._trecs:
+                for iFrame, trec in trecs.items():
+                    if trec.tmask is not None:
+                        ntmask = trec.tmask.values if (ntmask is None) else (ntmask | trec.tmask.values)
+            if ntmask is not None:
+                self._tmask = ~ntmask
+                self._tmask = self._tmask & self.raster_mask
+        if self._tmask is not None:
+            if not raster:
+                ptmask = self._tmask.flatten()
+                if reduced: ptmask = ptmask[self._point_mask]
+                return ptmask
+            return self._tmask
+
+    @exception_handled
+    def get_threshold_mask1( self, raster=False, reduced=True ) -> Optional[np.ndarray]:
         if self._tmask is None:
             ntmask = None
             for trecs in self._trecs:
@@ -680,6 +698,7 @@ class Block(DataContainer):
         if self.mask is not None:        lgm().log(f" **>> mask: {np.count_nonzero(self.mask)}/{ self.mask.shape}")
         rnz = np.count_nonzero(rmask);   lgm().log(f" **>> rmask: {np.count_nonzero(rmask)}/{rmask.shape}" )
         if pmask is not None:            lgm().log(f" **>> pmask: {np.count_nonzero(pmask)}/{pmask.shape}" )
+        if self.point_mask is not None:  lgm().log(f" **>> point_mask: {np.count_nonzero(self.point_mask)}/{self.point_mask.shape} ")
         if self.raster_mask is not None: lgm().log(f" **>> raster_mask: {np.count_nonzero(self.raster_mask)}/{self.raster_mask.shape} " )
         if (pmask is None) or (rnz == points_data.shape[0]):
             raster_data[ rmask ] = points_data.data
