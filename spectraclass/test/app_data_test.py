@@ -1,16 +1,55 @@
 from spectraclass.data.base import DataManager
-from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
+from spectraclass.data.spatial.modes import AvirisDataManager
 from spectraclass.model.labels import LabelsManager, lm
+from spectraclass.data.spatial.tile.manager import TileManager, tm
 
-dm: DataManager = DataManager.initialize( "demo4", 'swift' )
-dm.loadCurrentProject("main")
+image_index = 1
+dm: DataManager = DataManager.initialize("img_mgr", 'aviris')
 
-classes = [ ('Class-1', "cyan"),
-            ('Class-2', "green"),
-            ('Class-3', "magenta"),
-            ('Class-4', "blue")]
+location = "desktop"
+if location == "adapt":
+    dm.modal.cache_dir = "/adapt/nobackup/projects/ilab/cache"
+    dm.modal.data_dir = "/css/above/daac.ornl.gov/daacdata/above/ABoVE_Airborne_AVIRIS_NG/data/"
+elif location == "desktop":
+    dm.modal.cache_dir = "/Volumes/Shared/Cache"
+    dm.modal.data_dir = "/Users/tpmaxwel/Development/Data/Aviris"
+else:
+    raise Exception(f"Unknown location: {location}")
 
-lm().setLabels( classes )
+block_size = 200
+method = "aec"  # "vae"
+model_dims = 32
+version = "v2p9"  # "v2v2" "v2p9"
+month = "201707"  # "201707" "201908"
 
-gui = gpm().gui()
+dm.use_model_data = True
+dm.proc_type = "skl"
+dm.modal.images_glob = f"ang{month}*rfl/ang*_rfl_{version}/ang*_corr_{version}_img"
+TileManager.block_size = block_size
+TileManager.block_index = [0, 5]
+AvirisDataManager.version = version
+dm.modal.valid_aviris_bands = [[5, 193], [214, 283], [319, 10000]]
+dm.modal.model_dims = model_dims
+dm.modal.reduce_method = method
+dm.modal.reduce_nepoch = 3
+dm.modal.reduce_focus_nepoch = 10
+dm.modal.reduce_niter = 1
+dm.modal.reduce_focus_ratio = 10.0
+dm.modal.reduce_dropout = 0.0
+dm.modal.reduce_learning_rate = 1e-4
+dm.modal.refresh_model = False
+dm.modal.modelkey = f"b{block_size}.{method}"
+
+dm.loadCurrentProject()
+classes = [('Class-1', "cyan"),
+           ('Class-2', "green"),
+           ('Class-3', "magenta"),
+           ('Class-4', "blue")]
+
+lm().setLabels(classes)
+
+block0 = tm().getBlock()
+
+dm.modal.set_current_image(image_index)
+block1 = tm().getBlock()
 
