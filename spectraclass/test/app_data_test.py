@@ -1,7 +1,9 @@
 from spectraclass.data.base import DataManager
 from spectraclass.data.spatial.modes import AvirisDataManager
 from spectraclass.model.labels import LabelsManager, lm
+from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.data.spatial.tile.manager import TileManager, tm
+import xarray as xa
 
 image_index = 1
 dm: DataManager = DataManager.initialize("img_mgr", 'aviris')
@@ -20,11 +22,10 @@ block_size = 200
 method = "aec"  # "vae"
 model_dims = 32
 version = "v2p9"  # "v2v2" "v2p9"
-month = "201707"  # "201707" "201908"
 
 dm.use_model_data = True
 dm.proc_type = "skl"
-dm.modal.images_glob = f"ang{month}*rfl/ang*_rfl_{version}/ang*_corr_{version}_img"
+dm.modal.images_glob = f"ang*rfl/ang*_rfl_{version}/ang*_corr_{version}_img"
 TileManager.block_size = block_size
 TileManager.block_index = [0, 5]
 AvirisDataManager.version = version
@@ -45,11 +46,14 @@ classes = [('Class-1', "cyan"),
            ('Class-2', "green"),
            ('Class-3', "magenta"),
            ('Class-4', "blue")]
-
 lm().setLabels(classes)
 
-block0 = tm().getBlock()
+block0: Block = tm().getBlock()
+pdata0: xa.DataArray = block0.getPointData()[0]
+print( pdata0.mean() )
 
 dm.modal.set_current_image(image_index)
 block1 = tm().getBlock()
+pdata1: xa.DataArray = block1.getPointData()[0]
+print( pdata1.mean() )
 

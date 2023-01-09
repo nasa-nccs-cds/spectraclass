@@ -96,6 +96,7 @@ class ModeDataManager(SCSingletonConfigurable):
         super(ModeDataManager,self).__init__()
         assert self.MODE, f"Attempt to instantiate intermediate SingletonConfigurable class: {self.__class__}"
         self.datasets = {}
+        self._current_dataset: Optional[xa.Dataset] = None
         self._model_dims_selector: ip.SelectionSlider = None
         self._samples_axis = None
         self._subsample_selector: ip.SelectionSlider = None
@@ -542,8 +543,9 @@ class ModeDataManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         if image_index != self._active_image:
             self._active_image = image_index
+            self._current_dataset = None
             msg = f"Setting active image[{self._active_image}]: {self.image_name}"
-            lgm().log( msg ); ufm().show( msg )
+            ufm().show( msg )
             tm().tile.initialize()
 
     @classmethod
@@ -759,22 +761,22 @@ class ModeDataManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.tile import Block
         from spectraclass.data.base import DataManager, dm, DataType
         lgm().log(f"Load dataset, current = {list(self.datasets.keys())}")
+        self._current_dataset = None
         if self.dsid() not in self.datasets:
             lgm().log(f"Load dataset {self.dsid()}, current datasets = {list(self.datasets.keys())}")
-            xdataset: Optional[xa.Dataset] = None
             if not dm().refresh_data:
-                xdataset = self.loadDataFile(**kwargs)
+                self._current_dataset = self.loadDataFile(**kwargs)
             block: Block = tm().getBlock()
-            if xdataset is None:
+            if self._current_dataset is None:
                 has_metadata = (self.metadata is not None)
-                xdataset = self.process_block( block, has_metadata )
-            if (xdataset is None) or (len(xdataset.variables.keys()) == 0):
+                self._current_dataset = self.process_block( block, has_metadata )
+            if (self._current_dataset is None) or (len(self._current_dataset.variables.keys()) == 0):
                 lgm().log(f"Warning: Attempt to Load empty dataset {self.dataFile( **kwargs )}")
                 return None
             else:
                 lgm().log(f" ---> Opening Dataset {self.dsid()}")
-                dvars: Dict[str,Union[xa.DataArray,List,Dict]] = self.dset_subsample( xdataset, dsid=self.dsid(), **kwargs )
-                attrs = xdataset.attrs.copy()
+                dvars: Dict[str,Union[xa.DataArray,List,Dict]] = self.dset_subsample( self._current_dataset, dsid=self.dsid(), **kwargs )
+                attrs = self._current_dataset.attrs.copy()
                 raw_data = dvars['raw']
                 point_data, pcoords = block.getPointData()
                 lgm().log( f" -----> point_data: shape = {raw_data.shape}, #NULL={np.count_nonzero(np.isnan(raw_data.values))}/{raw_data.size}")
@@ -810,17 +812,17 @@ class ModeDataManager(SCSingletonConfigurable):
     def loadDataFile( self, **kwargs ) -> Optional[xa.Dataset]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         ufm().show( f" Loading Tile {tm().block_index} " )
-        dFile = self.dataFile( **kwargs )
-        dataset: Optional[xa.Dataset] = None
-        if path.isfile( dFile ):
-            dataset = xa.open_dataset( dFile, concat_characters=True )
-            dataset.attrs['data_file'] = dFile
-            vars = [ f"{vid}{var.dims}" for (vid,var) in dataset.variables.items()]
-            coords = [f"{cid}{coord.shape}" for (cid, coord) in dataset.coords.items()]
-            lgm().log( f"#GID: loadDataFile: {dFile}, coords={coords}, vars={vars}" )
-            lgm().log( f"#GID:  --> coords={coords}")
-            lgm().log( f"#GID:  --> vars={vars}")
-        return dataset
+        if self._current_dataset is None:
+            dFile = self.dataFile( **kwargs )
+            if path.isfile( dFile ):
+                self._current_dataset = xa.open_dataset( dFile, concat_characters=True )
+                self._current_dataset.attrs['data_file'] = dFile
+                vars = [ f"{vid}{var.dims}" for (vid,var) in self._current_dataset.variables.items()]
+                coords = [f"{cid}{coord.shape}" for (cid, coord) in self._current_dataset.coords.items()]
+                lgm().log( f"#GID: loadDataFile: {dFile}, coords={coords}, vars={vars}" )
+                lgm().log( f"#GID:  --> coords={coords}")
+                lgm().log( f"#GID:  --> vars={vars}")
+        return self._current_dataset
 
     def filterCommonPrefix(self, paths: List[str])-> Tuple[str,List[str]]:
         letter_groups, longest_pre = zip(*paths), ""
