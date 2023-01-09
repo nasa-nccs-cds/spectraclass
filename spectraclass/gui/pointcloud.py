@@ -157,16 +157,16 @@ class PointCloudManager(SCSingletonConfigurable):
     def init_data(self, **kwargs):
         from spectraclass.reduction.embedding import ReductionManager, rm
         from spectraclass.data.base import dm
-        from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
+#        from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
         refresh = kwargs.get( 'refresh', True )
         model_data: Optional[xa.DataArray] = dm().getModelData()
 
         if (model_data is not None) and (model_data.shape[0] > 1):
             lgm().log(f"UMAP.init: model_data{model_data.dims} shape = {model_data.shape}",print=True)
-            flow: ActivationFlow = afm().getActivationFlow()
-            if flow is None: return False
-            node_data = model_data if refresh else None
-            flow.setNodeData( node_data )
+            # flow: ActivationFlow = afm().getActivationFlow()
+            # if flow is None: return False
+            # node_data = model_data if refresh else None
+            # flow.setNodeData( node_data )
             embedding = rm().umap_init( model_data, **kwargs )
             self.xyz = self.pnorm(embedding)
         else:
@@ -300,15 +300,18 @@ class PointCloudManager(SCSingletonConfigurable):
             embedding = kwargs['points']
             lgm().log( f"PCM->plot embedding: shape = {embedding.shape}")
             self.xyz = self.pnorm( embedding )
+        t1 = time.time()
         if self._gui is not None:
             geometry =  self.getGeometry( **kwargs )
+            t2 = time.time()
             if geometry is not None:
                 self.points.geometry = geometry
                 if self.marker_points is not None:
                     self.marker_points.geometry = self.getMarkerGeometry()
                 if self.probe_points is not None:
                     self.probe_points.geometry = self.getMarkerGeometry(probes=True)
-            lgm().log( f" *** update point cloud data: time = {time.time()-t0} " )
+            t3 = time.time()
+            lgm().log( f" *** update point cloud data: time = {t3-t2} {t2-t1} {t1-t0} " )
 
     def clear(self):
         lgm().log(f"  $CLEAR: PCM")

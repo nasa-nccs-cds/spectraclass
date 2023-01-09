@@ -77,14 +77,15 @@ class ActivationFlowManager(SCSingletonConfigurable):
         result = None
         if point_data is not None:
             dsid = point_data.attrs.get('dsid','global')
-            lgm().log( f"Get Activation flow for dsid {dsid}", print=True )
             result = self.instances.get( dsid, None )
             if result is None:
+                t0 = time.time()
+                lgm().log(f"Get new Activation flow for dsid {dsid}, existing = {list(self.instances.keys())}", print=True)
                 metric_specs = self.metric.split("-")
                 kwargs = dict( metric = metric_specs[0] )
                 kwargs['p'] = int(metric_specs[1]) if len( metric_specs ) > 1 else 2
                 result = ActivationFlow.instance( point_data, self.nneighbors, **kwargs )
                 self.instances[dsid] = result
-                lgm().log( f"COMPLETED ActivationFlow: shape={point_data.shape}, nn={self.nneighbors}, args={kwargs}" )
+                lgm().log( f"COMPLETED ActivationFlow: shape={point_data.shape}, nn={self.nneighbors}, args={kwargs} in {time.time()-t0} sec" )
         return result
 

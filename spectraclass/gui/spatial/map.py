@@ -56,6 +56,8 @@ class MapManager(SCSingletonConfigurable):
     def __init__( self, **kwargs ):   # class_labels: [ [label, RGBA] ... ]
         super(MapManager, self).__init__()
         self._debug = False
+        self._pcm_updated = False
+        self.norm = None
         self.base: TileServiceBasemap = None
         self._currentFrame = 0
         self.block: Block = None
@@ -411,31 +413,37 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def update_spectral_image(self):
-        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         if self.base is not None:
             fdata: xa.DataArray = self.frame_data
             if fdata is not None:
-                t0 = time.time()
                 lgm().log(f"set_color_bounds: full data range = {[np.nanmin(fdata.values),np.nanmax(fdata.values)]}")
                 drange = self.get_color_bounds(fdata)
                 alpha = self.layers('bands').visibility
-                norm = Normalize(**drange)
+                self.norm = Normalize(**drange)
                 if self._spectral_image is None:
                     self.base.set_bounds(self.block.xlim, self.block.ylim)
-                    self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=alpha, cmap='jet', norm=norm, add_colorbar=False, zorder=2.0 )
+                    self._spectral_image: AxesImage = fdata.plot.imshow(ax=self.base.gax, alpha=alpha, cmap='jet', norm=self.norm, add_colorbar=False, zorder=2.0 )
                 else:
-                    self._spectral_image.set_norm( norm )
+                    self._spectral_image.set_norm( self.norm )
                     self._spectral_image.set_data(fdata.values)
                     self._spectral_image.set_alpha(alpha)
 #                with self.base.hold_limits():
                 self._spectral_image.set_extent(self.block.extent)
                 self.update_canvas()
+                self._pcm_updated = False
+
                 lgm().log(f"UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, "
-                          f"xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}, model_data={self._use_model_data}, time = {time.time()-t0}" )
-                pcm().update_plot(cdata=fdata, norm=norm)
+                          f"xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}, model_data={self._use_model_data} " )
+
             else: lgm().log(f"UPDATE spectral_image: fdata is None")
         else: lgm().log(f"UPDATE spectral_image: base is None")
 
+    def update_pcm(self):
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
+        fdata: xa.DataArray = self.frame_data
+        if not self._pcm_updated and (fdata is not None):
+            pcm().update_plot(cdata=fdata, norm=self.norm)
+            self._pcm_updated = True
 
     def reset_plot(self):
         from spectraclass.data.base import DataManager, dm
@@ -511,6 +519,7 @@ class MapManager(SCSingletonConfigurable):
 
     def image_update(self):
         self.block = None
+        self.setBlock()
 
     @property
     def data(self) -> Optional[xa.DataArray]:

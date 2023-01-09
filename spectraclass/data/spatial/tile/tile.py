@@ -349,7 +349,7 @@ class Block(DataContainer):
         self._point_coords: Optional[Dict[str,np.ndarray]] = None
         self._point_mask: Optional[np.ndarray] = None
         self._raster_mask: Optional[np.ndarray] = None
-        self._tmask: xa.DataArray = None
+        self._tmask: np.ndarray = None
         self._model_data: xa.DataArray = None
         self._reproduction = None
 
@@ -406,7 +406,7 @@ class Block(DataContainer):
                 ptmask = self._tmask.flatten()
                 if reduced: ptmask = ptmask[self._point_mask]
                 return ptmask
-            return self._tmask
+        return self._tmask
 
     @exception_handled
     def get_threshold_mask1( self, raster=False, reduced=True ) -> Optional[np.ndarray]:

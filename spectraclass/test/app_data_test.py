@@ -53,12 +53,12 @@ lm().setLabels(classes)
 block0: Block = tm().getBlock()
 pdata0: xa.DataArray = block0.getPointData()[0]
 print( pdata0.mean() )
-tmask: np.ndarray = mm().threshold_mask(raster=False)
-print( tmask.shape )
+model_data = dm.getModelData( )
+print( model_data.shape )
 
 dm.modal.set_current_image(image_index)
 block1 = tm().getBlock()
 pdata1: xa.DataArray = block1.getPointData()[0]
 print( pdata1.mean() )
-tmask: np.ndarray = mm().threshold_mask(raster=False)
-print( tmask.shape )
+model_data = dm.getModelData( )
+print( model_data.shape )
