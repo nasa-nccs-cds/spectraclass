@@ -70,7 +70,7 @@ class AvirisTileSelector:
         self.band_plot.set_clim(*vrange)
         self.add_block_selection()
         mm().image_update()
-        self.select_block()
+      #  self.select_block()
 
     @log_timing
     def on_image_change( self, event: Dict ):
@@ -101,6 +101,7 @@ class AvirisTileSelector:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block_size = tm().block_size
         block_dims = tm().block_dims
+        self._selected_block = tm().block_index
         lgm().log(f"  add_block_selection: block_size={block_size}, block_dims={block_dims}, "
                   f" color={self.selection_color}/{self.grid_color}, lw={self.slw}/1, alpha={self.grid_alpha}, "
                   f" xbound={self.ax.get_xbound()}, ybound={self.ax.get_ybound()}, selected_block={self._selected_block} ")

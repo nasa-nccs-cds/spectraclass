@@ -43,14 +43,15 @@ class SpatialDataManager(ModeDataManager):
         from spectraclass.gui.spatial.map import MapManager, mm
         tmask: np.ndarray = mm().threshold_mask(raster=False)
         if tmask is None:
-            lgm().log(f"*** MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape},  NO threshold mask")
+            lgm().log(f"#GID: MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape}, attrs={raw_model_data.attrs.keys()},  NO threshold mask")
             result =  raw_model_data
         else:
             result = raw_model_data[tmask]
-            lgm().log( f"*** MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape}, mask shape = {tmask.shape}")
+            result.attrs.update( raw_model_data.attrs )
+            lgm().log( f"#GID: MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape}, attrs={raw_model_data.attrs.keys()}, mask shape = {tmask.shape}")
             lgm().log( f"#GID: filtered model_data[{result.dims}], shape= {result.shape}")
         nnan = np.count_nonzero( np.isnan( result.values.sum(axis=1) ) )
-        lgm().log(f"#GID:getModelData->  nnan-bands = {nnan}/{result.shape[0]}")
+        lgm().log(f"#GID:getModelData->  nnan-bands = {nnan}/{result.shape[0]}, attrs = {result.attrs.keys()}")
         return result
 
     @classmethod

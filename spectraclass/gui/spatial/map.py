@@ -113,11 +113,12 @@ class MapManager(SCSingletonConfigurable):
 
     def update_thresholds( self ):
         self.silent_thresholds = True
-        trec = self.block.threshold_record( self._use_model_data, self.currentFrame )
-        self.upper_threshold = trec.thresholds[1]
-        self.lower_threshold = trec.thresholds[0]
-        self.silent_thresholds = False
-        lgm().log(f"update_thresholds(frame={self.currentFrame}): [{self.lower_threshold},{self.upper_threshold}]")
+        trec = self.block.get_trec( self._use_model_data, self.currentFrame )
+        if trec is not None:
+            self.upper_threshold = trec.thresholds[1]
+            self.lower_threshold = trec.thresholds[0]
+            self.silent_thresholds = False
+            lgm().log(f"update_thresholds(frame={self.currentFrame}): [{self.lower_threshold},{self.upper_threshold}]")
 
     def use_model_data(self, use: bool):
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
@@ -545,10 +546,9 @@ class MapManager(SCSingletonConfigurable):
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
         needs_update = (self.block is None) if (block_index is None) else (tuple(block_index) != tuple(tm().block_index))
         if needs_update:
-            lgm().log( f"Loading Block{block_index}, tm.index={tm().block_index}, current.index={self.block_index}")
-            if block_index is not None:
-                ufm().show(f" *** Setting Block{block_index}")
-                tm().setBlock( block_index )
+            if block_index is None: block_index = tm().block_index
+            lgm().trace( f"Loading Block[{tm().image_index}:{tm().image_name}]{block_index}, tm.index={tm().block_index}, current.index={self.block_index}")
+            tm().setBlock( block_index )
             self.block: Block = tm().getBlock()
             if (self.block is not None):
                 ufm().show(f" --> Loading Block{self.block.block_coords}" )

@@ -276,6 +276,7 @@ class Tile(DataContainer):
 class ThresholdRecord:
 
     def __init__(self, fdata: xa.DataArray, block_coords: Tuple[int,int], image_index: int ):
+        lgm().trace( f"#TR: Create ThresholdRecord[{image_index}:{block_coords}] ")
         self._tmask: xa.DataArray = None
         self._block_coords: Tuple[int,int] = block_coords
         self._image_index: int = image_index
@@ -331,7 +332,19 @@ class Block(DataContainer):
 
     def __init__(self, tile: Tile, ix: int, iy: int, itile: int, **kwargs ):
         super(Block, self).__init__( data_projected=True, **kwargs )
-        self.initialize_data()
+        self.initialize()
+        self.init_task = None
+        self._index_array: xa.DataArray = None
+        self._gid_array: np.ndarray = None
+        self._flow = None
+        self._samples_axis: Optional[xa.DataArray] = None
+        self._point_data: Optional[xa.DataArray] = None
+        self._point_coords: Optional[Dict[str,np.ndarray]] = None
+        self._point_mask: Optional[np.ndarray] = None
+        self._raster_mask: Optional[np.ndarray] = None
+        self._tmask: np.ndarray = None
+        self._model_data: xa.DataArray = None
+        self._reproduction = None
         self.tile: Tile = tile
         self.config = kwargs
         self._trecs: Tuple[ Dict[int,ThresholdRecord], Dict[int,ThresholdRecord] ] = ( {}, {} )
@@ -378,6 +391,11 @@ class Block(DataContainer):
         if iFrame in trecs: return trecs[ iFrame ]
         fdata: xa.DataArray = self.points2raster( dm().getModelData() ) if model_data else self.data
         return trecs.setdefault( iFrame,  ThresholdRecord( fdata[iFrame], self.block_coords, tm().image_index ) )
+
+    def get_trec(self, model_data: bool, iFrame: int ) -> Optional[ThresholdRecord]:
+        trecs: Dict[int,ThresholdRecord] = self._trecs[ int(model_data) ]
+        return trecs.get( iFrame, None )
+
 
     def get_mask_list(self, current_frame = -1 ) -> Tuple[ List[str], str ]:
         mask_list, types, value = [], ["band", "model" ], None
@@ -540,10 +558,14 @@ class Block(DataContainer):
 
     def _get_model_data(self):
         from spectraclass.data.base import DataManager, dm
-        (self._model_data, self._reproduction) = dm().modal.reduce( self.getPointData()[0] )
+        pdata, pcoords = self.getPointData()
+        lgm().log(f"_get_model_data: pcoords = {list(pcoords.keys())}")
+        (self._model_data, self._reproduction) = dm().modal.reduce( pdata )
         self._model_data.attrs['block_coords'] = self.block_coords
         self._model_data.attrs['dsid'] = self.dsid()
         self._model_data.attrs['file_name'] = self.file_name
+        self._model_data.attrs['pmask'] = pcoords['pmask']
+        self._model_data.attrs['rmask'] = pcoords['rmask']
         self._model_data.name = self.file_name
 
     @exception_handled
@@ -601,13 +623,17 @@ class Block(DataContainer):
         norm = kwargs.get('norm', True)
         if self._point_data is None:
             self._point_data, pmask, rmask =  self.raster2points( self.data )
-            self._point_coords: Dict[str,np.ndarray] = dict( y=self.data.y.values, x=self.data.x.values, mask=pmask )
+            lgm().log( f"BLOCK[{self.dsid()}].SetPointCoords-> pdata: {self._point_data.shape}, pmask: {np.count_nonzero(pmask)}/{pmask.shape}, rmask: {np.count_nonzero(rmask)}/{rmask.shape}")
+            self._point_coords: Dict[str,np.ndarray] = dict( y=self.data.y.values, x=self.data.x.values, mask=pmask, pmask=pmask, rmask=rmask )
             self._samples_axis = self._point_data.coords['samples']
             self._point_data.attrs['type'] = 'block'
             self._point_data.attrs['dsid'] = self.dsid()
+            self._point_data.attrs['pmask'] = pmask
+            self._point_data.attrs['rmask'] = rmask
             self._point_mask = pmask
             self._raster_mask = rmask
         result = tm().norm( self._point_data )
+        lgm().log(f"BLOCK[{self.dsid()}].SetPointCoords-> attrs = {result.attrs.keys()}")
         return (result, self._point_coords )
 
     @property
@@ -688,29 +714,26 @@ class Block(DataContainer):
         #     lgm().log( f" --> pindex2indices Error: {err}, pid = {point_index}, coords = {pi}" )
 
     def points2raster(self, points_data: xa.DataArray ) -> xa.DataArray:
-        tmask = self.get_threshold_mask( reduced=False )
-        lgm().log( f"points->raster, points: dims={points_data.dims}, shape={points_data.shape}; data: dims={self.data.dims}, shape={self.data.shape}")
+        lgm().log( f"points->raster[{self.dsid()}], points: dims={points_data.dims}, shape={points_data.shape}; data: dims={self.data.dims}, shape={self.data.shape}, attrs={points_data.attrs.keys()}")
         dims = [points_data.dims[1], self.data.dims[1], self.data.dims[2]]
         coords = [(dims[0], points_data[dims[0]].data), (dims[1], self.data[dims[1]].data), (dims[2], self.data[dims[2]].data)]
-        raster_data = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
-        rmask = self.mask if (tmask is None) else tmask
-        pmask = self.get_threshold_mask( raster=False, reduced=True )
-        if self.mask is not None:        lgm().log(f" **>> mask: {np.count_nonzero(self.mask)}/{ self.mask.shape}")
-        rnz = np.count_nonzero(rmask);   lgm().log(f" **>> rmask: {np.count_nonzero(rmask)}/{rmask.shape}" )
-        if pmask is not None:            lgm().log(f" **>> pmask: {np.count_nonzero(pmask)}/{pmask.shape}" )
-        if self.point_mask is not None:  lgm().log(f" **>> point_mask: {np.count_nonzero(self.point_mask)}/{self.point_mask.shape} ")
-        if self.raster_mask is not None: lgm().log(f" **>> raster_mask: {np.count_nonzero(self.raster_mask)}/{self.raster_mask.shape} " )
-        if (pmask is None) or (rnz == points_data.shape[0]):
-            raster_data[ rmask ] = points_data.data
+        rpdata = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
+        self._point_mask  = points_data.attrs['pmask']
+        self._raster_mask = points_data.attrs['rmask']
+        rnz = np.count_nonzero(self.raster_mask)
+        pnz = np.count_nonzero(self.point_mask)
+        lgm().log(f" **>> point_mask: {pnz}/{self.point_mask.shape} ")
+        lgm().log(f" **>> raster_mask: {rnz}/{self.raster_mask.shape} " )
+        if pnz == points_data.shape[0]:
+            rpdata[ self.point_mask ] = points_data.data
         else:
-            pnz = np.count_nonzero(pmask)
             if pnz != rnz:
                 lgm().log( f"\n\n ERROR: mask shape mismatch:  {rnz} vs {pnz}")
-                lgm().log(  f"  --> raster_data, shape={raster_data.shape}; rmask, shape={rmask.shape}, #nz={rnz}")
-                lgm().log(  f"  --> points_data, shape={points_data.shape}; pmask, shape={pmask.shape}, #nz={pnz}\n\n")
+                lgm().log(  f"  --> pdata, shape={rpdata.shape}; rmask, shape={self.raster_mask.shape}, #nz={rnz}")
+                lgm().log(  f"  --> points_data, shape={points_data.shape}; pmask, shape={self.point_mask.shape}, #nz={pnz}\n\n")
             else:
-                raster_data[ rmask ] = points_data.data[ pmask ]
-        raster_data = raster_data.transpose().reshape([points_data.shape[1], self.data.shape[1], self.data.shape[2]])
+                rpdata[ self.raster_mask ] = points_data.data[ self.point_mask ]
+        raster_data = rpdata.transpose().reshape([points_data.shape[1], self.data.shape[1], self.data.shape[2]])
         return xa.DataArray( raster_data, coords, dims, points_data.name, points_data.attrs )
 
     def raster2points( self, base_raster: xa.DataArray ) -> Tuple[ Optional[xa.DataArray], Optional[np.ndarray], Optional[np.ndarray] ]:   #  base_raster dims: [ band, y, x ]
