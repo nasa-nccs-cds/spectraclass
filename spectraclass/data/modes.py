@@ -584,7 +584,7 @@ class ModeDataManager(SCSingletonConfigurable):
         from spectraclass.gui.spatial.map import MapManager, mm
         self.set_current_image( self.file_selector.index )
         dm().clear_project_cache()
-        mm().update_plots(True)
+        dm().modal.update_extent()
         mm().update()
 
     @property

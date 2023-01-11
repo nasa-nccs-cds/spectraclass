@@ -504,23 +504,25 @@ class Block(DataContainer):
     @log_timing
     def has_data_samples(self) -> bool:
         file_exists = path.isfile(self.data_file)
-        if file_exists:
-            with xa.open_dataset(self.data_file) as dataset:
-                if (len(dataset.coords) == 0):
-                    nsamples = 0
-                elif 'samples' in dataset.coords:
-                    nsamples = dataset.coords['samples'].size
-                else:
-                    lgm().log(f" BLOCK{self.block_coords}: NO SAMPLES COORD-> coords= {list(dataset.coords.keys())}")
-                    nsamples = 9999
-                lgm().log( f" BLOCK{self.block_coords} data_samples={nsamples}")
-                file_exists = (nsamples > 0)
+
+        # if file_exists:
+        #     with xa.open_dataset(self.data_file) as dataset:
+        #         if (len(dataset.coords) == 0):
+        #             nsamples = 0
+        #         elif 'samples' in dataset.coords:
+        #             nsamples = dataset.coords['samples'].size
+        #         else:
+        #             lgm().log(f" BLOCK{self.block_coords}: NO SAMPLES COORD-> coords= {list(dataset.coords.keys())}")
+        #             nsamples = 9999
+        #         lgm().log( f" BLOCK{self.block_coords} data_samples={nsamples}")
+        #         file_exists = (nsamples > 0)
         return file_exists
 
     def has_data_file(self, non_empty=False ) -> bool:
         file_exists = path.isfile(self.data_file)
-        if non_empty and file_exists:
-            return self.has_data_samples()
+        lgm().log(f" BLOCK{self.block_coords}: file_exists={file_exists}, data file= {self.data_file}")
+        # if non_empty and file_exists:
+        #     return self.has_data_samples()
         return file_exists
 
     @log_timing
@@ -614,7 +616,7 @@ class Block(DataContainer):
         bsize = tm().block_size
         x0, y0 = self.block_coords[0]*bsize, self.block_coords[1]*bsize
         bounds = ( x0, x0+bsize ), ( y0, y0+bsize )
-        lgm().log( f"GET BLOCK{self.block_coords} BOUNDS: dx={bounds[0]}, dy={bounds[1]}")
+        lgm().log( f"GET BLOCK{self.block_coords} BOUNDS: dx={bounds[0]}, dy={bounds[1]}, block_size={bsize}")
         return bounds
 
     @log_timing
@@ -622,11 +624,11 @@ class Block(DataContainer):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         norm = kwargs.get('norm', True)
         if self._point_data is None:
+            lgm().log(f"BLOCK[{self.dsid()}].getPointData:")
             self._point_data, pmask, rmask =  self.raster2points( self.data )
-            lgm().log( f"BLOCK[{self.dsid()}].SetPointCoords-> " )
-            lgm().log( f"\n *** pdata: {0 if (self._point_data is None) else self._point_data.shape} " )
-            lgm().log( f"\n *** pmask: {0 if (pmask is None) else np.count_nonzero(pmask)}/{0 if (pmask is None) else pmask.shape}, " )
-            lgm().log( f"\n *** rmask: {0 if (rmask is None) else np.count_nonzero(rmask)}/{0 if (rmask is None) else rmask.shape}" )
+            # lgm().log( f"\n *** pdata: {0 if (self._point_data is None) else self._point_data.shape} " )
+            # lgm().log( f"\n *** pmask: {0 if (pmask is None) else np.count_nonzero(pmask)}/{0 if (pmask is None) else pmask.shape}, " )
+            # lgm().log( f"\n *** rmask: {0 if (rmask is None) else np.count_nonzero(rmask)}/{0 if (rmask is None) else rmask.shape}" )
             self._point_coords: Dict[str,np.ndarray] = dict( y=self.data.y.values, x=self.data.x.values, mask=pmask, pmask=pmask, rmask=rmask )
             self._samples_axis = self._point_data.coords['samples']
             self._point_data.attrs['type'] = 'block'
@@ -636,7 +638,6 @@ class Block(DataContainer):
             self._point_mask = pmask
             self._raster_mask = rmask
         result = tm().norm( self._point_data )
-        lgm().log(f"BLOCK[{self.dsid()}].SetPointCoords-> attrs = {result.attrs.keys()}")
         return (result, self._point_coords )
 
     @property
@@ -717,7 +718,7 @@ class Block(DataContainer):
         #     lgm().log( f" --> pindex2indices Error: {err}, pid = {point_index}, coords = {pi}" )
 
     def points2raster(self, points_data: xa.DataArray ) -> xa.DataArray:
-        lgm().log( f"points->raster[{self.dsid()}], points: dims={points_data.dims}, shape={points_data.shape}; data: dims={self.data.dims}, shape={self.data.shape}, attrs={points_data.attrs.keys()}")
+        t0 = time.time()
         dims = [points_data.dims[1], self.data.dims[1], self.data.dims[2]]
         coords = [(dims[0], points_data[dims[0]].data), (dims[1], self.data[dims[1]].data), (dims[2], self.data[dims[2]].data)]
         rpdata = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
@@ -725,8 +726,6 @@ class Block(DataContainer):
         self._raster_mask = points_data.attrs['rmask']
         rnz = np.count_nonzero(self.raster_mask)
         pnz = np.count_nonzero(self.point_mask)
-        lgm().log(f" **>> point_mask: {pnz}/{self.point_mask.shape} ")
-        lgm().log(f" **>> raster_mask: {rnz}/{self.raster_mask.shape} " )
         if pnz == points_data.shape[0]:
             rpdata[ self.point_mask ] = points_data.data
         else:
@@ -737,6 +736,8 @@ class Block(DataContainer):
             else:
                 rpdata[ self.raster_mask ] = points_data.data[ self.point_mask ]
         raster_data = rpdata.transpose().reshape([points_data.shape[1], self.data.shape[1], self.data.shape[2]])
+        lgm().log( f"points->raster[{self.dsid()}], time= {time.time()-t0:.2f} sec, points: dims={points_data.dims}, shape={points_data.shape}" )
+        lgm().log( f"  ---> data: dims={self.data.dims}, shape={self.data.shape}, attrs={points_data.attrs.keys()}" )
         return xa.DataArray( raster_data, coords, dims, points_data.name, points_data.attrs )
 
     def raster2points( self, base_raster: xa.DataArray ) -> Tuple[ Optional[xa.DataArray], Optional[np.ndarray], Optional[np.ndarray] ]:   #  base_raster dims: [ band, y, x ]

@@ -404,7 +404,9 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def update( self ):
         lgm().log( "MapManager: UPDATE")
-        self.currentFrame = self.currentFrame
+        self.image_update()
+        fval = 1 if (self.currentFrame == 0) else 1
+        self.slider.set_val(fval)
 
     def update_image_alpha( self, layer: str, increase: bool, *args, **kwargs ):
         self.layers(layer).increment( increase )
@@ -451,22 +453,23 @@ class MapManager(SCSingletonConfigurable):
             pcm().update_plot(cdata=fdata, norm=self.norm)
             self._pcm_updated = True
 
-    def reset_plot(self):
+    def reset_plot(self, clear_image=False):
         from spectraclass.data.base import DataManager, dm
-#        self._spectral_image.remove()
-#        self._spectral_image = None
+        if clear_image:
+            self._spectral_image.remove()
+            self._spectral_image = None
         plot_name = os.path.basename( dm().dsid() )
         if self.plot_axes is not None:
             self.plot_axes.title.set_text(f"{plot_name}: Band {self.currentFrame + 1}")
             self.plot_axes.title.set_fontsize(8)
         self.setBlock()
+        self.update_thresholds()
 
     @exception_handled
     def update_plots(self, new_image=False):
         from spectraclass.data.base import DataManager, dm
         if new_image:  dm().modal.update_extent()
         self.reset_plot()
-        self.update_thresholds()
         self.update_spectral_image()
 
     def update_canvas(self):
@@ -552,17 +555,15 @@ class MapManager(SCSingletonConfigurable):
         needs_update = (self.block is None) if (block_index is None) else (tuple(block_index) != tuple(tm().block_index))
         if needs_update:
             if block_index is None: block_index = tm().block_index
-            lgm().trace( f"Loading Block[{tm().image_index}:{tm().image_name}]{block_index}, tm.index={tm().block_index}, current.index={self.block_index}")
             tm().setBlock( block_index )
             self.block: Block = tm().getBlock()
             if (self.block is not None):
-                ufm().show(f" --> Loading Block{self.block.block_coords}" )
+                ufm().show(f"Loading Block[{tm().image_index}:{tm().image_name}]{block_index}")
                 t0 = time.time()
                 self.block_index = block_index
                 dm().clear_project_cache()
                 pcm().reset()
                 update = kwargs.get( 'update', False )
-                lgm().log(f" -------------------- Loading block: {self.block.block_coords}  -------------------- " )
                 if self.base is not None:
                     self.base.set_bounds(self.block.xlim, self.block.ylim)
                 self.band_axis = kwargs.pop('band', 0)
