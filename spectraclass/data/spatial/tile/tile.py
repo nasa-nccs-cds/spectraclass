@@ -623,7 +623,10 @@ class Block(DataContainer):
         norm = kwargs.get('norm', True)
         if self._point_data is None:
             self._point_data, pmask, rmask =  self.raster2points( self.data )
-            lgm().log( f"BLOCK[{self.dsid()}].SetPointCoords-> pdata: {self._point_data.shape}, pmask: {np.count_nonzero(pmask)}/{pmask.shape}, rmask: {np.count_nonzero(rmask)}/{rmask.shape}")
+            lgm().log( f"BLOCK[{self.dsid()}].SetPointCoords-> " )
+            lgm().log( f"\n *** pdata: {0 if (self._point_data is None) else self._point_data.shape} " )
+            lgm().log( f"\n *** pmask: {0 if (pmask is None) else np.count_nonzero(pmask)}/{0 if (pmask is None) else pmask.shape}, " )
+            lgm().log( f"\n *** rmask: {0 if (rmask is None) else np.count_nonzero(rmask)}/{0 if (rmask is None) else rmask.shape}" )
             self._point_coords: Dict[str,np.ndarray] = dict( y=self.data.y.values, x=self.data.x.values, mask=pmask, pmask=pmask, rmask=rmask )
             self._samples_axis = self._point_data.coords['samples']
             self._point_data.attrs['type'] = 'block'

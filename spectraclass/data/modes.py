@@ -585,6 +585,7 @@ class ModeDataManager(SCSingletonConfigurable):
         self.set_current_image( self.file_selector.index )
         dm().clear_project_cache()
         mm().update_plots(True)
+        mm().update()
 
     @property
     def mode(self):

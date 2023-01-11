@@ -401,6 +401,11 @@ class MapManager(SCSingletonConfigurable):
     def _update( self, val: float ):
         self.currentFrame = int( val )
 
+    @exception_handled
+    def update( self ):
+        lgm().log( "MapManager: UPDATE")
+        self.currentFrame = self.currentFrame
+
     def update_image_alpha( self, layer: str, increase: bool, *args, **kwargs ):
         self.layers(layer).increment( increase )
 
