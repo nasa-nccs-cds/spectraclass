@@ -278,9 +278,12 @@ class DataManager(SCSingletonConfigurable):
 
     def images_panel(self) -> ip.VBox:
         title = ipw.Label( value="Images", width='500px' )
-        file_selector = dm().modal.set_file_selection_observer( dm().modal.on_image_change )
+        file_selector = dm().modal.set_file_selection_observer( self.on_image_change )
         controls = [ title, file_selector ]
         return ip.VBox( controls, layout=ipw.Layout(flex='1 1 auto') )
+
+    def on_image_change(self, event: Dict):
+        dm().modal.on_image_change( event )
 
     def model_panel(self) -> ip.VBox:
         controls = []

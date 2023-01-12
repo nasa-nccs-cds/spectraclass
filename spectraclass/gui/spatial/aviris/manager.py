@@ -65,10 +65,19 @@ class AvirisTileSelector:
         band_array = self.get_band_data()
         vmean, vstd = np.nanmean(band_array), np.nanstd( band_array )
         vrange = [ max(vmean-2*vstd, 0.0), vmean+2*vstd ]
-        if self.band_plot is None:  self.band_plot = self.ax.imshow( band_array, cmap="jet")
-        else:                       self.band_plot.set_data( band_array )
+        (nr,nc) = band_array.shape
+        extent = ( -0.5, nc-0.5, -0.5, nr-0.5 )
+        plt.ioff()
+        if self.band_plot is None:
+            self.band_plot = self.ax.imshow( band_array, cmap="jet", origin="lower", extent=extent)
+        else:
+            self.band_plot.set_extent( extent )
+            self.band_plot.set_data( band_array )
+            self.ax.set_xbound(extent[0],extent[1])
+            self.ax.set_ybound(extent[2],extent[3])
         self.band_plot.set_clim(*vrange)
         self.add_block_selection()
+        plt.ion()
         mm().image_update()
       #  self.select_block()
 
@@ -96,9 +105,15 @@ class AvirisTileSelector:
             self._axes.figure.canvas.mpl_connect( 'pick_event', self.on_pick )
         return self._axes
 
+    def clear_blocks(self):
+        for r in self._blocks.values():
+            r.remove()
+        self._blocks = {}
+
     @exception_handled
     def add_block_selection(self):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        self.clear_blocks()
         block_size = tm().block_size
         block_dims = tm().block_dims
         self._selected_block = tm().block_index
@@ -191,7 +206,6 @@ class AvirisDatasetManager:
         if "cache_dir" in kwargs: self.dm.modal.cache_dir = kwargs["cache_dir"]
         if "data_dir"  in kwargs: self.dm.modal.data_dir = kwargs["data_dir"]
         if "images_glob" in kwargs: self.dm.modal.images_glob = kwargs["images_glob"]
-        self.dm.modal.ext = kwargs.get( "ext", "_img" )
         self.init_band = kwargs.get( "init_band", 160 )
         self.grid_color = kwargs.get("grid_color", 'white')
         self.selection_color = kwargs.get("selection_color", 'black')

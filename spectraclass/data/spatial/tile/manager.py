@@ -44,9 +44,6 @@ class TileManager(SCSingletonConfigurable):
         self._tiles: Dict[str,Tile] = {}
         self._idxtiles: Dict[int, Tile] = {}
         self.cacheTileData = True
-        self._block_dims = None
-        self._tile_size = None
-        self._tile_shape = None
         self._scale: Tuple[np.ndarray,np.ndarray] = None
 
     @classmethod
@@ -106,21 +103,17 @@ class TileManager(SCSingletonConfigurable):
 
     @property
     def block_dims(self) -> Tuple[int,int]:
-        if self._block_dims is None:
-            self._block_dims = [ math.ceil(self.tile_shape[i]/self.block_size) for i in (0,1) ]
-        return self._block_dims
+        ts = self.tile_shape
+        return math.ceil(ts[0]/self.block_size), math.ceil(ts[1]/self.block_size)
 
     @property
     def tile_size(self) -> Tuple[int,int]:
-        if self._tile_size is None:
-            self._tile_size = [ ( self.block_dims[i] * self.block_size ) for i in (0,1) ]
-        return self._tile_size
+        bd = self.block_dims
+        return bd[0]*self.block_size, bd[1]*self.block_size
 
     @property
     def tile_shape(self) -> Tuple[int,int]:
-        if self._tile_shape is None:
-            self._tile_shape = [ self.tile.data.shape[-1], self.tile.data.shape[-2] ]
-        return self._tile_shape
+        return ( self.tile.data.shape[-1], self.tile.data.shape[-2] )
 
     @property
     def image_name(self):

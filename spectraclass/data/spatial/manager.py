@@ -232,6 +232,7 @@ class SpatialDataManager(ModeDataManager):
     @exception_handled
     def process_block( self, block: Block, has_metadata: bool  ) -> Optional[xa.Dataset]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        t0 = time.time()
         block_data_file = dm().modal.dataFile(block=block)
         if os.path.exists(block_data_file):
             if not has_metadata:
@@ -244,14 +245,16 @@ class SpatialDataManager(ModeDataManager):
             ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
             coord_data = {}
             ufm().show( f" *** Processing Block{block.block_coords}" )
+            raw_data: xa.DataArray = block.data
             try:
                 blocks_point_data, coord_data = block.getPointData()
                 lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}")
             except NoDataInBounds:
                 blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
 
-            if blocks_point_data.size == 0: return None
-            raw_data: xa.DataArray = block.data
+            if blocks_point_data.size == 0:
+                ufm().show(f" *** NO DATA in BLOCK {block.block_coords} *** ")
+                return None
             data_vars = dict( raw=raw_data )
             lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.shape[0]} samples" )
             data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y', 'x'], coords={d: raw_data.coords[d] for d in ['x', 'y']} )
@@ -259,14 +262,14 @@ class SpatialDataManager(ModeDataManager):
             result_dataset.attrs['tile_shape'] = tm().tile.data.shape
             result_dataset.attrs['block_dims'] = tm().block_dims
             result_dataset.attrs['tile_size'] = tm().tile_size
-            result_dataset.attrs['block_size'] = blocks_point_data.shape[0]
+            result_dataset.attrs['nsamples'] = blocks_point_data.shape[0]
             result_dataset.attrs['nbands'] = blocks_point_data.shape[1]
             for (aid, aiv) in tm().tile.data.attrs.items():
                 if aid not in result_dataset.attrs:
                     result_dataset.attrs[aid] = aiv
             lgm().log( f" Writing preprocessed output to {block_data_file} with {blocks_point_data.size} samples, dset attrs:")
             for varname, da in result_dataset.data_vars.items():
-                da.attrs['long_name'] = ".".join([blocks_point_data.attrs['file_name'], varname])
+                da.attrs['long_name'] = ".".join([block.file_name, varname])
             for vname, v in data_vars.items():
                 lgm().log( f" ---> {vname}: shape={v.shape}, size={v.size}, dims={v.dims}, coords={[':'.join([cid, str(c.shape)]) for (cid, c) in v.coords.items()]}")
             write_dir = os.path.dirname(block_data_file)
@@ -275,6 +278,7 @@ class SpatialDataManager(ModeDataManager):
             os.chmod( write_dir, open_perm )
             result_dataset.to_netcdf(block_data_file)
             os.chmod( block_data_file, open_perm )
+            lgm().log( f" ---------  FINISHED PROCESSING BLOCK {block.block_coords} in {time.time()-t0:.2f} sec ---------  ")
             return result_dataset
 
     def get_scaling( self, sums: List[xa.DataArray] ) -> xa.DataArray:
@@ -309,8 +313,9 @@ class SpatialDataManager(ModeDataManager):
                 for block in blocks:
                     result_dataset = self.process_block( block, has_metadata )
                     if result_dataset is not None:
-                        block_sizes[ block.cindex ] = result_dataset.attrs[ 'block_size']
+                        block_sizes[ block.cindex ] = result_dataset.attrs[ 'nsamples']
                         if nbands is None: nbands = result_dataset.attrs[ 'nbands']
+
             if not has_metadata:
                 dm().modal.write_metadata(block_sizes, attrs)
             dm().modal.autoencoder_preprocess( bands=nbands, **kwargs )

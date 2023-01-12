@@ -106,7 +106,8 @@ class TileServiceBasemap(SCSingletonConfigurable):
         self.gax.set_xbound(*xlim)
         self.gax.set_ybound(*ylim)
         self.set_figsize( xlim, ylim )
-        if self._block_selection: self.basemap.update_blocks()
+        if self._block_selection:
+            self.basemap.add_block_selection()
 
     def set_alpha(self, alpha ):
         self.basemap.set_alpha( alpha )
