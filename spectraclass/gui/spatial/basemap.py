@@ -63,16 +63,17 @@ class TileServiceBasemap(SCSingletonConfigurable):
         self.figure.suptitle( title, color="yellow" )
         self.set_figsize( xlim, ylim )
         if not standalone: plt.ion()
+        slider_space, slider_height = 0.2, 0.05
 
         if use_slider:
             self.bsax: Axes  = self.figure.add_axes( [0.01, 0.01, 0.98, 0.05])  # [left, bottom, width, height]
-            self.msax: Axes  = self.figure.add_axes( [0.01, 0.01, 0.98, 0.05]) # [left, bottom, width, height]
+            self.msax: Axes  = self.figure.add_axes( [0.01, (slider_space-slider_height)/2.0, 0.98, slider_height]) # [left, bottom, width, height]
             self.msax.set_visible( False )
             self.bsax.set_visible( True  )
         self.figure.canvas.toolbar_visible = True
         self.figure.canvas.header_visible = False
 
-        bounds = [0.01, 0.07, 0.98, 0.93] if use_slider else [0.01, 0.01, 0.98, 0.98]
+        bounds = [0.01, slider_space, 0.98, 1.0-slider_space] if use_slider else [0.01, 0.01, 0.98, 0.98]
         self.gax: Axes = self.figure.add_axes( bounds, **kwargs )  # [left, bottom, width, height] # , projection=self.crs
         self.gax.figure.canvas.callbacks.connect( 'motion_notify_event', self.on_move )
         self.gax.figure.canvas.callbacks.connect( 'button_press_event', self.on_click )

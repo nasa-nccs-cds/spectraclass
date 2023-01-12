@@ -27,6 +27,7 @@ class AvirisTileSelector:
         self._transformed_block_data = None
         self._selected_block: Tuple[int,int] = (0,0)
         self.band_plot: AxesImage = None
+        self._band_index = 0
         self._select_rec = None
         self._axes: Axes = None
 
@@ -47,21 +48,19 @@ class AvirisTileSelector:
         from spectraclass.data.base import DataManager, dm
         return dm().modal.get_image_name( self.image_index )
 
-    @property
-    def band_index(self) -> int:
-        from spectraclass.gui.spatial.map import MapManager, mm
-        return mm().currentFrame
-
     def get_band_data(self) -> np.ndarray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         data_array: xa.DataArray = tm().tile.data
-        band_array: np.ndarray = data_array[ self.band_index ].values.squeeze().transpose()
+        band_array: np.ndarray = data_array[ self._band_index ].values.squeeze().transpose()
         nodata = data_array.attrs.get('_FillValue')
         band_array[band_array == nodata] = np.nan
         return band_array
 
     def update_image( self ):
         from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.data.base import DataManager, dm
+        if not dm().use_model_data:
+            self._band_index = mm().currentFrame
         band_array = self.get_band_data()
         vmean, vstd = np.nanmean(band_array), np.nanstd( band_array )
         vrange = [ max(vmean-2*vstd, 0.0), vmean+2*vstd ]
@@ -145,6 +144,9 @@ class AvirisTileSelector:
     @log_timing
     def select_block(self, r: Rectangle = None ):
         from spectraclass.gui.spatial.map import MapManager, mm
+        from spectraclass.data.base import DataManager, dm
+        if (not dm().use_model_data) and (self._band_index != mm().currentFrame):
+            self.update_image()
         if r is None: r = self._select_rec
         if r is not None:
             self.highlight_block(r)

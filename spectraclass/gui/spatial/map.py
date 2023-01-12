@@ -284,9 +284,9 @@ class MapManager(SCSingletonConfigurable):
             self.region_selection.set_class( cid )
 
     def create_sliders(self):
-        self.band_slider = Slider( ax=self.slider_axes(False), label="band", valmin=0, valmax=self.nFrames(model=False)-1, valstep=1, valfmt="%0.0f" )
+        self.band_slider = Slider( ax=self.slider_axes(False), label="band", valmin=0, valmax=self.nFrames(model=False)-1, valstep=1, valfmt="%.0f" )
         self.band_slider_cid = self.band_slider.on_changed(self._update)
-        self.model_slider = Slider( self.slider_axes(True), label="band", valmin=0, valmax=self.nFrames(model=True)-1, valstep=1, valfmt="%0.0f"  )
+        self.model_slider = Slider( self.slider_axes(True), label="feature", valmin=0, valmax=self.nFrames(model=True)-1, valstep=1, valfmt="%.0f"  )
         self.model_slider_cid = self.model_slider.on_changed(self._update)
 
     def one_hot_to_index(self, class_data: xa.DataArray, axis=0) -> xa.DataArray:
