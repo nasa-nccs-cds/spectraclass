@@ -58,8 +58,7 @@ class AvirisTileSelector:
 
     def update_image( self ):
         from spectraclass.gui.spatial.map import MapManager, mm
-        from spectraclass.data.base import DataManager, dm
-        if not dm().use_model_data:
+        if not mm().use_model_data:
             self._band_index = mm().currentFrame
         band_array = self.get_band_data()
         vmean, vstd = np.nanmean(band_array), np.nanstd( band_array )
@@ -144,8 +143,7 @@ class AvirisTileSelector:
     @log_timing
     def select_block(self, r: Rectangle = None ):
         from spectraclass.gui.spatial.map import MapManager, mm
-        from spectraclass.data.base import DataManager, dm
-        if (not dm().use_model_data) and (self._band_index != mm().currentFrame):
+        if (not mm().use_model_data) and (self._band_index != mm().currentFrame):
             self.update_image()
         if r is None: r = self._select_rec
         if r is not None:

@@ -59,11 +59,11 @@ class SpatialModelWrapper(KerasLearningModel):
     @exception_handled
     def get_training_set(self, **kwargs ) -> Tuple[Optional[np.ndarray],Optional[np.ndarray],Optional[np.ndarray],Optional[np.ndarray]]:
         from spectraclass.model.labels import LabelsManager, Action, lm
-        from spectraclass.data.base import DataManager, dm
+        from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.learn.base import LearningModel
         training_data, training_labels, sample_weight, test_mask = None, None, None, None
         label_blocks: List[Block] = lm().getTrainingBlocks()
-        use_spectral_data = (self.mtype == ModelType.SPECTRALSPATIAL) or not dm().use_model_data
+        use_spectral_data = (self.mtype == ModelType.SPECTRALSPATIAL) or not mm().use_model_data
         if len(label_blocks) == 0:
             ufm().show( "Must label some points for learning","red")
             lgm().log( "Must label some points for learning", print=True )
@@ -109,9 +109,10 @@ class SpatialModelWrapper(KerasLearningModel):
 
     @classmethod
     def get_input_shape(cls) -> Tuple[int,...]:
+        from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.data.base import DataManager, dm
         input_shape =  list( cls.block_data().shape )
-        if dm().use_model_data: input_shape[-1] = dm().modal.model_dims
+        if mm().use_model_data: input_shape[-1] = dm().modal.model_dims
         return tuple( input_shape )
 
     @classmethod

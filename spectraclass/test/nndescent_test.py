@@ -16,8 +16,6 @@ block_size = 150
 method = "vae"
 model_dims = 16
 
-dm.modal.ext = "_img"
-dm.use_model_data = True
 TileManager.block_size = block_size
 TileManager.block_index = [0, 7]
 AvirisDataManager.valid_aviris_bands = [[5, 193], [214, 283], [319, 10000]]

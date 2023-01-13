@@ -26,8 +26,9 @@ from matplotlib.image import AxesImage
 from spectraclass.xext.xgeo import XGeo
 from spectraclass.learn.cluster.manager import ClusterSelector
 # from spectraclass.widgets.slider import PageSlider
-from  matplotlib.widgets import Slider
+from  matplotlib.widgets import Slider, RadioButtons, TextBox
 import traitlets as tl
+from enum import Enum
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.data.spatial.tile.tile import Block, Tile, ThresholdRecord
 
@@ -70,7 +71,8 @@ class MapManager(SCSingletonConfigurable):
         self.cluster_selection: ClusterSelector = None
         self.region_selection: PolygonInteractor = None
         self._band_selector: ipw.IntSlider = None
-        self._use_model_data = False
+        self._source_type_index = 1
+        self._source_types =  [ 'bands', 'features' ]
         self._cidpress = -1
         self.cspecs=None
         self._classification_data: xa.DataArray = None
@@ -78,6 +80,12 @@ class MapManager(SCSingletonConfigurable):
         self.layers = LayersManager( self.on_layer_change )
         self.band_slider: Slider = None
         self.model_slider: Slider = None
+        self.band_slider_cid = -1
+        self.model_slider_cid = -1
+        self.source_selector: RadioButtons = None
+        self.source_selector_cid = -1
+        self.messsage_box: TextBox = None
+
         self._spectral_image: Optional[AxesImage] = None
         self.label_map: Optional[xa.DataArray] = None     # Map of classification labels from ML
         self.labels_image: Optional[AxesImage] = None
@@ -98,6 +106,14 @@ class MapManager(SCSingletonConfigurable):
         self.active_thresholds.observe( self.on_active_threshold_selection, names=['value'] )
         atexit.register(self.exit)
 
+    @property
+    def source_type(self):
+        return self._source_types[ self._source_type_index ]
+
+    @property
+    def use_model_data(self) -> bool:
+        return (self._source_type_index == 1)
+
     def clearMarkers(self):
         for selector in [ self.points_selection, self.cluster_selection, self.region_selection ]:
             selector.clear()
@@ -106,30 +122,19 @@ class MapManager(SCSingletonConfigurable):
     def  on_threshold_change( self,  *args  ):
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
         if not self.silent_thresholds:
-            initialized = self.block.set_thresholds( self._use_model_data, self.currentFrame, (self.lower_threshold, self.upper_threshold) )
+            initialized = self.block.set_thresholds( self.use_model_data, self.currentFrame, (self.lower_threshold, self.upper_threshold) )
             if initialized: self.update_threshold_list()
             pcm().reset()
             self.update_spectral_image()
 
     def update_thresholds( self ):
         self.silent_thresholds = True
-        trec = self.block.get_trec( self._use_model_data, self.currentFrame )
+        trec = self.block.get_trec( self.use_model_data, self.currentFrame )
         if trec is not None:
             self.upper_threshold = trec.thresholds[1]
             self.lower_threshold = trec.thresholds[0]
             self.silent_thresholds = False
             lgm().log(f"update_thresholds(frame={self.currentFrame}): [{self.lower_threshold},{self.upper_threshold}]")
-
-    def use_model_data(self, use: bool):
-        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
-        from spectraclass.learn.manager import ClassificationManager, cm
-        if use != self._use_model_data:
-            self._use_model_data = use
-            if self.base is not None:
-                self.update_slider_visibility()
-                self.update_spectral_image()
-                gpm().use_model_data(use)
-                cm().rebuild()
 
     # @property
     # def band_selector(self):
@@ -145,7 +150,7 @@ class MapManager(SCSingletonConfigurable):
     def getPointData(self, **kwargs ) -> xa.DataArray:
         from spectraclass.data.base import DataManager, dm
         current_frame = kwargs.get('current_frame',False)
-        if self._use_model_data:
+        if self.use_model_data:
             pdata = dm().getModelData()
         else:
             pdata, coords = self.block.getPointData()
@@ -191,7 +196,7 @@ class MapManager(SCSingletonConfigurable):
 
     def clear_threshold(self, *args ):
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
-        trec = self.block.threshold_record( self._use_model_data, self.currentFrame )
+        trec = self.block.threshold_record( self.use_model_data, self.currentFrame )
         trec.clear()
         self.lower_threshold = 0.0
         self.upper_threshold = 1.0
@@ -285,12 +290,28 @@ class MapManager(SCSingletonConfigurable):
 
     def create_sliders(self):
         smodel, sbands = self.nFrames(model=True), self.nFrames(model=False)
-
-        self.band_slider = Slider( ax=self.slider_axes(False), label="band", valmin=0, valmax=sbands-1, valstep=1, valfmt="%.0f" )
+        self.band_slider = Slider( self.base.bsax, label="band", valmin=0, valmax=sbands-1, valstep=1, valfmt="%.0f" )
         self.band_slider_cid = self.band_slider.on_changed(self._update)
-        self.model_slider = Slider( self.slider_axes(True), label="feature", valmin=0, valmax=smodel-1, valstep=1, valfmt="%.0f"  )
+        self.model_slider = Slider( self.base.msax, label="feature", valmin=0, valmax=smodel-1, valstep=1, valfmt="%.0f"  )
         self.model_slider_cid = self.model_slider.on_changed(self._update)
+        self.source_selector = RadioButtons( self.base.selax, self._source_types, self._source_type_index, 'blue' )
+        self.source_selector_cid = self.source_selector.on_clicked( self.select_source )
+        self.messsage_box = TextBox( self.base.texax, label="" )
         lgm().log(f"create_sliders: smodel={smodel} ({self.model_slider.slidermax}), sbands={sbands} ({self.band_slider.slidermax})")
+
+    def message(self, text: str ):
+        self.messsage_box.set_val( text )
+
+    def select_source(self, source ):
+        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
+        sindex = self._source_types.index( source )
+        if sindex != self._source_type_index:
+            self._source_type_index = sindex
+            lgm().log( f"select_source: {source}")
+            if self.base is not None:
+                self.update_slider_visibility()
+                self.update_spectral_image()
+                gpm().use_model_data( self.use_model_data )
 
     def one_hot_to_index(self, class_data: xa.DataArray, axis=0) -> xa.DataArray:
         return class_data.argmax( axis=axis, skipna=True, keep_attrs=True ).squeeze()
@@ -387,7 +408,7 @@ class MapManager(SCSingletonConfigurable):
 
     @property
     def slider(self) -> Slider:
-        return self.model_slider if self._use_model_data else self.band_slider
+        return self.model_slider if self.use_model_data else self.band_slider
 
     @property
     def currentFrame(self):
@@ -403,6 +424,13 @@ class MapManager(SCSingletonConfigurable):
     @exception_handled
     def _update( self, val: float ):
         self.currentFrame = int( val )
+
+    @exception_handled
+    def update_message(self):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.data.base import DataManager, dm
+        self.message( f"{dm().dsid()}: {self.source_type}[{self.currentFrame}]")
+        self.base.set_title( f"IMAGE[{tm().image_index}]: BLOCK{tm().block_index}" )
 
     @exception_handled
     def update( self ):
@@ -441,10 +469,11 @@ class MapManager(SCSingletonConfigurable):
 #                with self.base.hold_limits():
                 self._spectral_image.set_extent(self.block.extent)
                 self.update_canvas()
+                self.update_message()
                 self._pcm_updated = False
 
                 lgm().log(f"UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, "
-                          f"xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}, model_data={self._use_model_data} " )
+                          f"xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}, model_data={self.use_model_data} " )
 
             else: lgm().log(f"UPDATE spectral_image: fdata is None")
         else: lgm().log(f"UPDATE spectral_image: base is None")
@@ -480,7 +509,7 @@ class MapManager(SCSingletonConfigurable):
 
     def nFrames(self, **kwargs ) -> int:
         from spectraclass.data.base import DataManager, dm
-        use_model = kwargs.get( 'model', self._use_model_data )
+        use_model = kwargs.get( 'model', self.use_model_data )
         return dm().getModelData().shape[1] if use_model else self.block.data.shape[0]
 
     @property
@@ -514,8 +543,8 @@ class MapManager(SCSingletonConfigurable):
         return self.base.msax if use_model else self.base.bsax
 
     def update_slider_visibility(self):
-        lgm().log( f" UPDATE MAP SLIDER: model = {self._use_model_data}")
-        self.base.update_slider_visibility( self._use_model_data )
+        lgm().log( f" UPDATE MAP SLIDER: model = {self.use_model_data}")
+        self.base.update_slider_visibility( self.use_model_data )
 
     def invert_yaxis(self):
         self.plot_axes.invert_yaxis()
@@ -535,7 +564,7 @@ class MapManager(SCSingletonConfigurable):
 
     @property
     def data(self) -> Optional[xa.DataArray]:
-        return self.getRasterData( self._use_model_data )
+        return self.getRasterData( self.use_model_data )
 
     def getRasterData(self, use_model: bool ) -> Optional[xa.DataArray]:
         from spectraclass.data.base import dm
@@ -595,21 +624,8 @@ class MapManager(SCSingletonConfigurable):
             self.init_hover()
             if not standalone:
                 self.create_selection_panel()
+            self.update_message()
         return self.base.gax.figure.canvas
-
-    def createMapPanel(self, title: str):
-        pass
-
-    def gui1(self):
-        wTab = ipw.Tab()
-        tabNames = [  "bands", "features" ]
-        children = []
-        for iT, title in enumerate( tabNames ):
-            children.append( self.createMapPanel(title) )
-        wTab.children = children
-        for iT, title in enumerate( tabNames ):
-            wTab.set_title( iT, title )
-        return wTab
 
     def mark_point(self, pid: int, **kwargs ) -> Optional[Tuple[float,float]]:
         point = self.points_selection.mark_point( pid, **kwargs )
@@ -624,12 +640,10 @@ class MapManager(SCSingletonConfigurable):
         self.points_selection.plot( **kwargs )
 
     def init_map(self):
-        from spectraclass.data.base import DataManager, dm
         self.update_spectral_image()
         self.create_sliders()
         self.initLabels()
         self._cidpress = self.figure.canvas.mpl_connect('button_press_event', self.on_button_press)
-        self.use_model_data( dm().use_model_data )
      #   self._cidrelease = self._spectral_image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
      #   self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
 

@@ -8,7 +8,6 @@ c.ModeDataManager.class_file = "NONE"
 c.ModeDataManager.refresh_model = False
 c.DataManager.proc_type = "skl"
 c.DataManager.refresh_data = False
-c.DataManager.use_model_data = True
 c.DataManager.labels_dset = "labels"
 c.TileManager.block_index = (1, 6)
 c.TileManager.block_size = 200

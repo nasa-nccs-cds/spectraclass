@@ -1,20 +1,12 @@
 import logging, os, traceback, contextlib
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
-from matplotlib.image import AxesImage
-import xarray as xa
-from spectraclass.util.logs import LogManager, lgm
-from spectraclass.data.spatial.tile.manager import TileManager
-from matplotlib.font_manager import FontProperties
-from matplotlib.backend_bases import FigureCanvasBase
 from spectraclass.gui.spatial.source import WMTSRasterSource
 from spectraclass.gui.spatial.image import TileServiceImage
 from typing import List, Optional, Dict, Tuple
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
-from cartopy.mpl.geoaxes import GeoAxes
 from matplotlib.axes import Axes
 from owslib.wmts import WebMapTileService
-import cartopy.crs as ccrs
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 
@@ -26,6 +18,8 @@ class TileServiceBasemap(SCSingletonConfigurable):
         self.crs: str = TileManager.crs
         self.msax: Axes = None
         self.bsax: Axes = None
+        self.texax: Axes = None
+        self.selax: Axes = None
         self.tile_service: WebMapTileService = None
         self.layer: str = None
         self.basemap: TileServiceImage = None
@@ -52,6 +46,7 @@ class TileServiceBasemap(SCSingletonConfigurable):
 
     @exception_handled
     def setup_plot( self, title: str, xlim: Tuple[float,float], ylim: Tuple[float,float], **kwargs ):
+        from spectraclass.gui.spatial.map import MapManager, mm
         standalone = kwargs.pop( 'standalone', False )
         if not standalone: plt.ioff()
         fig_index = kwargs.pop('index',100)
@@ -62,19 +57,21 @@ class TileServiceBasemap(SCSingletonConfigurable):
         self.figure: Figure = plt.figure( fig_index )
         self.figure.canvas.mpl_connect('motion_notify_event', self.on_move)
         self.bpeid = self.figure.canvas.mpl_connect('button_press_event', self.on_click)
-        self.figure.suptitle( title, color="yellow" )
+        self.set_title( title )
         self.set_figsize( xlim, ylim )
         if not standalone: plt.ion()
 
         if use_slider:
-            self.bsax: Axes  = self.figure.add_axes( [0.01, 0.01, 0.98, 0.05])  # [left, bottom, width, height]
-            self.msax: Axes  = self.figure.add_axes( [0.01, 0.01, 0.98, 0.05]) # [left, bottom, width, height]
-            self.msax.set_visible( False )
-            self.bsax.set_visible( True  )
+            self.bsax: Axes  = self.figure.add_axes( [0.17, 0.05, 0.82, 0.05])  # [left, bottom, width, height]
+            self.msax: Axes  = self.figure.add_axes( [0.17, 0.05, 0.82, 0.05]) # [left, bottom, width, height]
+            self.texax: Axes = self.figure.add_axes( [0.17, 0.005, 0.82, 0.045])  # [left, bottom, width, height]
+            self.selax: Axes = self.figure.add_axes( [0.00, 0.005, 0.15, 0.095])  # [left, bottom, width, height]
+            self.msax.set_visible( mm().use_model_data )
+            self.bsax.set_visible( not mm().use_model_data  )
         self.figure.canvas.toolbar_visible = True
         self.figure.canvas.header_visible = False
 
-        bounds = [0.01, 0.07, 0.98, 0.93] if use_slider else [0.01, 0.01, 0.98, 0.98]
+        bounds = [0.01, 0.1, 0.98, 0.9] if use_slider else [0.01, 0.01, 0.98, 0.98]
         self.gax: Axes = self.figure.add_axes( bounds, **kwargs )  # [left, bottom, width, height] # , projection=self.crs
         self.gax.figure.canvas.callbacks.connect( 'motion_notify_event', self.on_move )
         self.gax.figure.canvas.callbacks.connect( 'button_press_event', self.on_click )
@@ -88,6 +85,10 @@ class TileServiceBasemap(SCSingletonConfigurable):
             self.gax.set_ybound( ylim[0], ylim[1] )
 
         return standalone
+
+    def set_title( self, title: str ):
+        self.figure.suptitle(title, color="yellow")
+        self.figure.canvas.draw_idle()
 
     @exception_handled
     def on_click(self, event):

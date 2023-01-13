@@ -32,8 +32,6 @@ model_dims = 32
 version = "v2p9"  # "v2v2" "v2p9"
 month = "201707" # "201707" "201908"
 
-dm.modal.ext =  "_img"
-dm.use_model_data = True
 dm.proc_type = "skl"
 dm.modal.images_glob = f"ang{month}*rfl/ang*_rfl_{version}/ang*_corr_{version}_img"
 TileManager.block_size = block_size

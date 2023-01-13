@@ -25,7 +25,6 @@ method = "aec"  # "vae"
 model_dims = 32
 version = "v2p9"  # "v2v2" "v2p9"
 
-dm.use_model_data = True
 dm.proc_type = "skl"
 dm.modal.images_glob = f"ang*rfl/ang*_rfl_{version}/ang*_corr_{version}_img"
 TileManager.block_size = block_size

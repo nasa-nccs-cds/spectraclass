@@ -26,8 +26,6 @@ nepochs = 20
 use_saved_weights = True
 nbins = 64
 
-dm.modal.ext = "_img"
-dm.use_model_data = True
 dm.proc_type = "skl"
 TileManager.block_size = block_size
 TileManager.block_index = [0, 7]
