@@ -545,6 +545,7 @@ class MapManager(SCSingletonConfigurable):
     def update_slider_visibility(self):
         lgm().log( f" UPDATE MAP SLIDER: model = {self.use_model_data}")
         self.base.update_slider_visibility( self.use_model_data )
+        self._currentFrame = int(self.slider.val)
 
     def invert_yaxis(self):
         self.plot_axes.invert_yaxis()

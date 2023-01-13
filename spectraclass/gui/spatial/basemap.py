@@ -31,8 +31,6 @@ class TileServiceBasemap(SCSingletonConfigurable):
         if self.msax is not None:
             self.msax.set_visible( use_model_data )
             self.bsax.set_visible( not use_model_data )
-            self.msax.figure.canvas.draw_idle()
-            self.bsax.figure.canvas.draw_idle()
 
     # def set_extent(self, xr: List[float], yr: List[float], **kwargs):
     #     crs = kwargs.get( 'crs', self.crs )
