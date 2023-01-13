@@ -284,10 +284,13 @@ class MapManager(SCSingletonConfigurable):
             self.region_selection.set_class( cid )
 
     def create_sliders(self):
-        self.band_slider = Slider( ax=self.slider_axes(False), label="band", valmin=0, valmax=self.nFrames(model=False)-1, valstep=1, valfmt="%.0f" )
+        smodel, sbands = self.nFrames(model=True), self.nFrames(model=False)
+
+        self.band_slider = Slider( ax=self.slider_axes(False), label="band", valmin=0, valmax=sbands-1, valstep=1, valfmt="%.0f" )
         self.band_slider_cid = self.band_slider.on_changed(self._update)
-        self.model_slider = Slider( self.slider_axes(True), label="feature", valmin=0, valmax=self.nFrames(model=True)-1, valstep=1, valfmt="%.0f"  )
+        self.model_slider = Slider( self.slider_axes(True), label="feature", valmin=0, valmax=smodel-1, valstep=1, valfmt="%.0f"  )
         self.model_slider_cid = self.model_slider.on_changed(self._update)
+        lgm().log(f"create_sliders: smodel={smodel} ({self.model_slider.slidermax}), sbands={sbands} ({self.band_slider.slidermax})")
 
     def one_hot_to_index(self, class_data: xa.DataArray, axis=0) -> xa.DataArray:
         return class_data.argmax( axis=axis, skipna=True, keep_attrs=True ).squeeze()
@@ -478,7 +481,7 @@ class MapManager(SCSingletonConfigurable):
     def nFrames(self, **kwargs ) -> int:
         from spectraclass.data.base import DataManager, dm
         use_model = kwargs.get( 'model', self._use_model_data )
-        return dm().getModelData().shape[1] if use_model else self.data.shape[0]
+        return dm().getModelData().shape[1] if use_model else self.block.data.shape[0]
 
     @property
     def frame_data(self) -> Optional[xa.DataArray]:
@@ -593,6 +596,20 @@ class MapManager(SCSingletonConfigurable):
             if not standalone:
                 self.create_selection_panel()
         return self.base.gax.figure.canvas
+
+    def createMapPanel(self, title: str):
+        pass
+
+    def gui1(self):
+        wTab = ipw.Tab()
+        tabNames = [  "bands", "features" ]
+        children = []
+        for iT, title in enumerate( tabNames ):
+            children.append( self.createMapPanel(title) )
+        wTab.children = children
+        for iT, title in enumerate( tabNames ):
+            wTab.set_title( iT, title )
+        return wTab
 
     def mark_point(self, pid: int, **kwargs ) -> Optional[Tuple[float,float]]:
         point = self.points_selection.mark_point( pid, **kwargs )

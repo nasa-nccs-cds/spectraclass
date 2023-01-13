@@ -24,8 +24,8 @@ class TileServiceBasemap(SCSingletonConfigurable):
         super(TileServiceBasemap, self).__init__()
         self.tile_server_url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/WMTS'
         self.crs: str = TileManager.crs
-        self.msax = None
-        self.bsax = None
+        self.msax: Axes = None
+        self.bsax: Axes = None
         self.tile_service: WebMapTileService = None
         self.layer: str = None
         self.basemap: TileServiceImage = None
@@ -37,6 +37,8 @@ class TileServiceBasemap(SCSingletonConfigurable):
         if self.msax is not None:
             self.msax.set_visible( use_model_data )
             self.bsax.set_visible( not use_model_data )
+            self.msax.figure.canvas.draw_idle()
+            self.bsax.figure.canvas.draw_idle()
 
     # def set_extent(self, xr: List[float], yr: List[float], **kwargs):
     #     crs = kwargs.get( 'crs', self.crs )
@@ -63,17 +65,16 @@ class TileServiceBasemap(SCSingletonConfigurable):
         self.figure.suptitle( title, color="yellow" )
         self.set_figsize( xlim, ylim )
         if not standalone: plt.ion()
-        slider_space, slider_height = 0.2, 0.05
 
         if use_slider:
             self.bsax: Axes  = self.figure.add_axes( [0.01, 0.01, 0.98, 0.05])  # [left, bottom, width, height]
-            self.msax: Axes  = self.figure.add_axes( [0.01, (slider_space-slider_height)/2.0, 0.98, slider_height]) # [left, bottom, width, height]
+            self.msax: Axes  = self.figure.add_axes( [0.01, 0.01, 0.98, 0.05]) # [left, bottom, width, height]
             self.msax.set_visible( False )
             self.bsax.set_visible( True  )
         self.figure.canvas.toolbar_visible = True
         self.figure.canvas.header_visible = False
 
-        bounds = [0.01, slider_space, 0.98, 1.0-slider_space] if use_slider else [0.01, 0.01, 0.98, 0.98]
+        bounds = [0.01, 0.07, 0.98, 0.93] if use_slider else [0.01, 0.01, 0.98, 0.98]
         self.gax: Axes = self.figure.add_axes( bounds, **kwargs )  # [left, bottom, width, height] # , projection=self.crs
         self.gax.figure.canvas.callbacks.connect( 'motion_notify_event', self.on_move )
         self.gax.figure.canvas.callbacks.connect( 'button_press_event', self.on_click )
