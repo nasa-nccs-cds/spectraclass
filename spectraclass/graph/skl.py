@@ -96,6 +96,7 @@ class skActivationFlow(ActivationFlow):
         return self.getGraph()
 
     def _compute_graph(self):
+        ufm().show( f"Computing spectral nearest-neighbor graph..")
         t0 = time.time()
         D_sk, I_sk = self.knn_graph.kneighbors(self.nodes, self.nneighbors)
         self.knn_graph.neighbor_graph = (I_sk, D_sk)
@@ -104,6 +105,7 @@ class skActivationFlow(ActivationFlow):
         lgm().log(f" --->  $$$sklD: setNodeData D=> {self.D.__class__}:{self.D.dtype}", print=True)
         dt = (time.time() - t0)
         lgm().trace( f"\nComputed NN skGraph with {self._knn_graph.n_neighbors} neighbors and {self.nodes.shape[0]} verts in {dt} sec ({dt / 60} min)\n")
+        ufm().show(f"Computed graph ({self.nodes.shape[0]} verts) in {dt:.1} sec.")
 
     def setNodeData(self, nodes_data: xa.DataArray ):
         if (nodes_data.size > 0):

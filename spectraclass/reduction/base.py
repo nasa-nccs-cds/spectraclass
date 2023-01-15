@@ -275,9 +275,9 @@ class UMAP(BaseEstimator):
 
     @property
     def input_data(self) -> np.ndarray:
-        from spectraclass.gui.spatial.map import MapManager, mm
-#        from spectraclass.data.spatial.tile.manager import TileManager, tm
-#        result, mask = mm().block.raster2points( mm().threshold_mask )
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
+        if self._input_data is None:
+            self._input_data = pcm().xyz
         return self._input_data
 
     @input_data.setter

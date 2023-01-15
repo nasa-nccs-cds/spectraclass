@@ -57,7 +57,6 @@ class MapManager(SCSingletonConfigurable):
     def __init__( self, **kwargs ):   # class_labels: [ [label, RGBA] ... ]
         super(MapManager, self).__init__()
         self._debug = False
-        self._pcm_updated = False
         self.norm = None
         self.base: TileServiceBasemap = None
         self._currentFrame = 0
@@ -300,7 +299,8 @@ class MapManager(SCSingletonConfigurable):
         lgm().log(f"create_sliders: smodel={smodel} ({self.model_slider.slidermax}), sbands={sbands} ({self.band_slider.slidermax})")
 
     def message(self, text: str ):
-        self.messsage_box.set_val( text )
+        if self.messsage_box is not None:
+            self.messsage_box.set_val( text )
 
     def select_source(self, source ):
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
@@ -420,6 +420,7 @@ class MapManager(SCSingletonConfigurable):
         self._currentFrame = value
         self.update_thresholds()
         self.update_spectral_image()
+        self.update_pcm()
 
     @exception_handled
     def _update( self, val: float ):
@@ -470,7 +471,6 @@ class MapManager(SCSingletonConfigurable):
                 self._spectral_image.set_extent(self.block.extent)
                 self.update_canvas()
                 self.update_message()
-                self._pcm_updated = False
 
                 lgm().log(f"UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, "
                           f"xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}, model_data={self.use_model_data} " )
@@ -480,10 +480,11 @@ class MapManager(SCSingletonConfigurable):
 
     def update_pcm(self):
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
+        t0 = time.time()
         fdata: xa.DataArray = self.frame_data
-        if not self._pcm_updated and (fdata is not None):
-            pcm().update_plot(cdata=fdata, norm=self.norm)
-            self._pcm_updated = True
+        if (fdata is not None):
+            if pcm().update_plot(cdata=fdata):
+                lgm().log( f"update_pcm in {time.time()-t0} sec")
 
     def reset_plot(self, clear_image=False):
         from spectraclass.data.base import DataManager, dm

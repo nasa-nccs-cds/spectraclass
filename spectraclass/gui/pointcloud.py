@@ -98,17 +98,19 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @log_timing
     def addMarker(self, marker: Marker ):
-        self.clear_transients()
-        lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}, #pids={marker.gids.size}")
-        for gid in marker.gids:
-            self.mark_point( gid, marker.cid )
-        self.update_marker_plot()
+        if self.initialized:
+            self.clear_transients()
+            lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}, #pids={marker.gids.size}")
+            for gid in marker.gids:
+                self.mark_point( gid, marker.cid )
+            self.update_marker_plot()
 
     def deleteMarkers( self, gids: List[int], **kwargs ):
-        plot = kwargs.get('plot',False)
-        for gid in gids:
-            self.marker_gids.pop(gid, 0)
-        if plot: self.update_marker_plot()
+        if self.initialized:
+            plot = kwargs.get('plot',False)
+            for gid in gids:
+                self.marker_gids.pop(gid, 0)
+            if plot: self.update_marker_plot()
 
     def update_marker_plot(self):
         if self.marker_points is None:
@@ -157,8 +159,6 @@ class PointCloudManager(SCSingletonConfigurable):
     def init_data(self, **kwargs):
         from spectraclass.reduction.embedding import ReductionManager, rm
         from spectraclass.data.base import dm
-#        from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
-        refresh = kwargs.get( 'refresh', True )
         model_data: Optional[xa.DataArray] = dm().getModelData()
 
         if (model_data is not None) and (model_data.shape[0] > 1):
@@ -184,10 +184,28 @@ class PointCloudManager(SCSingletonConfigurable):
     #     return data.copy(data=normed_data)
 
     def getColors( self, **kwargs ):
-        from spectraclass.data.base import DataManager, dm
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.gui.spatial.map import MapManager, mm
+        cdata: Optional[xa.DataArray] = kwargs.get( 'cdata', mm().getPointData( current_frame=True ) )
+        if cdata.ndim > 1:
+            cdata, _, _ = tm().getBlock().raster2points(cdata)
+        vr = mm().get_color_bounds( cdata )
+        norm = Normalize( vr['vmin'], vr['vmax'] )
+        tmask: np.ndarray = mm().block.get_threshold_mask(raster=False)
+        if (tmask is not None) and (tmask.shape[0] == cdata.shape[0]):
+            cdata = cdata[ tmask ]
+        lgm().log( f"getColors: norm cdata shape = {cdata.shape}, dims={cdata.dims}, crange={[norm.vmin,norm.vmax]}")
+        mapper = plt.cm.ScalarMappable( norm = norm, cmap="jet" )
+        colors = mapper.to_rgba( cdata.values )[:, :-1] * 255
+        if self.pick_point >= 0:
+            pid = self.voxelizer.gid2pid( self.pick_point )
+            colors[ pid ] = [255] * colors.shape[1]
+        return colors.astype(np.uint8)
+
+    def getColors1( self, **kwargs ):
         from spectraclass.gui.spatial.map import MapManager, mm
         norm: Normalize = kwargs.get('norm')
-        cdata: Optional[xa.DataArray] = dm().getSpectralData( current_frame=True )
+        cdata: Optional[xa.DataArray] = mm().getPointData( current_frame=True )
         if norm is None:
             vr = mm().get_color_bounds( cdata )
             norm = Normalize( vr['vmin'], vr['vmax'] )
@@ -204,13 +222,13 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @exception_handled
     def getGeometry( self, **kwargs ) -> Optional[p3js.BufferGeometry]:
-        geometry_data = self.xyz
-        if geometry_data is not None:
-            colors = self.getColors(**kwargs)
-            lgm().log(f" *** getGeometry: xyz shape = {geometry_data.shape}, color shape = {colors.shape}")
-            attrs = dict( position = p3js.BufferAttribute( geometry_data, normalized=False ),
-                          color =    p3js.BufferAttribute( list(map(tuple, colors))) )
-            return p3js.BufferGeometry( attributes=attrs )
+        geometry_data = kwargs.get( 'init_data', None )
+        if geometry_data is None: geometry_data = self.xyz
+        colors = self.getColors(**kwargs)
+        lgm().log(f" *** getGeometry: xyz shape = {geometry_data.shape}, color shape = {colors.shape}")
+        attrs = dict( position = p3js.BufferAttribute( geometry_data, normalized=False ),
+                      color =    p3js.BufferAttribute( list(map(tuple, colors))) )
+        return p3js.BufferGeometry( attributes=attrs )
 
     @exception_handled
     def getMarkerGeometry( self, **kwargs ) -> p3js.BufferGeometry:
@@ -255,7 +273,9 @@ class PointCloudManager(SCSingletonConfigurable):
         return ipw.Label( f"{toks[0]} {toks[2]}" )
 
     def _get_gui( self ) -> ipw.DOMWidget:
-        self.createPoints()
+        ecoords = dict(samples=[], model=np.arange(0, 3))
+        init_data = xa.DataArray(np.empty([0, 3]), dims=['samples', 'model'], coords=ecoords, attrs={})
+        self.createPoints( init_data=init_data )
         self.scene = p3js.Scene( children=[ self.points, self.camera, p3js.AmbientLight(intensity=0.8)  ] )
         self.renderer = p3js.Renderer( scene=self.scene, camera=self.camera, controls=[self.orbit_controls], width=800, height=500 )
         self.point_picker = p3js.Picker(controlling=self.points, event='click')
@@ -283,7 +303,6 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def gui(self, **kwargs ) -> ipw.DOMWidget:
         if self._gui is None:
-            self.init_data( **kwargs )
             self._gui = self._get_gui()
         return self._gui
 
@@ -294,12 +313,18 @@ class PointCloudManager(SCSingletonConfigurable):
         lgm().log( f"get_index_from_point[{indx}]: Loc array range=[{loc_array.min()},{loc_array.max()}], spt={loc_array[indx]}, pos={self.xyz[indx]}")
         return indx
 
-    def update_plot(self, **kwargs):
+    @property
+    def initialized(self):
+        return self._xyz is not None
+
+    def update_plot(self, **kwargs) -> bool:
         t0 = time.time()
         if 'points' in kwargs:
             embedding = kwargs['points']
             lgm().log( f"PCM->plot embedding: shape = {embedding.shape}")
             self.xyz = self.pnorm( embedding )
+        if not self.initialized:
+            return False
         t1 = time.time()
         if self._gui is not None:
             geometry =  self.getGeometry( **kwargs )
@@ -312,29 +337,28 @@ class PointCloudManager(SCSingletonConfigurable):
                     self.probe_points.geometry = self.getMarkerGeometry(probes=True)
             t3 = time.time()
             lgm().log( f" *** update point cloud data: time = {t3-t2} {t2-t1} {t1-t0} " )
+            return True
 
     def clear(self):
-        lgm().log(f"  $CLEAR: PCM")
-        self.marker_gids = {}
-        self.probe_gids = {}
-        if self.marker_points is not None:
-            self.marker_points.geometry = self.getMarkerGeometry()
-        if self.probe_points is not None:
-            self.marker_points.geometry = self.getMarkerGeometry(probes=True)
+        if self.initialized:
+            lgm().log(f"  $CLEAR: PCM")
+            self.marker_gids = {}
+            self.probe_gids = {}
+            if self.marker_points is not None:
+                self.marker_points.geometry = self.getMarkerGeometry()
+            if self.probe_points is not None:
+                self.marker_points.geometry = self.getMarkerGeometry(probes=True)
 
 
     def color_by_value(self, values: np.ndarray = None, **kwargs):
-        #        is_distance = kwargs.get('distance', False)
-        if values is not None:
-            lgm().log(f" $$$color_by_value: data shape = {values.shape} ")
-            self._color_values = ma.masked_invalid(values)
-        if self._color_values is not None:
-            colors = self._color_values.filled(-1)
-            #            (vmin, vmax) = ((0.0, self._color_values.max()) if is_distance else self.get_color_bounds())
-            (vmin, vmax, vave, vstd) = self.get_color_bounds()
-            lgm().log(
-                f" $$$color_by_value(shape:{colors.shape}) (vmin, vmax) = {(vmin, vmax)}  (vave, vstd) = {(vave, vstd)}")
-            self.update_plot(norm=Normalize(vmin, vmax), cdata=colors, **kwargs)
+        if self.initialized:
+            if values is not None:
+                lgm().log(f" $$$color_by_value: data shape = {values.shape} ")
+                self._color_values = ma.masked_invalid(values)
+            if self._color_values is not None:
+                colors = self._color_values.filled(-1)
+                lgm().log( f" $$$color_by_value (shape:{colors.shape}) ")
+                self.update_plot( cdata=colors, **kwargs)
 
     def get_color_bounds(self):
         from spectraclass.data.spatial.manager import SpatialDataManager

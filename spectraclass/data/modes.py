@@ -492,6 +492,8 @@ class ModeDataManager(SCSingletonConfigurable):
         return edges[ti + 1]
 
     def autoencoder_reduction(self, train_input: xa.DataArray, **kwargs ) -> Tuple[np.ndarray, np.ndarray]:
+        ufm().show("Computing Feature Space...")
+        t0 = time.time()
         ispecs: List[np.ndarray] = [train_input.data.max(0), train_input.data.min(0), train_input.data.mean(0), train_input.data.std(0)]
         lgm().log(f" autoencoder_reduction: train_input shape = {train_input.shape} ")
         lgm().log(f"   ----> max = { ispecs[0][:64].tolist() } ")
@@ -503,12 +505,13 @@ class ModeDataManager(SCSingletonConfigurable):
         encoded_data: np.ndarray = encoder_result[0] if isinstance(encoder_result, (list, tuple)) else encoder_result
         reproduced_data: np.ndarray = self._autoencoder.predict( train_input.values )
         lgm().log(f" Autoencoder_reduction, result shape = {encoded_data.shape}")
-        lgm().log(f" ----> encoder_input: shape = {train_input.shape}, val[5][5] = {train_input.values[:5][:5]} ")
-        lgm().log(f" ----> reproduction: shape = {reproduced_data.shape}, val[5][5] = {reproduced_data[:5][:5]} ")
-        lgm().log(f" ----> encoding: shape = {encoded_data.shape}, val[5][5] = {encoded_data[:5][:5]}, std = {encoded_data.std(0)} ")
+        lgm().log(f" ----> encoder_input: shape = {train_input.shape}")
+        lgm().log(f" ----> reproduction: shape = {reproduced_data.shape}")
+        lgm().log(f" ----> encoding: shape = {encoded_data.shape}, std = {encoded_data.std(0)} ")
 #        anomaly = np.abs( train_input.values - reproduced_data ).sum( axis=-1, keepdims=False )
 #        dmask = anomaly > 0.0
 #        lgm().log( f" ----> ANOMALY: shape = {anomaly.shape}, range = [{anomaly.min(where=dmask,initial=np.inf)},{anomaly.max()}] ")
+        ufm().show(f"Done Computing Features in {time.time()-t0:.2f} sec")
         return (encoded_data, reproduced_data)
 
     @property
