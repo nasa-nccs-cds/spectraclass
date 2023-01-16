@@ -468,6 +468,10 @@ class MapManager(SCSingletonConfigurable):
                     self._spectral_image.set_norm( self.norm )
                     self._spectral_image.set_data(fdata.values)
                     self._spectral_image.set_alpha(alpha)
+                    self._spectral_image.changed()
+                    self._spectral_image.stale = True
+                    self._spectral_image.figure.canvas.draw_idle()
+
 #                with self.base.hold_limits():
                 self._spectral_image.set_extent(self.block.extent)
                 self.update_message()
