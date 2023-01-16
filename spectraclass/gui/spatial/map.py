@@ -290,9 +290,9 @@ class MapManager(SCSingletonConfigurable):
 
     def create_sliders(self):
         smodel, sbands = self.nFrames(model=True), self.nFrames(model=False)
-        self.band_slider = Slider( self.base.bsax, label="band", valmin=0, valmax=sbands-1, valstep=1, valfmt="%.0f" )
+        self.band_slider = Slider( self.base.bsax, label="band", valmin=0, valmax=sbands-1, valstep=1 )
         self.band_slider_cid = self.band_slider.on_changed(self._update)
-        self.model_slider = Slider( self.base.msax, label="feature", valmin=0, valmax=smodel-1, valstep=1, valfmt="%.0f"  )
+        self.model_slider = Slider( self.base.msax, label="feature", valmin=0, valmax=smodel-1, valstep=1  )
         self.model_slider_cid = self.model_slider.on_changed(self._update)
         self.source_selector = RadioButtons( self.base.selax, self._source_types, self._source_type_index, 'blue' )
         self.source_selector_cid = self.source_selector.on_clicked( self.select_source )
@@ -511,9 +511,9 @@ class MapManager(SCSingletonConfigurable):
         self.update_spectral_image()
 
     def update_canvas(self):
-        # for ax in [self.base.selax, self.base.bsax, self.base.msax, self.base.texax, self.base.gax]:
-        #     ax.stale = True
-        #     ax.figure.canvas.draw_idle()
+        for ax in [self.base.selax, self.base.bsax, self.base.msax, self.base.texax, self.base.gax]:
+           ax.stale = True
+           ax.figure.canvas.draw_idle()
         self.figure.canvas.draw_idle()
 
     def nFrames(self, **kwargs ) -> int:
