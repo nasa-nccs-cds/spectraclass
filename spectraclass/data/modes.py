@@ -432,7 +432,7 @@ class ModeDataManager(SCSingletonConfigurable):
             dm().modal.set_current_image(image_index)
             blocks: List[Block] = tm().tile.getBlocks()
             num_training_blocks = min(self.reduce_nblocks, len(blocks))
-            lgm().log(f"Autoencoder focussed training: {num_training_blocks} blocks for image[{image_index}/{num_reduce_images}]: {dm().modal.image_name}", print=True)
+            lgm().log(f"Autoencoder focused training: {num_training_blocks} blocks for image[{image_index}/{num_reduce_images}]: {dm().modal.image_name}", print=True)
             for iB, block in enumerate(blocks):
                 if iB < self.reduce_nblocks:
                     point_data, grid = block.getPointData()
