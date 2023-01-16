@@ -298,10 +298,6 @@ class MapManager(SCSingletonConfigurable):
         self.messsage_box = TextBox( self.base.texax, label="" )
         lgm().log(f"create_sliders: smodel={smodel} ({self.model_slider.slidermax}), sbands={sbands} ({self.band_slider.slidermax})")
 
-    def refresh_sliders(self):
-        for ax in [self.base.selax, self.base.bsax, self.base.msax, self.base.texax ]:
-            ax.stale = True
-            ax.figure.canvas.draw_idle()
 
     def message(self, text: str ):
         if self.messsage_box is not None:
@@ -476,7 +472,6 @@ class MapManager(SCSingletonConfigurable):
                 self._spectral_image.set_extent(self.block.extent)
                 self.update_message()
                 self.update_canvas()
-                self.refresh_sliders()
 
                 lgm().log(f"UPDATE spectral_image[{self.currentFrame}]: data shape = {fdata.shape}, drange={drange}, "
                           f"xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}, model_data={self.use_model_data} " )
@@ -512,6 +507,9 @@ class MapManager(SCSingletonConfigurable):
         self.update_spectral_image()
 
     def update_canvas(self):
+        for ax in [self.base.selax, self.base.bsax, self.base.msax, self.base.texax, self.base.gax]:
+            ax.stale = True
+            ax.figure.canvas.draw_idle()
         self.figure.canvas.draw_idle()
 
     def nFrames(self, **kwargs ) -> int:
