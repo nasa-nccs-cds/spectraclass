@@ -317,6 +317,7 @@ class PointCloudManager(SCSingletonConfigurable):
     def initialized(self):
         return self._xyz is not None
 
+    @exception_handled
     def update_plot(self, **kwargs) -> bool:
         t0 = time.time()
         if 'points' in kwargs:

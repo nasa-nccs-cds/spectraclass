@@ -126,6 +126,7 @@ class MapManager(SCSingletonConfigurable):
             pcm().reset()
             self.update_spectral_image()
 
+    @exception_handled
     def update_thresholds( self ):
         self.silent_thresholds = True
         trec = self.block.get_trec( self.use_model_data, self.currentFrame )
@@ -420,8 +421,8 @@ class MapManager(SCSingletonConfigurable):
         lgm().log( f"MM: Set current Frame: {value}")
         self._currentFrame = value
         self.update_thresholds()
-        self.update_spectral_image()
         self.update_pcm()
+        self.update_spectral_image()
 
     @exception_handled
     def _update( self, val: float ):
@@ -470,7 +471,6 @@ class MapManager(SCSingletonConfigurable):
                     self._spectral_image.set_alpha(alpha)
                     self._spectral_image.changed()
                     self._spectral_image.stale = True
-                    self._spectral_image.figure.canvas.draw_idle()
 
 #                with self.base.hold_limits():
                 self._spectral_image.set_extent(self.block.extent)
@@ -511,9 +511,9 @@ class MapManager(SCSingletonConfigurable):
         self.update_spectral_image()
 
     def update_canvas(self):
-        for ax in [self.base.selax, self.base.bsax, self.base.msax, self.base.texax, self.base.gax]:
-            ax.stale = True
-            ax.figure.canvas.draw_idle()
+        # for ax in [self.base.selax, self.base.bsax, self.base.msax, self.base.texax, self.base.gax]:
+        #     ax.stale = True
+        #     ax.figure.canvas.draw_idle()
         self.figure.canvas.draw_idle()
 
     def nFrames(self, **kwargs ) -> int:
