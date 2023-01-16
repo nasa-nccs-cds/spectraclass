@@ -66,7 +66,6 @@ class ModeDataManager(SCSingletonConfigurable):
     MODE = None
     METAVARS = None
     INPUTS = None
-    VALID_BANDS = None
     application: SpectraclassController = None
 
     _image_names = tl.List( default_value=[] ).tag( config=True, sync=True, cache=False )
@@ -96,6 +95,7 @@ class ModeDataManager(SCSingletonConfigurable):
         super(ModeDataManager,self).__init__()
         assert self.MODE, f"Attempt to instantiate intermediate SingletonConfigurable class: {self.__class__}"
         self.datasets = {}
+        self._valid_bands = None
         self._current_dataset: Optional[xa.Dataset] = None
         self._model_dims_selector: ip.SelectionSlider = None
         self._samples_axis = None
@@ -607,7 +607,7 @@ class ModeDataManager(SCSingletonConfigurable):
         pass
 
     def valid_bands(self) -> Optional[List]:
-        return self.VALID_BANDS
+        return self._valid_bands
 
     def getClassMap(self) -> Optional[xa.DataArray]:
         raise NotImplementedError()

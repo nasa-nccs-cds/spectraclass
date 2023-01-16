@@ -298,6 +298,11 @@ class MapManager(SCSingletonConfigurable):
         self.messsage_box = TextBox( self.base.texax, label="" )
         lgm().log(f"create_sliders: smodel={smodel} ({self.model_slider.slidermax}), sbands={sbands} ({self.band_slider.slidermax})")
 
+    def refresh_sliders(self):
+        for ax in [self.base.selax, self.base.bsax, self.base.msax, self.base.texax ]:
+            ax.stale = True
+            ax.figure.canvas.draw_idle()
+
     def message(self, text: str ):
         if self.messsage_box is not None:
             self.messsage_box.set_val( text )
@@ -469,10 +474,11 @@ class MapManager(SCSingletonConfigurable):
                     self._spectral_image.set_alpha(alpha)
 #                with self.base.hold_limits():
                 self._spectral_image.set_extent(self.block.extent)
-                self.update_canvas()
                 self.update_message()
+                self.update_canvas()
+                self.refresh_sliders()
 
-                lgm().log(f"UPDATE spectral_image({id(self._spectral_image)}): data shape = {fdata.shape}, drange={drange}, "
+                lgm().log(f"UPDATE spectral_image[{self.currentFrame}]: data shape = {fdata.shape}, drange={drange}, "
                           f"xlim={fs(self.block.xlim)}, ylim={fs(self.block.ylim)}, model_data={self.use_model_data} " )
 
             else: lgm().log(f"UPDATE spectral_image: fdata is None")
@@ -628,6 +634,13 @@ class MapManager(SCSingletonConfigurable):
                 self.create_selection_panel()
             self.update_message()
         return self.base.gax.figure.canvas
+
+    def raw_data_viewer(self,**kwargs):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        tile_data: xa.DataArray = tm().tile.data
+        fig, ax = plt.subplots(1,1)
+        overlay_plot = tile_data[100].plot.imshow(ax, alpha=1.0, cmap='jet', add_colorbar=False)
+        return fig.canvas
 
     def mark_point(self, pid: int, **kwargs ) -> Optional[Tuple[float,float]]:
         point = self.points_selection.mark_point( pid, **kwargs )
