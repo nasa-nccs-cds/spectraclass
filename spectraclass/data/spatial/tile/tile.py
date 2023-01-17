@@ -446,7 +446,7 @@ class Block(DataContainer):
         return self._tmask
 
     def classmap(self, default_value: int =0 ) -> xa.DataArray:
-        return xa.full_like( self.data[0].squeeze(drop=True), default_value, dtype=np.int )
+        return xa.full_like( self.data[0].squeeze(drop=True), default_value, dtype=np.int32 )
 
     @property
     def gid_array(self):
@@ -609,7 +609,7 @@ class Block(DataContainer):
 
     @property
     def zeros(self) -> np.ndarray:
-        return np.zeros( self.shape, np.int)
+        return np.zeros( self.shape, np.int32)
 
     def getBounds(self ) -> Tuple[ Tuple[int,int], Tuple[int,int] ]:
         from spectraclass.data.spatial.tile.manager import tm

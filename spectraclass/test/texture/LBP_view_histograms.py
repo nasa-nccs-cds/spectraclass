@@ -25,7 +25,7 @@ hist_disk_radius = 3.0
 fig: Figure = plt.figure()
 grid = plt.GridSpec(3, 3, wspace=0.1, hspace=0.1)
 
-lbp: np.ndarray = sktex.local_binary_pattern( texband.data, P, R, method ).astype(np.int)
+lbp: np.ndarray = sktex.local_binary_pattern( texband.data, P, R, method ).astype(np.int32)
 hist_array: np.ndarray = windowed_histogram( lbp, disk( hist_disk_radius )  )
 sample_hist = hist_array[ 0, 0 ]
 

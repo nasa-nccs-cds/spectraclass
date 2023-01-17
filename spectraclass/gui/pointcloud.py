@@ -149,11 +149,11 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @property
     def empty_pointset(self) -> xa.DataArray:
-        return xa.DataArray( np.empty(shape=[0, 3], dtype=np.float), dims=["samples","model"] )
+        return xa.DataArray( np.empty(shape=[0, 3], dtype=np.float32), dims=["samples","model"] )
 
     @property
     def empty_pids(self) -> np.ndarray:
-        return np.empty(shape=[0], dtype=np.int)
+        return np.empty(shape=[0], dtype=np.int32)
 
     @exception_handled
     def init_data(self, **kwargs):
@@ -235,7 +235,7 @@ class PointCloudManager(SCSingletonConfigurable):
         probes = kwargs.get('probes',False)
         gids = np.array(list(self.probe_gids.keys() if probes else self.marker_gids.keys()))
         if gids.size == 0:
-            positions = np.empty( shape=[0,3], dtype=np.int )
+            positions = np.empty( shape=[0,3], dtype=np.int32 )
             colors = np.empty( shape=[0,3], dtype=np.uint8 )
         else:
             srange, ssize = [self.xyz.samples.values.min(),self.xyz.samples.values.max()], self.xyz.samples.values.size

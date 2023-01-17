@@ -194,7 +194,7 @@ class SpatialDataManager(ModeDataManager):
 # #        if rescale is not None:
 # #            raster = cls.scale_to_bounds(raster, rescale)
 #         lgm().log( f"$$$COLOR: Plotting tile image with parameters: {defaults}")
-#         img_data = raster.data if not zeros else np.zeros( raster.shape, np.int )
+#         img_data = raster.data if not zeros else np.zeros( raster.shape, np.int32 )
 #         img = ax.imshow( img_data, zorder=1, **defaults )
 #         ax.set_title(title)
 #         if colorbar:
@@ -242,7 +242,7 @@ class SpatialDataManager(ModeDataManager):
                 lgm().log(f"** Skipping processed BLOCK{block.cindex}: {block_data_file} " )
                 return None
         else:
-            ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
+            ea1, ea2 = np.empty(shape=[0], dtype=np.float32), np.empty(shape=[0, 0], dtype=np.float32)
             coord_data = {}
             ufm().show( f" *** Processing Block{block.block_coords}" )
             raw_data: xa.DataArray = block.data

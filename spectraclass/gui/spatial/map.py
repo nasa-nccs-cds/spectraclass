@@ -209,7 +209,7 @@ class MapManager(SCSingletonConfigurable):
     def initLabels(self):
         template = self.block.data[0].squeeze( drop=True )
         self.class_template =  xa.full_like( template, 0, dtype=np.dtype(np.int32) )
-        self.raster_template = xa.full_like( template, 0.0, dtype=np.dtype(np.float) )
+        self.raster_template = xa.full_like( template, 0.0, dtype=np.dtype(np.float32) )
         self.label_map: xa.DataArray = self.class_template
 #        self.label_map.attrs['_FillValue'] = nodata_value
         self.label_map.name = f"{self.block.data.name}_labels"
@@ -666,8 +666,9 @@ class MapManager(SCSingletonConfigurable):
 
     def update_block(self):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        self.base.set_title(f"IMAGE[{tm().image_index}]: BLOCK{tm().block_index}")
-        self._spectral_image.set_extent(self.block.extent)
+        if self.base is not None:
+            self.base.set_title(f"IMAGE[{tm().image_index}]: BLOCK{tm().block_index}")
+            self._spectral_image.set_extent(self.block.extent)
 
     def __del__(self):
         self.exit()

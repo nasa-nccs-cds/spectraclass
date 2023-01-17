@@ -29,9 +29,9 @@ class GLCM(TextureHandler):
 
     def _glcm_feature(self, patch: np.ndarray):
         levels = 256 // self.bin_size
-        if patch.size == 1: return np.zeros_like( patch, dtype=np.float )
+        if patch.size == 1: return np.zeros_like( patch, dtype=np.float32 )
         glcm = greycomatrix( patch, self.distances, self.angles, levels, symmetric=True, normed=True )
-        rv: np.ndarray = np.full( patch.shape, 0, dtype=np.float )
+        rv: np.ndarray = np.full( patch.shape, 0, dtype=np.float32 )
         for iF, feature in enumerate( self.features ):
             i0, i1 = self.overlap + iF//self.bin_size, self.overlap + iF % self.bin_size
             rv[ i0, i1 ] = greycoprops( glcm, feature )[0, 0]

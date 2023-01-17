@@ -97,7 +97,7 @@ project_data = dm.loadCurrentProject("main")
 block: Block = tm().getBlock()
 band_data: xa.DataArray = block.data[ color_band ]
 overlay_data = np.random.randint( 0, 6, band_data.shape )
-init_overlay_data = np.zeros( band_data.shape, np.int )
+init_overlay_data = np.zeros( band_data.shape, np.int32 )
 
 fig, ax = plt.subplots(1,1)
 base_image: AxesImage = plotRaster( band_data, ax = ax )
