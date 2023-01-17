@@ -430,10 +430,8 @@ class MapManager(SCSingletonConfigurable):
 
     @exception_handled
     def update_message(self):
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.data.base import DataManager, dm
         self.message( f"{dm().dsid()}: {self.source_type}[{self.currentFrame}]")
-        self.base.set_title( f"IMAGE[{tm().image_index}]: BLOCK{tm().block_index}" )
 
     @exception_handled
     def update( self ):
@@ -473,7 +471,7 @@ class MapManager(SCSingletonConfigurable):
                     self._spectral_image.stale = True
 
 #                with self.base.hold_limits():
-                self._spectral_image.set_extent(self.block.extent)
+
                 self.update_message()
                 self.update_canvas()
 
@@ -509,6 +507,7 @@ class MapManager(SCSingletonConfigurable):
         if new_image:  dm().modal.update_extent()
         self.reset_plot()
         self.update_spectral_image()
+
 
     def update_canvas(self):
         for ax in [self.base.selax, self.base.bsax, self.base.msax, self.base.texax, self.base.gax]:
@@ -618,6 +617,7 @@ class MapManager(SCSingletonConfigurable):
                 clm().clear()
                 t1 = time.time()
                 if update:  self.update_plots()
+                self.update_block()
                 t2 = time.time()
                 ufm().show(f" ** Block Loaded: {t1-t0:.2f} {t2-t1:.2f} ")
 
@@ -663,6 +663,11 @@ class MapManager(SCSingletonConfigurable):
         self._cidpress = self.figure.canvas.mpl_connect('button_press_event', self.on_button_press)
      #   self._cidrelease = self._spectral_image.figure.canvas.mpl_connect('button_release_event', self.onMouseRelease )
      #   self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
+
+    def update_block(self):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        self.base.set_title(f"IMAGE[{tm().image_index}]: BLOCK{tm().block_index}")
+        self._spectral_image.set_extent(self.block.extent)
 
     def __del__(self):
         self.exit()
