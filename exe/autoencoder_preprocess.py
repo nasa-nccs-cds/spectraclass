@@ -6,7 +6,7 @@ from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timin
 
 block_size = 150
 method = "aec" # "vae"
-model_dims = 32
+model_dims = 24
 reprocess_data = False
 
 try:

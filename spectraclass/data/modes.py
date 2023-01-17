@@ -225,17 +225,15 @@ class ModeDataManager(SCSingletonConfigurable):
         if self._autoencoder is None:
             self.autoencoder_preprocess( refresh_model=False, **kwargs )
 
-    def build_encoder(self, **kwargs):
-        input_dims = kwargs.pop( 'bands', None )
-        if input_dims is None: input_dims = tm().getBlock().data.shape[0]
+    def build_encoder(self, input_dims, **kwargs):
         lgm().log( f"build_encoder, input_dims={input_dims}, parms={kwargs}")
         if self.vae:
             self._build_vae_model( input_dims, **kwargs)
         else:
             self._build_ae_model( input_dims, **kwargs)
 
-    def load_weights(self, **kwargs) -> bool:
-        aefiles = self.autoencoder_files(**kwargs)
+    def load_weights(self, input_dims, **kwargs) -> bool:
+        aefiles = self.autoencoder_files( input_dims, **kwargs )
         wfile = aefiles[0] + ".index"
         if self.refresh_model:
             return False
@@ -352,11 +350,11 @@ class ModeDataManager(SCSingletonConfigurable):
         if verbose >= 1: self._autoencoder.summary()
         lgm().log(f"#AEC: RM BUILD VAE NETWORK: {input_dims} -> {model_dims}")
 
-    def autoencoder_files(self, **kwargs ) -> List[str]:
+    def autoencoder_files(self, input_dims, **kwargs ) -> List[str]:
         key: str = kwargs.get( 'key', self.modelkey )
         model_dims: int = kwargs.get('dims', self.model_dims)
         from spectraclass.data.base import DataManager, dm
-        aefiles = [f"{dm().cache_dir}/autoencoder.{model_dims}.{key}", f"{dm().cache_dir}/encoder.{model_dims}.{key}"]
+        aefiles = [f"{dm().cache_dir}/autoencoder.{model_dims}.{input_dims}.{key}", f"{dm().cache_dir}/encoder.{model_dims}.{input_dims}.{key}"]
         lgm().log(f"#AEC: autoencoder_files (key={key}): {aefiles}")
         return aefiles
 
@@ -367,11 +365,12 @@ class ModeDataManager(SCSingletonConfigurable):
     def autoencoder_process(self, point_data: xa.DataArray, **kwargs ):
         nepoch: int = kwargs.get( 'nepoch', self.reduce_nepoch )
         dropout: float = kwargs.get('dropout', self.reduce_dropout)
+        input_dims = tm().getBlock().data.shape[0]
         if self._autoencoder is None:
             method: str = kwargs.pop('method', self.reduce_method)
             self.vae = (method.strip().lower() == 'vae')
             self.build_encoder( dropout=dropout, **kwargs )
-        weights_loaded = self.load_weights(**kwargs)
+        weights_loaded = self.load_weights(input_dims, **kwargs)
         if not weights_loaded:
             self._autoencoder.fit(point_data.values, point_data.values, epochs=nepoch, batch_size=256, shuffle=True)
 
@@ -379,16 +378,17 @@ class ModeDataManager(SCSingletonConfigurable):
         niter: int = kwargs.get( 'niter', self.reduce_niter )
         method: str = kwargs.get( 'method', self.reduce_method )
         dropout: float = kwargs.get('dropout', self.reduce_dropout)
+        input_dims = tm().getBlock().data.shape[0]
         lr = kwargs.get('lr', self.reduce_learning_rate )
         self.vae = (method.strip().lower() == 'vae')
-        self.build_encoder( dropout=dropout, lr=lr, **kwargs )
-        weights_loaded = self.load_weights(**kwargs)
+        self.build_encoder( input_dims, dropout=dropout, lr=lr, **kwargs )
+        weights_loaded = self.load_weights(input_dims, **kwargs)
         initial_epoch = 0
         if not weights_loaded:
             for iter in range(niter):
                 initial_epoch = self.general_training( initial_epoch, **kwargs )
                 initial_epoch = self.focused_training( initial_epoch, **kwargs )
-            aefiles = self.autoencoder_files(**kwargs)
+            aefiles = self.autoencoder_files(input_dims, **kwargs)
             if self.refresh_model:
                 for aef in aefiles:
                     for ifile in glob.glob(aef + ".*"): os.remove(ifile)
