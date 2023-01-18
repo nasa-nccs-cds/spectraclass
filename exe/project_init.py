@@ -24,9 +24,9 @@ else:
     dm.modal.refresh_model = True
 
     AvirisDataManager.version = version
-    AvirisDataManager.valid_aviris_bands = [[0,196],[208,287],[309,10000]]
+    AvirisDataManager.valid_aviris_bands = [[0,195],[210,287],[312,10000]]
     TileManager.block_size = block_size
-    TileManager.reprocess = False
+    TileManager.reprocess = True
     AvirisDataManager.model_dims = model_dims
     AvirisDataManager.reduce_method = method
     AvirisDataManager.modelkey = f"b{block_size}.{method}"

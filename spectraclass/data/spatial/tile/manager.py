@@ -257,6 +257,18 @@ class TileManager(SCSingletonConfigurable):
             tile_data = tile_data if np.isnan(nodata) else tile_data.where(tile_data != nodata, np.nan)
         return tile_data
 
+    def count_nbands(self) -> int:
+        from spectraclass.data.base import DataManager, dm, DataType
+        valid_bands = dm().valid_bands()
+        nbmax = self.tile.data.shape[0]
+        if valid_bands is None:
+            return nbmax
+        else:
+            nb = 0
+            for valid_band in valid_bands:
+                nb += ( min(nbmax,valid_band[1]) - valid_band[0] )
+            return nb
+
     @classmethod
     def process_tile_data( cls, tile_data: xa.DataArray ) -> xa.DataArray:
         tile_data = tile_data.xgeo.reproject(espg=cls.ESPG)
