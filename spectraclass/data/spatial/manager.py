@@ -333,10 +333,10 @@ class SpatialDataManager(ModeDataManager):
     def dataFile( self, **kwargs ):
         from spectraclass.data.spatial.tile.tile import Block
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        valid_bands = tm().count_nbands()
+        filter_sig = tm().get_band_filter_signature()
         block: Block = kwargs.get('block',None)
         bindex = tm().block_index if (block is None) else block.block_coords
-        file_name = f"{tm().tileName(**kwargs)}-{tm().block_size}-{valid_bands}-{bindex[0]}-{bindex[1]}"
+        file_name = f"{tm().tileName(**kwargs)}-{tm().block_size}-{filter_sig}-{bindex[0]}-{bindex[1]}"
         return os.path.join( self.datasetDir, file_name + f"{self.ext}.nc" )
 
     def getFilePath(self) -> str:

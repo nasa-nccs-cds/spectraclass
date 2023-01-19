@@ -269,6 +269,19 @@ class TileManager(SCSingletonConfigurable):
                 nb += ( min(nbmax,valid_band[1]) - valid_band[0] )
             return nb
 
+    def get_band_filter_signature(self) -> str:
+        from spectraclass.data.base import DataManager, dm, DataType
+        valid_bands = dm().valid_bands()
+        nbmax = self.tile.data.shape[0]
+        if valid_bands is None:
+            return "000"
+        else:
+            nb = 1
+            for valid_band in valid_bands:
+                if valid_band[0] > 0: nb *= valid_band[0]
+                nb *= min(nbmax,valid_band[1])
+            return str(nb)[-4:]
+
     @classmethod
     def process_tile_data( cls, tile_data: xa.DataArray ) -> xa.DataArray:
         tile_data = tile_data.xgeo.reproject(espg=cls.ESPG)

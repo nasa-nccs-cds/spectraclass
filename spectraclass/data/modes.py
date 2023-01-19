@@ -41,9 +41,9 @@ def nsamples( trainingsets: List[np.ndarray ]):
 def get_optimizer( **kwargs ):
     oid = kwargs.get( 'optimizer','rmsprop').lower()
     lr = kwargs.get( 'lr', 1e-3 )
-    if   oid == "rmsprop": return tf.keras.optimizers.RMSprop( learning_rate=lr )
-    elif oid == "adam":    return tf.keras.optimizers.Adam(    learning_rate=lr )
-    elif oid == "sgd":     return tf.keras.optimizers.SGD(     learning_rate=lr )
+    if   oid == "rmsprop": return tf.keras.optimizers.legacy.RMSprop( learning_rate=lr )
+    elif oid == "adam":    return tf.keras.optimizers.legacy.Adam(    learning_rate=lr )
+    elif oid == "sgd":     return tf.keras.optimizers.legacy.SGD(     learning_rate=lr )
     else: raise Exception( f" Unknown optimizer: {oid}")
 
 def vae_loss( inputs, outputs, n_features, z_mean, z_log ):
