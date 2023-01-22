@@ -350,11 +350,13 @@ class ModeDataManager(SCSingletonConfigurable):
         if verbose >= 1: self._autoencoder.summary()
         lgm().log(f"#AEC: RM BUILD VAE NETWORK: {input_dims} -> {model_dims}")
 
-    def autoencoder_files(self, input_dims, **kwargs ) -> List[str]:
-        key: str = kwargs.get( 'key', self.modelkey )
-        model_dims: int = kwargs.get('dims', self.model_dims)
+    def autoencoder_files(self, **kwargs ) -> List[str]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.data.base import DataManager, dm
-        aefiles = [f"{dm().cache_dir}/autoencoder.{model_dims}.{input_dims}.{key}", f"{dm().cache_dir}/encoder.{model_dims}.{input_dims}.{key}"]
+        key: str = kwargs.get( 'key', self.modelkey )
+        filter_sig = tm().get_band_filter_signature()
+        model_dims: int = kwargs.get('dims', self.model_dims)
+        aefiles = [f"{dm().cache_dir}/autoencoder.{model_dims}.{filter_sig}.{key}", f"{dm().cache_dir}/encoder.{model_dims}.{filter_sig}.{key}"]
         lgm().log(f"#AEC: autoencoder_files (key={key}): {aefiles}")
         return aefiles
 
