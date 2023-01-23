@@ -232,8 +232,8 @@ class ModeDataManager(SCSingletonConfigurable):
         else:
             self._build_ae_model( input_dims, **kwargs)
 
-    def load_weights(self, input_dims, **kwargs) -> bool:
-        aefiles = self.autoencoder_files( input_dims, **kwargs )
+    def load_weights(self, **kwargs) -> bool:
+        aefiles = self.autoencoder_files( **kwargs )
         wfile = aefiles[0] + ".index"
         if self.refresh_model:
             return False
