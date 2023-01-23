@@ -390,7 +390,7 @@ class ModeDataManager(SCSingletonConfigurable):
             for iter in range(niter):
                 initial_epoch = self.general_training( initial_epoch, **kwargs )
                 initial_epoch = self.focused_training( initial_epoch, **kwargs )
-            aefiles = self.autoencoder_files(input_dims, **kwargs)
+            aefiles = self.autoencoder_files(**kwargs)
             if self.refresh_model:
                 for aef in aefiles:
                     for ifile in glob.glob(aef + ".*"): os.remove(ifile)
