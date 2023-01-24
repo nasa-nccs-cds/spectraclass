@@ -372,7 +372,7 @@ class ModeDataManager(SCSingletonConfigurable):
             method: str = kwargs.pop('method', self.reduce_method)
             self.vae = (method.strip().lower() == 'vae')
             self.build_encoder( dropout=dropout, **kwargs )
-        weights_loaded = self.load_weights(input_dims, **kwargs)
+        weights_loaded = self.load_weights(**kwargs)
         if not weights_loaded:
             self._autoencoder.fit(point_data.values, point_data.values, epochs=nepoch, batch_size=256, shuffle=True)
 
@@ -384,7 +384,7 @@ class ModeDataManager(SCSingletonConfigurable):
         lr = kwargs.get('lr', self.reduce_learning_rate )
         self.vae = (method.strip().lower() == 'vae')
         self.build_encoder( input_dims, dropout=dropout, lr=lr, **kwargs )
-        weights_loaded = self.load_weights(input_dims, **kwargs)
+        weights_loaded = self.load_weights(**kwargs)
         initial_epoch = 0
         if not weights_loaded:
             for iter in range(niter):
