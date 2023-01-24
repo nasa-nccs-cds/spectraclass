@@ -367,7 +367,6 @@ class ModeDataManager(SCSingletonConfigurable):
     def autoencoder_process(self, point_data: xa.DataArray, **kwargs ):
         nepoch: int = kwargs.get( 'nepoch', self.reduce_nepoch )
         dropout: float = kwargs.get('dropout', self.reduce_dropout)
-        input_dims = tm().getBlock().data.shape[0]
         if self._autoencoder is None:
             method: str = kwargs.pop('method', self.reduce_method)
             self.vae = (method.strip().lower() == 'vae')
@@ -383,6 +382,10 @@ class ModeDataManager(SCSingletonConfigurable):
         input_dims = tm().getBlock().data.shape[0]
         lr = kwargs.get('lr', self.reduce_learning_rate )
         self.vae = (method.strip().lower() == 'vae')
+        aefiles = self.autoencoder_files(**kwargs)
+        if self.refresh_model:
+            for aef in aefiles:
+                for ifile in glob.glob(aef + ".*"): os.remove(ifile)
         self.build_encoder( input_dims, dropout=dropout, lr=lr, **kwargs )
         weights_loaded = self.load_weights(**kwargs)
         initial_epoch = 0
@@ -390,10 +393,6 @@ class ModeDataManager(SCSingletonConfigurable):
             for iter in range(niter):
                 initial_epoch = self.general_training( initial_epoch, **kwargs )
                 initial_epoch = self.focused_training( initial_epoch, **kwargs )
-            aefiles = self.autoencoder_files(**kwargs)
-            if self.refresh_model:
-                for aef in aefiles:
-                    for ifile in glob.glob(aef + ".*"): os.remove(ifile)
             self._autoencoder.save_weights( aefiles[0] )
             self._encoder.save_weights( aefiles[1] )
             lgm().log(f"autoencoder_preprocess completed, saved model weights to files={aefiles}", print=True)
