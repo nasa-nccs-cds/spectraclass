@@ -265,7 +265,7 @@ class SpatialDataManager(ModeDataManager):
             result_dataset.attrs['tile_size'] = tm().tile_size
             result_dataset.attrs['nsamples'] = blocks_point_data.shape[0]
             result_dataset.attrs['nbands'] = blocks_point_data.shape[1]
-            result_dataset.attrs['valid_bands'] = dm().valid_bands()
+            result_dataset.attrs['valid_bands'] = str(dm().valid_bands())
             for (aid, aiv) in tm().tile.data.attrs.items():
                 if aid not in result_dataset.attrs:
                     result_dataset.attrs[aid] = aiv
