@@ -23,7 +23,7 @@ class LBP(TextureHandler):
 
         for R in self.Rs:
             P = round( 4 + 4 * R )
-            lbp: np.ndarray = sktex.local_binary_pattern( image_band.data, P, R, self.method ).astype(np.int)
+            lbp: np.ndarray = sktex.local_binary_pattern( image_band.data, P, R, self.method ).astype(np.int32)
             print( f" calculated LBP in time {time.time()-t0} sec, shape = {lbp.shape}, range = [ {lbp.min()}, {lbp.max()} ] ")
 
             t1 = time.time()

@@ -82,7 +82,7 @@ class cpActivationFlow(ActivationFlow):
             self.getGraph()
             self.I: np.ndarray = self._knn_graph.neighbor_graph[0]
             self.D: np.ndarray = self._knn_graph.neighbor_graph[1].astype(np.float32)
-            lgm().log(f" --->  $$$D: setNodeData D=> {self.D.__class__}:{self.D.dtype}",print=True)
+            lgm().log(f" --->  $$$cpu1D: setNodeData D=> {self.D.__class__}:{self.D.dtype}",print=True)
             dt = (time.time()-t0)
             lgm().log(f"Computed NN Graph with {self._knn_graph.n_neighbors} neighbors and {nodes_data.shape[0]} verts in {dt} sec ({dt / 60} min)",print=True)
         else:

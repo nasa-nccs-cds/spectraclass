@@ -43,14 +43,15 @@ class SpatialDataManager(ModeDataManager):
         from spectraclass.gui.spatial.map import MapManager, mm
         tmask: np.ndarray = mm().threshold_mask(raster=False)
         if tmask is None:
-            lgm().log(f"*** MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape},  NO threshold mask")
+            lgm().log(f"#GID: MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape}, attrs={raw_model_data.attrs.keys()},  NO threshold mask")
             result =  raw_model_data
         else:
             result = raw_model_data[tmask]
-            lgm().log( f"*** MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape}, mask shape = {tmask.shape}")
+            result.attrs.update( raw_model_data.attrs )
+            lgm().log( f"#GID: MAP: model_data[{raw_model_data.dims}], shape= {raw_model_data.shape}, attrs={raw_model_data.attrs.keys()}, mask shape = {tmask.shape}")
             lgm().log( f"#GID: filtered model_data[{result.dims}], shape= {result.shape}")
         nnan = np.count_nonzero( np.isnan( result.values.sum(axis=1) ) )
-        lgm().log(f"#GID:getModelData->  nnan-bands = {nnan}/{result.shape[0]}")
+        lgm().log(f"#GID:getModelData->  nnan-bands = {nnan}/{result.shape[0]}, attrs = {result.attrs.keys()}")
         return result
 
     @classmethod
@@ -193,7 +194,7 @@ class SpatialDataManager(ModeDataManager):
 # #        if rescale is not None:
 # #            raster = cls.scale_to_bounds(raster, rescale)
 #         lgm().log( f"$$$COLOR: Plotting tile image with parameters: {defaults}")
-#         img_data = raster.data if not zeros else np.zeros( raster.shape, np.int )
+#         img_data = raster.data if not zeros else np.zeros( raster.shape, np.int32 )
 #         img = ax.imshow( img_data, zorder=1, **defaults )
 #         ax.set_title(title)
 #         if colorbar:
@@ -231,6 +232,7 @@ class SpatialDataManager(ModeDataManager):
     @exception_handled
     def process_block( self, block: Block, has_metadata: bool  ) -> Optional[xa.Dataset]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        t0 = time.time()
         block_data_file = dm().modal.dataFile(block=block)
         if os.path.exists(block_data_file):
             if not has_metadata:
@@ -240,17 +242,19 @@ class SpatialDataManager(ModeDataManager):
                 lgm().log(f"** Skipping processed BLOCK{block.cindex}: {block_data_file} " )
                 return None
         else:
-            ea1, ea2 = np.empty(shape=[0], dtype=np.float), np.empty(shape=[0, 0], dtype=np.float)
+            ea1, ea2 = np.empty(shape=[0], dtype=np.float32), np.empty(shape=[0, 0], dtype=np.float32)
             coord_data = {}
             ufm().show( f" *** Processing Block{block.block_coords}" )
+            raw_data: xa.DataArray = block.data
             try:
                 blocks_point_data, coord_data = block.getPointData()
                 lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}")
             except NoDataInBounds:
                 blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
 
-            if blocks_point_data.size == 0: return None
-            raw_data: xa.DataArray = block.data
+            if blocks_point_data.size == 0:
+                ufm().show(f" *** NO DATA in BLOCK {block.block_coords} *** ")
+                return None
             data_vars = dict( raw=raw_data )
             lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.shape[0]} samples" )
             data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y', 'x'], coords={d: raw_data.coords[d] for d in ['x', 'y']} )
@@ -258,14 +262,14 @@ class SpatialDataManager(ModeDataManager):
             result_dataset.attrs['tile_shape'] = tm().tile.data.shape
             result_dataset.attrs['block_dims'] = tm().block_dims
             result_dataset.attrs['tile_size'] = tm().tile_size
-            result_dataset.attrs['block_size'] = blocks_point_data.shape[0]
+            result_dataset.attrs['nsamples'] = blocks_point_data.shape[0]
             result_dataset.attrs['nbands'] = blocks_point_data.shape[1]
             for (aid, aiv) in tm().tile.data.attrs.items():
                 if aid not in result_dataset.attrs:
                     result_dataset.attrs[aid] = aiv
             lgm().log( f" Writing preprocessed output to {block_data_file} with {blocks_point_data.size} samples, dset attrs:")
             for varname, da in result_dataset.data_vars.items():
-                da.attrs['long_name'] = ".".join([blocks_point_data.attrs['file_name'], varname])
+                da.attrs['long_name'] = ".".join([block.file_name, varname])
             for vname, v in data_vars.items():
                 lgm().log( f" ---> {vname}: shape={v.shape}, size={v.size}, dims={v.dims}, coords={[':'.join([cid, str(c.shape)]) for (cid, c) in v.coords.items()]}")
             write_dir = os.path.dirname(block_data_file)
@@ -274,6 +278,7 @@ class SpatialDataManager(ModeDataManager):
             os.chmod( write_dir, open_perm )
             result_dataset.to_netcdf(block_data_file)
             os.chmod( block_data_file, open_perm )
+            lgm().log( f" ---------  FINISHED PROCESSING BLOCK {block.block_coords} in {time.time()-t0:.2f} sec ---------  ")
             return result_dataset
 
     def get_scaling( self, sums: List[xa.DataArray] ) -> xa.DataArray:
@@ -309,8 +314,9 @@ class SpatialDataManager(ModeDataManager):
                 for block in blocks:
                     result_dataset = self.process_block( block, has_metadata )
                     if result_dataset is not None:
-                        block_sizes[ block.cindex ] = result_dataset.attrs[ 'block_size']
+                        block_sizes[ block.cindex ] = result_dataset.attrs[ 'nsamples']
                         if nbands is None: nbands = result_dataset.attrs[ 'nbands']
+
             if not has_metadata:
                 dm().modal.write_metadata(block_sizes, attrs)
             dm().modal.autoencoder_preprocess( bands=nbands, **kwargs )
@@ -328,10 +334,11 @@ class SpatialDataManager(ModeDataManager):
     def dataFile( self, **kwargs ):
         from spectraclass.data.spatial.tile.tile import Block
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        filter_sig = tm().get_band_filter_signature()
         block: Block = kwargs.get('block',None)
         bindex = tm().block_index if (block is None) else block.block_coords
-        file_name = f"{tm().tileName(**kwargs)}_b-{tm().block_size}-{bindex[0]}-{bindex[1]}"
-        return os.path.join( self.datasetDir, file_name + f"-m{self.model_dims}{self.ext}.nc" )
+        file_name = f"{tm().tileName(**kwargs)}-{tm().block_size}-{filter_sig}-{bindex[0]}-{bindex[1]}"
+        return os.path.join( self.datasetDir, file_name + f"{self.ext}.nc" )
 
     def getFilePath(self) -> str:
         base_dir = self.data_dir

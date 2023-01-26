@@ -11,24 +11,29 @@ else:
     project: str = sys.argv[2]    #   e.g. 'demo1', 'demo2', 'demo3', or 'demo4'
     dm: DataManager = DataManager.initialize(project, mode)
 
-    block_size = 200
-    method = "aec" # "aec" "vae"
-    model_dims = 32
-    version = "v2p9"
-    month = "201707"
+    block_size = 150
+    method = "aec"  # "vae"
+    model_dims = 24
+    version = "v2p9"  # "v2v2" "v2p9"
 
-    dm.modal.images_glob = f"ang{month}*rfl/ang*_rfl_{version}/ang*_corr_{version}_img"
+    dm.use_model_data = True
+    dm.proc_type = "cpu"
+    dm.modal.images_glob = f"ang2017*rfl/ang*_rfl_{version}/ang*_corr_{version}_img"
     dm.modal.data_dir = "/Users/tpmaxwel/Development/Data/Aviris"
+    dm.proc_type = "cpu"
+    dm.modal.refresh_model = True
+
     AvirisDataManager.version = version
-    dm.proc_type = "skl"
-    dm.modal.refresh_model = False
+    AvirisDataManager.valid_aviris_bands = [[0,195],[210,287],[312,10000]]
     TileManager.block_size = block_size
-    TileManager.reprocess = False
+    TileManager.reprocess = True
     AvirisDataManager.model_dims = model_dims
     AvirisDataManager.reduce_method = method
     AvirisDataManager.modelkey = f"b{block_size}.{method}"
-    print( f"Init project {project}, mode = {mode}, modelkey = {AvirisDataManager.modelkey}")
 
+    print(f"Init project {project}, mode = {mode}, modelkey = {AvirisDataManager.modelkey}")
     dm.prepare_inputs()
+
+
 
 

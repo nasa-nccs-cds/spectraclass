@@ -521,7 +521,7 @@ class LabelsManager(SCSingletonConfigurable):
         from spectraclass.gui.control import UserFeedbackManager, ufm
         if self.currentMarker is None:
             ufm().show( "Error: Must Label some points before executing this operation!", "red" )
-            return xa.DataArray( np.empty(shape=[0], dtype=np.int) )
+            return xa.DataArray( np.empty(shape=[0], dtype=np.int32) )
         else:
             from spectraclass.data.base import DataManager
             model_data: xa.DataArray = DataManager.instance().getModelData()

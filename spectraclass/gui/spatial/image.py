@@ -60,23 +60,24 @@ class TileServiceImage(AxesImage):
         if xrange is not None: self.axes.set_xbound( xrange[0], xrange[1] )
         if yrange is not None: self.axes.set_ybound( yrange[0], yrange[1] )
 
-    def update_blocks(self):
-        self.clear_blocks()
-        self.add_block_selection()
-
     def clear_blocks(self):
-        for r in self._blocks: r.remove()
-        self._blocks = []
+        if len( self._blocks ) > 0:
+            lgm().log( f"CLEAR {len( self._blocks )} BLOCKS")
+            for r in self._blocks: r.remove()
+            self._blocks = []
+            self.axes.figure.canvas.draw_idle()
 
     @exception_handled
     def add_block_selection(self):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.data.spatial.tile.tile import Block
+        self.clear_blocks()
         [dx, _, x0, _, dy, y0 ] = tm().transform
         block_size = tm().block_size
         max_nvalid = block_size * block_size
         block_dims = tm().block_dims
         width, height = dx*block_size, dy*block_size
+        lgm().log(f" add_block_selection: block_dims={block_dims}, block_size={block_size} " )
         for tx in range( block_dims[0] ):
             for ty in range( block_dims[1] ):
                 block: Block = tm().tile.getDataBlock( tx, ty )
@@ -92,7 +93,7 @@ class TileServiceImage(AxesImage):
                 self.axes.add_patch( r )
                 self._blocks.append( r )
                 if selected: self._selected_block = r
-         #       lgm().log( f" BLOCK[{bc}]: xc={xc:.1f}, yc={yc:.1f}, size=({width:.1f},{height:.1f})\n  ->> Axis bounds: xlim={self.axes.get_xlim()}, ylim={self.axes.get_ylim()}", print=True )
+                lgm().log( f" BLOCK{(tx,ty)}: xc={xc:.1f}, yc={yc:.1f}, size=({width:.1f},{height:.1f})\n  ->> Axis bounds: xlim={self.axes.get_xlim()}, ylim={self.axes.get_ylim()}" )
 
     def on_press(self, event: MouseEvent =None):
         self.user_is_interacting = True

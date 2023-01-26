@@ -88,7 +88,7 @@ class cpActivationFlow(ActivationFlow):
             self.getGraph()
             self.I: np.ndarray = self._knn_graph.neighbor_graph[0]
             self.D: np.ndarray = self._knn_graph.neighbor_graph[1].astype(np.float32)
-            lgm().log(f" --->  $$$D: setNodeData D=> {self.D.__class__}:{self.D.dtype}",print=True)
+            lgm().log(f" --->  $$$cpuD: setNodeData D=> {self.D.__class__}:{self.D.dtype}",print=True)
             dt = (time.time()-t0)
             lgm().log(f"Computed NN Graph with {self._knn_graph.n_neighbors} neighbors and {nodes_data.shape[0]} verts in {dt} sec ({dt / 60} min)",print=True)
         else:
@@ -96,6 +96,8 @@ class cpActivationFlow(ActivationFlow):
 
     def getGraph(self ):
         if self._knn_graph is None:
+            t0 = time.time()
+            ufm().show( "Computing spectral nn-graph")
             n_trees =  5 + int(round((self.nodes.shape[0]) ** 0.5 / 20.0))
             n_iters =  max(5, 2 * int(round(np.log2(self.nodes.shape[0]))))
             kwargs = dict( n_trees=n_trees, n_iters=n_iters, n_neighbors=self.nneighbors, max_candidates=60, verbose=True, metric = self.metric )
@@ -104,7 +106,7 @@ class cpActivationFlow(ActivationFlow):
             lgm().log(f"Computing NN-Graph[{id(self)}] with parms= {kwargs}, nodes shape = {self.nodes.shape}, #NULL={np.count_nonzero(np.isnan(ndata))}",print=True)
             lgm().log( f" ---> data ave = {ndata.mean()}, std = {ndata.std()}, range = [{ndata.min()},{ndata.max()}]",print=True)
             self._knn_graph = NNDescent( ndata, **kwargs )
-            lgm().log(f"NN-Graph COMPLETED",print=True)
+            ufm().show(f"Completed spectral graph in {time.time()-t0:%.1f} sec")
         return self._knn_graph
 
     def getEdgeIndex(self) -> Tuple[np.ndarray,np.ndarray]:

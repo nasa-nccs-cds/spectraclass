@@ -149,7 +149,7 @@ class ClusterManager(SCSingletonConfigurable):
         else:
             colors = self.get_cluster_colors(updated)
             rgb: np.ndarray = colors[ index ] * 255.99
-            return tuple( rgb.astype(np.int).tolist() )
+            return tuple( rgb.astype(np.int32).tolist() )
 
     def get_layer_colormap( self ):
         ncolors = self._cluster_colors.shape[0]
@@ -214,13 +214,13 @@ class ClusterManager(SCSingletonConfigurable):
         return self._marked_clusters.setdefault( ckey, [] )
 
     def get_points(self, cid: int ) -> np.ndarray:
-        class_points = np.array( [], dtype=np.int )
+        class_points = np.array( [], dtype=np.int32 )
         clusters: List[int] = self.get_marked_clusters(cid)
         for icluster in clusters:
             mask = ( self._cluster_points.values.squeeze() == icluster )
             pids: np.ndarray = self._cluster_points.samples[mask].values
             class_points = np.concatenate( (class_points, pids), axis=0 )
-        return class_points.astype(np.int)
+        return class_points.astype(np.int32)
 
     def get_cluster_pids(self, icluster: int ) -> np.ndarray:
         mask = ( self._cluster_points.values.squeeze() == icluster )

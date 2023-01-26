@@ -18,15 +18,19 @@ class AvirisDataManager(SpatialDataManager):
 
     def __init__(self):
         super(AvirisDataManager, self).__init__()
-        self.VALID_BANDS = []
-        self._unpack_valid_bands()
         self.tile_selector: AvirisTileSelector = None
+
+    def valid_bands(self):
+        if self._valid_bands is None:
+            self._unpack_valid_bands()
+        return self._valid_bands
 
     def _unpack_valid_bands(self):
         bv0 = 0
+        self._valid_bands = []
         for ib, bv1 in enumerate(self.valid_aviris_bands):
-            if isinstance(bv1, (list, tuple)): self.VALID_BANDS.append( bv1 )
-            elif ib % 2 == 1: self.VALID_BANDS.append( [ bv0, bv1 ] )
+            if isinstance(bv1, (list, tuple)): self._valid_bands.append(bv1)
+            elif ib % 2 == 1: self._valid_bands.append([bv0, bv1])
             else: bv0 = bv1
 
     def on_image_change( self, event: Dict ):

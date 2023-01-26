@@ -41,9 +41,9 @@ def nsamples( trainingsets: List[np.ndarray ]):
 def get_optimizer( **kwargs ):
     oid = kwargs.get( 'optimizer','rmsprop').lower()
     lr = kwargs.get( 'lr', 1e-3 )
-    if   oid == "rmsprop": return tf.keras.optimizers.RMSprop( learning_rate=lr )
-    elif oid == "adam":    return tf.keras.optimizers.Adam(    learning_rate=lr )
-    elif oid == "sgd":     return tf.keras.optimizers.SGD(     learning_rate=lr )
+    if   oid == "rmsprop": return tf.keras.optimizers.legacy.RMSprop( learning_rate=lr )
+    elif oid == "adam":    return tf.keras.optimizers.legacy.Adam(    learning_rate=lr )
+    elif oid == "sgd":     return tf.keras.optimizers.legacy.SGD(     learning_rate=lr )
     else: raise Exception( f" Unknown optimizer: {oid}")
 
 def vae_loss( inputs, outputs, n_features, z_mean, z_log ):
@@ -66,7 +66,6 @@ class ModeDataManager(SCSingletonConfigurable):
     MODE = None
     METAVARS = None
     INPUTS = None
-    VALID_BANDS = None
     application: SpectraclassController = None
 
     _image_names = tl.List( default_value=[] ).tag( config=True, sync=True, cache=False )
@@ -96,6 +95,7 @@ class ModeDataManager(SCSingletonConfigurable):
         super(ModeDataManager,self).__init__()
         assert self.MODE, f"Attempt to instantiate intermediate SingletonConfigurable class: {self.__class__}"
         self.datasets = {}
+        self._valid_bands = None
         self._current_dataset: Optional[xa.Dataset] = None
         self._model_dims_selector: ip.SelectionSlider = None
         self._samples_axis = None
@@ -225,9 +225,7 @@ class ModeDataManager(SCSingletonConfigurable):
         if self._autoencoder is None:
             self.autoencoder_preprocess( refresh_model=False, **kwargs )
 
-    def build_encoder(self, **kwargs):
-        input_dims = kwargs.pop( 'bands', None )
-        if input_dims is None: input_dims = tm().getBlock().data.shape[0]
+    def build_encoder(self, input_dims, **kwargs):
         lgm().log( f"build_encoder, input_dims={input_dims}, parms={kwargs}")
         if self.vae:
             self._build_vae_model( input_dims, **kwargs)
@@ -235,7 +233,7 @@ class ModeDataManager(SCSingletonConfigurable):
             self._build_ae_model( input_dims, **kwargs)
 
     def load_weights(self, **kwargs) -> bool:
-        aefiles = self.autoencoder_files(**kwargs)
+        aefiles = self.autoencoder_files( **kwargs )
         wfile = aefiles[0] + ".index"
         if self.refresh_model:
             return False
@@ -353,10 +351,12 @@ class ModeDataManager(SCSingletonConfigurable):
         lgm().log(f"#AEC: RM BUILD VAE NETWORK: {input_dims} -> {model_dims}")
 
     def autoencoder_files(self, **kwargs ) -> List[str]:
-        key: str = kwargs.get( 'key', self.modelkey )
-        model_dims: int = kwargs.get('dims', self.model_dims)
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.data.base import DataManager, dm
-        aefiles = [f"{dm().cache_dir}/autoencoder.{model_dims}.{key}", f"{dm().cache_dir}/encoder.{model_dims}.{key}"]
+        key: str = kwargs.get( 'key', self.modelkey )
+        filter_sig = tm().get_band_filter_signature()
+        model_dims: int = kwargs.get('dims', self.model_dims)
+        aefiles = [f"{dm().cache_dir}/autoencoder.{model_dims}.{filter_sig}.{key}", f"{dm().cache_dir}/encoder.{model_dims}.{filter_sig}.{key}"]
         lgm().log(f"#AEC: autoencoder_files (key={key}): {aefiles}")
         return aefiles
 
@@ -379,19 +379,20 @@ class ModeDataManager(SCSingletonConfigurable):
         niter: int = kwargs.get( 'niter', self.reduce_niter )
         method: str = kwargs.get( 'method', self.reduce_method )
         dropout: float = kwargs.get('dropout', self.reduce_dropout)
+        input_dims = tm().getBlock().data.shape[0]
         lr = kwargs.get('lr', self.reduce_learning_rate )
         self.vae = (method.strip().lower() == 'vae')
-        self.build_encoder( dropout=dropout, lr=lr, **kwargs )
+        aefiles = self.autoencoder_files(**kwargs)
+        if self.refresh_model:
+            for aef in aefiles:
+                for ifile in glob.glob(aef + ".*"): os.remove(ifile)
+        self.build_encoder( input_dims, dropout=dropout, lr=lr, **kwargs )
         weights_loaded = self.load_weights(**kwargs)
         initial_epoch = 0
         if not weights_loaded:
             for iter in range(niter):
                 initial_epoch = self.general_training( initial_epoch, **kwargs )
                 initial_epoch = self.focused_training( initial_epoch, **kwargs )
-            aefiles = self.autoencoder_files(**kwargs)
-            if self.refresh_model:
-                for aef in aefiles:
-                    for ifile in glob.glob(aef + ".*"): os.remove(ifile)
             self._autoencoder.save_weights( aefiles[0] )
             self._encoder.save_weights( aefiles[1] )
             lgm().log(f"autoencoder_preprocess completed, saved model weights to files={aefiles}", print=True)
@@ -433,7 +434,7 @@ class ModeDataManager(SCSingletonConfigurable):
             dm().modal.set_current_image(image_index)
             blocks: List[Block] = tm().tile.getBlocks()
             num_training_blocks = min(self.reduce_nblocks, len(blocks))
-            lgm().log(f"Autoencoder focussed training: {num_training_blocks} blocks for image[{image_index}/{num_reduce_images}]: {dm().modal.image_name}", print=True)
+            lgm().log(f"Autoencoder focused training: {num_training_blocks} blocks for image[{image_index}/{num_reduce_images}]: {dm().modal.image_name}", print=True)
             for iB, block in enumerate(blocks):
                 if iB < self.reduce_nblocks:
                     point_data, grid = block.getPointData()
@@ -493,6 +494,8 @@ class ModeDataManager(SCSingletonConfigurable):
         return edges[ti + 1]
 
     def autoencoder_reduction(self, train_input: xa.DataArray, **kwargs ) -> Tuple[np.ndarray, np.ndarray]:
+        ufm().show("Computing Feature Space...")
+        t0 = time.time()
         ispecs: List[np.ndarray] = [train_input.data.max(0), train_input.data.min(0), train_input.data.mean(0), train_input.data.std(0)]
         lgm().log(f" autoencoder_reduction: train_input shape = {train_input.shape} ")
         lgm().log(f"   ----> max = { ispecs[0][:64].tolist() } ")
@@ -504,12 +507,13 @@ class ModeDataManager(SCSingletonConfigurable):
         encoded_data: np.ndarray = encoder_result[0] if isinstance(encoder_result, (list, tuple)) else encoder_result
         reproduced_data: np.ndarray = self._autoencoder.predict( train_input.values )
         lgm().log(f" Autoencoder_reduction, result shape = {encoded_data.shape}")
-        lgm().log(f" ----> encoder_input: shape = {train_input.shape}, val[5][5] = {train_input.values[:5][:5]} ")
-        lgm().log(f" ----> reproduction: shape = {reproduced_data.shape}, val[5][5] = {reproduced_data[:5][:5]} ")
-        lgm().log(f" ----> encoding: shape = {encoded_data.shape}, val[5][5] = {encoded_data[:5][:5]}, std = {encoded_data.std(0)} ")
+        lgm().log(f" ----> encoder_input: shape = {train_input.shape}")
+        lgm().log(f" ----> reproduction: shape = {reproduced_data.shape}")
+        lgm().log(f" ----> encoding: shape = {encoded_data.shape}, std = {encoded_data.std(0)} ")
 #        anomaly = np.abs( train_input.values - reproduced_data ).sum( axis=-1, keepdims=False )
 #        dmask = anomaly > 0.0
 #        lgm().log( f" ----> ANOMALY: shape = {anomaly.shape}, range = [{anomaly.min(where=dmask,initial=np.inf)},{anomaly.max()}] ")
+        ufm().show(f"Done Computing Features in {time.time()-t0:.2f} sec")
         return (encoded_data, reproduced_data)
 
     @property
@@ -585,7 +589,8 @@ class ModeDataManager(SCSingletonConfigurable):
         from spectraclass.gui.spatial.map import MapManager, mm
         self.set_current_image( self.file_selector.index )
         dm().clear_project_cache()
-        mm().update_plots(True)
+        dm().modal.update_extent()
+        mm().update()
 
     @property
     def mode(self):
@@ -604,7 +609,7 @@ class ModeDataManager(SCSingletonConfigurable):
         pass
 
     def valid_bands(self) -> Optional[List]:
-        return self.VALID_BANDS
+        return self._valid_bands
 
     def getClassMap(self) -> Optional[xa.DataArray]:
         raise NotImplementedError()

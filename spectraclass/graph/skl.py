@@ -62,8 +62,8 @@ class skActivationFlow(ActivationFlow):
     def __init__(self, nodes_data: xa.DataArray, n_neighbors: int, **kwargs ):
         ActivationFlow.__init__( self,  n_neighbors, **kwargs )
         self._knn_graph: skNearestNeighbors = None
-        self.I: np.ndarray = None
-        self.D: np.ndarray = None
+        self._I: np.ndarray = None
+        self._D: np.ndarray = None
         self.P: np.ndarray = None
         self.C: np.ndarray = None
         self.setNodeData( nodes_data )
@@ -81,20 +81,35 @@ class skActivationFlow(ActivationFlow):
     def neighbor_graph(self) -> Tuple[np.ndarray, np.ndarray]:
         return (self.I, self.D)
 
+    @property
+    def I(self) -> np.ndarray:
+        if self._I is None: self._compute_graph()
+        return self._I
+
+    @property
+    def D(self) -> np.ndarray:
+        if self._D is None: self._compute_graph()
+        return self._D
+
+    @property
+    def knn_graph(self) -> skNearestNeighbors:
+        return self.getGraph()
+
+    def _compute_graph(self):
+        ufm().show( f"Computing spectral nearest-neighbor graph..")
+        t0 = time.time()
+        D_sk, I_sk = self.knn_graph.kneighbors(self.nodes, self.nneighbors)
+        self.knn_graph.neighbor_graph = (I_sk, D_sk)
+        self._I: np.ndarray = I_sk
+        self._D: np.ndarray = D_sk.astype(np.float32)
+        lgm().log(f" --->  $$$sklD: setNodeData D=> {self.D.__class__}:{self.D.dtype}", print=True)
+        dt = (time.time() - t0)
+        lgm().trace( f"\nComputed NN skGraph with {self._knn_graph.n_neighbors} neighbors and {self.nodes.shape[0]} verts in {dt} sec ({dt / 60} min)\n")
+        ufm().show(f"Computed graph ({self.nodes.shape[0]} verts) in {dt:.1} sec.")
+
     def setNodeData(self, nodes_data: xa.DataArray ):
-        from spectraclass.data.spatial.tile.manager import tm
         if (nodes_data.size > 0):
-            t0 = time.time()
             self.nodes = nodes_data
-            self.getGraph()
-            D_sk, I_sk = self._knn_graph.kneighbors( self.nodes, self.nneighbors )
-            self._knn_graph.neighbor_graph = ( I_sk, D_sk )
-            self.I: np.ndarray = I_sk
-            self.D: np.ndarray = D_sk.astype(np.float32)
-            lgm().log(f" --->  $$$D: setNodeData D=> {self.D.__class__}:{self.D.dtype}",print=True)
-            dt = (time.time()-t0)
-            lgm().log(f"Computed NN skGraph with {self._knn_graph.n_neighbors} neighbors and {nodes_data.shape[0]} verts in {dt} sec ({dt / 60} min)",print=True)
-            lgm().trace(f"\nNN-skGraph[{tm().image_index}:{tm().block_index}]")
         else:
             lgm().log("No data available for this block")
 

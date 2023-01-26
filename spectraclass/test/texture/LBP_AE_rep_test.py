@@ -30,7 +30,7 @@ loss = "mean_squared_error"
 fig, axs = plt.subplots( 2, n_features )
 
 t0 = time.time()
-lbp: np.ndarray = sktex.local_binary_pattern( texband.data, P, R, method ).astype(np.int)
+lbp: np.ndarray = sktex.local_binary_pattern( texband.data, P, R, method ).astype(np.int32)
 print( f" calculated LBP in time {time.time()-t0} sec, shape = {lbp.shape}, range = [ {lbp.min()}, {lbp.max()} ] ")
 
 t1 = time.time()

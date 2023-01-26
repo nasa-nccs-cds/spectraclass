@@ -31,7 +31,6 @@ class SpectraclassController(SCSingletonConfigurable):
     def __init__(self):
         super(SpectraclassController, self).__init__()
         self._action_events = []
-        self.pcm_active = True
 
     @classmethod
     def set_spectraclass_theme(cls):
@@ -60,7 +59,7 @@ class SpectraclassController(SCSingletonConfigurable):
     @property
     def color_map(self) -> str:
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
-        if self.pcm_active: return pcm().color_map
+        return pcm().color_map
 
     @exception_handled
     def update_current_class(self, iclass: int ):
@@ -97,17 +96,19 @@ class SpectraclassController(SCSingletonConfigurable):
         lm().clearMarkers()
         mm().clearMarkers()
         gpm().clear()
-        if self.pcm_active: pcm().clear()
+        pcm().clear()
         mm().plot_labels_image()
 
     @exception_handled
     def embed(self):
+        from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
         from spectraclass.reduction.embedding import ReductionManager, rm
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> EMBED ")
         ufm().show( "Computing 3D embedding" )
+        mm().update_pcm()
         embedding = rm().umap_embedding()
-        if self.pcm_active: pcm().update_plot( points=embedding )
+        pcm().update_plot( points=embedding )
         ufm().clear()
 
     @exception_handled
@@ -201,7 +202,7 @@ class SpectraclassController(SCSingletonConfigurable):
         seed_points: xa.DataArray = lm().getSeedPointMask()
         flow: ActivationFlow = afm().getActivationFlow()
         if flow.spread( seed_points.data, niters, bidirectional=True ) is not None:
-            if self.pcm_active: pcm().color_by_value( flow.get_distances(), distance=True )
+            pcm().color_by_value( flow.get_distances(), distance=True )
             ufm().show("Done Coloring by Distance")
 
     @exception_handled
@@ -213,7 +214,7 @@ class SpectraclassController(SCSingletonConfigurable):
             lgm().log( f" #APP-> Add Marker[{marker.cid}] ")
             lm().addMarker( marker )
             gpm().plot_graph( marker )
-            if self.pcm_active: pcm().addMarker(marker)
+            pcm().addMarker(marker)
 
     @exception_handled
     def remove_marker(self, marker: Marker):
@@ -223,7 +224,7 @@ class SpectraclassController(SCSingletonConfigurable):
         if marker is not None:
             lm().clearMarker( marker )
             gpm().remove_marker( marker )
-            if self.pcm_active: pcm().deleteMarkers(marker.gids.tolist())
+            pcm().deleteMarkers(marker.gids.tolist())
 
     def get_marked_pids(self) -> Dict[int,Set[int]]:
         from spectraclass.model.labels import LabelsManager, Action, lm
@@ -237,7 +238,7 @@ class SpectraclassController(SCSingletonConfigurable):
     @exception_handled
     def color_pointcloud( self, color_data: np.ndarray = None, **kwargs ):
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
-        if self.pcm_active: pcm().color_by_value( color_data, **kwargs )
+        pcm().color_by_value( color_data, **kwargs )
 
 
 def app() -> SpectraclassController:

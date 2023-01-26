@@ -31,7 +31,7 @@ P = round( 8 * R )
 method = "uniform"  # "var" "ror" "uniform"
 hist_disk_radius = 2
 
-lbp: np.ndarray = sktex.local_binary_pattern( texband.data, P, R, method ).astype(np.int)
+lbp: np.ndarray = sktex.local_binary_pattern( texband.data, P, R, method ).astype(np.int32)
 print( f" calculated LBP, shape = {lbp.shape}, range = [ {lbp.min()}, {lbp.max()} ] ")
 
 hist_array: np.ndarray = windowed_histogram( lbp, disk( hist_disk_radius )  )

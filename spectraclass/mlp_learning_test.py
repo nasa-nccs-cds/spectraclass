@@ -45,7 +45,6 @@ elif location == "laptop":
 else: raise Exception( f"Unknown location: {location}")
 
 block_size = 250
-dm.use_model_data = False
 dm.proc_type = "skl"
 
 tm.block_size = block_size

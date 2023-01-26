@@ -20,13 +20,13 @@ class AvirisTileSelector:
         self.init_band = kwargs.get( "init_band", 160 )
         self.grid_color = kwargs.get("grid_color", 'white')
         self.selection_color = kwargs.get("selection_color", 'black')
-        self.grid_alpha = kwargs.get("grid_alpha", 0.5 )
         self.slw = kwargs.get("slw", 2)
         self.colorstretch = 2.0
         self._blocks: Dict[Tuple[int,int],Rectangle] = {}
         self._transformed_block_data = None
         self._selected_block: Tuple[int,int] = (0,0)
         self.band_plot: AxesImage = None
+        self._band_index = 0
         self._select_rec = None
         self._axes: Axes = None
 
@@ -47,30 +47,45 @@ class AvirisTileSelector:
         from spectraclass.data.base import DataManager, dm
         return dm().modal.get_image_name( self.image_index )
 
-    @property
-    def band_index(self) -> int:
-        from spectraclass.gui.spatial.map import MapManager, mm
-        return mm().currentFrame
-
     def get_band_data(self) -> np.ndarray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         data_array: xa.DataArray = tm().tile.data
-        band_array: np.ndarray = data_array[ self.band_index ].values.squeeze().transpose()
+        band_array: np.ndarray = data_array[ self._band_index ].values.squeeze().transpose()
         nodata = data_array.attrs.get('_FillValue')
         band_array[band_array == nodata] = np.nan
         return band_array
+
+    def update_image_band(self):
+        from spectraclass.gui.spatial.map import MapManager, mm
+        t0 = time.time()
+        self._band_index = mm().currentFrame
+        band_array = self.get_band_data()
+        vmean, vstd = np.nanmean(band_array), np.nanstd( band_array )
+        vrange = [ max(vmean-2*vstd, 0.0), vmean+2*vstd ]
+        self.band_plot.set_data(band_array)
+        self.band_plot.set_clim(*vrange)
+        lgm().log( f"update_image_band in {time.time()-t0:.2f} sec")
 
     def update_image( self ):
         from spectraclass.gui.spatial.map import MapManager, mm
         band_array = self.get_band_data()
         vmean, vstd = np.nanmean(band_array), np.nanstd( band_array )
         vrange = [ max(vmean-2*vstd, 0.0), vmean+2*vstd ]
-        if self.band_plot is None:  self.band_plot = self.ax.imshow( band_array, cmap="jet")
-        else:                       self.band_plot.set_data( band_array )
+        (nr,nc) = band_array.shape
+        extent = ( -0.5, nc-0.5, -0.5, nr-0.5 )
+        plt.ioff()
+        if self.band_plot is None:
+            self.band_plot = self.ax.imshow( band_array, cmap="jet", origin="lower", extent=extent)
+        else:
+            self.band_plot.set_extent( extent )
+            self.band_plot.set_data( band_array )
+            self.ax.set_xbound(extent[0],extent[1])
+            self.ax.set_ybound(extent[2],extent[3])
         self.band_plot.set_clim(*vrange)
         self.add_block_selection()
+        plt.ion()
         mm().image_update()
-        self.select_block()
+      #  self.select_block()
 
     @log_timing
     def on_image_change( self, event: Dict ):
@@ -96,13 +111,20 @@ class AvirisTileSelector:
             self._axes.figure.canvas.mpl_connect( 'pick_event', self.on_pick )
         return self._axes
 
+    def clear_blocks(self):
+        for r in self._blocks.values():
+            r.remove()
+        self._blocks = {}
+
     @exception_handled
     def add_block_selection(self):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        self.clear_blocks()
         block_size = tm().block_size
         block_dims = tm().block_dims
+        self._selected_block = tm().block_index
         lgm().log(f"  add_block_selection: block_size={block_size}, block_dims={block_dims}, "
-                  f" color={self.selection_color}/{self.grid_color}, lw={self.slw}/1, alpha={self.grid_alpha}, "
+                  f" color={self.selection_color}/{self.grid_color}, lw={self.slw}/1, "
                   f" xbound={self.ax.get_xbound()}, ybound={self.ax.get_ybound()}, selected_block={self._selected_block} ")
         for bx in range( block_dims[0] ):
             for by in range( block_dims[1] ):
@@ -110,7 +132,7 @@ class AvirisTileSelector:
                 ix, iy = bx*block_size, by*block_size
                 lw = self.slw if ( selected ) else 1
                 color = self.selection_color if ( selected ) else self.grid_color
-                r = Rectangle( (iy, ix), block_size, block_size, fill=False, edgecolor=color, lw=lw, alpha=self.grid_alpha )
+                r = Rectangle( (iy, ix), block_size, block_size, fill=False, edgecolor=color, lw=lw, alpha=1.0 )
                 setattr( r, 'block_index', (bx,by) )
                 if selected: self._select_rec = r
                 r.set_picker( True )
@@ -131,6 +153,9 @@ class AvirisTileSelector:
         from spectraclass.gui.spatial.map import MapManager, mm
         if r is None: r = self._select_rec
         if r is not None:
+            ufm().show(f"Selected Block[{r.block_index}")
+            if (not mm().use_model_data) and (self._band_index != mm().currentFrame):
+                self.update_image_band()
             self.highlight_block(r)
             self.clear_block_cache()
             mm().setBlock( r.block_index, update=True )
@@ -190,11 +215,9 @@ class AvirisDatasetManager:
         if "cache_dir" in kwargs: self.dm.modal.cache_dir = kwargs["cache_dir"]
         if "data_dir"  in kwargs: self.dm.modal.data_dir = kwargs["data_dir"]
         if "images_glob" in kwargs: self.dm.modal.images_glob = kwargs["images_glob"]
-        self.dm.modal.ext = kwargs.get( "ext", "_img" )
         self.init_band = kwargs.get( "init_band", 160 )
         self.grid_color = kwargs.get("grid_color", 'white')
         self.selection_color = kwargs.get("selection_color", 'black')
-        self.grid_alpha = kwargs.get("grid_alpha", 0.5 )
         self.base = TileServiceBasemap()
         self.slw = kwargs.get("slw", 3)
         self.colorstretch = 2.0
@@ -319,7 +342,7 @@ class AvirisDatasetManager:
                 ix, iy = tx*block_size, ty*block_size
                 lw = self.slw if ( selected ) else 1
                 color = self.selection_color if ( selected ) else self.grid_color
-                r = Rectangle( (iy, ix), block_size, block_size, fill=False, edgecolor=color, lw=lw, alpha=self.grid_alpha )
+                r = Rectangle( (iy, ix), block_size, block_size, fill=False, edgecolor=color, lw=lw, alpha=1.0 )
                 setattr( r, 'block_index', (tx,ty) )
                 r.set_picker( True )
                 self.ax.add_patch( r )

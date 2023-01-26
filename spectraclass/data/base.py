@@ -50,7 +50,6 @@ def register_modes():
 class DataManager(SCSingletonConfigurable):
     proc_type = tl.Unicode('cpu').tag(config=True)
     labels_dset = tl.Unicode('labels').tag(config=True)
-    use_model_data = tl.Bool(False).tag(config=True, sync=True)
     _mode_data_managers_: Dict = {}
     refresh_data = tl.Bool(False).tag(config=True, sync=True)
     preprocess = tl.Bool(False).tag(config=True, sync=True)
@@ -63,7 +62,6 @@ class DataManager(SCSingletonConfigurable):
         super(DataManager, self).__init__()
         self._wGui = None
         self._lock = threading.Lock()
-        self.observe( self.on_control_change, names=["use_model_data"] )
 
     def _contingent_configuration_(self):
         pass
@@ -85,13 +83,6 @@ class DataManager(SCSingletonConfigurable):
 
     def clear_project_cache(self):
         self._project_data = None
-
-    def on_control_change(self, change: Dict ):
-        from spectraclass.gui.spatial.map import MapManager, mm
-        lgm().log( f"on_control_change: {change}")
-        if change.get('name', None) == 'use_model_data':
-            use_model_data = bool( change['new'] )
-            mm().use_model_data( use_model_data )
 
     def getClassMap(self)-> Optional[xa.DataArray]:
         return self.modal.getClassMap()
@@ -270,28 +261,19 @@ class DataManager(SCSingletonConfigurable):
             SpectraclassController.set_spectraclass_theme()
             mode_gui = self._mode_data_manager_.gui()
             self._wGui = ipw.Tab()
-            self._wGui.children = [ mode_gui, dm().images_panel(), dm().model_panel() ]
+            self._wGui.children = [ mode_gui, dm().images_panel() ]
             self._wGui.set_title( 0, "blocks" )
             self._wGui.set_title( 1, "images" )
-            self._wGui.set_title( 2, "model")
         return self._wGui
 
     def images_panel(self) -> ip.VBox:
         title = ipw.Label( value="Images", width='500px' )
-        file_selector = dm().modal.set_file_selection_observer( dm().modal.on_image_change )
+        file_selector = dm().modal.set_file_selection_observer( self.on_image_change )
         controls = [ title, file_selector ]
         return ip.VBox( controls, layout=ipw.Layout(flex='1 1 auto') )
 
-    def model_panel(self) -> ip.VBox:
-        controls = []
-        if self.modal.model_dims > 0:
-            model_data_cbox = ip.Checkbox( value=self.use_model_data, description = "Use Model Data", layout=ipw.Layout( width='500px' ) )
-            tl.link( (model_data_cbox, "value"), (self, 'use_model_data') )
-            controls.append( model_data_cbox )
-            refresh_cbox = ip.Checkbox( value=self.refresh_data, description = "Refresh Data", layout=ipw.Layout( width='500px' ) )
-            tl.link( (refresh_cbox, "value"), (self, 'refresh_data') )
-            controls.append( refresh_cbox )
-        return ip.VBox( controls, layout=ipw.Layout(flex='1 1 auto') )
+    def on_image_change(self, event: Dict):
+        dm().modal.on_image_change( event )
 
     def getInputFileData(self, vname: str = None, **kwargs ) -> np.ndarray:
         return self._mode_data_manager_.getInputFileData( vname, **kwargs )

@@ -201,7 +201,7 @@ class ipSpreadsheet1:
 
     def idxs2pids(self, idxs: Union[List,np.ndarray]) -> np.ndarray:
         if len(idxs) == 0:
-            return np.array([],dtype=np.int)
+            return np.array([],dtype=np.int32)
         else:
             page_idxs = idxs if isinstance(idxs, np.ndarray) else np.array(idxs)
             global_idxs = page_idxs + self.page_start
@@ -227,7 +227,7 @@ class ipSpreadsheet1:
 
     def pids2idxs(self, pids: Union[List,np.ndarray] ) -> np.ndarray:
         if len(pids) == 0:
-            return np.array([],dtype=np.int)
+            return np.array([],dtype=np.int32)
         else:
             _pids: np.ndarray = pids if isinstance(pids, np.ndarray) else np.array(pids)
             global_idxs: np.ndarray = np.nonzero( np.isin( self.pids(), _pids ) )[0]
