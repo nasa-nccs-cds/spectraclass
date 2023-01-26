@@ -232,6 +232,7 @@ class SpatialDataManager(ModeDataManager):
     @exception_handled
     def process_block( self, block: Block, has_metadata: bool  ) -> Optional[xa.Dataset]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.data.base import DataManager, dm
         t0 = time.time()
         block_data_file = dm().modal.dataFile(block=block)
         if os.path.exists(block_data_file):
@@ -264,6 +265,7 @@ class SpatialDataManager(ModeDataManager):
             result_dataset.attrs['tile_size'] = tm().tile_size
             result_dataset.attrs['nsamples'] = blocks_point_data.shape[0]
             result_dataset.attrs['nbands'] = blocks_point_data.shape[1]
+            result_dataset.attrs['valid_bands'] = dm().valid_bands()
             for (aid, aiv) in tm().tile.data.attrs.items():
                 if aid not in result_dataset.attrs:
                     result_dataset.attrs[aid] = aiv
