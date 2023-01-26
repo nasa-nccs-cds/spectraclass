@@ -364,17 +364,6 @@ class ModeDataManager(SCSingletonConfigurable):
         lgm().log( "AEC: initialize_dimension_reduction" )
         self.prepare_inputs( **kwargs )
 
-    def autoencoder_process(self, point_data: xa.DataArray, **kwargs ):
-        nepoch: int = kwargs.get( 'nepoch', self.reduce_nepoch )
-        dropout: float = kwargs.get('dropout', self.reduce_dropout)
-        if self._autoencoder is None:
-            method: str = kwargs.pop('method', self.reduce_method)
-            self.vae = (method.strip().lower() == 'vae')
-            self.build_encoder( dropout=dropout, **kwargs )
-        weights_loaded = self.load_weights(**kwargs)
-        if not weights_loaded:
-            self._autoencoder.fit(point_data.values, point_data.values, epochs=nepoch, batch_size=256, shuffle=True)
-
     def autoencoder_preprocess(self, **kwargs ):
         niter: int = kwargs.get( 'niter', self.reduce_niter )
         method: str = kwargs.get( 'method', self.reduce_method )
@@ -392,13 +381,13 @@ class ModeDataManager(SCSingletonConfigurable):
         if not weights_loaded:
             for iter in range(niter):
                 initial_epoch = self.general_training( initial_epoch, **kwargs )
-                initial_epoch = self.focused_training( initial_epoch, **kwargs )
+                if self.reduce_focus_nepoch > 0:
+                    initial_epoch = self.focused_training( initial_epoch, **kwargs )
             self._autoencoder.save_weights( aefiles[0] )
             self._encoder.save_weights( aefiles[1] )
             lgm().log(f"autoencoder_preprocess completed, saved model weights to files={aefiles}", print=True)
 
     def general_training(self, initial_epoch = 0, **kwargs ):
-        nepoch: int = kwargs.get( 'nepoch', self.reduce_nepoch )
         from spectraclass.data.base import DataManager, dm
         from spectraclass.data.spatial.tile.tile import Block, Tile
         num_reduce_images = min( dm().modal.num_images, self.reduce_nimages )
@@ -413,10 +402,11 @@ class ModeDataManager(SCSingletonConfigurable):
                     t0 = time.time()
                     point_data, grid = block.getPointData()
                     if point_data.shape[0] > 0:
+                        final_epoch = initial_epoch + self.reduce_nepoch
                         lgm().log( f" ** ITER[{iter}]: Processing block{block.block_coords}, data shape = {point_data.shape}", print=True)
                         history: tf.keras.callbacks.History = self._autoencoder.fit(point_data.data, point_data.data, initial_epoch=initial_epoch,
-                                                                 epochs=initial_epoch + nepoch, batch_size=256, shuffle=True)
-                        initial_epoch = initial_epoch + nepoch
+                                                                 epochs=final_epoch, batch_size=256, shuffle=True)
+                        initial_epoch = final_epoch
                         lgm().log(f" Trained autoencoder in {time.time() - t0} sec", print=True)
                     block.initialize()
         return initial_epoch
