@@ -406,6 +406,7 @@ class ModeDataManager(SCSingletonConfigurable):
             blocks: List[Block] = tm().tile.getBlocks()
             num_training_blocks = min( self.reduce_nblocks, len(blocks) )
             lgm().log(f"Autoencoder general training: {num_training_blocks} blocks for image[{image_index}/{num_reduce_images}]: {dm().modal.image_name}", print=True)
+            lgm().log(f" NBLOCKS = {self.reduce_nblocks}/{len(blocks)}, block shape = {blocks[0].shape}")
             for iB, block in enumerate(blocks):
                 if iB < self.reduce_nblocks:
                     t0 = time.time()
