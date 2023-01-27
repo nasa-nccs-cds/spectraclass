@@ -294,7 +294,7 @@ class MapManager(SCSingletonConfigurable):
         self.band_slider_cid = self.band_slider.on_changed(self._update)
         self.model_slider = Slider( self.base.msax, label="feature", valmin=0, valmax=smodel-1, valstep=1  )
         self.model_slider_cid = self.model_slider.on_changed(self._update)
-        self.source_selector = RadioButtons( self.base.selax, self._source_types, self._source_type_index, 'blue' )
+        self.source_selector: RadioButtons = RadioButtons( self.base.selax, self._source_types, self._source_type_index, 'blue' )
         self.source_selector_cid = self.source_selector.on_clicked( self.select_source )
         self.messsage_box = TextBox( self.base.texax, label="" )
         lgm().log(f"create_sliders: smodel={smodel} ({self.model_slider.slidermax}), sbands={sbands} ({self.band_slider.slidermax})")
@@ -635,7 +635,7 @@ class MapManager(SCSingletonConfigurable):
             if not standalone:
                 self.create_selection_panel()
             self.update_message()
-            self.select_source( self._source_types[0] )
+            self.source_selector.set_active(0)
         return self.base.gax.figure.canvas
 
     def raw_data_viewer(self,**kwargs):
