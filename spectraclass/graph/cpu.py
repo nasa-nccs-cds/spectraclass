@@ -106,7 +106,7 @@ class cpActivationFlow(ActivationFlow):
             lgm().log(f"Computing NN-Graph[{id(self)}] with parms= {kwargs}, nodes shape = {self.nodes.shape}, #NULL={np.count_nonzero(np.isnan(ndata))}",print=True)
             lgm().log( f" ---> data ave = {ndata.mean()}, std = {ndata.std()}, range = [{ndata.min()},{ndata.max()}]",print=True)
             self._knn_graph = NNDescent( ndata, **kwargs )
-            ufm().show(f"Completed spectral graph in {time.time()-t0:%.1f} sec")
+            ufm().show(f"Completed spectral graph in {time.time()-t0:.2f} sec")
         return self._knn_graph
 
     def getEdgeIndex(self) -> Tuple[np.ndarray,np.ndarray]:
