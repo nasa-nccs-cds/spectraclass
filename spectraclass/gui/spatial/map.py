@@ -635,6 +635,7 @@ class MapManager(SCSingletonConfigurable):
             if not standalone:
                 self.create_selection_panel()
             self.update_message()
+            self.select_source( self._source_types[0] )
         return self.base.gax.figure.canvas
 
     def raw_data_viewer(self,**kwargs):
