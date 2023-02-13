@@ -213,7 +213,7 @@ class KerasLearningModel(LearningModel):
         self._model.save( mfile, save_format="tf", **kwargs )
         return os.path.splitext( os.path.basename(mfile) )[0]
 
-    def epoch_callback(self, epoch):
+    def epoch_callback(self, epoch, logs):
         pass
 
     def predict( self, data: np.ndarray, **kwargs ) -> Tuple[np.ndarray,Optional[np.ndarray]]:

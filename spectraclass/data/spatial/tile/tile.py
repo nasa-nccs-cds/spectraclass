@@ -722,6 +722,7 @@ class Block(DataContainer):
         dims = [points_data.dims[1], self.data.dims[1], self.data.dims[2]]
         coords = [(dims[0], points_data[dims[0]].data), (dims[1], self.data[dims[1]].data), (dims[2], self.data[dims[2]].data)]
         rpdata = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
+        lgm().log(f"points2raster:  points_data.attrs = {list(points_data.attrs.keys())}")
         self._point_mask  = points_data.attrs['pmask']
         self._raster_mask = points_data.attrs['rmask']
         rnz = np.count_nonzero(self.raster_mask)
