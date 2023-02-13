@@ -147,7 +147,9 @@ class LearningModel:
             lm().addAction("classify", "application")
             self.confidence = xa.DataArray( pred_confidence, dims=['samples', 'classes'],
                                            coords=dict(samples=input_data.coords['samples'], classes=range(pred_confidence.shape[1])))
-            return self.classification, self.confidence
+            results =  self.classification, self.confidence
+            for result in results: result.attrs.update(input_data.attrs)
+            return results
         except NotFittedError:
             ufm().show( "Must learn a mapping before applying a classification", "red")
 
