@@ -142,14 +142,12 @@ class LearningModel:
             prediction, pred_confidence = self.predict( input_data.values, **kwargs )
             if pred_confidence.ndim == 1: pred_confidence = np.expand_dims(pred_confidence, 1)
             if prediction.ndim == 1: prediction = np.expand_dims(prediction, 1)
-            self.classification = xa.DataArray( prediction, dims=['samples', 'classes'],
-                                               coords=dict(samples=input_data.coords['samples'], classes=range(prediction.shape[1])))
+            self.classification = xa.DataArray( prediction, dims=['samples', 'classes'], attrs=input_data.attrs,
+                                                coords=dict(samples=input_data.coords['samples'], classes=range(prediction.shape[1])))
             lm().addAction("classify", "application")
-            self.confidence = xa.DataArray( pred_confidence, dims=['samples', 'classes'],
+            self.confidence = xa.DataArray( pred_confidence, dims=['samples', 'classes'], attrs=input_data.attrs,
                                            coords=dict(samples=input_data.coords['samples'], classes=range(pred_confidence.shape[1])))
-            results =  self.classification, self.confidence
-            for result in results: result.attrs.update(input_data.attrs)
-            return results
+            return self.classification, self.confidence
         except NotFittedError:
             ufm().show( "Must learn a mapping before applying a classification", "red")
 
