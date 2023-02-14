@@ -265,7 +265,7 @@ class MapManager(SCSingletonConfigurable):
         if enabled:
             tbar._id_press   = canvas.mpl_connect( 'button_press_event', tbar._zoom_pan_handler )
             tbar._id_release = canvas.mpl_connect( 'button_release_event', tbar._zoom_pan_handler )
-            tbar._id_drag    = canvas.mpl_connect( 'motion_notify_event', tbar.point_selection1 )
+ #           tbar._id_drag    = canvas.mpl_connect( 'motion_notify_event', tbar._point_selection )
             self._cidpress   = canvas.mpl_connect( 'button_press_event', self.on_button_press )
 
     @exception_handled

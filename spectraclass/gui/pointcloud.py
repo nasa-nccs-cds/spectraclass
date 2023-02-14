@@ -137,7 +137,6 @@ class PointCloudManager(SCSingletonConfigurable):
         if self._xyz is None: self.init_data()
         return self._xyz
 
-    @xyz.setter
     def xyz(self, data_array: Union[xa.DataArray,np.ndarray] ):
         self._xyz = self.xyz.copy( data=data_array ) if (type(data_array) == np.ndarray) else data_array
         self._bounds = []
