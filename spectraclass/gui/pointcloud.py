@@ -139,10 +139,10 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @xyz.setter
     def xyz(self, data_array: Union[xa.DataArray,np.ndarray] ):
-        self._xyz = self._xyz.copy( data=data_array ) if (type(data_array) == np.ndarray) else data_array
+        self._xyz = self.xyz.copy( data=data_array ) if (type(data_array) == np.ndarray) else data_array
         self._bounds = []
         self.voxelizer = Voxelizer( self._xyz, 0.1*self.scale )
-        self.point_locator = self._xyz.values.sum(axis=1)
+        self.point_locator = self.xyz.values.sum(axis=1)
 
     def initialize_points(self):
         self._xyz: xa.DataArray = self.empty_pointset
