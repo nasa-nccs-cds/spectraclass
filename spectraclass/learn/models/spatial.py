@@ -160,7 +160,7 @@ class SpatialModelWrapper(KerasLearningModel):
         return self._training_layers.get( (block.tile_index, block.block_coords), -1 )
 
     @exception_handled
-    def epoch_callback(self, epoch):
+    def epoch_callback(self, epoch, logs):
         if (self.test_mask is not None) and (self.test_size > 0.0):
             prediction, confidence = self.predict( self.training_data )
             for iBlock in range( self.training_data.shape[0] ):

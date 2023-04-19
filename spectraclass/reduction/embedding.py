@@ -97,7 +97,7 @@ class ReductionManager(SCSingletonConfigurable):
         if 'alpha' not in kwargs.keys():   kwargs['alpha'] = self.alpha
         self._state = self.PROCESSED
         labels_data: np.ndarray = kwargs.get( 'labels', LabelsManager.instance().getLabelsArray()).values
-        lgm().log( f"Executing UMAP embedding with input data shape = {mapper.input_data.shape}, parms: {kwargs}")
+    #    lgm().log( f"Executing UMAP embedding with input data shape = {mapper.input_data.shape}, parms: {kwargs}")
         labels_data[ labels_data == 0 ] = -1
         mapper.embed( mapper.input_data, labels_data, **kwargs )
         return mapper.embedding
@@ -109,7 +109,7 @@ class ReductionManager(SCSingletonConfigurable):
         if 'alpha' not in kwargs.keys():   kwargs['alpha'] = self.alpha
         self._state = self.PROCESSED
         labels_data: np.ndarray = kwargs.get( 'labels', LabelsManager.instance().getLabelsArray()).values
-        lgm().log( f"Executing UMAP embedding with input data shape = {mapper.input_data.shape}, parms: {kwargs}")
+    #    lgm().log( f"Executing UMAP embedding with input data shape = {mapper.input_data.shape}, parms: {kwargs}")
         labels_data[ labels_data == 0 ] = -1
         mapper.embed( mapper.input_data, labels_data, **kwargs )
         return mapper.embedding

@@ -142,10 +142,10 @@ class LearningModel:
             prediction, pred_confidence = self.predict( input_data.values, **kwargs )
             if pred_confidence.ndim == 1: pred_confidence = np.expand_dims(pred_confidence, 1)
             if prediction.ndim == 1: prediction = np.expand_dims(prediction, 1)
-            self.classification = xa.DataArray( prediction, dims=['samples', 'classes'],
-                                               coords=dict(samples=input_data.coords['samples'], classes=range(prediction.shape[1])))
+            self.classification = xa.DataArray( prediction, dims=['samples', 'classes'], attrs=input_data.attrs,
+                                                coords=dict(samples=input_data.coords['samples'], classes=range(prediction.shape[1])))
             lm().addAction("classify", "application")
-            self.confidence = xa.DataArray( pred_confidence, dims=['samples', 'classes'],
+            self.confidence = xa.DataArray( pred_confidence, dims=['samples', 'classes'], attrs=input_data.attrs,
                                            coords=dict(samples=input_data.coords['samples'], classes=range(pred_confidence.shape[1])))
             return self.classification, self.confidence
         except NotFittedError:
@@ -213,7 +213,7 @@ class KerasLearningModel(LearningModel):
         self._model.save( mfile, save_format="tf", **kwargs )
         return os.path.splitext( os.path.basename(mfile) )[0]
 
-    def epoch_callback(self, epoch):
+    def epoch_callback(self, epoch, logs):
         pass
 
     def predict( self, data: np.ndarray, **kwargs ) -> Tuple[np.ndarray,Optional[np.ndarray]]:
