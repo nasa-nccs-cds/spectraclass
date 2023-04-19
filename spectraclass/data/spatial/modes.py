@@ -66,6 +66,32 @@ class AvirisDataManager(SpatialDataManager):
         if self.ext == ".tif": return f"{base_name}{self.ext}"
         else: return f"ang{base_name}rfl/ang{base_name}_rfl_{self.version}/ang{base_name}_corr_{self.version}{self.ext}"
 
+class NEONDataManager(SpatialDataManager):
+    from spectraclass.gui.spatial.application import Spectraclass
+    valid_neon_bands = tl.List( default_value=[ 0,100000] ).tag(config=True, sync=True)
+    ext = tl.Unicode('.tif').tag(config=True, sync=True)
+
+    MODE = "NEON"
+    METAVARS = []
+    INPUTS = dict()
+    application = Spectraclass
+
+    def __init__(self):
+        super(NEONDataManager, self).__init__()
+
+    def valid_bands(self):
+        if self._valid_bands is None:
+            self._unpack_valid_bands()
+        return self._valid_bands
+
+    def _unpack_valid_bands(self):
+        bv0 = 0
+        self._valid_bands = []
+        for ib, bv1 in enumerate(self.valid_neon_bands):
+            if isinstance(bv1, (list, tuple)): self._valid_bands.append(bv1)
+            elif ib % 2 == 1: self._valid_bands.append([bv0, bv1])
+            else: bv0 = bv1
+
 class KeelinDataManager(SpatialDataManager):
     from spectraclass.gui.spatial.application import Spectraclass
 
