@@ -61,8 +61,9 @@ class AvirisDataManager(SpatialDataManager):
     @property
     def image_name(self):
         from spectraclass.data.base import DataManager, dm
-        assert len( self.image_names ) > 0, f"Error, unable to find any images in the data_dir: {dm().modal.data_dir}"
-        base_name = self.image_names[self._active_image]
+        inames = list(self.image_names.keys())
+        assert len( inames ) > 0, f"Error, unable to find any images in the data_dir: {dm().modal.data_dir}"
+        base_name = inames[self._active_image]
         if self.ext == ".tif": return f"{base_name}{self.ext}"
         else: return f"ang{base_name}rfl/ang{base_name}_rfl_{self.version}/ang{base_name}_corr_{self.version}{self.ext}"
 

@@ -68,7 +68,7 @@ class ModeDataManager(SCSingletonConfigurable):
     INPUTS = None
     application: SpectraclassController = None
 
-    _image_names = tl.List( default_value=[] ).tag( config=True, sync=True, cache=False )
+    _image_names = tl.Dict( default_value={} ).tag( config=True, sync=True, cache=False )
     images_glob = tl.Unicode(default_value="").tag( config=True, sync=True, cache=False )
     dset_name = tl.Unicode( "" ).tag(config=True)
     cache_dir = tl.Unicode( "" ).tag(config=True)
@@ -507,7 +507,7 @@ class ModeDataManager(SCSingletonConfigurable):
         return (encoded_data, reproduced_data)
 
     @property
-    def image_names(self) -> List[str]:
+    def image_names(self) -> Dict[str,str]:
         self.generate_image_list()
         return self._image_names
 
@@ -524,7 +524,7 @@ class ModeDataManager(SCSingletonConfigurable):
         if len( self._image_names ) == 0:
             image_path_list = self.get_image_paths()
             lgm().log(f" ---> FOUND {len(image_path_list)} paths")
-            self._image_names = [ self.extract_image_name( image_path ) for image_path in image_path_list ]
+            self._image_names = { self.extract_image_name( image_path ): image_path for image_path in image_path_list }
             lgm().log( f" ---> IMAGE LIST: {self._image_names}")
 
     @exception_handled
@@ -558,16 +558,19 @@ class ModeDataManager(SCSingletonConfigurable):
 
     @property
     def image_name(self):
-        return self.image_names[self._active_image]
+        inames = list(self.image_names.keys())
+        return inames[self._active_image]
 
     def get_image_name( self, image_index: int ):
-        return self.image_names[ image_index ]
+        inames = list(self.image_names.keys())
+        return inames[ image_index ]
 
     @property
     def file_selector(self):
         if self._file_selector is None:
-            lgm().log( f"Creating file_selector, options={self.image_names}, value={self.image_names[0]}")
-            self._file_selector =  ip.Select( options=self.image_names, value=self.image_names[0], layout=ipw.Layout(width='600px') )
+            inames = list( self.image_names.keys() )
+            lgm().log( f"Creating file_selector, options={inames}, value={inames[0]}")
+            self._file_selector =  ip.Select( options=inames, value=inames[0], layout=ipw.Layout(width='600px') )
         return self._file_selector
 
     def set_file_selection_observer( self, observer ):
