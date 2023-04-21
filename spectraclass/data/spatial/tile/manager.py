@@ -123,7 +123,8 @@ class TileManager(SCSingletonConfigurable):
     def get_image_name( self, **kwargs ):
         from spectraclass.data.base import DataManager, dm, DataType
         image_index = kwargs.get('index', DataManager.instance().modal._active_image )
-        return dm().modal.image_names[ image_index ]
+        dm().modal.set_current_image(image_index)
+        return dm().modal.image_name
 
     @property
     def image_index(self) -> int:
