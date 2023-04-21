@@ -344,7 +344,7 @@ class SpatialDataManager(ModeDataManager):
 
     def getFilePath(self) -> str:
         filepath = self.image_path( self.image_name )
-        return filepath if filepath.endswith(self.ext) else f"{filepath}{self.ext}"
+        return filepath
 
     def writeGeotiff(self, raster_data: xa.DataArray ) -> Optional[str]:
         output_file = self.getFilePath()
