@@ -343,12 +343,8 @@ class SpatialDataManager(ModeDataManager):
         return os.path.join( self.datasetDir, file_name + f"{self.ext}.nc" )
 
     def getFilePath(self) -> str:
-        base_dir = self.data_dir
-        base_file = self.image_name
-        if base_file.endswith(self.ext):
-            return f"{base_dir}/{base_file}"
-        else:
-            return f"{base_dir}/{base_file}{self.ext}"
+        filepath = self.image_path( self.image_name )
+        return filepath if filepath.endswith(self.ext) else f"{filepath}{self.ext}"
 
     def writeGeotiff(self, raster_data: xa.DataArray ) -> Optional[str]:
         output_file = self.getFilePath()
