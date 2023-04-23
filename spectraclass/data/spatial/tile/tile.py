@@ -762,7 +762,7 @@ class Block(DataContainer):
         lgm().log( f"#IA: raster2points:  base_raster{base_raster.dims} shp={base_raster.shape}, "
                    f" rmask shp,nz= ({shp(rmask)},{rnonz}), pmask shp,nz= ({shp(pmask)},{pnonz})  ")
         lgm().log( f" ---> mask shape = {pmask.shape}, mask #valid = {np.count_nonzero(pmask)}/{pmask.size}, completed in {time.time()-t0} sec" )
-        lgm().log( f"filtered_point_data samples: \n {filtered_point_data[:50,:50]}")
+        lgm().log( f"filtered_point_data samples: \n {filtered_point_data.values.tolist()[:400]}")
         return filtered_point_data.assign_coords( samples=point_index[ pmask ] ), pmask, rmask
 
     def coords2gid(self, cy, cx) -> Tuple[int,int,int]:
