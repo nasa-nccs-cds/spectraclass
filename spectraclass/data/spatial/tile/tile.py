@@ -744,7 +744,7 @@ class Block(DataContainer):
     def raster2points( self, base_raster: xa.DataArray ) -> Tuple[ Optional[xa.DataArray], Optional[np.ndarray], Optional[np.ndarray] ]:   #  base_raster dims: [ band, y, x ]
         t0 = time.time()
         if base_raster is None: return (None, None, None)
-        rmask = ~np.isnan( base_raster[0].values.squeeze() ) if (base_raster.size > 0) else None
+        rmask = ~np.isnan( base_raster.values.max(axis=0).squeeze() ) if (base_raster.size > 0) else None
 #        lgm().log( f"raster2points: stack spatial dims: {base_raster.dims[-2:]} (last dim varies fastest)" )
         point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
         if '_FillValue' in point_data.attrs:
