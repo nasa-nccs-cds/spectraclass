@@ -756,7 +756,8 @@ class Block(DataContainer):
         filtered_point_data: xa.DataArray = point_data[ pmask, : ] if ( point_data.ndim == 2 ) else point_data[ pmask ]
         filtered_point_data.attrs['dsid'] = base_raster.name
         nonz = nz(rmask)
-        lgm().log( f"raster2points -> [{base_raster.name}]: filtered_point_data shape = {filtered_point_data.shape}" )
+        lgm().log( f"raster2points -> [{base_raster.name}]: filtered_point_data shape = {filtered_point_data.shape}, "
+                   f"range=[{filtered_point_data.values.min():.4f}, {filtered_point_data.values.max():.4f}]" )
         lgm().log( f"#IA: raster2points:  base_raster{base_raster.dims} shp={base_raster.shape}, rmask shp={shp(rmask)}, nz={nonz} ")
         lgm().log( f" ---> mask shape = {pmask.shape}, mask #valid = {np.count_nonzero(pmask)}/{pmask.size}, completed in {time.time()-t0} sec" )
         return filtered_point_data.assign_coords( samples=point_index[ pmask ] ), pmask, rmask
