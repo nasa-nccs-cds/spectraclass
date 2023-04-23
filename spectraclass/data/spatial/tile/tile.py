@@ -750,15 +750,17 @@ class Block(DataContainer):
         if '_FillValue' in point_data.attrs:
             nodata = point_data.attrs['_FillValue']
             point_data = point_data if np.isnan( nodata ) else point_data.where( point_data != nodata, np.nan )
-        pmask: np.ndarray = ~np.isnan(point_data.values) if (self._point_coords is None) else self.mask
+        pmask: np.ndarray = ~np.isnan(point_data.values)
         if pmask.ndim == 2: pmask = pmask.any(axis=1)
+        if self._point_coords is not None: pmask = self.mask & pmask
         point_index = np.arange( 0, base_raster.shape[-1]*base_raster.shape[-2] )
         filtered_point_data: xa.DataArray = point_data[ pmask, : ] if ( point_data.ndim == 2 ) else point_data[ pmask ]
         filtered_point_data.attrs['dsid'] = base_raster.name
-        nonz = nz(rmask)
+        rnonz, pnonz = nz(rmask), nz(pmask)
         lgm().log( f"raster2points -> [{base_raster.name}]: filtered_point_data shape = {filtered_point_data.shape}, "
                    f"range=[{filtered_point_data.values.min():.4f}, {filtered_point_data.values.max():.4f}]" )
-        lgm().log( f"#IA: raster2points:  base_raster{base_raster.dims} shp={base_raster.shape}, rmask shp={shp(rmask)}, nz={nonz} ")
+        lgm().log( f"#IA: raster2points:  base_raster{base_raster.dims} shp={base_raster.shape}, "
+                   f" rmask shp,nz= ({shp(rmask)},{rnonz}), pmask shp,nz= ({shp(pmask)},{pnonz})  ")
         lgm().log( f" ---> mask shape = {pmask.shape}, mask #valid = {np.count_nonzero(pmask)}/{pmask.size}, completed in {time.time()-t0} sec" )
         return filtered_point_data.assign_coords( samples=point_index[ pmask ] ), pmask, rmask
 
