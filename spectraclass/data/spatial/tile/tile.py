@@ -752,7 +752,7 @@ class Block(DataContainer):
             point_data = point_data if np.isnan( nodata ) else point_data.where( point_data != nodata, np.nan )
         pmask: np.ndarray = ~np.isnan(point_data.values)
         if pmask.ndim == 2: pmask = pmask.any(axis=1)
-        if self._point_coords is not None: pmask = self.mask & pmask
+  #      if self._point_coords is not None: pmask = self.mask & pmask
         point_index = np.arange( 0, base_raster.shape[-1]*base_raster.shape[-2] )
         filtered_point_data: xa.DataArray = point_data[ pmask, : ] if ( point_data.ndim == 2 ) else point_data[ pmask ]
         filtered_point_data.attrs['dsid'] = base_raster.name
@@ -762,7 +762,11 @@ class Block(DataContainer):
         lgm().log( f"#IA: raster2points:  base_raster{base_raster.dims} shp={base_raster.shape}, "
                    f" rmask shp,nz= ({shp(rmask)},{rnonz}), pmask shp,nz= ({shp(pmask)},{pnonz})  ")
         lgm().log( f" ---> mask shape = {pmask.shape}, mask #valid = {np.count_nonzero(pmask)}/{pmask.size}, completed in {time.time()-t0} sec" )
-        lgm().log( f"filtered_point_data samples: \n {filtered_point_data.values.tolist()[:400]}")
+        lgm().log( f"filtered_point_data{filtered_point_data.dims}{filtered_point_data.shape} samples: \n ")
+        for iS in range( 100 ):
+           for iB in range(100):
+                if np.isnan( filtered_point_data.values[iS,iB] ):
+                    print( f"  * NANVAL: S={iS} B={iB}")
         return filtered_point_data.assign_coords( samples=point_index[ pmask ] ), pmask, rmask
 
     def coords2gid(self, cy, cx) -> Tuple[int,int,int]:
