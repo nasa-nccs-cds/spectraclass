@@ -638,11 +638,15 @@ class Block(DataContainer):
             self._point_data.attrs['dsid'] = self.dsid()
             self._point_data.attrs['pmask'] = pmask
             self._point_data.attrs['rmask'] = rmask
+            self._point_data.attrs['bmask'] = bmask
             self._point_mask = pmask
             self._raster_mask = rmask
             self._band_mask = bmask
         result = tm().norm( self._point_data )
         return (result, self._point_coords )
+
+    def mask_bands(self, point_data: xa.DataArray )-> xa.DataArray:
+        return point_data[:,self._band_mask]
 
     @property
     def point_mask(self) -> np.ndarray:

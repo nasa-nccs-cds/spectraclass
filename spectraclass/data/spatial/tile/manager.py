@@ -20,6 +20,9 @@ def get_rounded_dims( master_shape: List[int], subset_shape: List[int] ) -> List
     dims = [ int(round(ms/ss)) for (ms,ss) in zip(master_shape,subset_shape) ]
     return [ max(d, 1) for d in dims ]
 
+def nnan( array: Optional[Union[np.ndarray,xa.DataArray]] ):
+    return np.count_nonzero( np.isnan(array) )
+
 def tm() -> "TileManager":
     return TileManager.instance()
 
@@ -253,6 +256,13 @@ class TileManager(SCSingletonConfigurable):
             if isinstance(band_names, (list, tuple)):
                 tile_data.attrs['bands'] = sum( [list(band_names[valid_band[0]:valid_band[1]]) for valid_band in valid_bands], [])
             lgm().log( f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
+        else:
+            point_data = tile_data.stack(samples=tile_data.dims[-2:]).transpose()
+            bvcnts = [nnan(point_data.values[:, ic]) for ic in range(point_data.shape[1])]
+            bmask: np.ndarray = (np.array(bvcnts) < point_data.shape[0] * 0.01)
+            tile_data = tile_data[bmask]
+            lgm().log( f"-------------\n         ***** Filtering invalid bands, init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
+
         if '_FillValue' in tile_data.attrs:
             nodata = tile_data.attrs['_FillValue']
             tile_data = tile_data if np.isnan(nodata) else tile_data.where(tile_data != nodata, np.nan)
