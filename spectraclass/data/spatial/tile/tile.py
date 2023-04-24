@@ -752,10 +752,11 @@ class Block(DataContainer):
             nodata = point_data.attrs.get('_FillValue',np.nan)
             point_data = point_data if np.isnan(nodata) else point_data.where(point_data != nodata, np.nan)
 
-        pdm0, pdm1 = point_data.values.max(axis=0), point_data.values.max(axis=1)
-        pm0, pm1 = ~np.isnan( pdm0 ), ~np.isnan( pdm1 )
-        nz0, nz1 = nz(pm0), nz(pm1)
-        lgm().log(f" pm0 shp,nz= ({shp(pm0)},{nz0}), pm1 shp,nz= ({shp(pm1)},{nz1})  ")
+        vcnts0 = [ nnan( point_data.values[ic] )   for ic in range( point_data.shape[0] ) ]
+        vcnts1 = [ nnan( point_data.values[:,ic] ) for ic in range( point_data.shape[1] ) ]
+
+        lgm().log(f" \nvcnts0[{len(vcnts0)}] = {vcnts0} ")
+        lgm().log(f" \nvcnts1[{len(vcnts1)}] = {vcnts1} ")
 
         pmask: np.ndarray = ~np.isnan( point_data.values.max(axis=1) )
         rmask = pmask.reshape(base_raster.shape[-2:])
