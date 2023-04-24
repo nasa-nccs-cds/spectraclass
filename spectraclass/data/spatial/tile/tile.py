@@ -755,14 +755,16 @@ class Block(DataContainer):
             nodata = point_data.attrs.get('_FillValue',np.nan)
             point_data = point_data if np.isnan(nodata) else point_data.where(point_data != nodata, np.nan)
 
-        vcnts0 = [ nnan( point_data.values[ic] )   for ic in range( point_data.shape[0] ) ]
-        vcnts1 = [ nnan( point_data.values[:,ic] ) for ic in range( point_data.shape[1] ) ]
+        vcnts = [ nnan( point_data.values[ic] ) for ic in range( point_data.shape[0] ) ]
+        pmask: np.ndarray = (np.array(vcnts) < point_data.shape[1])
+        lgm().log(f" pmask shp={shp(pmask)}, nonzero={np.count_nonzero(pmask)})  ")
 
-        lgm().log(f" \nvcnts0[{len(vcnts0)}] = {vcnts0} ")
-        lgm().log(f" \nvcnts1[{len(vcnts1)}] = {vcnts1} ")
+        filtered_point_data: xa.DataArray = point_data[pmask]
 
-        pmask: np.ndarray = (np.array(vcnts0) == point_data.shape[1])
-        lgm().log(f" pmask shp={shp(pmask)}, nz={np.count_nonzero(pmask)})  ")
+        vcnts0 = [ nnan( filtered_point_data.values[ic] )   for ic in range( filtered_point_data.shape[0] ) ]
+        vcnts1 = [ nnan( filtered_point_data.values[:,ic] ) for ic in range( filtered_point_data.shape[1] ) ]
+        lgm().log(f" \nfcnts0[{len(vcnts0)}] = {vcnts0} ")
+        lgm().log(f" \nfcnts1[{len(vcnts1)}] = {vcnts1} ")
 
 
         rmask = pmask.reshape(base_raster.shape[-2:])
@@ -771,7 +773,7 @@ class Block(DataContainer):
         lgm().log( f" rmask shp,nz= ({shp(rmask)},{rnonz}), pmask shp,nz= ({shp(pmask)},{pnonz})  ")
 
         point_index = np.arange(0, base_raster.shape[-1] * base_raster.shape[-2])
-        filtered_point_data: xa.DataArray = point_data[pmask]
+
         filtered_point_data.attrs['dsid'] = base_raster.name
 
         lgm().log(f"filtered_point_data{filtered_point_data.dims}{filtered_point_data.shape}:  "
