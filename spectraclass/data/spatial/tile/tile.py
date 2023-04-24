@@ -744,9 +744,9 @@ class Block(DataContainer):
         lgm().log( f"  ---> data: dims={self.data.dims}, shape={self.data.shape}, attrs={points_data.attrs.keys()}" )
         return xa.DataArray( raster_data, coords, dims, points_data.name, points_data.attrs )
 
-    def raster2points(self, base_raster: xa.DataArray) -> Tuple[Optional[xa.DataArray], Optional[np.ndarray], Optional[np.ndarray]]:  # base_raster dims: [ band, y, x ]
+    def raster2points(self, base_raster: xa.DataArray) -> Tuple[Optional[xa.DataArray], Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]]:  # base_raster dims: [ band, y, x ]
         t0 = time.time()
-        if base_raster is None: return (None, None, None)
+        if base_raster is None: return (None, None, None, None)
         point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
 
         lgm().log(f"#IA: raster2points:  base_raster{base_raster.dims} shp={base_raster.shape}, point_data{point_data.dims} shp={point_data.shape} " )
@@ -765,30 +765,18 @@ class Block(DataContainer):
 
         filtered_point_data: xa.DataArray = point_data[pmask,bmask]
         lgm().log(f" band-filtered point_data shape = {filtered_point_data.shape} ")
-
-        vcnts0 = [ nnan( filtered_point_data.values[ic] )   for ic in range( filtered_point_data.shape[0] ) ]
-        vcnts1 = [ nnan( filtered_point_data.values[:,ic] ) for ic in range( filtered_point_data.shape[1] ) ]
-        lgm().log(f" \nfcnts0[{len(vcnts0)}] = {vcnts0} ")
-        lgm().log(f" \nfcnts1[{len(vcnts1)}] = {vcnts1} ")
-
-
+        fpf = filtered_point_data.values.reshape(-1)
+        fpf[ np.isnan(fpf) ] = 0.0
         rmask = pmask.reshape(base_raster.shape[-2:])
-        rnonz, pnonz = nz(rmask), nz(pmask)
-
-        lgm().log( f" rmask shp,nz= ({shp(rmask)},{rnonz}), pmask shp,nz= ({shp(pmask)},{pnonz})  ")
+        lgm().log(f" rmask shp={shp(rmask)}, nvalid={np.count_nonzero(rmask)})  ")
 
         point_index = np.arange(0, base_raster.shape[-1] * base_raster.shape[-2])
-
         filtered_point_data.attrs['dsid'] = base_raster.name
 
         lgm().log(f"filtered_point_data{filtered_point_data.dims}{filtered_point_data.shape}:  "
                   f"range=[{filtered_point_data.values.min():.4f}, {filtered_point_data.values.max():.4f}]")
 
-        # for iS in range(100):
-        #     for iB in range(100):
-        #         if np.isnan(filtered_point_data.values[iS, iB]):
-        #             print(f"  * NANVAL: S={iS} B={iB}")
-        return filtered_point_data.assign_coords(samples=point_index[pmask]), pmask, rmask
+        return filtered_point_data.assign_coords(samples=point_index[pmask]), pmask, bmask, rmask
 
 #     def raster2points1( self, base_raster: xa.DataArray ) -> Tuple[ Optional[xa.DataArray], Optional[np.ndarray], Optional[np.ndarray] ]:   #  base_raster dims: [ band, y, x ]
 #         t0 = time.time()
