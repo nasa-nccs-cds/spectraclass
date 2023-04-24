@@ -756,7 +756,7 @@ class Block(DataContainer):
             point_data = point_data if np.isnan(nodata) else point_data.where(point_data != nodata, np.nan)
 
         vcnts = [ nnan( point_data.values[ic] ) for ic in range( point_data.shape[0] ) ]
-        pmask: np.ndarray = (np.array(vcnts) < point_data.shape[1])
+        pmask: np.ndarray = (np.array(vcnts) < point_data.shape[1]*0.5)
         lgm().log(f" pmask shp={shp(pmask)}, nonzero={np.count_nonzero(pmask)})  ")
 
         filtered_point_data: xa.DataArray = point_data[pmask]
