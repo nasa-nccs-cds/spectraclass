@@ -761,7 +761,10 @@ class Block(DataContainer):
         lgm().log(f" \nvcnts0[{len(vcnts0)}] = {vcnts0} ")
         lgm().log(f" \nvcnts1[{len(vcnts1)}] = {vcnts1} ")
 
-        pmask: np.ndarray = ~np.isnan( point_data.values.max(axis=1) )
+        pmask: np.ndarray = (np.array(vcnts0) == point_data.shape[1])
+        lgm().log(f" pmask shp={shp(pmask)}, nz={np.count_nonzero(pmask)})  ")
+
+
         rmask = pmask.reshape(base_raster.shape[-2:])
         rnonz, pnonz = nz(rmask), nz(pmask)
 
