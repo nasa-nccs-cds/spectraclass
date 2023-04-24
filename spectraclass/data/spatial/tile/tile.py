@@ -751,6 +751,12 @@ class Block(DataContainer):
         if '_FillValue' in point_data.attrs:
             nodata = point_data.attrs.get('_FillValue',np.nan)
             point_data = point_data if np.isnan(nodata) else point_data.where(point_data != nodata, np.nan)
+
+        pdm0, pdm1 = point_data.values.max(axis=0), point_data.values.max(axis=1)
+        pm0, pm1 = ~np.isnan( pdm0 ), ~np.isnan( pdm1 )
+        nz0, nz1 = nz(pm0), nz(pm1)
+        lgm().log(f" pm0 shp,nz= ({shp(pm0)},{nz0}), pm1 shp,nz= ({shp(pm1)},{nz1})  ")
+
         pmask: np.ndarray = ~np.isnan( point_data.values.max(axis=1) )
         rmask = pmask.reshape(base_raster.shape[-2:])
         rnonz, pnonz = nz(rmask), nz(pmask)
