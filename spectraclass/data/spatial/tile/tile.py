@@ -759,7 +759,11 @@ class Block(DataContainer):
         bmask: np.ndarray = (np.array(bvcnts) < point_data.shape[0]*0.3)
         lgm().log(f" bmask shp={shp(bmask)}, nvalid={np.count_nonzero(bmask)})  ")
 
-        filtered_point_data: xa.DataArray = point_data[:,bmask]
+        pvcnts = [ nnan( point_data.values[ic] ) for ic in range( point_data.shape[0] ) ]
+        pmask: np.ndarray = ( np.array(pvcnts) < point_data.shape[1]*0.5 )
+        lgm().log(f" pmask shp={shp(pmask)}, nvalid={np.count_nonzero(pmask)})  ")
+
+        filtered_point_data: xa.DataArray = point_data[pmask,bmask]
         lgm().log(f" band-filtered point_data shape = {filtered_point_data.shape} ")
 
         vcnts0 = [ nnan( filtered_point_data.values[ic] )   for ic in range( filtered_point_data.shape[0] ) ]
