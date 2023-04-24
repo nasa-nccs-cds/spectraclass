@@ -144,6 +144,10 @@ class Tile(DataContainer):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         tile_data = tm().getTileData()
         lgm().log( f"#Tile[{self._index}]-> Read Data: shape = {tile_data.shape}, dims={tile_data.dims}", print=True )
+        return self.filter_degraded_bands( tile_data )
+
+    def filter_degraded_bands(self, tile_data: xa.DataArray ) -> xa.DataArray:
+        lgm().log(f"  ---> attrs: {tile_data.attrs}" )
         return tile_data
 
     @property
