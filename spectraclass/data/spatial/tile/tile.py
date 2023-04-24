@@ -148,7 +148,7 @@ class Tile(DataContainer):
 
     def filter_degraded_bands(self, tile_data: xa.DataArray ) -> xa.DataArray:
         lgm().log(f"  ---> attrs: {tile_data.attrs}" )
-        init_shape = tile_data.sahpe
+        init_shape = tile_data.shape
         if '_FillValue' in tile_data.attrs:
             nodata = tile_data.attrs['_FillValue']
             tile_data = tile_data if np.isnan(nodata) else tile_data.where(tile_data != nodata, np.nan)
