@@ -756,7 +756,7 @@ class Block(DataContainer):
             point_data = point_data if np.isnan(nodata) else point_data.where(point_data != nodata, np.nan)
 
         bvcnts = [ nnan( point_data.values[:,ic] ) for ic in range( point_data.shape[1] ) ]
-        bmask: np.ndarray = (np.array(bvcnts) < point_data.shape[0]*0.3)
+        bmask: np.ndarray = (np.array(bvcnts) < point_data.shape[0]*0.1)
         lgm().log(f" bmask shp={shp(bmask)}, nvalid={np.count_nonzero(bmask)})  ")
 
         pvcnts = [ nnan( point_data.values[ic] ) for ic in range( point_data.shape[0] ) ]
