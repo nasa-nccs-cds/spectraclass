@@ -628,7 +628,7 @@ class Block(DataContainer):
         norm = kwargs.get('norm', True)
         if self._point_data is None:
             lgm().log(f"BLOCK[{self.dsid()}].getPointData:")
-            self._point_data, pmask, rmask =  self.raster2points( self.data )
+            self._point_data, pmask, bmask, rmask =  self.raster2points( self.data )
             # lgm().log( f"\n *** pdata: {0 if (self._point_data is None) else self._point_data.shape} " )
             # lgm().log( f"\n *** pmask: {0 if (pmask is None) else np.count_nonzero(pmask)}/{0 if (pmask is None) else pmask.shape}, " )
             # lgm().log( f"\n *** rmask: {0 if (rmask is None) else np.count_nonzero(rmask)}/{0 if (rmask is None) else rmask.shape}" )
@@ -640,6 +640,7 @@ class Block(DataContainer):
             self._point_data.attrs['rmask'] = rmask
             self._point_mask = pmask
             self._raster_mask = rmask
+            self._band_mask = bmask
         result = tm().norm( self._point_data )
         return (result, self._point_coords )
 
