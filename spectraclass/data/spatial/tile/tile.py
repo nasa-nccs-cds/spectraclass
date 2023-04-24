@@ -21,8 +21,11 @@ def shp( array: Optional[Union[np.ndarray,xa.DataArray]] ):
 def nz( array: Optional[Union[np.ndarray,xa.DataArray]] ):
     return "NONE" if array is None else np.count_nonzero(array)
 
-def nnan( array: Optional[Union[np.ndarray,xa.DataArray]] ):
+def nvalid( array: Optional[Union[np.ndarray,xa.DataArray]] ):
     return "NONE" if array is None else np.count_nonzero( ~np.isnan(array) )
+
+def nnan( array: Optional[Union[np.ndarray,xa.DataArray]] ):
+    return "NONE" if array is None else np.count_nonzero( np.isnan(array) )
 
 class DataContainer:
 
