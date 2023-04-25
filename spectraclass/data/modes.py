@@ -236,6 +236,7 @@ class ModeDataManager(SCSingletonConfigurable):
         aefiles = self.autoencoder_files( **kwargs )
         wfile = aefiles[0] + ".index"
         if self.refresh_model:
+            lgm().log(f"#AEC refreshing weights")
             return False
         elif not os.path.exists( wfile ):
             lgm().log( f"#AEC weights file does not exist: {wfile}")
@@ -372,6 +373,7 @@ class ModeDataManager(SCSingletonConfigurable):
         lr = kwargs.get('lr', self.reduce_learning_rate )
         self.vae = (method.strip().lower() == 'vae')
         aefiles = self.autoencoder_files(**kwargs)
+        lgm().log(f"#AEC autoencoder_preprocess, aefiles = {aefiles}" )
         if self.refresh_model:
             for aef in aefiles:
                 for ifile in glob.glob(aef + ".*"): os.remove(ifile)
@@ -385,7 +387,7 @@ class ModeDataManager(SCSingletonConfigurable):
                     initial_epoch = self.focused_training( initial_epoch, **kwargs )
             self._autoencoder.save_weights( aefiles[0] )
             self._encoder.save_weights( aefiles[1] )
-            lgm().log(f"autoencoder_preprocess completed, saved model weights to files={aefiles}", print=True)
+            lgm().log(f"#AEC autoencoder_preprocess completed, saved model weights to files={aefiles}", print=True)
 
     def general_training(self, initial_epoch = 0, **kwargs ):
         from spectraclass.data.base import DataManager, dm
