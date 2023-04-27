@@ -50,11 +50,11 @@ class VariableBrowser:
 class RasterCollectionsViewer:
 
     def __init__(self, collections: Dict[str,xa.DataArray], **plotopts ):
-        self.browsers = { cname: VariableBrowser( cdata ) for cname,cdata in collections.items() }
-        self.panels = [ (cname,browser.plot(**plotopts)) for cname,browser in self.browsers.items() ]
+        self.browsers = { cname: VariableBrowser( cdata ) for cname, cdata in collections.items() }
+        self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
 
     def panel(self, title: str = None, **kwargs ) -> Panel:
-        items = [ pn.Tabs( *self.panels ) ]
-        if title is not None: items.insert(0,title)
+        tabs = [ pn.Tabs( *self.panels ) ]
+        if title is not None: tabs.insert( 0, title )
         background = kwargs.get( 'background', 'WhiteSmoke')
-        return pn.Column( *items, background=background )
+        return pn.Column( *tabs, background=background )
