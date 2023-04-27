@@ -642,6 +642,7 @@ class Block(DataContainer):
         if self._point_data is None:
             lgm().log(f"BLOCK[{self.dsid()}].getPointData:")
             self._point_data, pmask, rmask =  self.raster2points( self.data )
+            if (self._point_data is None): return (None, {})
             # lgm().log( f"\n *** pdata: {0 if (self._point_data is None) else self._point_data.shape} " )
             # lgm().log( f"\n *** pmask: {0 if (pmask is None) else np.count_nonzero(pmask)}/{0 if (pmask is None) else pmask.shape}, " )
             # lgm().log( f"\n *** rmask: {0 if (rmask is None) else np.count_nonzero(rmask)}/{0 if (rmask is None) else rmask.shape}" )
@@ -762,7 +763,7 @@ class Block(DataContainer):
 
     def raster2points(self, base_raster: xa.DataArray) -> Tuple[Optional[xa.DataArray], Optional[np.ndarray],  Optional[np.ndarray]]:  # base_raster dims: [ band, y, x ]
         t0 = time.time()
-        if base_raster is None: return (None, None, None)
+        if (base_raster is None) or (base_raster.shape[0] == 0): return (None, None, None)
         point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
 
         lgm().log(f"#IA: raster2points:  base_raster{base_raster.dims} shp={base_raster.shape}, point_data{point_data.dims} shp={point_data.shape} " )

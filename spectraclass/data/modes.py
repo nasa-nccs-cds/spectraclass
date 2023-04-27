@@ -563,7 +563,9 @@ class ModeDataManager(SCSingletonConfigurable):
         inames = list(self.image_names.keys())
         return inames[self._active_image]
 
-    def image_path(self, image_name: str ) -> str:
+    def image_path(self, local_image_path: str ) -> str:
+        base_image_name = local_image_path.split('/')[0]
+        image_name = base_image_name.replace("ang","").replace("rfl","")
         return self.image_names[image_name]
 
     def get_image_name( self, image_index: int ):

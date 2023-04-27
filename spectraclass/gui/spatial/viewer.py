@@ -5,6 +5,7 @@ import hvplot.xarray
 import geoviews as gv
 import holoviews as hv
 import pandas as pd
+from panel.layout import Panel
 import geoviews.feature as gf
 import panel as pn
 from panel.layout import Panel
@@ -36,30 +37,21 @@ def find_varname( selname: str, varlist: List[str]) -> str:
 
 class VariableBrowser:
 
-    def __init__(self, dsets: Dict[str,xa.Dataset], **plotopts ):
-        self.dsets = dsets
-        self.cvars = list(dsets.keys())
-        self.select = pn.widgets.Select( name='Variable:', options=self.cvars )
-        self.hmap = hv.DynamicMap(pn.bind(self.getImage, cvar=self.select))
+    def __init__(self, data: xa.DataArray ):
+        self.data = data
 
-    def getImage(self, cvar: str, **plotopts) -> gv.Image:
-        dset: xa.Dataset = self.dsets[cvar]
-        kdims, vdims = [ 'lon', 'lat' ], ['covariate']
-        cmap = plotopts.get('cmap','jet')
-        lgm().log( f"getImage: {dset}")
-        geodataset = gv.Dataset(dset, kdims=kdims, vdims=vdims)   #  .squeeze("time")
-        image = geodataset.to( gv.Image, ['lon', 'lat'] ).opts( cmap=cmap, colorbar=False, **plotopts )
-        return image
-
-    def plot(self, coastline: bool = False):
-        if coastline: self.hmap = self.hmap * coastline
-        return pn.Column( self.hmap, self.select )
+    def plot(self, **plotopts)-> Panel:
+        width = plotopts.get('width',600)
+        widget_type = plotopts.get('widget_type','scrubber')
+        cmap = plotopts.get('cmap', 'jet')
+        iopts = dict( width=width, cmap=cmap, xaxis = "bare", yaxis = "bare"  )
+        return  self.data.hvplot.image( groupby='band', widget_type=widget_type, widget_location='bottom', **iopts )
 
 class RasterCollectionsViewer:
 
-    def __init__(self, collections: Dict[str,Dict[str,xa.Dataset]], **plotopts ):
-        self.browsers = { cname: VariableBrowser( dsets, **plotopts ) for cname,dsets in collections.items() }
-        self.panels = [ (cname,browser.plot()) for cname,browser in self.browsers.items() ]
+    def __init__(self, collections: Dict[str,xa.DataArray], **plotopts ):
+        self.browsers = { cname: VariableBrowser( cdata ) for cname,cdata in collections.items() }
+        self.panels = [ (cname,browser.plot(**plotopts)) for cname,browser in self.browsers.items() ]
 
     def panel(self, title: str = None, **kwargs ) -> Panel:
         items = [ pn.Tabs( *self.panels ) ]
