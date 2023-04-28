@@ -60,7 +60,7 @@ class VariableBrowser:
             points = self.selected_points + [(x, y, 'unlabeled')]
         elif None not in [x2, y2]:
             self.selected_points.append((x2, y2, current_class))
-        return hv.Points(points, vdims='class').opts( marker='+', size=10, color='class', cmap=self.classes, colorbar=False )
+        return hv.Points(points, vdims='class').opts( marker='+', size=10, color='class', cmap=self.classes )
 
     @exception_handled
     def update_graph(self, x, y, x2, y2):
@@ -76,7 +76,7 @@ class VariableBrowser:
     @exception_handled
     def get_frame(self, iteration: int ):
         fdata: xa.DataArray = self.data[iteration]
-        iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare")
+        iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", colorbar=False)
         return fdata.hvplot.image( **iopts )
 
     # @exception_handled
