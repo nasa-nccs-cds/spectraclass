@@ -1,6 +1,7 @@
 from .manager import SpatialDataManager
 from typing import List, Union, Tuple, Optional, Dict, Callable
 from spectraclass.gui.spatial.aviris.manager import AvirisTileSelector
+from spectraclass.gui.spatial.neon.manager import NEONTileSelector
 from pathlib import Path
 import traitlets as tl
 import os, sys
@@ -79,6 +80,15 @@ class NEONDataManager(SpatialDataManager):
 
     def __init__(self):
         super(NEONDataManager, self).__init__()
+        self.tile_selector: NEONTileSelector = None
+
+    def gui(self):
+        if self.ext == "_img":
+            if self.tile_selector is None:
+                self.tile_selector = NEONTileSelector()
+            return self.tile_selector.gui()
+        else:
+            return SpatialDataManager.gui( self )
 
     def valid_bands(self):
         if self._valid_bands is None:
