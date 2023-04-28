@@ -35,9 +35,8 @@ def find_varname( selname: str, varlist: List[str]) -> str:
 
 class VariableBrowser:
 
-    def __init__(self, data: xa.DataArray, classes: Dict[str,str], **plotopts ):
+    def __init__(self, data: xa.DataArray, classes: List[str], **plotopts ):
         self.data = data
-        self.classes = dict( Unlabeled="white", **classes )
         self.width = plotopts.get('width',600)
         self.cmap = plotopts.get('cmap', 'jet')
         self.nIter = data.shape[0]
@@ -47,27 +46,26 @@ class VariableBrowser:
         self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True)
         self.selection_dmap = hv.DynamicMap(self.select_points, streams=[self.tap_stream, self.double_tap_stream])
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream, self.double_tap_stream])
-        self.class_selector = pn.widgets.RadioButtonGroup( name='Class Selection', value=['Unlabeled'], options=list(self.classes.keys()) )
+        self.class_selector = pn.widgets.RadioButtonGroup( name='Class Selection', value=['Unlabeled'], options=['Unlabeled']+classes )
         self.graph_data = xa.DataArray([])
 
     @exception_handled
     def select_points(self, x, y, x2, y2):
-        current_class = self.class_selector.value
         points = self.selected_points
         if None not in [x, y]:
-            points = self.selected_points + [(x, y, current_class)]
+            points = self.selected_points + [(x, y, 1)]
         elif None not in [x2, y2]:
-            self.selected_points.append((x2, y2, current_class))
-        return hv.Points(points, vdims='class')
+            self.selected_points.append((x2, y2, 2))
+        return hv.Points(points, vdims='Taps')
 
     @exception_handled
     def update_graph(self, x, y, x2, y2):
-        graph_data = self.data.sel(x=x, y=y, method="nearest")
-        # if None not in [x, y]:
-        #     self.graph_data = self.data.sel(x=x, y=y, method="nearest")
-        # elif None not in [x2, y2]:
-        #     self.graph_data = self.data.sel(x=x2, y=y2, method="nearest")
-        return hv.Curve(graph_data).opts(width=self.width, height=200, yaxis="bare")
+        if None not in [x, y]:
+            self.graph_data = self.data.sel(x=x, y=y, method="nearest")
+        elif None not in [x2, y2]:
+            self.graph_data = self.data.sel(x=x2, y=y2, method="nearest")
+        lgm().log( f"update_graph: graph_data{self.graph_data.dims} shape = {self.graph_data.shape}, values = {self.graph_data.values.tolist()}")
+        return hv.Curve(self.graph_data)
 
       #  return hv.NdOverlay(curves)
 
@@ -88,12 +86,14 @@ class VariableBrowser:
     @exception_handled
     def plot(self)-> Panel:
         image = hv.DynamicMap( pn.bind(self.get_frame, iteration=self.player) )
-        point_selection = self.selection_dmap.opts( color='class', cmap=self.classes )
-        return pn.Column( self.class_selector, image*point_selection, self.player, self.point_graph )
+        point_selection = self.selection_dmap.opts( color='Taps', cmap={1: 'red', 2: 'gray'} )
+        graph = self.point_graph.opts( width=self.width, height=200 )
+#        return pn.Column( self.class_selector, image*point_selection, self.player, graph )
+        return pn.Column(  self.class_selector, image*point_selection, self.player, graph )
 
 class RasterCollectionsViewer:
 
-    def __init__(self, collections: Dict[str,xa.DataArray], classes: List[str] = None, **plotopts ):
+    def __init__(self, collections: Dict[str,xa.DataArray], classes: List[str], **plotopts ):
         self.browsers = { cname: VariableBrowser( cdata, classes ) for cname, cdata in collections.items() }
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
 

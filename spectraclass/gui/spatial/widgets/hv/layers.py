@@ -15,7 +15,6 @@ import pandas as pd
 from holoviews.element import Dataset as hvDataset
 from holoviews.core.boundingregion import BoundingRegion, BoundingBox
 from holoviews.plotting.links import DataLink
-from spectraclass.gui.spatial.widgets.tiles import TileSelector, TileManager
 from holoviews.core import Dimension
 import cartopy.crs as ccrs
 from holoviews.core.spaces import DynamicMap

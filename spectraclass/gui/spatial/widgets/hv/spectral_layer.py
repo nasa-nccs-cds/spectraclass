@@ -5,15 +5,10 @@ import numpy as np
 import xarray as xa
 import hvplot.xarray
 from holoviews.plotting.links import RangeToolLink
-from bokeh.models.mappers import CategoricalColorMapper
-from spectraclass.gui.spatial.widgets.points import PointSelection
 import panel as pn
 import geoviews as gv
 from collections import OrderedDict
 import geoviews.tile_sources as gts
-from geoviews.element import WMTS
-import rioxarray as rio
-import rasterio
 from holoviews import streams
 from bokeh.io import push_notebook, show, output_notebook
 from holoviews import opts
