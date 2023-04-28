@@ -48,6 +48,7 @@ class VariableBrowser:
         self.selection_dmap = hv.DynamicMap(self.select_points, streams=[self.tap_stream, self.double_tap_stream])
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream, self.double_tap_stream])
         self.class_selector = pn.widgets.RadioButtonGroup( name='Class Selection', value=['Unlabeled'], options=list(self.classes.keys()) )
+        self.image = hv.DynamicMap( pn.bind(self.get_frame, iteration=self.player) )
         self.graph_data = xa.DataArray([])
 
     @exception_handled
@@ -58,7 +59,7 @@ class VariableBrowser:
             points = self.selected_points + [(x, y, current_class)]
         elif None not in [x2, y2]:
             self.selected_points.append((x2, y2, current_class))
-        return hv.Points(points, vdims='class')
+        return hv.Points(points, vdims='class').opts( marker='+', size=10, color='class', cmap=self.classes )
 
     @exception_handled
     def update_graph(self, x, y, x2, y2):
@@ -87,13 +88,11 @@ class VariableBrowser:
 
     @exception_handled
     def plot(self)-> Panel:
-        image = hv.DynamicMap( pn.bind(self.get_frame, iteration=self.player) )
-        point_selection = self.selection_dmap.opts( color='class', cmap=self.classes )
-        return pn.Column( self.class_selector, image*point_selection, self.player, self.point_graph )
+        return pn.Column( self.class_selector, self.image*self.selection_dmap, self.player, self.point_graph )
 
 class RasterCollectionsViewer:
 
-    def __init__(self, collections: Dict[str,xa.DataArray], classes: List[str] = None, **plotopts ):
+    def __init__(self, collections: Dict[str,xa.DataArray], classes: Dict[str,str] = None, **plotopts ):
         self.browsers = { cname: VariableBrowser( cdata, classes ) for cname, cdata in collections.items() }
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
 
