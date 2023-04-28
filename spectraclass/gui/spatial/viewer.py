@@ -37,7 +37,7 @@ class VariableBrowser:
 
     def __init__(self, data: xa.DataArray, classes: Dict[str,str], **plotopts ):
         self.data = data
-        self.classes = dict( Unlabeled="white", **classes )
+        self.classes = dict( unlabeled="white", **classes )
         self.width = plotopts.get('width',600)
         self.cmap = plotopts.get('cmap', 'jet')
         self.nIter = data.shape[0]
@@ -47,7 +47,8 @@ class VariableBrowser:
         self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True)
         self.selection_dmap = hv.DynamicMap(self.select_points, streams=[self.tap_stream, self.double_tap_stream])
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream, self.double_tap_stream])
-        self.class_selector = pn.widgets.RadioButtonGroup( name='Class Selection', value=['Unlabeled'], options=list(self.classes.keys()) )
+        class_options = list(classes.keys())
+        self.class_selector = pn.widgets.RadioButtonGroup( name='Class Selection', value=class_options[0], options=class_options )
         self.image = hv.DynamicMap( pn.bind(self.get_frame, iteration=self.player) )
         self.graph_data = xa.DataArray([])
 
@@ -56,10 +57,10 @@ class VariableBrowser:
         current_class = self.class_selector.value
         points = self.selected_points
         if None not in [x, y]:
-            points = self.selected_points + [(x, y, current_class)]
+            points = self.selected_points + [(x, y, 'unlabeled')]
         elif None not in [x2, y2]:
             self.selected_points.append((x2, y2, current_class))
-        return hv.Points(points, vdims='class').opts( marker='+', size=10, color='class', cmap=self.classes )
+        return hv.Points(points, vdims='class').opts( marker='+', size=10, color='class', cmap=self.classes, colorbar=False )
 
     @exception_handled
     def update_graph(self, x, y, x2, y2):
