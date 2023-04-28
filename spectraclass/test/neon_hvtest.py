@@ -43,6 +43,9 @@ classes = [ ('Class-1', "cyan"),
 
 lm().setLabels( classes )
 
-fdata: xa.DataArray = mm().data
-viewer = RasterCollectionsViewer( dict( features=fdata ) )
+dset_names: List[str] = list(dm.modal.datasets.keys())
+dset: Dict[str,xa.DataArray] = dm.modal.datasets[ dset_names[0] ]
+fdata: xa.DataArray = mm().data.rename( dict(band='feature') )
+sdata: xa.DataArray = dset['raw']
+viewer = RasterCollectionsViewer( dict( bands=sdata, features=fdata ) )
 viewer.panel()
