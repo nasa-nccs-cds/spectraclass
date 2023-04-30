@@ -1,5 +1,7 @@
 import xarray as xa
 from spectraclass.widgets.points import PointsInteractor
+from matplotlib.backend_bases import PickEvent, MouseButton, MouseEvent  # , NavigationToolbar2
+from matplotlib.path import Path
 from spectraclass.data.spatial.tile.tile import Block
 import os, time, logging, numpy as np
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type, Iterable
@@ -227,24 +229,25 @@ class MarkerManager( PointsInteractor ):
             return point
 
     @exception_handled
-    def on_button_press(self, x, y, button ):
+    def on_button_press(self, event: MouseEvent ):
         from spectraclass.gui.spatial.map import MapManager, mm
         from matplotlib.image import AxesImage
-        lgm().log(f"MarkerManager.on_button_press --> enabled = {self._enabled}")
+        inaxes = event.inaxes == self.ax
+        lgm().log(f"MarkerManager.on_button_press --> inaxes = {inaxes}, enabled = {self._enabled}")
         from spectraclass.gui.control import ufm
-        if (x != None) and (y != None)  and self._enabled:
+        if (event.xdata != None) and (event.ydata != None) and inaxes and self._enabled:
             mdata = ""
-            if int(button) == self.RIGHT_BUTTON:
-                self.delete_marker( x, y )
-            elif int(button) == self.LEFT_BUTTON:
+            if int(event.button) == self.RIGHT_BUTTON:
+                self.delete_marker( event.xdata, event.ydata )
+            elif int(event.button) == self.LEFT_BUTTON:
                 labels_img: AxesImage = mm().layer_managers("labels")[0]
-                gid,ix,iy = self.block.coords2gid(y, x)
+                gid,ix,iy = self.block.coords2gid(event.ydata, event.xdata)
                 if labels_img.get_visible():
                     cid = 0 if mm().classification_data is None else mm().classification_data[iy,ix]
                     mdata = mdata + f" label={cid} "
-                lgm().log(f" *** --> selected gid = {gid}, button = {button}")
-                ufm().show( f" event[{x:.2f},{y:.2f}]: ({ix},{iy},{gid}) {mdata}" )
-                self.mark_point( gid, point=(x,y) )
+                lgm().log(f" *** --> selected gid = {gid}, button = {event.button}")
+                ufm().show( f" event[{event.xdata:.2f},{event.ydata:.2f}]: ({ix},{iy},{gid}) {mdata}" )
+                self.mark_point( gid, point=(event.xdata,event.ydata) )
             self.plot()
 
 

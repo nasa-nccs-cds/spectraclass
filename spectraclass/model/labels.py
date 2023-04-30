@@ -4,7 +4,7 @@ from spectraclass.data.spatial.tile.tile import Block
 import os, collections.abc
 from functools import partial
 from matplotlib import colors
-import ipywidgets as ipw
+import panel as pn
 from ..graph.manager import ActivationFlow
 import traitlets.config as tlc
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
@@ -12,6 +12,10 @@ from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.gui.spatial.widgets.markers import Marker
 import xarray as xa
 import numpy as np
+
+RIGHT_BUTTON = 3
+MIDDLE_BUTTON = 2
+LEFT_BUTTON = 1
 
 def c2rgb( color: Union[str,List] ) -> Tuple[float,float,float]:
     if isinstance(color, str):  return colors.to_rgb(color)
@@ -75,21 +79,22 @@ def lm() -> "LabelsManager":
 
 class LabelsManager(SCSingletonConfigurable):
 
+
     def __init__(self):
         super(LabelsManager, self).__init__()
         self._colors: List[str] = None
-        self._labels = None
+        self._labels: List[str] = None
         self._markers: List[Marker] = []
         self._labels_data: xa.DataArray = None
         self._flow: ActivationFlow = None
         self._actions: List[Action] = []
         self._label_maps: List[np.ndarray] = []
-        self._selected_class = 0
+        self.class_selector: pn.widgets.RadioButtonGroup = None
         self._nodata_value = -1
         self._optype = None
         self.template = None
         self.n_spread_iters = 1
-        self.wSelectedClass: ipw.HBox = None
+#        self.wSelectedClass: ipw.HBox = None
 #        self.get_rgb_colors = np.vectorize(self.get_rgb_color)
         self._buttons = []
 
@@ -103,15 +108,15 @@ class LabelsManager(SCSingletonConfigurable):
 
     @property
     def current_class(self) -> str:
-        return self._labels[ self._selected_class ]
+        return self.class_selector.value
 
     @property
     def current_cid(self) -> int:
-        return self._selected_class
+        return self._labels.index( self.current_class )
 
     @property
     def current_color(self) -> str:
-        return self._colors[ self._selected_class ]
+        return self._colors[ self.current_cid]
 
     def get_rgb_color( self, cid: int, probe: bool = False ) -> Tuple[float,float,float]:
         return (1.0,1.0,1.0) if probe else colors.to_rgb( self._colors[ cid ] )
@@ -120,40 +125,29 @@ class LabelsManager(SCSingletonConfigurable):
         cdata = np.array( [ self.get_rgb_color(cid,probe) for cid in cids ] ) * 255.0
         return cdata.astype(np.uint8)
 
-    def set_selected_class(self, iclass, *args ):
-        from spectraclass.gui.control import UserFeedbackManager, ufm
-        from spectraclass.application.controller import app
-        ufm().clear()
-        self._selected_class = iclass
-        for iB, button in enumerate(self._buttons):
-            if iB == self._selected_class:  button.layout = {'border': '3px solid #FFFF00'}
-            else:                           button.layout = {'border': '1px solid darkkhaki'}
-        app().update_current_class( iclass )
+    # def set_selected_class(self, iclass, *args ):
+    #     from spectraclass.gui.control import UserFeedbackManager, ufm
+    #     from spectraclass.application.controller import app
+    #     ufm().clear()
+    #     self.current_cid = iclass
+    #     for iB, button in enumerate(self._buttons):
+    #         if iB == self.current_cid:  button.layout = {'border': '3px solid #FFFF00'}
+    #         else:                           button.layout = {'border': '1px solid darkkhaki'}
+    #     app().update_current_class( iclass )
 
-    def gui( self ) -> ipw.DOMWidget:
-        if self.wSelectedClass is None:
-            for iC, (color, label) in enumerate(zip( self._colors, self._labels )):
-                button = ipw.Button( description=label, layout=ipw.Layout( width = "100%", max_width="500px" ), border= '1px solid dimgrey'  ) # flex='1 1 auto',
-                button.style.button_color = color
-                button.on_click( partial( self.set_selected_class, iC ) )
-                self._buttons.append( button )
-            self.wSelectedClass = ipw.HBox( self._buttons, layout = ipw.Layout( width = "100%"  ) )
-            self.set_selected_class( 0 )
-        return self.wSelectedClass
+    # def gui( self ) -> ipw.DOMWidget:
+    #     pn.widgets.RadioButtonGroup(name='Class Selection', value=lm().labels[0], options=lm().labels)
+    #
+    #     if self.wSelectedClass is None:
+    #         for iC, (color, label) in enumerate(zip( self._colors, self._labels )):
+    #             button = ipw.Button( description=label, layout=ipw.Layout( width = "100%", max_width="500px" ), border= '1px solid dimgrey'  ) # flex='1 1 auto',
+    #             button.style.button_color = color
+    #             button.on_click( partial( self.set_selected_class, iC ) )
+    #             self._buttons.append( button )
+    #         self.wSelectedClass = ipw.HBox( self._buttons, layout = ipw.Layout( width = "100%"  ) )
+    #         self.set_selected_class( 0 )
+    #     return self.wSelectedClass
 
-    def get_labels_colormap(self):
-        from matplotlib.colors import LinearSegmentedColormap, ListedColormap
-        import matplotlib as mpl
-        rgbs = [cval[2] for cval in self.labeledColors]
-        cmap: ListedColormap = ListedColormap(rgbs)
-        color_values = [float(cval[0]) for cval in self.labeledColors]
-#        color_bounds = get_color_bounds(color_values)
-        ncolors = len(self.labeledColors)
-        color_bounds = np.linspace( -0.5, ncolors-0.5, ncolors+1 )
-        norm = mpl.colors.BoundaryNorm( color_bounds, ncolors, clip=True )
-        lgm().log( f"labels_colormap: colors={rgbs}, color_values={color_values}, color_bounds={color_bounds}, ncolors={ncolors}")
-        result =  dict( cmap=cmap, norm=norm, boundaries=color_bounds, ticks=color_values, spacing='proportional')
-        return result
 
     def flow(self) -> Optional[ActivationFlow]:
         return self._flow
@@ -190,6 +184,14 @@ class LabelsManager(SCSingletonConfigurable):
 
     def getMarkers(self) -> List[Marker]:
         return self._markers
+
+    def getPoints(self) -> List[Tuple[float,float,str]]:
+        points = []
+        for m in self._markers:
+            point = m.props['point']
+            cname = self._labels[ m.cid ]
+            points.append( (point[0], point[1], cname) )
+        return points
 
     def addAction(self, type: str, source: str, **kwargs ):
         new_action = Action(type, source, **kwargs)
@@ -290,7 +292,6 @@ class LabelsManager(SCSingletonConfigurable):
     @exception_handled
     def loadLabelData( self, labels_dset: Union[str,bool] ):
         from spectraclass.data.base import DataManager, dm
-        from spectraclass.data.spatial.tile.manager import tm
         if isinstance(labels_dset, str): dm().labels_dset = labels_dset
         lgm().log( f'Loading labels file: {dm().labels_file}', print=True )
         labels_dset: xa.Dataset = xa.open_dataset( dm().labels_file )
@@ -303,7 +304,6 @@ class LabelsManager(SCSingletonConfigurable):
                 if np.count_nonzero( label_mask ) > 0:
                     pids = point_index[ label_mask ]
                     bindex = (int(bidx0),int(bidx1))
-                    block = tm().getBlock(bindex=bindex)
                     marker = Marker( 'marker', pids, cid, block_index=bindex, image_index=int(image_idx) )
                     self.addMarker( marker )
 
@@ -514,8 +514,13 @@ class LabelsManager(SCSingletonConfigurable):
             if color.lower() == unlabeled_color: raise Exception( f"{unlabeled_color} is a reserved color")
         self._colors = [ item[1] for item in label_list ]
         self._labels = [ item[0] for item in label_list ]
+        self.class_selector = pn.widgets.RadioButtonGroup(name='Class Selection', value=self._labels[0], options=self._labels)
         if load_existing:
             self.loadLabelData( load_existing )
+
+    @property
+    def labelmap(self) -> Dict[str,str]:
+        return { k:v for (k,v) in zip(self._labels,self._colors) }
 
     def getSeedPointMask(self) -> xa.DataArray:
         from spectraclass.gui.control import UserFeedbackManager, ufm
@@ -558,5 +563,22 @@ class LabelsManager(SCSingletonConfigurable):
         else:
             shared_values_mask = np.isin(gids, current_gids, assume_unique=True)
             return gids[ np.invert(shared_values_mask)]
+
+    @property
+    def block(self) -> Block:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        return tm().getBlock()
+
+    def on_button_press(self, x, y, button = LEFT_BUTTON ):
+        from spectraclass.gui.control import ufm
+        if (x != None) and (y != None) :
+            gid, ix, iy = self.block.coords2gid(y, x)
+            marker = Marker( "marker", [gid], self.current_cid, point=(x,y) )
+            if int(button) == RIGHT_BUTTON:
+                self.clearMarker( marker )
+            elif int(button) == LEFT_BUTTON:
+                lgm().log(f" *** --> selected gid = {gid}, button = {button}")
+                ufm().show( f" event[{x:.2f},{y:.2f}]: ({ix},{iy},{gid})" )
+                self.addMarker( marker )
 
 

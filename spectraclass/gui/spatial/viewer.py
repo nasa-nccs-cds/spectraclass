@@ -4,6 +4,8 @@ import hvplot.xarray
 from panel.widgets.player import DiscretePlayer
 import holoviews as hv
 from panel.layout import Panel
+from spectraclass.gui.spatial.widgets.markers import Marker
+from spectraclass.model.labels import LabelsManager, lm
 from holoviews.streams import SingleTap, DoubleTap
 import geoviews.feature as gf
 import panel as pn
@@ -35,32 +37,27 @@ def find_varname( selname: str, varlist: List[str]) -> str:
 
 class VariableBrowser:
 
-    def __init__(self, data: xa.DataArray, classes: Dict[str,str], **plotopts ):
+    def __init__(self, data: xa.DataArray, **plotopts ):
         self.data = data
-        self.classes = dict( unlabeled="white", **classes )
         self.width = plotopts.get('width',600)
         self.cmap = plotopts.get('cmap', 'jet')
         self.nIter = data.shape[0]
         self.player: DiscretePlayer = DiscretePlayer(name='Iteration', options=list(range(self.nIter)), value=self.nIter - 1)
-        self.selected_points = []
         self.tap_stream = SingleTap( transient=True )
         self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True)
         self.selection_dmap = hv.DynamicMap(self.select_points, streams=[self.tap_stream, self.double_tap_stream])
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream, self.double_tap_stream])
-        class_options = list(classes.keys())
-        self.class_selector = pn.widgets.RadioButtonGroup( name='Class Selection', value=class_options[0], options=class_options )
         self.image = hv.DynamicMap( pn.bind(self.get_frame, iteration=self.player) )
         self.graph_data = xa.DataArray([])
 
     @exception_handled
     def select_points(self, x, y, x2, y2):
-        current_class = self.class_selector.value
-        points = self.selected_points
         if None not in [x, y]:
-            points = self.selected_points + [(x, y, 'unlabeled')]
+            lm().on_button_press( x, y )
         elif None not in [x2, y2]:
-            self.selected_points.append((x2, y2, current_class))
-        return hv.Points(points, vdims='class').opts( marker='+', size=10, color='class', cmap=self.classes )
+            lm().on_button_press( x, y )
+        points: List[Tuple[float,float,str]] = lm().getPoints()
+        return hv.Points(points, vdims='class').opts( marker='+', size=10, color='class', cmap=lm().labelmap )
 
     @exception_handled
     def update_graph(self, x, y, x2, y2):
@@ -89,12 +86,12 @@ class VariableBrowser:
 
     @exception_handled
     def plot(self)-> Panel:
-        return pn.Column( self.class_selector, self.image*self.selection_dmap, self.player, self.point_graph )
+        return pn.Column( lm().class_selector, self.image*self.selection_dmap, self.player, self.point_graph )
 
 class RasterCollectionsViewer:
 
-    def __init__(self, collections: Dict[str,xa.DataArray], classes: Dict[str,str] = None, **plotopts ):
-        self.browsers = { cname: VariableBrowser( cdata, classes ) for cname, cdata in collections.items() }
+    def __init__(self, collections: Dict[str,xa.DataArray], **plotopts ):
+        self.browsers = { cname: VariableBrowser( cdata ) for cname, cdata in collections.items() }
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
 
     def panel(self, title: str = None, **kwargs ) -> Panel:
