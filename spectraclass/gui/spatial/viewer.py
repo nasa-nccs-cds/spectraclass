@@ -86,19 +86,23 @@ class VariableBrowser:
 
     @exception_handled
     def plot(self)-> Panel:
-        return pn.Column( lm().class_selector, self.image*self.selection_dmap, self.player, self.point_graph )
+        selector = lm().class_selector
+        return pn.Column( selector, self.image*self.selection_dmap, self.player, self.point_graph )
 
 class RasterCollectionsViewer:
 
     def __init__(self, collections: Dict[str,xa.DataArray], **plotopts ):
         self.browsers = { cname: VariableBrowser( cdata ) for cname, cdata in collections.items() }
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
+        self.mapviews = pn.Tabs( *self.panels, dynamic=True )
+ #       ps, p = self.mapviews.params, self.mapviews.param
+ #       print(".")
 
     def panel(self, title: str = None, **kwargs ) -> Panel:
-        tabs = [ pn.Tabs( *self.panels ) ]
-        if title is not None: tabs.insert( 0, title )
+        rows = [ self.mapviews ]
+        if title is not None: rows.insert( 0, title )
         background = kwargs.get( 'background', 'WhiteSmoke')
-        return pn.Column( *tabs, background=background )
+        return pn.Column( *rows, background=background )
 
 class VariableBrowser1:
 
