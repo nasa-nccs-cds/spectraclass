@@ -4,6 +4,8 @@ from skimage.transform import ProjectiveTransform
 import numpy as np
 from os import path
 import numpy.ma as ma
+import geoviews as gv
+import cartopy.crs as crs
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from pyproj import Transformer
 import xarray as xa
@@ -76,6 +78,15 @@ class DataContainer:
     def extent(self) -> List[float]:
         if self._extent is None: self.update_transform()
         return self._extent
+
+    def extent_points(self, to_crs=None ) -> gv.Points:
+        if self._extent is None: self.update_transform()
+        ext = self._extent
+        epsg = int(self.data.attrs['crs'].split(":")[1])
+        projection = crs.epsg( epsg )
+        points =  gv.Points( [(ext[0],ext[2]),(ext[1],ext[3])], projection=projection )
+        if to_crs is not None: points = gv.operation.project(points, projection=to_crs)
+        return points
 
     @property
     def transform(self) -> List[float]:
