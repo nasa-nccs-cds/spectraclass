@@ -27,7 +27,7 @@ roi = "541567.6_4136443.0_542567.6_4137443.0"
 nclasses = 5
 
 dm.proc_type = "cpu"
-dm.modal.images_glob = f"AGB/test/{version}/MLBS_{year}_Reflectance_reflectance_warp.tif"
+dm.modal.images_glob = f"AGB/test/{version}/MLBS_2015_{roi}/MLBS_{year}_Reflectance_reflectance_warp.tif"
 TileManager.block_size = block_size
 TileManager.reprocess = False
 dm.modal.model_dims = model_dims
@@ -51,7 +51,7 @@ classes = [ ('air', "cyan"),
 
 lm().setLabels( classes )
 
+projection = crs.GOOGLE_MERCATOR
 block = tm().getBlock()
-pdata = block.extent_points( ).data
-[xlim, ylim] = [pdata.iloc[:,i].tolist() for i in range(2)]
+(xlim, ylim) = block.get_extent(projection)
 tile_source = gts.tile_sources.get("EsriImagery", None).opts(xlim=xlim, ylim=ylim, width=600, height=570 )

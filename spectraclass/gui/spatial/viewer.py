@@ -6,6 +6,7 @@ import holoviews as hv
 from panel.layout import Panel
 from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.model.labels import LabelsManager, lm
+from spectraclass.data.spatial.tile.manager import TileManager, tm
 from holoviews.streams import SingleTap, DoubleTap
 import geoviews.feature as gf
 import panel as pn
@@ -49,6 +50,7 @@ class VariableBrowser:
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream, self.double_tap_stream])
         self.image = hv.DynamicMap( pn.bind(self.get_frame, iteration=self.player) )
         self.graph_data = xa.DataArray([])
+        self.get_frame(0)
 
     @exception_handled
     def select_points(self, x, y, x2, y2):
@@ -73,7 +75,7 @@ class VariableBrowser:
     @exception_handled
     def get_frame(self, iteration: int ):
         fdata: xa.DataArray = self.data[iteration]
-        iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", colorbar=False)
+        iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False)
         return fdata.hvplot.image( **iopts )
 
     # @exception_handled
@@ -94,6 +96,7 @@ class RasterCollectionsViewer:
     def __init__(self, collections: Dict[str,xa.DataArray], **plotopts ):
         self.browsers = { cname: VariableBrowser( cdata ) for cname, cdata in collections.items() }
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
+        self.panels.append( ('satellite', tm().get_satellite_image() ) )
         self.mapviews = pn.Tabs( *self.panels, dynamic=True )
  #       ps, p = self.mapviews.params, self.mapviews.param
  #       print(".")
@@ -154,3 +157,5 @@ class RasterCollectionsViewer1:
         if title is not None: tabs.insert( 0, title )
         background = kwargs.get( 'background', 'WhiteSmoke')
         return pn.Column( *tabs, background=background )
+
+#if __name__ == '__main__':

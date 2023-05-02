@@ -19,7 +19,7 @@ version = "beta_pmm"
 roi = "541567.6_4136443.0_542567.6_4137443.0"
 
 dm.proc_type = "cpu"
-dm.modal.images_glob = f"AGB/test/{version}/MLBS_{year}_Reflectance_reflectance_warp.tif"
+dm.modal.images_glob = f"AGB/test/{version}/MLBS_{year}_{roi}/MLBS_{year}_Reflectance_reflectance_warp.tif"
 TileManager.block_size = block_size
 TileManager.reprocess = False
 dm.modal.model_dims = model_dims
@@ -47,5 +47,5 @@ dset_names: List[str] = list(dm.modal.datasets.keys())
 dset: Dict[str,xa.DataArray] = dm.modal.datasets[ dset_names[0] ]
 fdata: xa.DataArray = mm().data.rename( dict(band='feature') )
 sdata: xa.DataArray = dset['raw']
-viewer = RasterCollectionsViewer( dict( bands=sdata, features=fdata ) )
+viewer = RasterCollectionsViewer( dict( features=fdata, bands=sdata ) )
 viewer.panel()

@@ -4,6 +4,7 @@ from skimage.transform import ProjectiveTransform
 import numpy as np
 from os import path
 import numpy.ma as ma
+from osgeo import osr
 import geoviews as gv
 import cartopy.crs as crs
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
@@ -28,6 +29,17 @@ def nvalid( array: Optional[Union[np.ndarray,xa.DataArray]] ):
 
 def nnan( array: Optional[Union[np.ndarray,xa.DataArray]] ):
     return "NONE" if array is None else np.count_nonzero( np.isnan(array) )
+
+def parse_p4( p4str: str ) -> Dict[str,str]:
+    p4d = {}
+    for p4entry in p4str.split('+'):
+        entry = p4entry.strip()
+        if '=' in entry:
+            toks = entry.split('=')
+            p4d[toks[0]] = toks[1]
+        elif len(entry):
+            p4d[entry] = 'true'
+    return p4d
 
 class DataContainer:
 
@@ -79,13 +91,24 @@ class DataContainer:
         if self._extent is None: self.update_transform()
         return self._extent
 
-    def extent_points(self) -> gv.Points:
-        if self._extent is None: self.update_transform()
-        ext = self._extent
-        epsg = int(self.data.attrs['crs'].split(":")[1])
-        from_crs = crs.epsg( epsg )
-        points =  gv.Points( [(ext[0],ext[2]),(ext[1],ext[3])], projection=from_crs )
-        return points
+    def wkt_to_proj4(self, wkt_text: str, as_dict=True ) -> Union[str,Dict[str,str]]:
+        srs = osr.SpatialReference()
+        srs.ImportFromWkt(wkt_text)
+        p4str = srs.ExportToProj4()
+        return parse_p4( p4str ) if as_dict else p4str
+
+    @property
+    def projection(self) -> crs.Projection:
+        wkt = self.data.spatial_ref.attrs['crs_wkt']
+        return crs.Projection(self.wkt_to_proj4(wkt))
+
+    def get_extent(self, projection: crs.Projection = None) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+        ext = self.extent
+        if projection is None:
+            return  ( (ext[0],ext[2]), (ext[1],ext[3]) )
+        else:
+            trans_ext = projection.transform_points( self.projection, np.array(ext[:2]), np.array(ext[2:]) )
+            return ( tuple(trans_ext[:,0].tolist()), tuple(trans_ext[:,1].tolist()) )
 
     @property
     def transform(self) -> List[float]:
