@@ -4,11 +4,11 @@ import sys
 
 dm: DataManager = DataManager.initialize( "AGB", 'neon' )
 
-dm.modal.cache_dir = "/explore/nobackup/projects/ilab/cache"
-dm.modal.data_dir  = "/explore/nobackup/projects/ilab/data"
+#dm.modal.cache_dir = "/explore/nobackup/projects/ilab/cache"
+#dm.modal.data_dir  = "/explore/nobackup/projects/ilab/data"
 
-#dm.modal.cache_dir = "/Volumes/archive/spectraclass/logs"
-#dm.modal.data_dir  = "/Volumes/archive/data/"
+dm.modal.cache_dir = "/Volumes/archive/spectraclass/logs"
+dm.modal.data_dir  = "/Volumes/archive/data/"
 
 block_size = 150
 method = "aec" # "vae"

@@ -285,9 +285,9 @@ class TileManager(SCSingletonConfigurable):
 
     @classmethod
     def process_tile_data( cls, tile_data: xa.DataArray ) -> xa.DataArray:
-        tile_data = tile_data.xgeo.reproject(espg=cls.ESPG)
-        tile_data.attrs['wkt'] = cls.crs.to_wkt()
-        tile_data.attrs['crs'] = cls.crs.to_string()
+#        tile_data = tile_data.xgeo.reproject(espg=cls.ESPG)
+#        tile_data.attrs['wkt'] = cls.crs.to_wkt()
+#        tile_data.attrs['crs'] = cls.crs.to_string()
         return cls.filter_invalid_data( tile_data )
 
 #     def getPointData( self ) -> Tuple[xa.DataArray,xa.DataArray]:
