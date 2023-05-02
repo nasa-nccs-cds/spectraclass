@@ -1,6 +1,8 @@
 import geoviews.tile_sources as gts
 import holoviews as hv
 import panel as pn
+import numpy as np
+import geoviews as gv
 import cartopy.crs as crs
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.data.base import DataManager
@@ -50,5 +52,6 @@ classes = [ ('air', "cyan"),
 lm().setLabels( classes )
 
 block = tm().getBlock()
-(p0,p1) = block.extent_points( crs.GOOGLE_MERCATOR )
-tile_source = gts.tile_sources.get("EsriImagery", None).opts(xlim=(xmin, xmax), ylim=(ymin, ymax), width=600, height=570 )
+pdata = block.extent_points( ).data
+[xlim, ylim] = [pdata.iloc[:,i].tolist() for i in range(2)]
+tile_source = gts.tile_sources.get("EsriImagery", None).opts(xlim=xlim, ylim=ylim, width=600, height=570 )

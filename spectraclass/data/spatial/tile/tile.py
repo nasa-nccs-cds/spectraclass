@@ -79,13 +79,12 @@ class DataContainer:
         if self._extent is None: self.update_transform()
         return self._extent
 
-    def extent_points(self, to_crs=None ) -> gv.Points:
+    def extent_points(self) -> gv.Points:
         if self._extent is None: self.update_transform()
         ext = self._extent
         epsg = int(self.data.attrs['crs'].split(":")[1])
-        projection = crs.epsg( epsg )
-        points =  gv.Points( [(ext[0],ext[2]),(ext[1],ext[3])], projection=projection )
-        if to_crs is not None: points = gv.operation.project(points, projection=to_crs)
+        from_crs = crs.epsg( epsg )
+        points =  gv.Points( [(ext[0],ext[2]),(ext[1],ext[3])], projection=from_crs )
         return points
 
     @property
