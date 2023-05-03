@@ -49,8 +49,10 @@ class VariableBrowser:
         self.selection_dmap = hv.DynamicMap(self.select_points, streams=[self.tap_stream, self.double_tap_stream])
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream, self.double_tap_stream])
         self.image = hv.DynamicMap( pn.bind(self.get_frame, iteration=self.player) )
+        self.iter_marker = hv.DynamicMap( pn.bind(self.get_iter_marker, index=self.player) )
         self.graph_data = xa.DataArray([])
-        self.get_frame(0)
+        self.curves: List[hv.Curve] = []
+        self.current_curve_data: Tuple[int,hv.Curve] = None
 
     @exception_handled
     def select_points(self, x, y, x2, y2):
@@ -59,24 +61,36 @@ class VariableBrowser:
         elif None not in [x2, y2]:
             lm().on_button_press( x, y )
         points: List[Tuple[float,float,str]] = lm().getPoints()
-        return hv.Points(points, vdims='class').opts( marker='+', size=10, color='class', cmap=lm().labelmap )
+        return hv.Points(points, vdims='class').opts( marker='+', size=12, line_width=3, angle=45, color='class', cmap=lm().labelmap )
 
     @exception_handled
-    def update_graph(self, x, y, x2, y2):
+    def update_graph(self, x, y, x2, y2) -> hv.Overlay:
         graph_data = self.data.sel(x=x, y=y, method="nearest")
+        line_color = "black" if (lm().current_color == "white") else lm().current_color
         # if None not in [x, y]:
         #     self.graph_data = self.data.sel(x=x, y=y, method="nearest")
         # elif None not in [x2, y2]:
         #     self.graph_data = self.data.sel(x=x2, y=y2, method="nearest")
-        return hv.Curve(graph_data).opts(width=self.width, height=200, yaxis="bare")
-
-      #  return hv.NdOverlay(curves)
+        if (self.current_curve_data is not None) and self.current_curve_data[0] > 0:
+            self.curves.append( self.current_curve_data[1].opts(line_width=1) )
+        current_curve = hv.Curve(graph_data).opts(width=self.width, height=200, yaxis="bare", line_width=3, line_color=line_color)
+        self.current_curve_data = ( lm().current_cid, current_curve )
+        return hv.Overlay( [ current_curve ] + self.curves )
 
     @exception_handled
     def get_frame(self, iteration: int ):
         fdata: xa.DataArray = self.data[iteration]
         iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False)
         return fdata.hvplot.image( **iopts )
+
+    @exception_handled
+    def get_iter_marker(self, index: int ):
+        coord: np.ndarray = self.data.coords[ self.data.dims[0] ].values
+        vline = hv.VLine( coord[index], label="current iteration")
+        return vline.opts( color="grey", alpha=0.5 )
+
+    #  vline = hv.VLine(0.5, label="vline")
+    #  curve * vline
 
     # @exception_handled
     # def plot1(self, **plotopts)-> Panel:
@@ -89,17 +103,15 @@ class VariableBrowser:
     @exception_handled
     def plot(self)-> Panel:
         selector = lm().class_selector
-        return pn.Column( selector, self.image*self.selection_dmap, self.player, self.point_graph )
+        return pn.Column( selector, self.image*self.selection_dmap, self.player, self.point_graph*self.iter_marker )
 
 class RasterCollectionsViewer:
 
     def __init__(self, collections: Dict[str,xa.DataArray], **plotopts ):
         self.browsers = { cname: VariableBrowser( cdata ) for cname, cdata in collections.items() }
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
-        self.panels.append( ('satellite', tm().get_satellite_image() ) )
+#        self.panels.append( ('satellite', tm().get_satellite_image() ) )
         self.mapviews = pn.Tabs( *self.panels, dynamic=True )
- #       ps, p = self.mapviews.params, self.mapviews.param
- #       print(".")
 
     def panel(self, title: str = None, **kwargs ) -> Panel:
         rows = [ self.mapviews ]
