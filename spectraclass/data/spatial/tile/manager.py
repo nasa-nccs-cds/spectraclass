@@ -1,5 +1,6 @@
 from skimage.transform import ProjectiveTransform
 import numpy as np
+import holoviews as hv
 import codecs
 import xarray as xa
 import geoviews.tile_sources as gts
@@ -80,13 +81,6 @@ class TileManager(SCSingletonConfigurable):
         new_tile = Tile( tile_index )
         self._idxtiles[ tile_index ] = new_tile
         return self._tiles.setdefault( self.get_image_name(index=tile_index), new_tile )
-
-    def get_satellite_image(self):
-        projection = ccrs.GOOGLE_MERCATOR
-        block = self.getBlock()
-        (xlim, ylim) = block.get_extent(projection)
-        tile_source = gts.tile_sources.get("EsriImagery", None).opts(xlim=xlim, ylim=ylim, width=600, height=570)
-        return tile_source
 
     def tile_grid_offset(self, tile_index: int ) -> int:
         offset = 0

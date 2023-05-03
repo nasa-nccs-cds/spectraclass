@@ -2,6 +2,7 @@ from collections import OrderedDict
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Set
 from spectraclass.data.spatial.tile.tile import Block
 import os, collections.abc
+import cartopy.crs as ccrs
 from functools import partial
 from matplotlib import colors
 import panel as pn
@@ -185,7 +186,7 @@ class LabelsManager(SCSingletonConfigurable):
     def getMarkers(self) -> List[Marker]:
         return self._markers
 
-    def getPoints(self) -> List[Tuple[float,float,str]]:
+    def getPoints(self ) -> List[Tuple[float,float,str]]:
         points = []
         for m in self._markers:
             point = m.props['point']

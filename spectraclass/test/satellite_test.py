@@ -7,7 +7,6 @@ import cartopy.crs as crs
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.data.base import DataManager
 from spectraclass.data.spatial.tile.manager import TileManager
-from spectraclass.gui.spatial.satellite import spm, SatellitePlotManager
 from spectraclass.model.labels import LabelsManager, lm
 from typing import List, Union, Tuple, Optional, Dict, Callable
 pn.extension()

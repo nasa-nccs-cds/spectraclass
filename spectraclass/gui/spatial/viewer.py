@@ -3,6 +3,7 @@ from typing import List, Union, Tuple, Optional, Dict, Type, Hashable, Callable
 import hvplot.xarray
 from panel.widgets.player import DiscretePlayer
 import holoviews as hv
+from spectraclass.data.spatial.satellite import spm
 from panel.layout import Panel
 from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.model.labels import LabelsManager, lm
@@ -46,13 +47,13 @@ class VariableBrowser:
         self.player: DiscretePlayer = DiscretePlayer(name='Iteration', options=list(range(self.nIter)), value=self.nIter - 1)
         self.tap_stream = SingleTap( transient=True )
         self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True)
-        self.selection_dmap = hv.DynamicMap(self.select_points, streams=[self.tap_stream, self.double_tap_stream])
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream, self.double_tap_stream])
         self.image = hv.DynamicMap( pn.bind(self.get_frame, iteration=self.player) )
         self.iter_marker = hv.DynamicMap( pn.bind(self.get_iter_marker, index=self.player) )
         self.graph_data = xa.DataArray([])
         self.curves: List[hv.Curve] = []
         self.current_curve_data: Tuple[int,hv.Curve] = None
+        self.selection_dmap = hv.DynamicMap(self.select_points, streams=[self.tap_stream, self.double_tap_stream])
 
     @exception_handled
     def select_points(self, x, y, x2, y2):
@@ -110,7 +111,7 @@ class RasterCollectionsViewer:
     def __init__(self, collections: Dict[str,xa.DataArray], **plotopts ):
         self.browsers = { cname: VariableBrowser( cdata ) for cname, cdata in collections.items() }
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
-#        self.panels.append( ('satellite', tm().get_satellite_image() ) )
+        self.panels.append( ('satellite', spm().panel() ) )
         self.mapviews = pn.Tabs( *self.panels, dynamic=True )
 
     def panel(self, title: str = None, **kwargs ) -> Panel:

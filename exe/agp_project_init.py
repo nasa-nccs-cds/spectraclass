@@ -14,7 +14,7 @@ TileManager.block_size = block_size
 TileManager.reprocess = True
 dm.modal.refresh_model = True
 dm.modal.model_dims = model_dims
-dm.modal.modelkey = f"b{block_size}.{version}.{year}.{roi}"
+dm.modal.modelkey = f"agp.neon.{version}.{year}.{roi}.{block_size}.{model_dims}"
 
 dm.prepare_inputs()
 
