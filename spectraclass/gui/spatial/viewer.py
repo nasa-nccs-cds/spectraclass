@@ -57,6 +57,7 @@ class VariableBrowser:
 
     @exception_handled
     def select_points(self, x, y, x2, y2):
+        print(f"select_points: ({x},{y}) ({x2},{y2})")
         if None not in [x, y]:
             lm().on_button_press( x, y )
         elif None not in [x2, y2]:
@@ -66,6 +67,7 @@ class VariableBrowser:
 
     @exception_handled
     def update_graph(self, x, y, x2, y2) -> hv.Overlay:
+        print(f"update_graph: ({x},{y}) ({x2},{y2})")
         graph_data = self.data.sel(x=x, y=y, method="nearest")
         line_color = "black" if (lm().current_color == "white") else lm().current_color
         # if None not in [x, y]:
@@ -111,7 +113,7 @@ class RasterCollectionsViewer:
     def __init__(self, collections: Dict[str,xa.DataArray], **plotopts ):
         self.browsers = { cname: VariableBrowser( cdata ) for cname, cdata in collections.items() }
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
-        self.panels.append( ('satellite', spm().panel() ) )
+#        self.panels.append( ('satellite', spm().panel() ) )
         self.mapviews = pn.Tabs( *self.panels, dynamic=True )
 
     def panel(self, title: str = None, **kwargs ) -> Panel:

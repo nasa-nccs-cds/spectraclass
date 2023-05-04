@@ -28,6 +28,10 @@ def nnan( array: Optional[Union[np.ndarray,xa.DataArray]] ):
 def tm() -> "TileManager":
     return TileManager.instance()
 
+def nblocks( tile_size: int, block_size: int ) -> int:
+    return (tile_size // block_size) if (tile_size % block_size == 0) else math.ceil( tile_size/block_size )
+
+
 class PointsOutOfBoundsException(Exception):
     def __str__(self):
         return "Points out of bounds"
@@ -108,8 +112,7 @@ class TileManager(SCSingletonConfigurable):
 
     @property
     def block_dims(self) -> Tuple[int,int]:
-        ts = self.tile_shape
-        return math.ceil(ts[0]/self.block_size), math.ceil(ts[1]/self.block_size)
+        return nblocks(self.tile_shape[0],self.block_size), nblocks(self.tile_shape[1],self.block_size)
 
     @property
     def tile_size(self) -> Tuple[int,int]:

@@ -574,6 +574,7 @@ class LabelsManager(SCSingletonConfigurable):
         from spectraclass.gui.control import ufm
         if (x != None) and (y != None) :
             gid, ix, iy = self.block.coords2gid(y, x)
+            print(f"select_points: ({x},{y})->({ix},{iy}): gid={gid}")
             marker = Marker( "marker", [gid], self.current_cid, point=(x,y) )
             if int(button) == RIGHT_BUTTON:
                 self.clearMarker( marker )
