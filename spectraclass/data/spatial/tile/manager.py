@@ -29,7 +29,10 @@ def tm() -> "TileManager":
     return TileManager.instance()
 
 def nblocks( tile_size: int, block_size: int ) -> int:
-    return (tile_size // block_size) if (tile_size % block_size == 0) else math.ceil( tile_size/block_size )
+    tbm = tile_size % block_size
+    nb = (tile_size // block_size) if (tbm== 0) else math.ceil( tile_size/block_size )
+    lgm().log( f" $$$$$ nblocks: tile_size={tile_size} block_size={block_size} nblocks={nb}")
+    return nb
 
 
 class PointsOutOfBoundsException(Exception):
