@@ -67,13 +67,15 @@ class VariableBrowser:
 
     @exception_handled
     def update_graph(self, x, y, x2, y2) -> hv.Overlay:
-        print(f"update_graph: ({x},{y}) ({x2},{y2})")
-        graph_data = self.data.sel(x=x, y=y, method="nearest")
+        if None not in [x, y]:
+            print(f"update_graph: ({x},{y}) ")
+            graph_data = self.data.sel(x=x, y=y, method="nearest")
+        elif None not in [x2, y2]:
+            print(f"update_graph: ({x2},{y2})")
+            graph_data = self.data.sel(x=x2, y=y2, method="nearest")
+        else: return hv.Overlay( self.curves )
+
         line_color = "black" if (lm().current_color == "white") else lm().current_color
-        # if None not in [x, y]:
-        #     self.graph_data = self.data.sel(x=x, y=y, method="nearest")
-        # elif None not in [x2, y2]:
-        #     self.graph_data = self.data.sel(x=x2, y=y2, method="nearest")
         if (self.current_curve_data is not None) and self.current_curve_data[0] > 0:
             self.curves.append( self.current_curve_data[1].opts(line_width=1) )
         current_curve = hv.Curve(graph_data).opts(width=self.width, height=200, yaxis="bare", line_width=3, line_color=line_color)

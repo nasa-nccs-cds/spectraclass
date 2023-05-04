@@ -3,13 +3,14 @@ from spectraclass.data.spatial.tile.manager import TileManager
 dm: DataManager = DataManager.initialize( "AGB", 'neon' )
 
 block_size = 250
-model_dims = 3
+model_dims = 6
 year= 2015
 version = "beta_pmm"
 roi = "541567.6_4136443.0_542567.6_4137443.0"
 
 dm.proc_type = "cpu"
 dm.modal.images_glob = f"AGB/test/{version}/MLBS_{year}_{roi}/MLBS_{year}_Reflectance_reflectance_warp.tif"
+dm.modal.reduce_nepoch = 2
 TileManager.block_size = block_size
 TileManager.reprocess = True
 dm.modal.refresh_model = True
