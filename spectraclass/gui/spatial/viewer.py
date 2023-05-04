@@ -45,9 +45,9 @@ class VariableBrowser:
         self.nIter = data.shape[0]
         self.player: DiscretePlayer = DiscretePlayer(name='Iteration', options=list(range(self.nIter)), value=self.nIter - 1)
         self.tap_stream = SingleTap( transient=True )
-        self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True)
-        self.selection_dmap = hv.DynamicMap(self.select_points, streams=[self.tap_stream, self.double_tap_stream])
-        self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream, self.double_tap_stream])
+        self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True )
+        self.selection_dmap = hv.DynamicMap( self.select_points, streams=[self.tap_stream, self.double_tap_stream] )
+        self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream, self.double_tap_stream] )
         self.image = hv.DynamicMap( pn.bind(self.get_frame, iteration=self.player) )
         self.iter_marker = hv.DynamicMap( pn.bind(self.get_iter_marker, index=self.player) )
         self.graph_data = xa.DataArray([])
