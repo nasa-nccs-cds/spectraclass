@@ -3,7 +3,6 @@ from typing import List, Union, Tuple, Optional, Dict, Type, Hashable, Callable
 import hvplot.xarray
 from panel.widgets.player import DiscretePlayer
 import holoviews as hv
-from spectraclass.data.spatial.satellite import spm
 from panel.layout import Panel
 from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.model.labels import LabelsManager, lm
@@ -47,17 +46,16 @@ class VariableBrowser:
         self.player: DiscretePlayer = DiscretePlayer(name='Iteration', options=list(range(self.nIter)), value=self.nIter - 1)
         self.tap_stream = SingleTap( transient=True )
         self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True)
+        self.selection_dmap = hv.DynamicMap(self.select_points, streams=[self.tap_stream, self.double_tap_stream])
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream, self.double_tap_stream])
         self.image = hv.DynamicMap( pn.bind(self.get_frame, iteration=self.player) )
         self.iter_marker = hv.DynamicMap( pn.bind(self.get_iter_marker, index=self.player) )
         self.graph_data = xa.DataArray([])
         self.curves: List[hv.Curve] = []
         self.current_curve_data: Tuple[int,hv.Curve] = None
-        self.selection_dmap = hv.DynamicMap(self.select_points, streams=[self.tap_stream, self.double_tap_stream])
 
     @exception_handled
     def select_points(self, x, y, x2, y2):
-        print(f"select_points: ({x},{y}) ({x2},{y2})")
         if None not in [x, y]:
             lm().on_button_press( x, y )
         elif None not in [x2, y2]:
@@ -67,15 +65,12 @@ class VariableBrowser:
 
     @exception_handled
     def update_graph(self, x, y, x2, y2) -> hv.Overlay:
-        if None not in [x, y]:
-            print(f"update_graph: ({x},{y}) ")
-            graph_data = self.data.sel(x=x, y=y, method="nearest")
-        elif None not in [x2, y2]:
-            print(f"update_graph: ({x2},{y2})")
-            graph_data = self.data.sel(x=x2, y=y2, method="nearest")
-        else: return hv.Overlay( self.curves )
-
+        graph_data = self.data.sel(x=x, y=y, method="nearest")
         line_color = "black" if (lm().current_color == "white") else lm().current_color
+        # if None not in [x, y]:
+        #     self.graph_data = self.data.sel(x=x, y=y, method="nearest")
+        # elif None not in [x2, y2]:
+        #     self.graph_data = self.data.sel(x=x2, y=y2, method="nearest")
         if (self.current_curve_data is not None) and self.current_curve_data[0] > 0:
             self.curves.append( self.current_curve_data[1].opts(line_width=1) )
         current_curve = hv.Curve(graph_data).opts(width=self.width, height=200, yaxis="bare", line_width=3, line_color=line_color)

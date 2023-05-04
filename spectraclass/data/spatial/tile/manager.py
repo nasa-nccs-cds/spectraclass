@@ -1,6 +1,5 @@
 from skimage.transform import ProjectiveTransform
 import numpy as np
-import holoviews as hv
 import codecs
 import xarray as xa
 import geoviews.tile_sources as gts
@@ -27,13 +26,6 @@ def nnan( array: Optional[Union[np.ndarray,xa.DataArray]] ):
 
 def tm() -> "TileManager":
     return TileManager.instance()
-
-def nblocks( tile_size: int, block_size: int ) -> int:
-    tbm = tile_size % block_size
-    nb = (tile_size // block_size) if (tbm== 0) else math.ceil( tile_size/block_size )
-    lgm().log( f" $$$$$ nblocks: tile_size={tile_size} block_size={block_size} nblocks={nb}")
-    return nb
-
 
 class PointsOutOfBoundsException(Exception):
     def __str__(self):
@@ -89,6 +81,13 @@ class TileManager(SCSingletonConfigurable):
         self._idxtiles[ tile_index ] = new_tile
         return self._tiles.setdefault( self.get_image_name(index=tile_index), new_tile )
 
+    def get_satellite_image(self):
+        projection = ccrs.GOOGLE_MERCATOR
+        block = self.getBlock()
+        (xlim, ylim) = block.get_extent(projection)
+        tile_source = gts.tile_sources.get("EsriImagery", None).opts(xlim=xlim, ylim=ylim, width=600, height=570)
+        return tile_source
+
     def tile_grid_offset(self, tile_index: int ) -> int:
         offset = 0
         for itile in range( tile_index ):
@@ -115,7 +114,8 @@ class TileManager(SCSingletonConfigurable):
 
     @property
     def block_dims(self) -> Tuple[int,int]:
-        return nblocks(self.tile_shape[0],self.block_size), nblocks(self.tile_shape[1],self.block_size)
+        ts = self.tile_shape
+        return math.ceil(ts[0]/self.block_size), math.ceil(ts[1]/self.block_size)
 
     @property
     def tile_size(self) -> Tuple[int,int]:
