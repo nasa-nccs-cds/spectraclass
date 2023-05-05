@@ -501,6 +501,10 @@ class MapManager(SCSingletonConfigurable):
     def data(self) -> Optional[xa.DataArray]:
         return self.getRasterData( self.use_model_data )
 
+    def getBandData(self, **kwargs ) -> xa.DataArray:
+        if self.block is None: self.setBlock()
+        return self.block.getBandData( **kwargs )
+
     def getRasterData(self, use_model: bool ) -> Optional[xa.DataArray]:
         from spectraclass.data.base import dm
         if self.block is None: self.setBlock()
@@ -512,9 +516,10 @@ class MapManager(SCSingletonConfigurable):
         point_data = dm().getModelData()
         return self.block.points2raster(  point_data ) if raster else point_data
 
-    def getReproduction(self) -> Optional[xa.DataArray]:
+    def getReproduction(self, raster=False ) -> Optional[xa.DataArray]:
         if self.block is None: self.setBlock()
-        return self.block.reproduction
+        point_data =  self.block.reproduction
+        return self.block.points2raster(point_data) if raster else point_data
 
     @exception_handled
     def setBlock( self, block_index: Tuple[int,int] = None, **kwargs ):

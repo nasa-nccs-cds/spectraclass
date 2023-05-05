@@ -402,11 +402,11 @@ class ModeDataManager(SCSingletonConfigurable):
             for iB, block in enumerate(blocks):
                 if iB < self.reduce_nblocks:
                     t0 = time.time()
-                    point_data, grid = block.getPointData()
-                    if point_data.shape[0] > 0:
+                    norm_point_data, grid = block.getPointData( norm=True )
+                    if norm_point_data.shape[0] > 0:
                         final_epoch = initial_epoch + self.reduce_nepoch
-                        lgm().log( f" ** ITER[{iter}]: Processing block{block.block_coords}, data shape = {point_data.shape}", print=True)
-                        history: tf.keras.callbacks.History = self._autoencoder.fit(point_data.data, point_data.data, initial_epoch=initial_epoch,
+                        lgm().log( f" ** ITER[{iter}]: Processing block{block.block_coords}, norm data shape = {norm_point_data.shape}", print=True)
+                        history: tf.keras.callbacks.History = self._autoencoder.fit(norm_point_data.data, norm_point_data.data, initial_epoch=initial_epoch,
                                                                  epochs=final_epoch, batch_size=256, shuffle=True)
                         initial_epoch = final_epoch
                         lgm().log(f" Trained autoencoder in {time.time() - t0} sec", print=True)

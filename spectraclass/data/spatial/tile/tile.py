@@ -597,6 +597,11 @@ class Block(DataContainer):
     def getSpectralData(self, raster: bool = True ) -> xa.DataArray:
         return self.data if raster else self.getPointData()
 
+    def getBandData( self, **kwargs ) -> xa.DataArray:
+        raster = kwargs.pop( 'raster', True)
+        ptdata, pcoords = self.getPointData( **kwargs )
+        return self.points2raster( ptdata ) if raster else  ptdata
+
     @property
     def model_data(self) -> xa.DataArray:
         if self._model_data is None: self._get_model_data()
@@ -669,7 +674,7 @@ class Block(DataContainer):
         return bounds
 
     @log_timing
-    def getPointData( self, **kwargs ) -> Tuple[xa.DataArray,Dict]:
+    def getPointData( self, **kwargs ) -> Tuple[ Optional[xa.DataArray], Dict ]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         norm = kwargs.get('norm', True)
         if self._point_data is None:
@@ -687,11 +692,8 @@ class Block(DataContainer):
             self._point_data.attrs['rmask'] = rmask
             self._point_mask = pmask
             self._raster_mask = rmask
-        result = tm().norm( self._point_data )
+        result = tm().norm( self._point_data ) if norm else self._point_data
         return (result, self._point_coords )
-
-    def mask_bands(self, point_data: xa.DataArray )-> xa.DataArray:
-        return point_data[:,self._band_mask]
 
     @property
     def point_mask(self) -> np.ndarray:

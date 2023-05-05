@@ -1,19 +1,19 @@
 import xarray as xa
+import holoviews as hv
+import panel as pn
+from spectraclass.gui.spatial.viewer import RasterCollectionsViewer
+from spectraclass.gui.spatial.map import MapManager, mm
 from spectraclass.data.base import DataManager
 from spectraclass.data.spatial.tile.manager import TileManager
-from gui.spatial.viewer import RasterCollectionsViewer
-from spectraclass.gui.spatial.map import MapManager, mm
 from spectraclass.model.labels import LabelsManager, lm
 from typing import List, Union, Tuple, Optional, Dict, Callable
+pn.extension()
+hv.extension('bokeh')
 
 dm: DataManager = DataManager.initialize( "AGB", 'neon' )
 
-dm.modal.cache_dir = "/Volumes/archive/spectraclass/logs"
-dm.modal.data_dir  = "/Volumes/archive/data/"
-
-block_size = 150
-method = "aec" # "vae"
-model_dims = 32
+block_size = 250
+model_dims = 6
 year= 2015
 version = "beta_pmm"
 roi = "541567.6_4136443.0_542567.6_4137443.0"
@@ -22,24 +22,15 @@ dm.proc_type = "cpu"
 dm.modal.images_glob = f"AGB/test/{version}/MLBS_{year}_{roi}/MLBS_{year}_Reflectance_reflectance_warp.tif"
 TileManager.block_size = block_size
 TileManager.reprocess = False
-dm.modal.model_dims = model_dims
-dm.modal.reduce_method = method
-dm.modal.reduce_nepoch = 2
-dm.modal.reduce_focus_nepoch = 0
-dm.modal.reduce_niter = 12
-dm.modal.reduce_focus_ratio = 10.0
-dm.modal.reduce_dropout = 0.0
-dm.modal.reduce_learning_rate = 1e-4
 dm.modal.refresh_model = False
-dm.modal.reduce_nblocks = 1000
-dm.modal.reduce_nimages = 100
-dm.modal.modelkey = f"b{block_size}.{version}.{year}.{roi}"
+dm.modal.model_dims = model_dims
+dm.modal.modelkey = f"agp.neon.{version}.{year}.{roi}.{block_size}"
 
 dm.loadCurrentProject()
-classes = [ ('Class-1', "cyan"),
-            ('Class-2', "green"),
-            ('Class-3', "magenta"),
-            ('Class-4', "blue")]
+classes = [ ('air', "cyan"),
+            ('water', "blue"),
+            ('fire', "magenta"),
+            ('earth', "green") ]
 
 lm().setLabels( classes )
 
@@ -47,5 +38,5 @@ dset_names: List[str] = list(dm.modal.datasets.keys())
 dset: Dict[str,xa.DataArray] = dm.modal.datasets[ dset_names[0] ]
 fdata: xa.DataArray = mm().data.rename( dict(band='feature') )
 sdata: xa.DataArray = dset['raw']
-viewer = RasterCollectionsViewer( dict( features=fdata, bands=sdata ) )
+viewer = RasterCollectionsViewer( dict( features=fdata, bands=sdata, reproduction=mm().getReproduction(True) ) )
 viewer.panel()
