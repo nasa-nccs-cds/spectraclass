@@ -334,7 +334,7 @@ class TileManager(SCSingletonConfigurable):
         nodata_value = raster.attrs.get('data_ignore_value', -9999)
         return raster.where(raster != nodata_value, float('nan') )
 
-    def norm(self, data: xa.DataArray, axis=1) -> xa.DataArray:
+    def norm( self, data: xa.DataArray, axis=None ) -> xa.DataArray:
         dave, dmag = np.nanmean(data.values, keepdims=True, axis=axis), np.nanstd(data.values, keepdims=True, axis=axis)
         normed_data = (data.values - dave) / dmag
         return data.copy(data=normed_data)

@@ -510,10 +510,14 @@ class MapManager(SCSingletonConfigurable):
         if self.block is None: self.setBlock()
         return self.block.points2raster( dm().getModelData() ) if use_model else self.block.data
 
-    def getModelData(self, raster: bool ) -> Optional[xa.DataArray]:
+    def getModelData(self, **kwargs ) -> Optional[xa.DataArray]:
         from spectraclass.data.base import dm
+        from spectraclass.data.spatial.tile.manager import tm
+        raster: bool = kwargs.pop( 'raster', False )
+        norm: bool = kwargs.pop( 'norm', False )
         if self.block is None: self.setBlock()
         point_data = dm().getModelData()
+        if norm: point_data = tm().norm( point_data )
         return self.block.points2raster(  point_data ) if raster else point_data
 
     def getReproduction(self, raster=False ) -> Optional[xa.DataArray]:

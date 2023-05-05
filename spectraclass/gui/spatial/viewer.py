@@ -48,7 +48,7 @@ class VariableBrowser:
         self.verification: xa.DataArray = None
         self.width = plotopts.get('width',600)
         self.cmap = plotopts.get('cmap', 'jet')
-        self.yrange = [np.inf,-np.inf]
+ #       self.yrange = [np.inf,-np.inf]
         self.nIter: int = data.shape[0]
         self.player: DiscretePlayer = DiscretePlayer(name='Iteration', options=list(range(self.nIter)), value=self.nIter - 1)
         self.tap_stream = SingleTap( transient=True )
@@ -61,9 +61,9 @@ class VariableBrowser:
         self.curves: List[hv.Curve] = []
         self.current_curve_data: Tuple[int,hv.Curve] = None
 
-    def update_yrange( self, new_range: Tuple[float,float] ):
-        self.yrange[0] = min( self.yrange[0], new_range[0] )
-        self.yrange[1] = max( self.yrange[1], new_range[1] )
+    # def update_yrange( self, new_range: Tuple[float,float] ):
+    #     self.yrange[0] = min( self.yrange[0], new_range[0] )
+    #     self.yrange[1] = max( self.yrange[1], new_range[1] )
 
     @exception_handled
     def select_points(self, x, y, x2, y2):
@@ -77,12 +77,12 @@ class VariableBrowser:
     @exception_handled
     def update_graph(self, x, y, x2, y2) -> hv.Overlay:
         graph_data = self.data.sel(x=x, y=y, method="nearest")
-        gdrange = arange(graph_data)
-        self.update_yrange( gdrange )
-        lgm().log(f"^^^^ Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, range={gdrange}")
+#        gdrange = arange(graph_data)
+#        self.update_yrange( gdrange )
+#        lgm().log(f"^^^^ Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, range={gdrange}")
         is_probe = (lm().current_cid == 0)
         line_color = "black" if is_probe else lm().current_color
-        popts = dict( width = self.width, height = 200, line_color = line_color )
+        popts = dict( width = self.width, height = 200, line_color = line_color, yaxis = "bare", ylim=(-2,2) )
         # if None not in [x, y]:
         #     self.graph_data = self.data.sel(x=x, y=y, method="nearest")
         # elif None not in [x2, y2]:
@@ -90,16 +90,14 @@ class VariableBrowser:
 
         if (self.current_curve_data is not None) and (self.current_curve_data[0] > 0):
             self.curves.append( self.current_curve_data[1].opts(line_width=1) )
-        current_curve = hv.Curve(graph_data).redim.range( y=tuple(self.yrange) ).opts(line_width=3, **popts)
+        current_curve = hv.Curve(graph_data).opts(line_width=3, **popts)
         self.current_curve_data = ( lm().current_cid, current_curve )
         new_curves = [ self.current_curve_data[1] ]
         if is_probe and (self.verification is not None):
             verification_data: xa.DataArray = self.verification.sel(x=x, y=y, method="nearest")
-            lgm().log( f"^^^^ Plotting verification data[{verification_data.dims}]: shape = {verification_data.shape}, range={arange(verification_data)}")
-            verification_curve = hv.Curve(verification_data).redim.range( y=tuple(self.yrange) ).opts( line_width=1, **popts )
+            verification_curve = hv.Curve(verification_data).opts( line_width=1, **popts )
             new_curves.append( verification_curve )
         updated_curves = self.curves + new_curves
-        lgm().log(f"^^^^ Plotting updated_curves: {updated_curves}")
         return hv.Overlay( updated_curves )
 
     @exception_handled
