@@ -177,7 +177,8 @@ class Tile(DataContainer):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         tile_data = tm().getTileData()
         lgm().log( f"#Tile[{self._index}]-> Read Data: shape = {tile_data.shape}, dims={tile_data.dims}", print=True )
-        return self.filter_degraded_bands( tile_data )
+        tile_data = self.filter_degraded_bands( tile_data )
+        return tile_data
 
     def filter_degraded_bands(self, tile_data: xa.DataArray ) -> xa.DataArray:
         lgm().log(f"  ---> attrs: {tile_data.attrs}" )
@@ -614,7 +615,7 @@ class Block(DataContainer):
 
     def _get_model_data(self):
         from spectraclass.data.base import DataManager, dm
-        pdata, pcoords = self.getPointData()
+        pdata, pcoords = self.getPointData( anomaly=dm().modal.anomaly )
         lgm().log(f"_get_model_data: pcoords = {list(pcoords.keys())}")
         (self._model_data, self._reproduction) = dm().modal.reduce( pdata )
         self._model_data.attrs['block_coords'] = self.block_coords
@@ -673,14 +674,25 @@ class Block(DataContainer):
         lgm().log( f"GET BLOCK{self.block_coords} BOUNDS: dx={bounds[0]}, dy={bounds[1]}, block_size={bsize}")
         return bounds
 
+    @property
+    def raw_point_data(self):
+        if self._point_data is None:
+            self.getPointData()
+        return self._point_data
+
     @log_timing
     def getPointData( self, **kwargs ) -> Tuple[ Optional[xa.DataArray], Dict ]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.data.base import DataManager, dm
         norm = kwargs.get('norm', True)
+        anomaly = kwargs.get( 'anomaly', False )
         if self._point_data is None:
             lgm().log(f"BLOCK[{self.dsid()}].getPointData:")
             self._point_data, pmask, rmask =  self.raster2points( self.data )
             if (self._point_data is None): return (None, {})
+            if anomaly:
+                spectral_mean = dm().modal.spectral_mean
+                self._point_data = self._point_data - spectral_mean
             # lgm().log( f"\n *** pdata: {0 if (self._point_data is None) else self._point_data.shape} " )
             # lgm().log( f"\n *** pmask: {0 if (pmask is None) else np.count_nonzero(pmask)}/{0 if (pmask is None) else pmask.shape}, " )
             # lgm().log( f"\n *** rmask: {0 if (rmask is None) else np.count_nonzero(rmask)}/{0 if (rmask is None) else rmask.shape}" )

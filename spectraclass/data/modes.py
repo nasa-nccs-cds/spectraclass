@@ -78,6 +78,7 @@ class ModeDataManager(SCSingletonConfigurable):
     model_dims = tl.Int(16).tag(config=True, sync=True)
     subsample_index = tl.Int(1).tag(config=True, sync=True)
     reduce_method = tl.Unicode("vae").tag(config=True, sync=True)
+    anomaly = tl.Bool(False).tag(config=True, sync=True)
     reduce_anom_focus = tl.Float( 0.25 ).tag(config=True, sync=True)
     reduce_nepoch = tl.Int(5).tag(config=True, sync=True)
     reduce_nimages = tl.Int(100).tag(config=True, sync=True)
@@ -108,6 +109,20 @@ class ModeDataManager(SCSingletonConfigurable):
         self._autoencoder = None
         self._encoder = None
         self._metadata: Dict = None
+        self._spectral_mean: Optional[xa.DataArray] = None
+
+    @property
+    def spectral_mean(self) -> Optional[xa.DataArray]:
+        if self._spectral_mean is None:
+            self._spectral_mean = self.load_spectral_mean()
+        return self._spectral_mean
+
+    def load_spectral_mean(self) -> Optional[xa.DataArray]:
+        from spectraclass.data.base import DataManager, dm
+        file_path = f"{dm().cache_dir}/{self.modelkey}.spectral_mean.nc"
+        if os.path.exists( file_path ):
+            spectral_mean: xa.DataArray = xa.open_dataarray( file_path )
+            return spectral_mean
 
     @property
     def ext(self):
@@ -402,7 +417,7 @@ class ModeDataManager(SCSingletonConfigurable):
             for iB, block in enumerate(blocks):
                 if iB < self.reduce_nblocks:
                     t0 = time.time()
-                    norm_point_data, grid = block.getPointData( norm=True )
+                    norm_point_data, grid = block.getPointData( norm=True, anomaly=self.anomaly )
                     if norm_point_data.shape[0] > 0:
                         final_epoch = initial_epoch + self.reduce_nepoch
                         lgm().log( f" ** ITER[{iter}]: Processing block{block.block_coords}, norm data shape = {norm_point_data.shape}", print=True)
