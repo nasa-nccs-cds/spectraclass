@@ -7,7 +7,6 @@ from spectraclass.gui.control import ufm
 from spectraclass.reduction.embedding import rm
 from spectraclass.data.base import ModeDataManager
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Set
-import matplotlib.pyplot as plt
 import stat, os, time, json
 from spectraclass.data.spatial.tile.tile import Block, Tile
 from rioxarray.exceptions import NoDataInBounds
