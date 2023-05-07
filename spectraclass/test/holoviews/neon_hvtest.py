@@ -10,12 +10,14 @@ from spectraclass.model.labels import LabelsManager, lm
 from typing import List, Union, Tuple, Optional, Dict, Callable
 pn.extension()
 hv.extension('bokeh')
-
 dm: DataManager = DataManager.initialize( "AGB", 'neon' )
+TileManager.reprocess = False
+dm.modal.refresh_model = False
 
 block_size = 250
-model_dims = 12
-nepochs = 100
+model_dims = 6
+nepoch = 1
+niter = 100
 year= 2015
 version = "beta_pmm"
 roi = "541567.6_4136443.0_542567.6_4137443.0"
@@ -23,11 +25,10 @@ roi = "541567.6_4136443.0_542567.6_4137443.0"
 dm.proc_type = "cpu"
 dm.modal.images_glob = f"AGB/test/{version}/MLBS_{year}_{roi}/MLBS_{year}_Reflectance_reflectance_warp.tif"
 TileManager.block_size = block_size
-TileManager.reprocess = True
-dm.modal.refresh_model = True
 dm.modal.model_dims = model_dims
 dm.modal.modelkey = f"agp.neon.{version}.{year}.{roi}.{block_size}"
-dm.modal.reduce_nepoch = nepochs
+dm.modal.reduce_nepoch = nepoch
+dm.modal.reduce_niter = niter
 
 dm.loadCurrentProject()
 classes = [ ('air', "cyan"),
@@ -41,5 +42,5 @@ dset_names: List[str] = list(dm.modal.datasets.keys())
 fdata: xa.DataArray = mm().getModelData(raster=True,norm=True).rename( dict(band='feature') )
 band_data: xa.DataArray =  mm().getBandData(raster=True,norm=True)
 reproduction=mm().getReproduction(raster=True)
-viewer = RasterCollectionsViewer( dict( features=fdata, bands=band_data, reproduction=reproduction ), verification=reproduction )
+viewer = RasterCollectionsViewer( dict( features=fdata, bands=band_data, reproduction=reproduction ) )
 viewer.panel()

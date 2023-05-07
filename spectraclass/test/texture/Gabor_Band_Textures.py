@@ -1,5 +1,4 @@
 import math, random, numpy as np
-import matplotlib.pyplot as plt
 from spectraclass.test.texture.util import *
 from spectraclass.test.texture.util import load_test_data
 from spectraclass.features.texture.gabor import Gabor

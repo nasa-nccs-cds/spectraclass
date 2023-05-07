@@ -1,7 +1,4 @@
 import numpy as np
-from matplotlib.lines import Line2D
-from matplotlib.collections import PatchCollection, PolyCollection
-from matplotlib.patches import Polygon
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from shapely.geometry import Polygon as SPolygon
 from matplotlib.backend_bases import MouseEvent, KeyEvent

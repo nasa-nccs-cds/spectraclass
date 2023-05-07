@@ -1,12 +1,9 @@
 import random, numpy as np
-import matplotlib.pyplot as plt
 from pywt import dwt2
 from spectraclass.test.texture.util import *
 from skimage.filters.rank import entropy
 from skimage.morphology import disk
 from spectraclass.test.texture.util import load_test_data
-
-fig, axs = plt.subplots( 2, 3 )
 
 dataset_type = "chr"
 dsid = "ks"

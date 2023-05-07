@@ -1,6 +1,5 @@
 import os, time, random, numpy as np
 from typing import List, Union, Tuple, Optional, Dict, Callable, Iterable
-import matplotlib.pyplot as plt
 import scipy.stats as stats
 from matplotlib.figure import Figure
 from matplotlib.image import AxesImage

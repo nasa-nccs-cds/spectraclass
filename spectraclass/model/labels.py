@@ -3,7 +3,6 @@ from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Set
 from spectraclass.data.spatial.tile.tile import Block
 import os, collections.abc
 from functools import partial
-from matplotlib import colors
 import panel as pn
 from ..graph.manager import ActivationFlow
 import traitlets.config as tlc

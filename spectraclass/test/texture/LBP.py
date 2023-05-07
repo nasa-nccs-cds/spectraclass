@@ -1,6 +1,5 @@
 import os, time, random, numpy as np
 from typing import List, Union, Tuple, Optional, Dict, Callable, Iterable
-import matplotlib.pyplot as plt
 import xarray as xa
 from spectraclass.features.texture.lbp import LBP
 from spectraclass.test.texture.util import load_test_data, plot

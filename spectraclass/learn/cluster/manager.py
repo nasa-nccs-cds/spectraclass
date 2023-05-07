@@ -2,8 +2,6 @@ import pickle
 
 from joblib import cpu_count
 from spectraclass.gui.spatial.widgets.markers import Marker
-from matplotlib.colors import LinearSegmentedColormap, hsv_to_rgb
-from matplotlib.backend_bases import MouseEvent
 import xarray as xa
 import ipywidgets as ipw
 from functools import partial

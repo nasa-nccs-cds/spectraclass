@@ -3,6 +3,7 @@ from typing import List, Union, Tuple, Optional, Dict, Type, Hashable, Callable
 import hvplot.xarray
 from panel.widgets.player import DiscretePlayer
 import holoviews as hv
+from spectraclass.data.base import dm
 from panel.layout import Panel
 from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.model.labels import LabelsManager, lm
@@ -45,7 +46,6 @@ class VariableBrowser:
     def __init__(self, cname: str, data: xa.DataArray, **plotopts ):
         self.cname = cname
         self.data: xa.DataArray = data
-        self.verification: xa.DataArray = None
         self.width = plotopts.get('width',600)
         self.cmap = plotopts.get('cmap', 'jet')
  #       self.yrange = [np.inf,-np.inf]
@@ -76,13 +76,14 @@ class VariableBrowser:
 
     @exception_handled
     def update_graph(self, x, y, x2, y2) -> hv.Overlay:
+        from spectraclass.gui.spatial.map import MapManager, mm
         graph_data = self.data.sel(x=x, y=y, method="nearest")
 #        gdrange = arange(graph_data)
 #        self.update_yrange( gdrange )
 #        lgm().log(f"^^^^ Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, range={gdrange}")
         is_probe = (lm().current_cid == 0)
         line_color = "black" if is_probe else lm().current_color
-        popts = dict( width = self.width, height = 200, line_color = line_color, yaxis = "bare", ylim=(-2,2) )
+        popts = dict( width = self.width, height = 200, yaxis = "bare", ylim=(-2,2), alpha=0.6 )
         # if None not in [x, y]:
         #     self.graph_data = self.data.sel(x=x, y=y, method="nearest")
         # elif None not in [x2, y2]:
@@ -90,13 +91,18 @@ class VariableBrowser:
 
         if (self.current_curve_data is not None) and (self.current_curve_data[0] > 0):
             self.curves.append( self.current_curve_data[1].opts(line_width=1) )
-        current_curve = hv.Curve(graph_data).opts(line_width=3, **popts)
+        current_curve = hv.Curve(graph_data).opts(line_width=3, line_color = line_color, **popts)
         self.current_curve_data = ( lm().current_cid, current_curve )
         new_curves = [ self.current_curve_data[1] ]
-        if is_probe and (self.verification is not None):
-            verification_data: xa.DataArray = self.verification.sel(x=x, y=y, method="nearest")
-            verification_curve = hv.Curve(verification_data).opts( line_width=1, **popts )
-            new_curves.append( verification_curve )
+        if is_probe:
+            reproduction = mm().getReproduction(raster=True)
+            verification_data: xa.DataArray = reproduction.sel( x=x, y=y, method="nearest" )
+            smean_data:        xa.DataArray = dm().modal.getSpectralMean( norm=True )
+            lgm().log( f"V%% verification_data curve{verification_data.dims}, range = {arange(verification_data)}, shape={verification_data.shape}" )
+            lgm().log( f"V%% smean_data curve{smean_data.dims}, range = {arange(smean_data)}, shape={smean_data.shape}")
+            smean_curve        = hv.Curve(    smean_data     ).opts( line_width=1, line_color='red', **popts )
+            verification_curve = hv.Curve( verification_data ).opts( line_width=1, line_color='grey', **popts )
+            new_curves.extend( [smean_curve,verification_curve] )
         updated_curves = self.curves + new_curves
         return hv.Overlay( updated_curves )
 

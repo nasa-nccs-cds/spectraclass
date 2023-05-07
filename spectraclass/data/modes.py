@@ -111,11 +111,10 @@ class ModeDataManager(SCSingletonConfigurable):
         self._metadata: Dict = None
         self._spectral_mean: Optional[xa.DataArray] = None
 
-    @property
-    def spectral_mean(self) -> Optional[xa.DataArray]:
+    def getSpectralMean(self, norm=False ) -> Optional[xa.DataArray]:
         if self._spectral_mean is None:
             self._spectral_mean = self.load_spectral_mean()
-        return self._spectral_mean
+        return tm().norm(self._spectral_mean) if norm else self._spectral_mean
 
     def load_spectral_mean(self) -> Optional[xa.DataArray]:
         from spectraclass.data.base import DataManager, dm
@@ -417,7 +416,7 @@ class ModeDataManager(SCSingletonConfigurable):
             for iB, block in enumerate(blocks):
                 if iB < self.reduce_nblocks:
                     t0 = time.time()
-                    norm_point_data, grid = block.getPointData( norm=True, anomaly=self.anomaly )
+                    norm_point_data, grid = block.getPointData( norm=True )
                     if norm_point_data.shape[0] > 0:
                         final_epoch = initial_epoch + self.reduce_nepoch
                         lgm().log( f" ** ITER[{iter}]: Processing block{block.block_coords}, norm data shape = {norm_point_data.shape}", print=True)

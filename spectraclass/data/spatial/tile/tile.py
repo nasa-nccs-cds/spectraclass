@@ -615,7 +615,7 @@ class Block(DataContainer):
 
     def _get_model_data(self):
         from spectraclass.data.base import DataManager, dm
-        pdata, pcoords = self.getPointData( anomaly=dm().modal.anomaly )
+        pdata, pcoords = self.getPointData()
         lgm().log(f"_get_model_data: pcoords = {list(pcoords.keys())}")
         (self._model_data, self._reproduction) = dm().modal.reduce( pdata )
         self._model_data.attrs['block_coords'] = self.block_coords
@@ -685,14 +685,11 @@ class Block(DataContainer):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.data.base import DataManager, dm
         norm = kwargs.get('norm', True)
-        anomaly = kwargs.get( 'anomaly', False )
+        anomaly = kwargs.get( 'anomaly', dm().modal.anomaly )
         if self._point_data is None:
             lgm().log(f"BLOCK[{self.dsid()}].getPointData:")
             self._point_data, pmask, rmask =  self.raster2points( self.data )
             if (self._point_data is None): return (None, {})
-            if anomaly:
-                spectral_mean = dm().modal.spectral_mean
-                self._point_data = self._point_data - spectral_mean
             # lgm().log( f"\n *** pdata: {0 if (self._point_data is None) else self._point_data.shape} " )
             # lgm().log( f"\n *** pmask: {0 if (pmask is None) else np.count_nonzero(pmask)}/{0 if (pmask is None) else pmask.shape}, " )
             # lgm().log( f"\n *** rmask: {0 if (rmask is None) else np.count_nonzero(rmask)}/{0 if (rmask is None) else rmask.shape}" )
@@ -704,8 +701,11 @@ class Block(DataContainer):
             self._point_data.attrs['rmask'] = rmask
             self._point_mask = pmask
             self._raster_mask = rmask
-        result = tm().norm( self._point_data ) if norm else self._point_data
-        return (result, self._point_coords )
+        ptdata = self._point_data
+        smean = dm().modal.getSpectralMean( norm=False )
+        if anomaly:  ptdata = ptdata.copy( data=ptdata-smean )
+        if norm:     ptdata = tm().norm( ptdata )
+        return ( ptdata, self._point_coords )
 
     @property
     def point_mask(self) -> np.ndarray:

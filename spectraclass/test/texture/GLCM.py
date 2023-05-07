@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+
 from spectraclass.test.texture.util import *
 from spectraclass.features.texture.glcm import GLCM
 

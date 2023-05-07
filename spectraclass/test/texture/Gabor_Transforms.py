@@ -1,5 +1,4 @@
 import math, random, numpy as np
-import matplotlib.pyplot as plt
 from skimage.filters import gabor_kernel
 from skimage.filters.rank import entropy
 from skimage.morphology import disk

@@ -1,6 +1,5 @@
 import random, numpy as np
 from spectraclass.test.texture.util import load_test_data
-import matplotlib.pyplot as plt
 from skimage.filters import difference_of_gaussians
 from skimage.filters.rank import entropy
 from skimage.morphology import disk

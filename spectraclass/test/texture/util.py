@@ -1,8 +1,5 @@
 import os, time, random, numpy as np
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type
-from matplotlib.figure import Figure
-from matplotlib.image import AxesImage
-from matplotlib.axes import Axes, BarContainer
 from spectraclass.data.base import DataManager, dm
 import xarray as xa
 TEST_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))

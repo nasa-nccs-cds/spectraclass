@@ -1,10 +1,6 @@
 import os, time, random, numpy as np
 from typing import List, Union, Tuple, Optional, Dict, Callable, Iterable
-import matplotlib.pyplot as plt
 import scipy.stats as stats
-from matplotlib.figure import Figure
-from matplotlib.image import AxesImage
-from matplotlib.axes import Axes, BarContainer
 import xarray as xa
 from skimage.feature import texture as sktex
 from skimage.morphology import disk, ball
