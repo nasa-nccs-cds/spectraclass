@@ -610,10 +610,9 @@ class Block(DataContainer):
         if self._model_data is None: self._get_model_data()
         return self._model_data
 
-    @property
-    def reproduction(self) -> xa.DataArray:
+    def getReproduction(self, raster=False ) -> xa.DataArray:
         if self._model_data is None: self._get_model_data()
-        return self._reproduction
+        return self.points2raster(self._reproduction) if raster else self._reproduction
 
     @property
     def reduction_input_data(self) -> xa.DataArray:

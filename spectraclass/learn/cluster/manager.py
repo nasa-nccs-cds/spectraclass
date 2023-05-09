@@ -85,8 +85,7 @@ class ClusterManager(SCSingletonConfigurable):
         hsv[:, 1] = np.full( [ncolors], 0.4 )
         self._cluster_colors = np.full( [ncolors+1,3], 1.0 )
         for iC in range( ncolors ):
-            ih = iC*3
-            self._cluster_colors[iC+1,:] = colorsys.hsv_to_rgb( hsv[ih], hsv[ih+1], hsv[ih+2] )
+            self._cluster_colors[iC+1,:] = colorsys.hsv_to_rgb( *hsv[iC].tolist() )
 
     @property
     def mids(self) -> List[str]:

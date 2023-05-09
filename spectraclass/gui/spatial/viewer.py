@@ -6,6 +6,7 @@ import holoviews as hv
 from spectraclass.data.base import dm
 from panel.layout import Panel
 from spectraclass.gui.spatial.widgets.markers import Marker
+from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from holoviews.streams import SingleTap, DoubleTap
@@ -76,7 +77,7 @@ class VariableBrowser:
 
     @exception_handled
     def update_graph(self, x, y, x2, y2) -> hv.Overlay:
-        from spectraclass.gui.spatial.map import MapManager, mm
+        block: Block = tm().getBlock()
         graph_data: xa.DataArray = self.data.sel(x=x, y=y, method="nearest")
         lgm().log(f"V%% Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, range={arange(graph_data)}")
         is_probe = (lm().current_cid == 0)
@@ -96,7 +97,7 @@ class VariableBrowser:
             smean_data: xa.DataArray = dm().modal.getSpectralMean(norm=True)
             lgm().log(f"V%% [{self.cname}] smean_data.shape={smean_data.shape}  graph_data.shape={graph_data.shape}")
             if smean_data.shape[0] == graph_data.shape[0]:
-                reproduction: xa.DataArray = mm().getReproduction(raster=True)
+                reproduction: xa.DataArray = block.getReproduction(raster=True)
                 verification_data: xa.DataArray = reproduction.sel( x=x, y=y, method="nearest" )
                 lgm().log( f"V%% [{self.cname}] verification_data curve{verification_data.dims}, range = {arange(verification_data)}, shape={verification_data.shape}" )
                 lgm().log( f"V%% [{self.cname}] smean_data curve{smean_data.dims}, range = {arange(smean_data)}, shape={smean_data.shape}")
