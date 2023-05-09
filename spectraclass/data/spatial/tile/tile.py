@@ -394,7 +394,8 @@ class Block(DataContainer):
         self._raster_mask: Optional[np.ndarray] = None
         self._tmask: np.ndarray = None
         self._model_data: xa.DataArray = None
-        self._reproduction = None
+        self._reproduction: xa.DataArray = None
+        self._reduction_input_data: xa.DataArray = None
         self.tile: Tile = tile
         self.config = kwargs
         self._trecs: Tuple[ Dict[int,ThresholdRecord], Dict[int,ThresholdRecord] ] = ( {}, {} )
@@ -415,6 +416,7 @@ class Block(DataContainer):
         self._tmask: np.ndarray = None
         self._model_data: xa.DataArray = None
         self._reproduction = None
+        self._reduction_input_data = None
 
     def set_thresholds(self, bUseModel: bool, iFrame: int, thresholds: Tuple[float,float] ) -> bool:
         trec: ThresholdRecord = self.threshold_record( bUseModel, iFrame )
@@ -613,11 +615,17 @@ class Block(DataContainer):
         if self._model_data is None: self._get_model_data()
         return self._reproduction
 
+    @property
+    def reduction_input_data(self) -> xa.DataArray:
+        if self._model_data is None: self._get_model_data()
+        return self._reduction_input_data
+
     def _get_model_data(self):
         from spectraclass.data.base import DataManager, dm
         pdata, pcoords = self.getPointData()
         lgm().log(f"_get_model_data: pcoords = {list(pcoords.keys())}")
         (self._model_data, self._reproduction) = dm().modal.reduce( pdata )
+        self._reduction_input_data = pdata
         self._model_data.attrs['block_coords'] = self.block_coords
         self._model_data.attrs['dsid'] = self.dsid()
         self._model_data.attrs['file_name'] = self.file_name
@@ -702,9 +710,11 @@ class Block(DataContainer):
             self._point_mask = pmask
             self._raster_mask = rmask
         ptdata = self._point_data
-        smean = dm().modal.getSpectralMean( norm=False )
-        if anomaly:  ptdata = ptdata.copy( data=ptdata-smean )
-        if norm:     ptdata = tm().norm( ptdata )
+        if anomaly:
+            smean = dm().modal.getSpectralMean(norm=False)
+            ptdata = ptdata.copy( data=ptdata-smean )
+        if norm:
+            ptdata = tm().norm( ptdata )
         return ( ptdata, self._point_coords )
 
     @property

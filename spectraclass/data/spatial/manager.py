@@ -27,13 +27,10 @@ class SpatialDataManager(ModeDataManager):
     colorstretch = 1.25
 
     def __init__( self  ):   # Tile shape (y,x) matches image shape (row,col)
-        from spectraclass.gui.spatial.basemap import TileServiceBasemap
         super(SpatialDataManager, self).__init__()
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         self.tiles: TileManager = tm()
         self.spectral_means: List[ Tuple[int,np.ndarray] ] = []
-        self._tile_selection_basemap: TileServiceBasemap = None
-
 
     def getSpectralData( self, **kwargs ) -> Optional[xa.DataArray]:
         from spectraclass.gui.spatial.map import MapManager, mm
@@ -61,22 +58,13 @@ class SpatialDataManager(ModeDataManager):
         dx2, dy2 = (xc[1]-xc[0])/2, (yc[0]-yc[1])/2
         return [ xc[0]-dx2,  xc[-1]+dx2,  yc[-1]-dy2,  yc[0]+dy2 ]
 
-    @property
-    def tile_selection_basemap(self):
-        from spectraclass.gui.spatial.basemap import TileServiceBasemap
-        if self._tile_selection_basemap is None:
-            self._tile_selection_basemap = TileServiceBasemap( block_selection=True )
-            (x0, x1, y0, y1) = self.tiles.tile.extent
-            self._tile_selection_basemap.setup_plot( "Block Selection", (x0, x1), (y0, y1), index=99, size=6.0, slider=False )
-        return self._tile_selection_basemap
-
     def gui(self, **kwargs):
-        return self.tile_selection_basemap.gui()
+        return None # self.tile_selection_basemap.gui()
 
     def update_extent(self):
         (x0, x1, y0, y1) = self.tiles.tile.extent
-        self.tile_selection_basemap.set_bounds( (x0, x1), (y0, y1) )
-        self.tile_selection_basemap.update()
+ #       self.tile_selection_basemap.set_bounds( (x0, x1), (y0, y1) )
+ #       self.tile_selection_basemap.update()
 
     def getConstantXArray(self, fill_value: float, shape: Tuple[int], dims: Tuple[str], **kwargs) -> xa.DataArray:
         coords = kwargs.get( "coords", { dim: np.arange(shape[id]) for id, dim in enumerate(dims) } )
@@ -251,7 +239,7 @@ class SpatialDataManager(ModeDataManager):
             ufm().show( f" *** Processing Block{block.block_coords}" )
             raw_data: xa.DataArray = block.data
             try:
-                blocks_point_data, coord_data = block.getPointData(norm=True)
+                blocks_point_data, coord_data = block.getPointData(norm=False,anomaly=False)
                 lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}")
             except NoDataInBounds:
                 blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
@@ -259,7 +247,8 @@ class SpatialDataManager(ModeDataManager):
             if blocks_point_data.size == 0:
                 ufm().show(f" *** NO DATA in BLOCK {block.block_coords} *** ")
                 return None
-            self.spectral_means.append( ( block.raw_point_data.shape[0], np.nanmean( block.raw_point_data.values, axis=0 ) ) )
+            smean = np.nanmean( block.raw_point_data.values, axis=0 )
+            self.spectral_means.append( ( block.raw_point_data.shape[0], smean ) )
             data_vars = dict( raw=raw_data )
             lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.shape[0]} samples" )
             data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y', 'x'], coords={d: raw_data.coords[d] for d in ['x', 'y']} )
@@ -319,7 +308,8 @@ class SpatialDataManager(ModeDataManager):
                     if result_dataset is not None:
                         block_sizes[ block.cindex ] = result_dataset.attrs[ 'nsamples']
                         if nbands is None: nbands = result_dataset.attrs[ 'nbands']
-            self.process_spectral_mean()
+            if len( self.spectral_means ) > 0:
+                self.process_spectral_mean()
             if not has_metadata:
                 self.write_metadata(block_sizes, attrs)
             self.autoencoder_preprocess( bands=nbands, **kwargs )
@@ -335,11 +325,12 @@ class SpatialDataManager(ModeDataManager):
         file_path = f"{dm().cache_dir}/{self.modelkey}.spectral_mean.nc"
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         try:
+            if os.path.isfile(file_path): os.remove(file_path)
             spectral_mean.to_netcdf( file_path )
             lgm().log(f"Writing spectral_mean file: {file_path}", print=True)
         except Exception as err:
             lgm().log(f" ---> ERROR Writing spectral_mean file at {file_path}: {err}", print=True)
-            if os.path.isfile(file_path): os.remove(file_path)
+
 
     def update_band_range(self, band_range: Tuple[np.ndarray,np.ndarray], dataset: xa.Dataset ) -> Tuple[np.ndarray,np.ndarray]:
         band_min: np.ndarray = dataset['band_min'].squeeze() if band_range is None else np.fmin( band_range[0], dataset['band_min'].values ).squeeze()
@@ -378,10 +369,10 @@ class SpatialDataManager(ModeDataManager):
         return spectral_data
 
     def readDataFile(self, file_path: str, **kwargs  ):
-        if file_path.endswith(".mat"):
-            return self.readMatlabFile( file_path )
-        else:
-            return self.readGeoTiff( file_path, **kwargs )
+        # if file_path.endswith(".mat"):
+        #     return self.readMatlabFile( file_path )
+        # else:
+        return self.readGeoTiff( file_path, **kwargs )
 
     @exception_handled
     def readGeoTiff(self, input_file_path: str ) -> xa.DataArray:
@@ -401,16 +392,16 @@ class SpatialDataManager(ModeDataManager):
 #             input_bands.attrs['_FillValue'] = np.nan
         return input_bands
 
-    def readMatlabFile(self, input_file_path: str ) -> xa.DataArray:
-        from scipy.io import loadmat
-        from spectraclass.gui.spatial.image import toXA
-        gtdset = loadmat(input_file_path)
-        vnames = [ vid for vid in gtdset.keys() if not vid.startswith("_") ]
-        assert len( vnames ) == 1, f"Can't find unique variable in matlab file {input_file_path}, vars = {vnames} "
-        gtarray: np.ndarray = gtdset[vnames[0]]
-        print(f"Reading variable '{vnames[0]}' from Matlab dataset '{input_file_path}': {gtdset['__header__']}")
-        filename, file_extension = os.path.splitext( input_file_path )
-        return toXA( vnames[0], gtarray, file_extension, True )
+    # def readMatlabFile(self, input_file_path: str ) -> xa.DataArray:
+    #     from scipy.io import loadmat
+    #     from spectraclass.gui.spatial.image import toXA
+    #     gtdset = loadmat(input_file_path)
+    #     vnames = [ vid for vid in gtdset.keys() if not vid.startswith("_") ]
+    #     assert len( vnames ) == 1, f"Can't find unique variable in matlab file {input_file_path}, vars = {vnames} "
+    #     gtarray: np.ndarray = gtdset[vnames[0]]
+    #     print(f"Reading variable '{vnames[0]}' from Matlab dataset '{input_file_path}': {gtdset['__header__']}")
+    #     filename, file_extension = os.path.splitext( input_file_path )
+    #     return toXA( vnames[0], gtarray, file_extension, True )
 
     def getClassMap(self) -> Optional[xa.DataArray]:
         class_file_path = os.path.join( ModeDataManager.data_dir, self.class_file )

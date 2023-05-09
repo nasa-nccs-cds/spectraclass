@@ -5,7 +5,7 @@ TileManager.reprocess = True
 dm.modal.refresh_model = True
 
 block_size = 250
-model_dims = 6
+model_dims = 8
 nepoch = 1
 niter = 100
 year= 2015

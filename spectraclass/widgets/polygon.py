@@ -1,7 +1,6 @@
 import numpy as np
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from shapely.geometry import Polygon as SPolygon
-from matplotlib.backend_bases import MouseEvent, KeyEvent
 from typing import List, Union, Tuple, Optional, Dict, Callable
 
 def dist(x, y):
@@ -39,10 +38,10 @@ class PolyRec:
     def to_shapely(self) -> SPolygon:
         return SPolygon( self.poly.get_xy() )
 
-    def contains_point(self, event: MouseEvent ) -> bool:
+    def contains_point(self, event ) -> bool:
         return self.poly.contains_point( (event.x,event.y) )
 
-    def vertex_selected( self, event: MouseEvent ):
+    def vertex_selected( self, event ):
         xy = np.asarray(self.poly.xy)
         xyt = self.poly.get_transform().transform(xy)
         xt, yt = xyt[:, 0], xyt[:, 1]

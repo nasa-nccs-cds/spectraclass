@@ -178,11 +178,10 @@ class DataManager(SCSingletonConfigurable):
     def save_config( self, overwrite = False ):
         from spectraclass.gui.spatial.map import MapManager, mm
         from spectraclass.reduction.embedding import ReductionManager, rm
-        from spectraclass.features.texture.manager import TextureManager, texm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.graph.manager import ActivationFlow, ActivationFlowManager, afm
-        afm(), lm(), pcm(), mm(), texm(), rm()
+        afm(), lm(), pcm(), mm(), rm()
         conf_dict = self.generate_config_file()
         for scope, trait_classes in conf_dict.items():
             cfg_file = os.path.realpath( self.config_file( scope, self.mode ) )

@@ -6,14 +6,13 @@ from functools import partial
 from spectraclass.gui.spatial.widgets.markers import MarkerManager
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from typing import List, Union, Tuple, Optional, Dict, Callable
-from spectraclass.gui.spatial.basemap import TileServiceBasemap
 from spectraclass.widgets.polygons import PolygonInteractor
 import ipywidgets as ipw
 import math, atexit, os, traceback, time
 from collections import OrderedDict
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.xext.xgeo import XGeo
-from spectraclass.learn.cluster.manager import ClusterSelector
+# from spectraclass.learn.cluster.manager import ClusterSelector
 # from spectraclass.widgets.slider import PageSlider
 import traitlets as tl
 from enum import Enum
@@ -46,7 +45,6 @@ class MapManager(SCSingletonConfigurable):
         super(MapManager, self).__init__()
         self._debug = False
         self.norm = None
-        self.base: TileServiceBasemap = None
         self._currentFrame = 0
         self.block: Block = None
         self.block_index = None
@@ -55,7 +53,7 @@ class MapManager(SCSingletonConfigurable):
         self.class_template = None
         self.raster_template = None
         self.points_selection: MarkerManager = None
-        self.cluster_selection: ClusterSelector = None
+#        self.cluster_selection: ClusterSelector = None
         self.region_selection: PolygonInteractor = None
         self._band_selector: ipw.IntSlider = None
         self._source_type_index = 1
@@ -87,7 +85,7 @@ class MapManager(SCSingletonConfigurable):
         return (self._source_type_index == 1)
 
     def clearMarkers(self):
-        for selector in [ self.points_selection, self.cluster_selection, self.region_selection ]:
+        for selector in [ self.points_selection,  self.region_selection ]: # self.cluster_selection,
             selector.clear()
 
     @exception_handled
@@ -210,7 +208,7 @@ class MapManager(SCSingletonConfigurable):
         # self.selection.observe( self.set_selection_mode, "value" )
         self.points_selection.set_enabled( False )
         self.region_selection.set_enabled( False )
-        self.cluster_selection.set_enabled(False)
+ #       self.cluster_selection.set_enabled(False)
 
     # @exception_handled
     # def set_selection_mode( self, event: Dict ):
@@ -525,6 +523,11 @@ class MapManager(SCSingletonConfigurable):
         point_data =  self.block.reproduction
         return self.block.points2raster(point_data) if raster else point_data
 
+    def getReductionInputData(self, raster=False ) -> Optional[xa.DataArray]:
+        if self.block is None: self.setBlock()
+        point_data =  self.block.reduction_input_data
+        return self.block.points2raster(point_data) if raster else point_data
+
     @exception_handled
     def setBlock( self, block_index: Tuple[int,int] = None, **kwargs ):
         from spectraclass.data.spatial.tile.manager import tm
@@ -544,8 +547,6 @@ class MapManager(SCSingletonConfigurable):
                 dm().clear_project_cache()
                 pcm().reset()
                 update = kwargs.get( 'update', False )
-                if self.base is not None:
-                    self.base.set_bounds(self.block.xlim, self.block.ylim)
                 self.band_axis = kwargs.pop('band', 0)
                 self.z_axis_name = self.data.dims[self.band_axis]
                 self.x_axis = kwargs.pop('x', 2)
@@ -560,21 +561,19 @@ class MapManager(SCSingletonConfigurable):
                 t2 = time.time()
                 ufm().show(f" ** Block Loaded: {t1-t0:.2f} {t2-t1:.2f} ")
 
-    def gui(self,**kwargs):
-        if self.base is None:
-            self.setBlock()
-            [x0, x1, y0, y1] = self.block.extent
-            self.base = TileServiceBasemap()
-            standalone = self.base.setup_plot("Label Construction", (x0, x1), (y0, y1), index=100, **kwargs)
-            self.init_map()
-            self.region_selection = PolygonInteractor(self.base.gax)
-            self.points_selection = MarkerManager(self.base.gax)
-            self.cluster_selection = ClusterSelector(self.base.gax)
-            self.init_hover()
-            if not standalone:
-                self.create_selection_panel()
-            self.update_message()
-        return self.base.gax.figure.canvas
+    # def gui(self,**kwargs):
+    #         self.setBlock()
+    #         [x0, x1, y0, y1] = self.block.extent
+    #         standalone = self.base.setup_plot("Label Construction", (x0, x1), (y0, y1), index=100, **kwargs)
+    #         self.init_map()
+    #         self.region_selection = PolygonInteractor(self.base.gax)
+    #         self.points_selection = MarkerManager(self.base.gax)
+    #         self.cluster_selection = ClusterSelector(self.base.gax)
+    #         self.init_hover()
+    #         if not standalone:
+    #             self.create_selection_panel()
+    #         self.update_message()
+    #     return self.base.gax.figure.canvas
 
 
     def mark_point(self, pid: int, **kwargs ) -> Optional[Tuple[float,float]]:
@@ -582,9 +581,10 @@ class MapManager(SCSingletonConfigurable):
         return point
 
     def init_hover(self):
-        def format_coord(x, y):
-            return "x: {}, y: {}".format(x, y)
-        self.base.gax.format_coord = format_coord
+        pass
+    #     def format_coord(x, y):
+    #         return "x: {}, y: {}".format(x, y)
+    #     self.base.gax.format_coord = format_coord
 
     def plot_markers_image(self, **kwargs ):
         self.points_selection.plot( **kwargs )
@@ -596,10 +596,11 @@ class MapManager(SCSingletonConfigurable):
      #   self.plot_axes.callbacks.connect('ylim_changed', self.on_lims_change)
 
     def update_block(self):
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        if self.base is not None:
-            self.base.set_title(f"IMAGE[{tm().image_index}]: BLOCK{tm().block_index}")
- #           self._spectral_image.set_extent(self.block.extent)
+        pass
+ #        from spectraclass.data.spatial.tile.manager import TileManager, tm
+ #        if self.base is not None:
+ #            self.base.set_title(f"IMAGE[{tm().image_index}]: BLOCK{tm().block_index}")
+ # #           self._spectral_image.set_extent(self.block.extent)
 
     def __del__(self):
         self.exit()

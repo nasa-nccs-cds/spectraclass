@@ -1,10 +1,7 @@
 import numpy as np
-from matplotlib.lines import Line2D
-from matplotlib.artist import Artist
 from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.widgets.polygon import PolyRec
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
-from matplotlib.backend_bases import MouseEvent, KeyEvent
 from typing import List, Union, Tuple, Optional, Dict, Callable
 
 def dist(x, y):
@@ -13,8 +10,7 @@ def dist(x, y):
 
 class PolygonInteractor:
 
-    def __init__(self, ax):
-        self.ax = ax
+    def __init__(self):
         self.polys: List[PolyRec] = []
         self.prec: PolyRec = None
         self.markers: Dict[PolyRec, Marker] = {}
@@ -23,12 +19,11 @@ class PolygonInteractor:
         self.creating = False
         self._fill_color = "grey"
         self._cid = 0
-        self.canvas = ax.figure.canvas
-        self.canvas.mpl_connect('key_press_event', self.on_key_press)
-        self.canvas.mpl_connect('draw_event', self.on_draw)
-        self.canvas.mpl_connect('motion_notify_event', self.on_mouse_move )
-        self.canvas.mpl_connect('button_press_event', self.on_button_press)
-        self.canvas.mpl_connect('button_release_event', self.on_button_release)
+        # self.canvas.mpl_connect('key_press_event', self.on_key_press)
+        # self.canvas.mpl_connect('draw_event', self.on_draw)
+        # self.canvas.mpl_connect('motion_notify_event', self.on_mouse_move )
+        # self.canvas.mpl_connect('button_press_event', self.on_button_press)
+        # self.canvas.mpl_connect('button_release_event', self.on_button_release)
         self.poly_index = 0
         self.cids = []
 
@@ -63,15 +58,15 @@ class PolygonInteractor:
 
     @exception_handled
     def on_draw(self, event):
+        pass
  #       lgm().log( "POLY->on_draw")  # lgm().log( f"POLY->close: points = {self.prec.poly.get_xy().tolist()}")
-        for prec in self.polys:
-            self.ax.draw_artist(prec.poly)
-            self.ax.draw_artist(prec.line)
+ #        for prec in self.polys:
+ #            self.ax.draw_artist(prec.poly)
+ #            self.ax.draw_artist(prec.line)
 
     def poly_changed(self, poly):
         if self.prec is not None:
             vis = self.prec.line.get_visible()
-            Artist.update_from(self.prec.line, poly)
             self.prec.line.set_visible(vis)
 
     def in_poly( self, event ) -> Optional[PolyRec]:
@@ -116,7 +111,7 @@ class PolygonInteractor:
         self.prec = None
 
     @exception_handled
-    def on_button_press(self, event: MouseEvent ):
+    def on_button_press(self, event ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
         ufm().clear()
         if self.enabled and (event.inaxes is not None):
@@ -147,7 +142,7 @@ class PolygonInteractor:
                 self.editing = False
 
     @exception_handled
-    def on_key_press(self, event: KeyEvent ):
+    def on_key_press(self, event ):
         if self.enabled and (event.inaxes is not None):
             if event.key == 'backspace':  self.delete_selection()
 

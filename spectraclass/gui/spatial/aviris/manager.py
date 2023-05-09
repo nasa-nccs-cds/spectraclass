@@ -209,7 +209,6 @@ class AvirisDatasetManager:
     @log_timing
     def __init__(self, **kwargs):
         from spectraclass.data.base import DataManager
-        from spectraclass.gui.spatial.basemap import TileServiceBasemap
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         self.dm: DataManager = DataManager.initialize( "DatasetManager", 'aviris' )
         if "cache_dir" in kwargs: self.dm.modal.cache_dir = kwargs["cache_dir"]
@@ -218,7 +217,6 @@ class AvirisDatasetManager:
         self.init_band = kwargs.get( "init_band", 160 )
         self.grid_color = kwargs.get("grid_color", 'white')
         self.selection_color = kwargs.get("selection_color", 'black')
-        self.base = TileServiceBasemap()
         self.slw = kwargs.get("slw", 3)
         self.colorstretch = 2.0
         self.dm.proc_type = "cpu"

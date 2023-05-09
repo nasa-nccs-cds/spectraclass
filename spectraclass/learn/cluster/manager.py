@@ -12,6 +12,7 @@ from spectraclass.data.spatial.tile.tile import Block
 from .base import ClusterBase
 from spectraclass.util.logs import lgm, exception_handled, log_timing
 from spectraclass.model.base import SCSingletonConfigurable
+import colorsys
 
 def clm() -> "ClusterManager":
     return ClusterManager.instance()
@@ -83,7 +84,9 @@ class ClusterManager(SCSingletonConfigurable):
         hsv[:,0] = np.linspace( 0.0, 1.0, ncolors+1 )[:ncolors]
         hsv[:, 1] = np.full( [ncolors], 0.4 )
         self._cluster_colors = np.full( [ncolors+1,3], 1.0 )
-        self._cluster_colors[1:ncolors+1,:] = hsv_to_rgb(hsv)
+        for iC in range( ncolors ):
+            ih = iC*3
+            self._cluster_colors[iC+1,:] = colorsys.hsv_to_rgb( hsv[ih], hsv[ih+1], hsv[ih+2] )
 
     @property
     def mids(self) -> List[str]:
@@ -124,10 +127,10 @@ class ClusterManager(SCSingletonConfigurable):
             for (icluster, value) in self.marked_colors.items(): colors[icluster] = value
         return colors
 
-    def get_cluster_colormap( self ) -> LinearSegmentedColormap:
-        colors: np.ndarray = self.get_cluster_colors()
-        lgm().log( f'get_cluster_colormap: ncolors={colors.shape[0]}, colors = {colors.tolist()}')
-        return LinearSegmentedColormap.from_list( 'clusters', colors, N=colors.shape[0] )
+    # def get_cluster_colormap( self ) -> LinearSegmentedColormap:
+    #     colors: np.ndarray = self.get_cluster_colors()
+    #     lgm().log( f'get_cluster_colormap: ncolors={colors.shape[0]}, colors = {colors.tolist()}')
+    #     return LinearSegmentedColormap.from_list( 'clusters', colors, N=colors.shape[0] )
 
     @property
     def marked_colors(self) -> Dict[int,Tuple[float,float,float]]:
@@ -149,11 +152,11 @@ class ClusterManager(SCSingletonConfigurable):
             rgb: np.ndarray = colors[ index ] * 255.99
             return tuple( rgb.astype(np.int32).tolist() )
 
-    def get_layer_colormap( self ):
-        ncolors = self._cluster_colors.shape[0]
-        colors = np.full( [ncolors,4], 0.0 )
-        for (key, value) in self.marked_colors.items(): colors[key] = list(value) + [1.0]
-        return LinearSegmentedColormap.from_list( 'cluster-layer', colors, N=ncolors )
+    # def get_layer_colormap( self ):
+    #     ncolors = self._cluster_colors.shape[0]
+    #     colors = np.full( [ncolors,4], 0.0 )
+    #     for (key, value) in self.marked_colors.items(): colors[key] = list(value) + [1.0]
+    #     return LinearSegmentedColormap.from_list( 'cluster-layer', colors, N=ncolors )
 
     def clear(self, reset=True ):
         self._cluster_points = None
@@ -365,7 +368,7 @@ class ClusterSelector:
         clm().clear()
 
     @exception_handled
-    def on_button_press(self, event: MouseEvent ):
+    def on_button_press(self, event ):
         from spectraclass.gui.spatial.map import mm
         from spectraclass.gui.spatial.widgets.markers import Marker
         from spectraclass.application.controller import app

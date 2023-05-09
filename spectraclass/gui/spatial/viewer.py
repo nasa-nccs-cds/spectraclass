@@ -25,8 +25,8 @@ class DatasetType(Enum):
 coastline = gf.coastline.opts(line_color="white", line_width=2.0 ) # , scale='50m')
 
 
-def arange( data: xa.DataArray, axis=None ) -> Tuple[float,float]:
-    return ( data.values.min(axis), data.values.max(axis) )
+def arange( data: xa.DataArray, axis=None ) -> Tuple[np.ndarray,np.ndarray]:
+    return ( np.nanmin(data.values,axis=axis), np.nanmax(data.values,axis=axis) )
 
 def max_range( current_range: Tuple, series: np.ndarray ) -> Tuple:
     if len(current_range) < 2:  return series[0], series[-1]
@@ -77,13 +77,11 @@ class VariableBrowser:
     @exception_handled
     def update_graph(self, x, y, x2, y2) -> hv.Overlay:
         from spectraclass.gui.spatial.map import MapManager, mm
-        graph_data = self.data.sel(x=x, y=y, method="nearest")
-#        gdrange = arange(graph_data)
-#        self.update_yrange( gdrange )
-#        lgm().log(f"^^^^ Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, range={gdrange}")
+        graph_data: xa.DataArray = self.data.sel(x=x, y=y, method="nearest")
+        lgm().log(f"V%% Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, range={arange(graph_data)}")
         is_probe = (lm().current_cid == 0)
         line_color = "black" if is_probe else lm().current_color
-        popts = dict( width = self.width, height = 200, yaxis = "bare", ylim=(-2,2), alpha=0.6 )
+        popts = dict( width = self.width, height = 200, yaxis = "bare", ylim=(-3,3), alpha=0.6 )
         # if None not in [x, y]:
         #     self.graph_data = self.data.sel(x=x, y=y, method="nearest")
         # elif None not in [x2, y2]:
@@ -95,14 +93,16 @@ class VariableBrowser:
         self.current_curve_data = ( lm().current_cid, current_curve )
         new_curves = [ self.current_curve_data[1] ]
         if is_probe:
-            reproduction = mm().getReproduction(raster=True)
-            verification_data: xa.DataArray = reproduction.sel( x=x, y=y, method="nearest" )
-            smean_data:        xa.DataArray = dm().modal.getSpectralMean( norm=True )
-            lgm().log( f"V%% verification_data curve{verification_data.dims}, range = {arange(verification_data)}, shape={verification_data.shape}" )
-            lgm().log( f"V%% smean_data curve{smean_data.dims}, range = {arange(smean_data)}, shape={smean_data.shape}")
-            smean_curve        = hv.Curve(    smean_data     ).opts( line_width=1, line_color='red', **popts )
-            verification_curve = hv.Curve( verification_data ).opts( line_width=1, line_color='grey', **popts )
-            new_curves.extend( [smean_curve,verification_curve] )
+            smean_data: xa.DataArray = dm().modal.getSpectralMean(norm=True)
+            lgm().log(f"V%% [{self.cname}] smean_data.shape={smean_data.shape}  graph_data.shape={graph_data.shape}")
+            if smean_data.shape[0] == graph_data.shape[0]:
+                reproduction: xa.DataArray = mm().getReproduction(raster=True)
+                verification_data: xa.DataArray = reproduction.sel( x=x, y=y, method="nearest" )
+                lgm().log( f"V%% [{self.cname}] verification_data curve{verification_data.dims}, range = {arange(verification_data)}, shape={verification_data.shape}" )
+                lgm().log( f"V%% [{self.cname}] smean_data curve{smean_data.dims}, range = {arange(smean_data)}, shape={smean_data.shape}")
+                smean_curve        = hv.Curve(    smean_data     ).opts( line_width=1, line_color='red', **popts )
+                verification_curve = hv.Curve( verification_data ).opts( line_width=1, line_color='grey', **popts )
+                new_curves.extend( [smean_curve,verification_curve] )
         updated_curves = self.curves + new_curves
         return hv.Overlay( updated_curves )
 
