@@ -9,6 +9,7 @@ from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.data.spatial.tile.manager import TileManager, tm
+from spectraclass.data.spatial.satellite import spm
 from holoviews.streams import SingleTap, DoubleTap
 import geoviews.feature as gf
 import panel as pn
@@ -141,7 +142,7 @@ class RasterCollectionsViewer:
         self.browsers = { cname: VariableBrowser( cname, cdata ) for cname, cdata in collections.items() }
         self.browsers['bands'].verification = plotopts.pop('verification',None)
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
-#        self.panels.append( ('satellite', spm().panel() ) )
+        self.panels.append( ('satellite', spm().panel() ) )
         self.mapviews = pn.Tabs( *self.panels, dynamic=True )
 
     def panel(self, title: str = None, **kwargs ) -> Panel:

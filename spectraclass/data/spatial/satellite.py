@@ -2,10 +2,10 @@ from spectraclass.data.spatial.tile.tile import Block
 import cartopy.crs as ccrs
 import geoviews.tile_sources as gts
 import holoviews as hv
+from spectraclass.model.labels import LabelsManager, lm
 from holoviews.streams import SingleTap, DoubleTap
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type, Iterable
-import os, traitlets as tl
-import xarray as xa
+import os, logging, numpy as np
 import requests, traceback
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
@@ -22,25 +22,21 @@ class SatellitePlotManager(SCSingletonConfigurable):
         self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True)
         self.selection_dmap = hv.DynamicMap(self.select_points, streams=[self.tap_stream, self.double_tap_stream])
 
+    @exception_handled
+    def select_points(self, x, y, x2, y2):
+        if None not in [x, y]:
+            lm().on_button_press( x, y )
+        elif None not in [x2, y2]:
+            lm().on_button_press( x, y )
+        points: List[Tuple[float,float,str]] = lm().getPoints()
+        [x, y] = [ np.array( [pt[idim] for pt in points] ) for idim in [0,1] ]
+        points = self.projection.transform_points(self.points_projection, x, y )
+        return hv.Points(points, vdims='class').opts( marker='+', size=12, line_width=3, angle=45, color='class', cmap=lm().labelmap )
+
     def register_point_selection(self, x, y ):
         from spectraclass.model.labels import lm
         (x, y) = self.points_projection.transform_point(x, y, self.projection)
         lm().on_button_press(x, y)
-
-    @exception_handled
-    def select_points(self, x, y, x2, y2):
-        from spectraclass.model.labels import lm
-
-        if None not in [x, y]:
-            self.register_point_selection( x, y )
-        elif None not in [x2, y2]:
-            self.register_point_selection( x2, y2 )
-        else:
-            return hv.Points([])
-
-        points: List[Tuple[float,float,str]] = lm().getPoints( )
-        points = self.projection.transform_points(x, y, self.points_projection )
-        return hv.Points(points, vdims='class').opts( marker='+', size=12, line_width=3, angle=45, color='class', cmap=lm().labelmap )
 
     def panel( self ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
