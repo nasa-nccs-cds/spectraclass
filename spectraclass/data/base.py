@@ -1,11 +1,12 @@
 import warnings
 warnings.simplefilter("ignore", FutureWarning)
 import numpy as np
+import panel as pn
 import shutil
 import ipywidgets as ipw
 from typing import List, Union, Tuple, Optional, Dict, Type
 import os, warnings
-import tensorflow as tf
+from panel.layout import Panel
 from enum import Enum
 import ipywidgets as ip
 from spectraclass.gui.control import UserFeedbackManager, ufm
@@ -260,7 +261,15 @@ class DataManager(SCSingletonConfigurable):
     def table_cols(self) -> List:
         return self._mode_data_manager_.metavars
 
-    def gui( self ) -> ip.Tab():
+    def gui( self ) -> pn.Tabs():
+        from spectraclass.application.controller import SpectraclassController
+        if self._wGui is None:
+            SpectraclassController.set_spectraclass_theme()
+            mode_gui = self._mode_data_manager_.gui()
+            self._wGui = pn.Tabs( [ ("blocks",mode_gui), ("images",dm().images_panel()) ] )
+        return self._wGui
+
+    def ipw_gui( self ) -> ip.Tab():
         from spectraclass.application.controller import SpectraclassController
         if self._wGui is None:
             SpectraclassController.set_spectraclass_theme()
@@ -271,11 +280,9 @@ class DataManager(SCSingletonConfigurable):
             self._wGui.set_title( 1, "images" )
         return self._wGui
 
-    def images_panel(self) -> ip.VBox:
-        title = ipw.Label( value="Images", width='500px' )
-        file_selector = dm().modal.set_file_selection_observer( self.on_image_change )
-        controls = [ title, file_selector ]
-        return ip.VBox( controls, layout=ipw.Layout(flex='1 1 auto') )
+    def images_panel(self) -> Panel:
+        title = pn.widgets.StaticText(name='ImagesTitle', value='Images')
+        return pn.Column( [ title, dm().modal.file_selector ] )
 
     def on_image_change(self, event: Dict):
         dm().modal.on_image_change( event )
@@ -305,6 +312,13 @@ class DataManager(SCSingletonConfigurable):
 
     @exception_handled
     def prepare_inputs( self, **kwargs ):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        print( " ---------------------------- Project Init ---------------------------- ")
+        print( f" *block_size = {TileManager.block_size}")
+        print( f" *model_dims = {dm().modal.model_dims}")
+        print( f" *reduce_nepoch = {dm().modal.reduce_nepoch}")
+        print( f" *reduce_niter = {dm().modal.reduce_niter}")
+        print( f" *anomaly = {dm().modal.anomaly}")
         self._mode_data_manager_.prepare_inputs( **kwargs )
 
     @exception_handled

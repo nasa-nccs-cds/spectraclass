@@ -30,6 +30,9 @@ def nvalid( array: Optional[Union[np.ndarray,xa.DataArray]] ):
 def nnan( array: Optional[Union[np.ndarray,xa.DataArray]] ):
     return "NONE" if array is None else np.count_nonzero( np.isnan(array) )
 
+def xarange( data: xa.DataArray, axis=None ) -> Tuple[np.ndarray,np.ndarray]:
+    return ( np.nanmin(data.values,axis=axis), np.nanmax(data.values,axis=axis) )
+
 def parse_p4( p4str: str ) -> Dict[str,str]:
     p4d = {}
     for p4entry in p4str.split('+'):
@@ -684,7 +687,7 @@ class Block(DataContainer):
     @property
     def raw_point_data(self):
         if self._point_data is None:
-            self.getPointData()
+            self.getPointData(anomaly="none",norm=False)
         return self._point_data
 
     @log_timing
@@ -709,9 +712,16 @@ class Block(DataContainer):
             self._point_mask = pmask
             self._raster_mask = rmask
         ptdata = self._point_data
-        if anomaly:
+        if anomaly != "none":
             smean = dm().modal.getSpectralMean(norm=False)
-            ptdata = ptdata.copy( data=ptdata-smean )
+            if anomaly == "diff":
+                ptdata = ptdata.copy( data=ptdata-smean )
+            else:
+                fratio: np.ndarray = (ptdata/smean).values.flatten()
+                fratio[ fratio == 0.0 ] = 1.0
+                ratio: np.ndarray = fratio.reshape(ptdata.shape)
+                if   anomaly == "ratio":    ptdata = ptdata.copy( data= ratio-1.0 )
+                elif anomaly == "logratio": ptdata = ptdata.copy( data= np.log( ratio ) )
         if norm:
             ptdata = tm().norm( ptdata )
         return ( ptdata, self._point_coords )
@@ -834,18 +844,18 @@ class Block(DataContainer):
 
         filtered_point_data: xa.DataArray = point_data[pmask,:]
         lgm().log(f" band-filtered point_data shape = {filtered_point_data.shape} ")
-        fpf = filtered_point_data.values.reshape(-1)
-        fpf[ np.isnan(fpf) ] = 0.0
-        rmask = pmask.reshape(base_raster.shape[-2:])
-        lgm().log(f" rmask shp={shp(rmask)}, nvalid={np.count_nonzero(rmask)})  ")
+        smean: np.ndarray = np.nanmean( filtered_point_data.values, axis=0 )
+        for iB in range( smean.size ):
+            bmask: np.ndarray = np.isnan( filtered_point_data.values[:,iB] )
+            filtered_point_data[ bmask, iB ] = smean[iB]
 
         point_index = np.arange(0, base_raster.shape[-1] * base_raster.shape[-2])
         filtered_point_data.attrs['dsid'] = base_raster.name
 
         lgm().log(f"filtered_point_data{filtered_point_data.dims}{filtered_point_data.shape}:  "
-                  f"range=[{filtered_point_data.values.min():.4f}, {filtered_point_data.values.max():.4f}]")
+                  f"range=[{np.nanmin(filtered_point_data.values):.4f}, {np.nanmax(filtered_point_data.values):.4f}]")
 
-        return filtered_point_data.assign_coords(samples=point_index[pmask]), pmask, rmask
+        return filtered_point_data.assign_coords( samples=point_index[pmask]), pmask, pmask.reshape(base_raster.shape[1:])
 
 #     def raster2points1( self, base_raster: xa.DataArray ) -> Tuple[ Optional[xa.DataArray], Optional[np.ndarray], Optional[np.ndarray] ]:   #  base_raster dims: [ band, y, x ]
 #         t0 = time.time()

@@ -1,13 +1,15 @@
 from typing import List, Optional, Dict, Tuple, Union
-import ipywidgets as ipw
-import ipywidgets as ip
+import panel as pn
 from os import path
+from panel.layout import Panel
 from pathlib import Path
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from sklearn.decomposition import PCA, FastICA
+import ipywidgets as ip
 import tensorflow as tf
 import xarray as xa
 import traitlets as tl
+from panel.widgets import Button, Select
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from spectraclass.model.base import SCSingletonConfigurable
 import time, numpy as np
@@ -78,7 +80,7 @@ class ModeDataManager(SCSingletonConfigurable):
     model_dims = tl.Int(16).tag(config=True, sync=True)
     subsample_index = tl.Int(1).tag(config=True, sync=True)
     reduce_method = tl.Unicode("vae").tag(config=True, sync=True)
-    anomaly = tl.Bool(False).tag(config=True, sync=True)
+    anomaly = tl.Unicode("none").tag(config=True, sync=True)
     reduce_anom_focus = tl.Float( 0.25 ).tag(config=True, sync=True)
     reduce_nepoch = tl.Int(5).tag(config=True, sync=True)
     reduce_nimages = tl.Int(100).tag(config=True, sync=True)
@@ -110,6 +112,7 @@ class ModeDataManager(SCSingletonConfigurable):
         self._encoder = None
         self._metadata: Dict = None
         self._spectral_mean: Optional[xa.DataArray] = None
+        self.file_selection_watcher = None
 
     def getSpectralMean(self, norm=False ) -> Optional[xa.DataArray]:
         if self._spectral_mean is None:
@@ -371,7 +374,7 @@ class ModeDataManager(SCSingletonConfigurable):
         key: str = kwargs.get( 'key', self.modelkey )
         filter_sig = tm().get_band_filter_signature()
         model_dims: int = kwargs.get('dims', self.model_dims)
-        aefiles = [f"{dm().cache_dir}/autoencoder.{model_dims}.{filter_sig}.{key}", f"{dm().cache_dir}/encoder.{model_dims}.{filter_sig}.{key}"]
+        aefiles = [f"{dm().cache_dir}/autoencoder.{model_dims}.{filter_sig}.{key}.{dm().modal.anomaly}", f"{dm().cache_dir}/encoder.{model_dims}.{filter_sig}.{key}"]
         lgm().log(f"#AEC: autoencoder_files (key={key}): {aefiles}")
         return aefiles
 
@@ -590,21 +593,19 @@ class ModeDataManager(SCSingletonConfigurable):
     def file_selector(self):
         if self._file_selector is None:
             inames = list( self.image_names.keys() )
-            lgm().log( f"Creating file_selector, options={inames}, value={inames[0]}")
-            self._file_selector =  ip.Select( options=inames, value=inames[0], layout=ipw.Layout(width='600px') )
+            self._file_selector =  pn.widgets.Select(name='Image', options=inames, value=inames[0] )
+            self.file_selection_watcher = self.file_selector.param.watch(self.on_image_change, ['value'], onlychanged=True)
         return self._file_selector
 
-    def set_file_selection_observer( self, observer ):
-        self.file_selector.observe( observer, names=['value'] )
-        return self.file_selector
-
-    def on_image_change( self, event: Dict ):
+    def on_image_change(self,*events):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.spatial.map import MapManager, mm
-        self.set_current_image( self.file_selector.index )
-        dm().clear_project_cache()
-        dm().modal.update_extent()
-        mm().update()
+        for event in events:
+            if event.name == 'value':
+                self.set_current_image(self.file_selector.index)
+                dm().clear_project_cache()
+                dm().modal.update_extent()
+                mm().update()
 
     @property
     def mode(self):
@@ -686,14 +687,14 @@ class ModeDataManager(SCSingletonConfigurable):
         ufm().clear()
         dm().refresh_all()
 
-    def getSelectionPanel(self) -> ip.HBox:
+    def getSelectionPanel(self) -> pn.Column:
         from spectraclass.data.base import DataManager, dm
         self._dataset_prefix, dsets = self.getDatasetList()
-        self._dset_selection: ip.Select = ip.Select(options=dsets, description='Datasets:', disabled=False, layout=ip.Layout(width="900px"))
+        self._dset_selection: Select = Select( options=dsets, description='Datasets:', disabled=False )
         if len(dsets) > 0: self._dset_selection.value = dm().dsid()[ len(self._dataset_prefix): ]
-        load: ip.Button = ip.Button(description="Load", border='1px solid dimgrey')
-        load.on_click(self.select_dataset)
-        filePanel: ip.HBox = ip.HBox([self._dset_selection, load], layout=ip.Layout(width="100%", height="100%"), border='2px solid firebrick')
+        load: Button = Button(description="Load", border='1px solid dimgrey')
+        load.on_click( self.selected_dataset )
+        filePanel: pn.Column = pn.Column( [self._dset_selection, load] )
         return filePanel
 
     def getConfigPanel(self):
@@ -721,7 +722,7 @@ class ModeDataManager(SCSingletonConfigurable):
                                        layout=ip.Layout(width="100%", height="100%"), border='2px solid firebrick')
         return configPanel
 
-    def getCreationPanel(self) -> ip.VBox:
+    def getCreationPanel(self) -> Panel:
         load: ip.Button = ip.Button(description="Create", layout=ip.Layout(flex='1 1 auto'), border='1px solid dimgrey')
         self._model_dims_selector: ip.SelectionSlider = ip.SelectionSlider(options=range(3, 50),
                                                                            description='Model Dimension:',

@@ -239,7 +239,7 @@ class SpatialDataManager(ModeDataManager):
             ufm().show( f" *** Processing Block{block.block_coords}" )
             raw_data: xa.DataArray = block.data
             try:
-                blocks_point_data, coord_data = block.getPointData(norm=False,anomaly=False)
+                blocks_point_data, coord_data = block.getPointData(norm=False,anomaly="none")
                 lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}")
             except NoDataInBounds:
                 blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
@@ -248,7 +248,8 @@ class SpatialDataManager(ModeDataManager):
                 ufm().show(f" *** NO DATA in BLOCK {block.block_coords} *** ")
                 return None
             smean = np.nanmean( block.raw_point_data.values, axis=0 )
-            self.spectral_means.append( ( block.raw_point_data.shape[0], smean ) )
+            ptcount = np.count_nonzero( ~np.isnan(block.raw_point_data) )
+            self.spectral_means.append( ( ptcount, smean ) )
             data_vars = dict( raw=raw_data )
             lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.shape[0]} samples" )
             data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y', 'x'], coords={d: raw_data.coords[d] for d in ['x', 'y']} )

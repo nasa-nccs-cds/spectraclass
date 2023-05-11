@@ -145,11 +145,16 @@ class RasterCollectionsViewer:
         self.panels.append( ('satellite', spm().panel() ) )
         self.mapviews = pn.Tabs( *self.panels, dynamic=True )
 
+    def get_control_panel(self) -> Panel:
+        data_selection_panel = pn.Tabs( [ ("Tile",dm().modal.gui()), ("Block",dm().modal.gui()) ] )
+        return pn.Accordion( ('Data Selection', data_selection_panel ) )
+
     def panel(self, title: str = None, **kwargs ) -> Panel:
         rows = [ self.mapviews ]
         if title is not None: rows.insert( 0, title )
         background = kwargs.get( 'background', 'WhiteSmoke')
-        return pn.Column( *rows, background=background )
+        image_column = pn.Column( *rows, background=background )
+        return image_column # pn.Row( [ image_column ] ) #,self.get_control_panel() ] )
 
 class VariableBrowser1:
 
