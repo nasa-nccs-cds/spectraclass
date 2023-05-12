@@ -4,8 +4,6 @@ import os, datetime
 from enum import Enum
 #import tensorflow as tf
 #keras = tf.keras
-from tensorflow.keras.models import Model
-from tensorflow.keras.callbacks import CSVLogger
 from functools import wraps
 from time import time
 from datetime import datetime
@@ -63,21 +61,16 @@ class LogManager(SCSingletonConfigurable):
         self._level = level
 
     def init_logging(self, name: str, mode: str, **kwargs ):
+        now = datetime.now()
+        timestamp = now.strftime("%j%H%M%S")
         self.log_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "logging", mode )
         os.makedirs( self.log_dir, 0o777, exist_ok=True )
         overwrite = kwargs.get( 'overwrite', True )
         self._name = name
         self._lid = "" if overwrite else f"-{os.getpid()}"
-        self.log_file = f'{self.log_dir}/{name}{self._lid}.log'
+        self.log_file = f'{self.log_dir}/{name}{self._lid}.{timestamp}.log'
         self._log_stream = open(self.log_file, 'w')
         print( f"Opening log file:  '{self.log_file}'" )
-
-    def get_keras_logger(self) -> CSVLogger:
-        if self._keras_logger is None:
-            log_file = f'{self.log_dir}/{self._name}{self._lid}.keras.csv'
-            self.log( f"Logging keras output to '{log_file}'")
-            self._keras_logger = CSVLogger( log_file, "\t" )
-        return self._keras_logger
 
     @property
     def ctime(self):

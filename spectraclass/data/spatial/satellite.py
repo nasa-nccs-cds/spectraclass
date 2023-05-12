@@ -38,10 +38,16 @@ class SatellitePlotManager(SCSingletonConfigurable):
         (x, y) = self.points_projection.transform_point(x, y, self.projection)
         lm().on_button_press(x, y)
 
-    def panel( self ):
+    def satextent(self, full_tile=False):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block = tm().getBlock()
         self.points_projection = block.projection
-        (xlim, ylim) = block.get_extent(self.projection)
+        if full_tile:   (xlim, ylim) = tm().tile.get_extent(self.projection)
+        else:           (xlim, ylim) = block.get_extent(self.projection)
+        return (xlim, ylim)
+
+    def selection_basemap(self, xlim: Tuple[float,float] = None, ylim: Tuple[float,float] = None ):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        if xlim is None: (xlim, ylim) = tm().getBlock().get_extent( self.projection )
         tile_source = gts.tile_sources.get("EsriImagery", None).opts(xlim=xlim, ylim=ylim, width=600, height=570)
         return tile_source * self.selection_dmap

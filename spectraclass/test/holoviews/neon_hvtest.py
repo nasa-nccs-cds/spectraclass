@@ -1,6 +1,7 @@
 import xarray as xa
 import holoviews as hv
 import panel as pn
+from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.gui.spatial.viewer import RasterCollectionsViewer
 from spectraclass.gui.spatial.map import MapManager, mm
 from spectraclass.data.spatial.tile.manager import tm
@@ -15,7 +16,7 @@ TileManager.reprocess = False
 dm.modal.refresh_model = False
 
 block_size = 250
-model_dims = 6
+model_dims = 8
 nepoch = 1
 niter = 100
 year= 2015
@@ -29,6 +30,8 @@ dm.modal.model_dims = model_dims
 dm.modal.modelkey = f"agp.neon.{version}.{year}.{roi}.{block_size}"
 dm.modal.reduce_nepoch = nepoch
 dm.modal.reduce_niter = niter
+#hv.help(hv.Curve)
+#hv.help(hv.Curve)
 
 dm.loadCurrentProject()
 classes = [ ('air', "cyan"),
@@ -39,8 +42,9 @@ classes = [ ('air', "cyan"),
 lm().setLabels( classes )
 
 dset_names: List[str] = list(dm.modal.datasets.keys())
-fdata: xa.DataArray = mm().getModelData(raster=True,norm=True).rename( dict(band='feature') )
-band_data: xa.DataArray =  mm().getBandData(raster=True,norm=True)
-reproduction=mm().getReproduction(raster=True)
+block: Block = tm().getBlock()
+band_data: xa.DataArray = block.getBandData(raster=True,norm=True)
+fdata: xa.DataArray = dm.getModelData(raster=True,norm=True).rename( dict(band='feature') )
+reproduction = block.getReproduction(raster=True)
 viewer = RasterCollectionsViewer( dict( features=fdata, bands=band_data, reproduction=reproduction ) )
-viewer.panel()
+viewer.panel(devel_gui=True)
