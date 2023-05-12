@@ -142,12 +142,12 @@ class RasterCollectionsViewer:
         self.browsers = { cname: VariableBrowser( cname, cdata ) for cname, cdata in collections.items() }
         self.browsers['bands'].verification = plotopts.pop('verification',None)
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
-        self.panels.append(('satellite', spm().selection_basemap()))
+        self.panels.append(('satellite', spm().selection_basemap( point_selection=True ) ) )
         self.mapviews = pn.Tabs( *self.panels, dynamic=True )
 
     def get_control_panel(self) -> Panel:
         test_panel = pn.widgets.StaticText(name='test_panel', value='test_panel')
-        data_selection_panel = pn.Tabs(  ("Tile",spm().selection_basemap()) ) # , ("Block",dm().modal.gui()) ] )
+        data_selection_panel = pn.Tabs(  ("Tile",dm().modal.gui()) ) # , ("Block",dm().modal.gui()) ] )
         return pn.Accordion( ('Data Selection', data_selection_panel ), toggle=True, active=[0] )
 
     def panel(self, title: str = None, **kwargs ) -> Panel:

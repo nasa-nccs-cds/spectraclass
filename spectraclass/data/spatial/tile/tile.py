@@ -587,13 +587,14 @@ class Block(DataContainer):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         raw_raster: Optional[xa.DataArray] = None
         if self.has_data_file():
-            dataset: xa.Dataset = dm().modal.loadDataFile( block=self, index=self.tile_index )
+            dataset: xa.Dataset = dm().modal.loadDataFile( block=self )
             raw_raster = tm().mask_nodata( dataset["raw"] )
-            lgm().log( f" ---> load_block_raster{self.block_coords}: raw data attrs = {dataset['raw'].attrs.keys()}" )
+            lgm().log( f" @BLOCK{self.block_coords}---> raw data attrs = {dataset['raw'].attrs.keys()}" )
             for aid, aval in dataset.attrs.items():
                 if aid not in raw_raster.attrs:
                     raw_raster.attrs[aid] = aval
-            lgm().log(f"BLOCK{self.block_coords}->get_data: load-datafile raster shape={raw_raster.shape}")
+            x,y = raw_raster.x.values, raw_raster.y.values
+            lgm().log(f" @BLOCK{self.block_coords}->get_data: load-datafile raster shape={raw_raster.shape}, exent= ({x[0]},{x[-1]}) ({y[0]},{y[-1]})")
             if raw_raster.size == 0: ufm().show( "This block does not appear to have any data.", "red" )
         return raw_raster
 

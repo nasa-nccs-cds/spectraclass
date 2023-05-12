@@ -33,13 +33,14 @@ class NEONTileSelector:
         xlim,ylim = (sys.float_info.max,-sys.float_info.max), (sys.float_info.max,-sys.float_info.max)
         for block in blocks:
             (bxlim, bylim) = block.get_extent( spm().projection )
+            print( f" BLOCK ext:  {bxlim} {bylim}")
             rects.append( (bxlim[0],bylim[0],bxlim[1],bylim[1]) )
             xlim = ( min(bxlim[0],xlim[0]), max(bxlim[1],xlim[1]) )
             ylim = ( min(bylim[0],ylim[0]), max(bylim[1],ylim[1]) )
-        print( f"Satellite ext: {xlim} {ylim}")
+        print(f" TILE ext:  {xlim} {ylim}")
         basemap = spm().selection_basemap(xlim,ylim)
         self.rectangles = hv.Rectangles( rects )
-        return basemap * self.rectangles.opts( color="cyan")
+        return basemap * self.rectangles.opts( color="magenta", fill_alpha=0.0, line_alpha=1.0 )
 
     @property
     def image_index(self) -> int:

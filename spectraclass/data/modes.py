@@ -832,17 +832,22 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def loadDataFile( self, **kwargs ) -> Optional[xa.Dataset]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        ufm().show( f" Loading Tile {tm().block_index} " )
-        if self._current_dataset is None:
+        block = kwargs.get( 'block', tm().getBlock() )
+        ufm().show(f"Loading Block {block.block_coords} ")
+        if (self._current_dataset is None) or (self._current_dataset.attrs['block_coords'] != block.block_coords ):
             dFile = self.dataFile( **kwargs )
             if path.isfile( dFile ):
+                lgm().log(f"#GID: Loading Block {block.block_coords} ")
                 self._current_dataset = xa.open_dataset( dFile, concat_characters=True )
                 self._current_dataset.attrs['data_file'] = dFile
+                self._current_dataset.attrs['block_coords'] = block.block_coords
                 vars = [ f"{vid}{var.dims}" for (vid,var) in self._current_dataset.variables.items()]
                 coords = [f"{cid}{coord.shape}" for (cid, coord) in self._current_dataset.coords.items()]
                 lgm().log( f"#GID: loadDataFile: {dFile}, coords={coords}, vars={vars}" )
                 lgm().log( f"#GID:  --> coords={coords}")
                 lgm().log( f"#GID:  --> vars={vars}")
+                x,y = self._current_dataset.x.values, self._current_dataset.y.values
+                lgm().log(f"#GID:  --> exent= ({x[0]},{x[-1]}) ({y[0]},{y[-1]})")
         return self._current_dataset
 
     def filterCommonPrefix(self, paths: List[str])-> Tuple[str,List[str]]:

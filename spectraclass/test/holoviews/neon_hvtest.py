@@ -11,6 +11,7 @@ from spectraclass.model.labels import LabelsManager, lm
 from typing import List, Union, Tuple, Optional, Dict, Callable
 pn.extension()
 hv.extension('bokeh')
+
 dm: DataManager = DataManager.initialize( "AGB", 'neon' )
 TileManager.reprocess = False
 dm.modal.refresh_model = False
@@ -30,8 +31,7 @@ dm.modal.model_dims = model_dims
 dm.modal.modelkey = f"agp.neon.{version}.{year}.{roi}.{block_size}"
 dm.modal.reduce_nepoch = nepoch
 dm.modal.reduce_niter = niter
-#hv.help(hv.Curve)
-#hv.help(hv.Curve)
+hv.help(hv.Rectangles)
 
 dm.loadCurrentProject()
 classes = [ ('air', "cyan"),
@@ -46,5 +46,5 @@ block: Block = tm().getBlock()
 band_data: xa.DataArray = block.getBandData(raster=True,norm=True)
 fdata: xa.DataArray = dm.getModelData(raster=True,norm=True).rename( dict(band='feature') )
 reproduction = block.getReproduction(raster=True)
-viewer = RasterCollectionsViewer( dict( features=fdata, bands=band_data, reproduction=reproduction ) )
+viewer = RasterCollectionsViewer( dict( features=fdata, bands=band_data, reproduction=reproduction) )
 viewer.panel(devel_gui=True)
