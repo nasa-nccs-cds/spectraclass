@@ -38,7 +38,7 @@ class NEONTileSelector:
             ylim = ( min(bylim[0],ylim[0]), max(bylim[1],ylim[1]) )
         basemap = spm().selection_basemap(xlim,ylim)
         self.rectangles = hv.Rectangles( rects )
-        return basemap * self.rectangles.opts( color="magenta", fill_alpha=0.0, line_alpha=1.0 )
+        return basemap * self.rectangles.opts( line_color="magenta", fill_alpha=0.0, line_alpha=1.0 )
 
     @property
     def image_index(self) -> int:
