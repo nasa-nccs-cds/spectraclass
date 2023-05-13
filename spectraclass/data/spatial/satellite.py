@@ -1,7 +1,7 @@
 from spectraclass.data.spatial.tile.tile import Block
 import cartopy.crs as ccrs
-import geoviews.tile_sources as gts
 import holoviews as hv
+import geoviews as gv
 import cartopy.crs as crs
 from spectraclass.model.labels import LabelsManager, lm
 from holoviews.streams import SingleTap, DoubleTap
@@ -23,6 +23,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
         self.tap_stream = SingleTap( transient=True )
         self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True)
         self.selection_points = hv.DynamicMap(self.select_points, streams=[self.tap_stream, self.double_tap_stream])
+        self.tile_sources: List[gv.element.geo.Tiles] = []
 
     @property
     def block(self) -> Block:
@@ -65,6 +66,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         point_selection = kwargs.get( 'point_selection', False )
         if xlim is None: (xlim, ylim) = tm().getBlock().get_extent( self.projection )
-        tile_source = gts.tile_sources.get("EsriImagery", None).opts(xlim=xlim, ylim=ylim, width=600, height=570)
-        lgm().log(f" @@SatellitePlotManager.selection_basemap: xlim={xlim} ylim={ylim} point_selection={point_selection}")
+        tile_source: gv.element.geo.Tiles = tm().getESRIImageryServer( xlim=xlim, ylim=ylim, width=600, height=570 )
+        print( f"selection_basemap: TILE SOURCE {xlim} {ylim}")
+        self.tile_sources.append( tile_source )
         return tile_source * self.selection_points if point_selection else tile_source

@@ -14,6 +14,7 @@ from spectraclass.widgets.polygon import PolyRec
 import traitlets as tl
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.gui.spatial.widgets.markers import Marker
+import geoviews as gv
 from pyproj import Transformer
 from .tile import Tile, Block
 
@@ -49,6 +50,10 @@ class TileManager(SCSingletonConfigurable):
         self._idxtiles: Dict[int, Tile] = {}
         self.cacheTileData = True
         self._scale: Tuple[np.ndarray,np.ndarray] = None
+
+    def getESRIImageryServer(self,**kwargs) -> gv.element.geo.Tiles:
+        url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{Z}/{Y}/{X}.jpg'
+        return gv.element.geo.WMTS( url, name="EsriImagery").opts( **kwargs )
 
     @classmethod
     def encode( cls, obj ) -> str:
