@@ -8,6 +8,3 @@ dm.modal.data_dir = "/Users/tpmaxwel/Development/Data/DESIS"
 dm.modal.image_names = [ f"DESIS-HSI-L1C-DT0468853252_00{index}-20200628T153803-V0210" for index in image_indices ]
 dm.preprocess_data()
 dm.loadCurrentProject("main")
-
-#sgui = dm.modal.gui( standalone=True )
-#plt.show()

@@ -1,6 +1,6 @@
 from spectraclass.data.base import DataManager
 from spectraclass.data.spatial.tile.manager import TileManager
-from gui.spatial.viewer import RasterCollectionsViewer
+from gui.spatial.viewer import hvSpectraclassGui
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.gui.spatial.map import MapManager, mm
 from spectraclass.data.spatial.modes import AvirisDataManager
@@ -51,4 +51,4 @@ classes = [ ('Class-1', "cyan"),
 lm().setLabels( classes )
 
 fdata = mm().frame_data
-viewer = RasterCollectionsViewer( fdata )
+viewer = hvSpectraclassGui(fdata)

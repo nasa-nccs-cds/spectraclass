@@ -1,10 +1,10 @@
 from spectraclass.gui.control import UserFeedbackManager, ufm
 import numpy as np
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
-from cartopy.mpl.geoaxes import GeoAxes
-from spectraclass.xext.xgeo import XGeo
+from holoviews.streams import SingleTap, DoubleTap
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.data.spatial.tile.manager import TileManager, tm
+from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.data.spatial.satellite import spm
 from typing import List, Union, Tuple, Optional, Dict, Callable
 import panel as pn, holoviews as hv
@@ -19,26 +19,53 @@ class NEONTileSelector:
         self.selection_color = kwargs.get("selection_color", 'black')
         self.slw = kwargs.get("slw", 2)
         self.colorstretch = 2.0
- #       self._blocks: Dict[Tuple[int,int],Rectangle] = {}
+        self.tap_stream = SingleTap( transient=True )
+        self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True)
+        self.selected_rec = hv.DynamicMap(self.select_rec, streams=[self.tap_stream, self.double_tap_stream])
         self. rectangles: hv.Rectangles = None # ([(0, 0, 1, 1), (2, 3, 4, 6), (0.5, 2, 1.5, 4), (2, 1, 3.5, 2.5)])
         self._transformed_block_data = None
         self._selected_block: Tuple[int,int] = (0,0)
-
         self._band_index = 0
         self._select_rec = None
+        self.rects: Dict[Tuple,Tuple] = {}
+        self.xlim, self.ylim = (sys.float_info.max, -sys.float_info.max), (sys.float_info.max, -sys.float_info.max)
+        self.bdx, self.bdy = None, None
+        self.bx0, self.by0 = None, None
+        self.rect0 = None
+
+    @exception_handled
+    def select_rec(self, x, y, x2, y2):
+        from spectraclass.gui.spatial.viewer import sgui
+        bindex = self.block_index(x2,y2)
+        new_rect = self.rects.get( bindex, self.rect0 )
+        if new_rect != self.rect0:
+            sgui().select_block( bindex )
+            self.rect0 = new_rect
+        return hv.Rectangles( [self.rect0] ).opts( line_color="white", fill_alpha=0.0, line_alpha=1.0, line_width=3 )
 
     def gui(self):
         blocks: List[Block] = tm().tile.getBlocks()
-        rects = []
-        xlim,ylim = (sys.float_info.max,-sys.float_info.max), (sys.float_info.max,-sys.float_info.max)
         for block in blocks:
             (bxlim, bylim) = block.get_extent( spm().projection )
-            rects.append( (bxlim[0],bylim[0],bxlim[1],bylim[1]) )
-            xlim = ( min(bxlim[0],xlim[0]), max(bxlim[1],xlim[1]) )
-            ylim = ( min(bylim[0],ylim[0]), max(bylim[1],ylim[1]) )
-        basemap = spm().selection_basemap(xlim,ylim)
-        self.rectangles = hv.Rectangles( rects )
-        return basemap * self.rectangles.opts( line_color="magenta", fill_alpha=0.0, line_alpha=1.0 )
+            self.xlim = ( min(bxlim[0],self.xlim[0]), max(bxlim[1],self.xlim[1]) )
+            self.ylim = ( min(bylim[0],self.ylim[0]), max(bylim[1],self.ylim[1]) )
+            if self.bx0 is None:
+                self.bdx, self.bdy = (bxlim[1]-bxlim[0]), (bylim[1]-bylim[0])
+        self.bx0, self.by0 = self.xlim[0], self.ylim[0]
+        for block in blocks:
+            (bxlim, bylim) = block.get_extent( spm().projection )
+            r = (bxlim[0],bylim[0],bxlim[1],bylim[1])
+            c = (bxlim[0]+bxlim[1])/2, (bylim[0]+bylim[1])/2
+            self.rects[ self.block_index(*c) ] =  r
+        self.rect0 = self.rects[ tm().block_index ]
+        basemap = spm().selection_basemap(self.xlim,self.ylim)
+        self.rectangles = hv.Rectangles( list(self.rects.values()) ).opts( line_color="magenta", fill_alpha=0.0, line_alpha=1.0 )
+        return basemap * self.rectangles * self.selected_rec
+
+    @exception_handled
+    def block_index(self, x, y ) -> Tuple[int,int]:
+        if x is None: (x,y) = tm().block_index
+        return  math.floor( (x-self.bx0)/self.bdx ),  math.floor( (y-self.by0)/self.bdy )
 
     @property
     def image_index(self) -> int:

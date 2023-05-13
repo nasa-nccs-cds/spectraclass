@@ -5,6 +5,7 @@ from panel.widgets.player import DiscretePlayer
 import holoviews as hv
 from spectraclass.data.base import dm
 from panel.layout import Panel
+from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.model.labels import LabelsManager, lm
@@ -43,6 +44,9 @@ def find_varname( selname: str, varlist: List[str]) -> str:
         if selname.lower() in varname.lower(): return varname
     raise Exception( f"Unknown variable: '*{selname}', varlist = {varlist}")
 
+def sgui() -> "hvSpectraclassGui":
+    return hvSpectraclassGui.instance()
+
 class VariableBrowser:
 
     def __init__(self, cname: str, data: xa.DataArray, **plotopts ):
@@ -50,7 +54,6 @@ class VariableBrowser:
         self.data: xa.DataArray = data
         self.width = plotopts.get('width',600)
         self.cmap = plotopts.get('cmap', 'jet')
- #       self.yrange = [np.inf,-np.inf]
         self.nIter: int = data.shape[0]
         self.player: DiscretePlayer = DiscretePlayer(name='Iteration', options=list(range(self.nIter)), value=self.nIter - 1)
         self.tap_stream = SingleTap( transient=True )
@@ -62,6 +65,10 @@ class VariableBrowser:
         self.graph_data = xa.DataArray([])
         self.curves: List[hv.Curve] = []
         self.current_curve_data: Tuple[int,hv.Curve] = None
+
+    def update_data( self, block_data: xa.DataArray ):
+        self.data = block_data
+        self.player.value = 0
 
     # def update_yrange( self, new_range: Tuple[float,float] ):
     #     self.yrange[0] = min( self.yrange[0], new_range[0] )
@@ -136,17 +143,39 @@ class VariableBrowser:
         selector = lm().class_selector
         return pn.Column( selector, self.image*self.selection_dmap, self.player, self.point_graph*self.iter_marker )
 
-class RasterCollectionsViewer:
+class hvSpectraclassGui(SCSingletonConfigurable):
 
-    def __init__(self, collections: Dict[str,xa.DataArray], **plotopts ):
+    def __init__(self):
+        super(hvSpectraclassGui, self).__init__()
+        self.browsers: Dict[str,VariableBrowser] = None
+        self.panels: List = None
+        self.mapviews: pn.Tabs = None
+
+    def init( self, **plotopts ):
+        block: Block = tm().getBlock()
+        band_data: xa.DataArray = block.getBandData(raster=True, norm=True)
+        fdata: xa.DataArray = dm().getModelData(raster=True, norm=True).rename(dict(band='feature'))
+        reproduction: xa.DataArray = block.getReproduction(raster=True)
+        collections = dict(features=fdata, bands=band_data, reproduction=reproduction)
         self.browsers = { cname: VariableBrowser( cname, cdata ) for cname, cdata in collections.items() }
         self.browsers['bands'].verification = plotopts.pop('verification',None)
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
         self.panels.append(('satellite', spm().selection_basemap( point_selection=True ) ) )
         self.mapviews = pn.Tabs( *self.panels, dynamic=True )
+        return self
+
+    def select_block(self, bindex: Tuple ):
+        lgm().log(f" ------------>>>  hvSpectraclassGui.select_block: {bindex}  <<<------------ ")
+        if tm().setBlock( bindex ):
+            block: Block = tm().getBlock()
+            band_data: xa.DataArray = block.getBandData(raster=True, norm=True)
+            fdata: xa.DataArray = dm().getModelData(block=block,raster=True, norm=True).rename(dict(band='feature'))
+            reproduction: xa.DataArray = block.getReproduction(raster=True)
+            self.browsers['features'].update_data( fdata )
+            self.browsers['bands'].update_data(band_data)
+            self.browsers['reproduction'].update_data(reproduction)
 
     def get_control_panel(self) -> Panel:
-        test_panel = pn.widgets.StaticText(name='test_panel', value='test_panel')
         data_selection_panel = pn.Tabs(  ("Tile",dm().modal.gui()) ) # , ("Block",dm().modal.gui()) ] )
         return pn.Accordion( ('Data Selection', data_selection_panel ), toggle=True, active=[0] )
 
@@ -161,55 +190,56 @@ class RasterCollectionsViewer:
         else:
             return image_column
 
-class VariableBrowser1:
-
-    def __init__(self, data: xa.DataArray, ** plotopts):
-        self.width = plotopts.get('width',600)
-        self.cmap = plotopts.get('cmap', 'jet')
-        self.data: xa.DataArray = data
-        self.nIter = data.shape[0]
-#        self.points = hv.Points([])
- #       self.clicker = Tap(source=self.points, transient=True, x=np.nan, y=np.nan )
- #       self.point_selection = hv.DynamicMap(lambda point: hv.Points([point]), streams=[self.clicker])
-        self.player: DiscretePlayer = DiscretePlayer(name='Iteration', options=list(range(self.nIter)), value=self.nIter - 1)
-
-        # @pn.depends(self.clicker.param.x, self.clicker.param.y)
-        # def location(x, y):
-        #     print( f'Click at {x:.2f}, {y:.2f}' )
- #           return pn.pane.Str(f'Click at {x:.2f}, {y:.2f}', width=200)
-
-
-
-       # @pn.depends(stream.param.x, stream.param.y)
-       # def location(x, y):
-       #     return pn.pane.Str(f'Click at {x:.2f}, {y:.2f}', width=200)
-
-#    def click_callback(self,point):
-#        print( f"Point selected: {point}")
-
-        # dynamic_points = hv.DynamicMap(lambda point: points.select(x=point[0], y=point[1]), streams=[])
-        # dynamic_points.opts(opts.Points(size=10)).redim(x=dim('X Axis'), y=dim('Y Axis'))
-
-    def get_frame(self, iteration: int ):
-        fdata: xa.DataArray = self.data[iteration]
-        iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare")
-        return fdata.hvplot( **iopts )
-
-    @exception_handled
-    def plot(self, **plotopts)-> Panel:
-        image = hv.DynamicMap( pn.bind( self.get_frame, iteration=self.player ) )
-        return  pn.Column( image.opts( **plotopts ), self.player )
-
-class RasterCollectionsViewer1:
-
-    def __init__(self, collections: Dict[str,xa.DataArray], **plotopts ):
-        self.browsers = { cname: VariableBrowser( cdata ) for cname, cdata in collections.items() }
-        self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
-
-    def panel(self, title: str = None, **kwargs ) -> Panel:
-        tabs = [ pn.Tabs( *self.panels ) ]
-        if title is not None: tabs.insert( 0, title )
-        background = kwargs.get( 'background', 'WhiteSmoke')
-        return pn.Column( *tabs, background=background )
-
-#if __name__ == '__main__':
+#
+# class VariableBrowser1:
+#
+#     def __init__(self, data: xa.DataArray, ** plotopts):
+#         self.width = plotopts.get('width',600)
+#         self.cmap = plotopts.get('cmap', 'jet')
+#         self.data: xa.DataArray = data
+#         self.nIter = data.shape[0]
+# #        self.points = hv.Points([])
+#  #       self.clicker = Tap(source=self.points, transient=True, x=np.nan, y=np.nan )
+#  #       self.point_selection = hv.DynamicMap(lambda point: hv.Points([point]), streams=[self.clicker])
+#         self.player: DiscretePlayer = DiscretePlayer(name='Iteration', options=list(range(self.nIter)), value=self.nIter - 1)
+#
+#         # @pn.depends(self.clicker.param.x, self.clicker.param.y)
+#         # def location(x, y):
+#         #     print( f'Click at {x:.2f}, {y:.2f}' )
+#  #           return pn.pane.Str(f'Click at {x:.2f}, {y:.2f}', width=200)
+#
+#
+#
+#        # @pn.depends(stream.param.x, stream.param.y)
+#        # def location(x, y):
+#        #     return pn.pane.Str(f'Click at {x:.2f}, {y:.2f}', width=200)
+#
+# #    def click_callback(self,point):
+# #        print( f"Point selected: {point}")
+#
+#         # dynamic_points = hv.DynamicMap(lambda point: points.select(x=point[0], y=point[1]), streams=[])
+#         # dynamic_points.opts(opts.Points(size=10)).redim(x=dim('X Axis'), y=dim('Y Axis'))
+#
+#     def get_frame(self, iteration: int ):
+#         fdata: xa.DataArray = self.data[iteration]
+#         iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare")
+#         return fdata.hvplot( **iopts )
+#
+#     @exception_handled
+#     def plot(self, **plotopts)-> Panel:
+#         image = hv.DynamicMap( pn.bind( self.get_frame, iteration=self.player ) )
+#         return  pn.Column( image.opts( **plotopts ), self.player )
+#
+# class RasterCollectionsViewer1:
+#
+#     def __init__(self, collections: Dict[str,xa.DataArray], **plotopts ):
+#         self.browsers = { cname: VariableBrowser( cdata ) for cname, cdata in collections.items() }
+#         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
+#
+#     def panel(self, title: str = None, **kwargs ) -> Panel:
+#         tabs = [ pn.Tabs( *self.panels ) ]
+#         if title is not None: tabs.insert( 0, title )
+#         background = kwargs.get( 'background', 'WhiteSmoke')
+#         return pn.Column( *tabs, background=background )
+#
+# #if __name__ == '__main__':
