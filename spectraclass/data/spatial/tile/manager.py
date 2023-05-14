@@ -7,7 +7,7 @@ import shapely.vectorized as svect
 from typing import List, Union, Tuple, Optional, Dict
 from pyproj import Proj
 from spectraclass.util.logs import LogManager, lgm, log_timing
-import os, math, pickle, time
+import os, param, math, pickle, time
 import cartopy.crs as ccrs
 from spectraclass.util.logs import lgm, exception_handled
 from spectraclass.widgets.polygon import PolyRec
@@ -32,6 +32,9 @@ class PointsOutOfBoundsException(Exception):
     def __str__(self):
         return "Points out of bounds"
 
+class BlockSelection(param.Parameterized):
+    value = param.Tuple(default=(0,0), doc="selected block index")
+
 class TileManager(SCSingletonConfigurable):
 
     block_size = tl.Int(250).tag( config=True, sync=True )
@@ -50,6 +53,7 @@ class TileManager(SCSingletonConfigurable):
         self._idxtiles: Dict[int, Tile] = {}
         self.cacheTileData = True
         self._scale: Tuple[np.ndarray,np.ndarray] = None
+        self.block_selection = BlockSelection(value=self.block_index)
 
     def getESRIImageryServer(self,**kwargs) -> gv.element.geo.Tiles:
         url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{Z}/{Y}/{X}.jpg'

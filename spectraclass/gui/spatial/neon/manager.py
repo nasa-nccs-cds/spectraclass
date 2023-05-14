@@ -5,6 +5,7 @@ from holoviews.streams import SingleTap, DoubleTap
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.model.labels import LabelsManager, lm
+import param
 from spectraclass.data.spatial.satellite import spm
 from typing import List, Union, Tuple, Optional, Dict, Callable
 import panel as pn, holoviews as hv
@@ -35,11 +36,10 @@ class NEONTileSelector:
 
     @exception_handled
     def select_rec(self, x, y, x2, y2):
-        from spectraclass.gui.spatial.viewer import sgui
         bindex = self.block_index(x2,y2)
         new_rect = self.rects.get( bindex, self.rect0 )
         if new_rect != self.rect0:
-            sgui().select_block( bindex )
+            tm().block_selection.value = bindex
             self.rect0 = new_rect
         ufm().clear()
         return hv.Rectangles( [self.rect0] ).opts( line_color="white", fill_alpha=0.0, line_alpha=1.0, line_width=3 )

@@ -3,7 +3,9 @@ import cartopy.crs as ccrs
 import holoviews as hv
 import geoviews as gv
 import cartopy.crs as crs
+import panel as pn
 from spectraclass.model.labels import LabelsManager, lm
+from spectraclass.data.spatial.tile.manager import TileManager, tm
 from holoviews.streams import SingleTap, DoubleTap
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type, Iterable
 import os, logging, numpy as np
@@ -23,7 +25,8 @@ class SatellitePlotManager(SCSingletonConfigurable):
         self.tap_stream = SingleTap( transient=True )
         self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True)
         self.selection_points = hv.DynamicMap(self.select_points, streams=[self.tap_stream, self.double_tap_stream])
-        self.tile_sources: List[gv.element.geo.Tiles] = []
+        self.tile_source: gv.element.geo.Tiles = None
+        pn.bind( self.set_extent, block_index=tm().block_selection )
 
     @property
     def block(self) -> Block:
@@ -66,7 +69,13 @@ class SatellitePlotManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         point_selection = kwargs.get( 'point_selection', False )
         if xlim is None: (xlim, ylim) = tm().getBlock().get_extent( self.projection )
-        tile_source: gv.element.geo.Tiles = tm().getESRIImageryServer( xlim=xlim, ylim=ylim, width=600, height=570 )
+        self.tile_source = tm().getESRIImageryServer( xlim=xlim, ylim=ylim, width=600, height=570 )
         print( f"selection_basemap: TILE SOURCE {xlim} {ylim}")
-        self.tile_sources.append( tile_source )
-        return tile_source * self.selection_points if point_selection else tile_source
+        return self.tile_source * self.selection_points if point_selection else self.tile_source
+
+    def set_extent(self, block_index ):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        block: Block = tm().getBlock( bindex=block_index )
+        (xlim, ylim) = block.get_extent(self.projection)
+        self.tile_source.extents = (xlim[0], ylim[0], xlim[1], ylim[1] ) #   (left, bottom, right, top)
+

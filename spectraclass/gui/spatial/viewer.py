@@ -28,7 +28,6 @@ class DatasetType(Enum):
 
 coastline = gf.coastline.opts(line_color="white", line_width=2.0 ) # , scale='50m')
 
-
 def arange( data: xa.DataArray, axis=None ) -> Tuple[np.ndarray,np.ndarray]:
     return ( np.nanmin(data.values,axis=axis), np.nanmax(data.values,axis=axis) )
 
@@ -50,26 +49,23 @@ def sgui() -> "hvSpectraclassGui":
 
 class VariableBrowser:
 
-    def __init__(self, cname: str, data: xa.DataArray, **plotopts ):
+    def __init__(self, cname: str, **plotopts ):
         self.cname = cname
-        self.data: xa.DataArray = data
+        self.data: xa.DataArray = sgui().get_data(cname)
         self.width = plotopts.get('width',600)
         self.cmap = plotopts.get('cmap', 'jet')
-        self.nIter: int = data.shape[0]
+        self.nIter: int = self.data.shape[0]
         self.player: DiscretePlayer = DiscretePlayer(name='Iteration', options=list(range(self.nIter)), value=self.nIter - 1)
         self.tap_stream = SingleTap( transient=True )
         self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True )
         self.selection_dmap = hv.DynamicMap( self.select_points, streams=[self.tap_stream, self.double_tap_stream] )
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream, self.double_tap_stream] )
-        self.image = hv.DynamicMap( pn.bind(self.get_frame, iteration=self.player) )
-        self.iter_marker = hv.DynamicMap( pn.bind(self.get_iter_marker, index=self.player) )
+        self.image = hv.DynamicMap( self.get_frame, streams=dict( iteration=self.player.param.value, block_index=tm().block_selection.param.value ) )
+        self.iter_marker = hv.DynamicMap( self.get_iter_marker, streams=dict( index=self.player.param.value ) )
         self.graph_data = xa.DataArray([])
         self.curves: List[hv.Curve] = []
         self.current_curve_data: Tuple[int,hv.Curve] = None
 
-    def update_data( self, block_data: xa.DataArray ):
-        self.data = block_data
-        self.player.value = 0
 
     # def update_yrange( self, new_range: Tuple[float,float] ):
     #     self.yrange[0] = min( self.yrange[0], new_range[0] )
@@ -116,8 +112,14 @@ class VariableBrowser:
         updated_curves = self.curves + new_curves
         return hv.Overlay( updated_curves )
 
+    def select_block(self, bindex: Tuple ):
+        lgm().log(f" ------------>>>  VariableBrowser[{self.cname}].select_block: {bindex}  <<<------------ ")
+        tm().setBlock( bindex )
+        self.data = sgui().get_data(self.cname)
+
     @exception_handled
-    def get_frame(self, iteration: int ):
+    def get_frame(self, iteration: int, block_index: Tuple ):
+        self.select_block( block_index )
         fdata: xa.DataArray = self.data[iteration]
         iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False)
         return fdata.hvplot.image( **iopts )
@@ -154,28 +156,20 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         self.alert = ufm().gui()
 
     def init( self, **plotopts ):
-        block: Block = tm().getBlock()
-        band_data: xa.DataArray = block.getBandData(raster=True, norm=True)
-        fdata: xa.DataArray = dm().getModelData(raster=True, norm=True).rename(dict(band='feature'))
-        reproduction: xa.DataArray = block.getReproduction(raster=True)
-        collections = dict(features=fdata, bands=band_data, reproduction=reproduction)
-        self.browsers = { cname: VariableBrowser( cname, cdata ) for cname, cdata in collections.items() }
+        collections = [ 'features', "bands", "reproduction" ]
+        self.browsers = { cname: VariableBrowser( cname ) for cname in collections }
         self.browsers['bands'].verification = plotopts.pop('verification',None)
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
         self.panels.append(('satellite', spm().selection_basemap( point_selection=True ) ) )
         self.mapviews = pn.Tabs( *self.panels, dynamic=True )
         return self
 
-    def select_block(self, bindex: Tuple ):
-        lgm().log(f" ------------>>>  hvSpectraclassGui.select_block: {bindex}  <<<------------ ")
-        if tm().setBlock( bindex ):
-            block: Block = tm().getBlock()
-            band_data: xa.DataArray = block.getBandData(raster=True, norm=True)
-            fdata: xa.DataArray = dm().getModelData(block=block,raster=True, norm=True).rename(dict(band='feature'))
-            reproduction: xa.DataArray = block.getReproduction(raster=True)
-            self.browsers['features'].update_data( fdata )
-            self.browsers['bands'].update_data(band_data)
-            self.browsers['reproduction'].update_data(reproduction)
+    def get_data( self, cname: str ) -> xa.DataArray:
+        block: Block = tm().getBlock()
+        lgm().log( f"sgui:get_data[{cname}] block = {block.index}")
+        if cname=="bands":        return block.getBandData(raster=True, norm=True)
+        if cname=="features":     return dm().getModelData(block=block, raster=True, norm=True).rename(dict(band='feature'))
+        if cname=="reproduction": return block.getReproduction(raster=True)
 
     def get_control_panel(self) -> Panel:
         data_selection_panel = pn.Tabs(  ("Tile",dm().modal.gui()) ) # , ("Block",dm().modal.gui()) ] )
