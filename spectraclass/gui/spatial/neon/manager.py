@@ -22,6 +22,7 @@ class NEONTileSelector:
         self.tap_stream = SingleTap( transient=True )
         self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True)
         self.selected_rec = hv.DynamicMap(self.select_rec, streams=[self.tap_stream, self.double_tap_stream])
+        self.indicated_rec = hv.DynamicMap(self.indicate_rec, streams=[self.tap_stream, self.double_tap_stream])
         self. rectangles: hv.Rectangles = None # ([(0, 0, 1, 1), (2, 3, 4, 6), (0.5, 2, 1.5, 4), (2, 1, 3.5, 2.5)])
         self._transformed_block_data = None
         self._selected_block: Tuple[int,int] = (0,0)
@@ -30,7 +31,7 @@ class NEONTileSelector:
         self.rects: Dict[Tuple,Tuple] = {}
         self.xlim, self.ylim = (sys.float_info.max, -sys.float_info.max), (sys.float_info.max, -sys.float_info.max)
         self.bdx, self.bdy = None, None
-        self.bx0, self.by0 = None, None
+        self.bx0, self.by1 = None, None
         self.rect0 = None
 
     @exception_handled
@@ -41,7 +42,15 @@ class NEONTileSelector:
         if new_rect != self.rect0:
             sgui().select_block( bindex )
             self.rect0 = new_rect
+        ufm().clear()
         return hv.Rectangles( [self.rect0] ).opts( line_color="white", fill_alpha=0.0, line_alpha=1.0, line_width=3 )
+
+    @exception_handled
+    def indicate_rec(self, x, y, x2, y2):
+        bindex = self.block_index(x2,y2)
+        ufm().show( f"Loading block {bindex}")
+        new_rect = self.rects.get( bindex, self.rect0 )
+        return hv.Rectangles( [new_rect] ).opts( line_color="yellow", fill_alpha=0.0, line_alpha=1.0, line_width=1 )
 
     def gui(self):
         blocks: List[Block] = tm().tile.getBlocks()
@@ -51,7 +60,7 @@ class NEONTileSelector:
             self.ylim = ( min(bylim[0],self.ylim[0]), max(bylim[1],self.ylim[1]) )
             if self.bx0 is None:
                 self.bdx, self.bdy = (bxlim[1]-bxlim[0]), (bylim[1]-bylim[0])
-        self.bx0, self.by0 = self.xlim[0], self.ylim[0]
+        self.bx0, self.by1 = self.xlim[0], self.ylim[1]
         for block in blocks:
             (bxlim, bylim) = block.get_extent( spm().projection )
             r = (bxlim[0],bylim[0],bxlim[1],bylim[1])
@@ -60,12 +69,12 @@ class NEONTileSelector:
         self.rect0 = self.rects[ tm().block_index ]
         basemap = spm().selection_basemap(self.xlim,self.ylim)
         self.rectangles = hv.Rectangles( list(self.rects.values()) ).opts( line_color="magenta", fill_alpha=0.0, line_alpha=1.0 )
-        return basemap * self.rectangles * self.selected_rec
+        return basemap * self.rectangles * self.selected_rec * self.indicated_rec
 
     @exception_handled
     def block_index(self, x, y ) -> Tuple[int,int]:
         if x is None: (x,y) = tm().block_index
-        return  math.floor( (x-self.bx0)/self.bdx ),  math.floor( (y-self.by0)/self.bdy )
+        return  math.floor( (x-self.bx0)/self.bdx ),  math.floor( (self.by1-y)/self.bdy )
 
     @property
     def image_index(self) -> int:

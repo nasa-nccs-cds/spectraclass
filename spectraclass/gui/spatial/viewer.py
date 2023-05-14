@@ -9,6 +9,7 @@ from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.model.labels import LabelsManager, lm
+from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.data.spatial.satellite import spm
 from holoviews.streams import SingleTap, DoubleTap
@@ -150,6 +151,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         self.browsers: Dict[str,VariableBrowser] = None
         self.panels: List = None
         self.mapviews: pn.Tabs = None
+        self.alert = ufm().gui()
 
     def init( self, **plotopts ):
         block: Block = tm().getBlock()
@@ -177,7 +179,8 @@ class hvSpectraclassGui(SCSingletonConfigurable):
 
     def get_control_panel(self) -> Panel:
         data_selection_panel = pn.Tabs(  ("Tile",dm().modal.gui()) ) # , ("Block",dm().modal.gui()) ] )
-        return pn.Accordion( ('Data Selection', data_selection_panel ), toggle=True, active=[0] )
+        controls = pn.Accordion( ('Data Selection', data_selection_panel ), toggle=True, active=[0] )
+        return pn.Column( self.alert, controls )
 
     def panel(self, title: str = None, **kwargs ) -> Panel:
         devel = kwargs.get( 'devel_gui', False )

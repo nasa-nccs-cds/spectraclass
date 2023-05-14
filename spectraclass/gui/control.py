@@ -5,6 +5,8 @@ from functools import partial
 import xarray as xa
 import numpy as np
 import ipywidgets as ipw
+import panel as pn
+from panel.pane import Alert
 import traitlets.config as tlc
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
@@ -106,20 +108,19 @@ class UserFeedbackManager(SCSingletonConfigurable):
 
         def __init__(self):
             super(UserFeedbackManager, self).__init__()
-            self._wGui: ipw.HTML = ipw.HTML( value='', placeholder='', description='messages:',
-                                             layout = ip.Layout(width="100%"), border= '1px solid dimgrey' )
+            self._wGui: Alert = Alert()
 
-        def gui(self, **kwargs) -> ipw.HTML:
+        def gui(self) -> Alert:
             return self._wGui
 
-        def show(self, message: str, color: str = "blue", **kwargs ):
-            print_also = kwargs.get('print',False)
-            self._wGui.value = f'<p style="color:{color}"><b>{message}</b></p>'
-            if print_also: print( message )
+        def show(self, message: str, alert_type: str = "info", **kwargs ):  #  alert_types: primary, secondary, success, danger, warning, info, light, dark.
+            self._wGui.alert_type = alert_type
+            self._wGui.object = message
+
             lgm().log( message )
 
         def clear(self):
-            self._wGui.value = ""
+            self._wGui.object = ""
 
 
 
