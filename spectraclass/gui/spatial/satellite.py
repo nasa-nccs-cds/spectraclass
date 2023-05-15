@@ -34,6 +34,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
     @exception_handled
     def setBlock(self, block: Block = None, type ='satellite'):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         if block is None:
             self.block: Block = tm().getBlock()
             lgm().log("  @@GPM:  Getting block from TileManager")

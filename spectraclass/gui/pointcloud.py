@@ -1,15 +1,15 @@
 import ipywidgets as ipw
 import pythreejs as p3js
-import matplotlib.pyplot as plt
 from functools import partial
+import holoviews as hv
+from spectraclass.reduction.embedding import ReductionManager, rm
 import time, math, os, sys, numpy as np
+from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.gui.spatial.widgets.markers import Marker
 from typing import List, Union, Tuple, Optional, Dict, Callable, Iterable
-from matplotlib import cm
 import numpy.ma as ma
 import pickle, xarray as xa
 from spectraclass.data.spatial.voxels import Voxelizer
-from matplotlib.colors import Normalize
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import traitlets as tl
 from spectraclass.model.labels import LabelsManager, lm
@@ -30,7 +30,6 @@ class PointCloudManager(SCSingletonConfigurable):
     def __init__( self):
         super(PointCloudManager, self).__init__()
         self._gui = None
-        self._xyz: xa.DataArray = None
         self.points: p3js.Points = None
         self.marker_points: Optional[p3js.Points] = None
         self.marker_gids = {}
@@ -62,6 +61,17 @@ class PointCloudManager(SCSingletonConfigurable):
         self.probe_material = p3js.PointsMaterial( vertexColors='VertexColors', transparent=True ) # , size=5.0, opacity=1.0 )
         self.opacity_control = None
         self.voxelizer: Voxelizer = None
+        self.colorstretch = 2.0
+        self.block_watcher = None
+
+    @exception_handled
+    def set_block_callback(self,*events):
+        from spectraclass.data.spatial.tile.tile import Block
+        for event in events:
+            if event.name == 'value':
+                block_index = event.new
+                block: Block = tm().getBlock( block_index )
+                self.update_plot( points=block.getModelData(raster=False) )
 
     def set_alpha(self, opacity: float ):
         self.scene_controls[ 'marker.material.opacity' ] = opacity
@@ -175,6 +185,8 @@ class PointCloudManager(SCSingletonConfigurable):
             attrs = {} if (model_data is None) else model_data.attrs
             self.xyz = xa.DataArray( np.empty([0,3]), dims=['samples','model'], coords=ecoords, attrs=attrs )
 
+        self.block_watcher = tm().block_selection.param.watch(self.set_block_callback, ['value'], onlychanged=True)
+
     def pnorm(self, point_data: xa.DataArray) -> xa.DataArray:
         return (point_data - point_data.mean()) * (self.scale / point_data.std())
 
@@ -183,37 +195,29 @@ class PointCloudManager(SCSingletonConfigurable):
     #     normed_data = (data.values - dave) / dmag
     #     return data.copy(data=normed_data)
 
+    def get_color_bounds( self, raster: xa.DataArray ):
+        ave = np.nanmean( raster.values )
+        std = np.nanstd(  raster.values )
+        nan_mask = np.isnan( raster.values )
+        nnan = np.count_nonzero( nan_mask )
+        lgm().log( f" **get_color_bounds: mean={ave}, std={std}, #nan={nnan}" )
+        return dict( vmin= ave - std * self.colorstretch, vmax= ave + std * self.colorstretch  )
+
     def getColors( self, **kwargs ):
+        import matplotlib.pyplot as plt
+        from matplotlib.colors import Normalize
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.gui.spatial.map import MapManager, mm
         cdata: Optional[xa.DataArray] = kwargs.get( 'cdata', mm().getPointData( current_frame=True ) )
         if cdata.ndim > 1:
             cdata, _, _ = tm().getBlock().raster2points(cdata)
-        vr = mm().get_color_bounds( cdata )
+        vr = self.get_color_bounds( cdata )
         norm = Normalize( vr['vmin'], vr['vmax'] )
-        tmask: np.ndarray = mm().block.get_threshold_mask(raster=False)
-        if (tmask is not None) and (tmask.shape[0] == cdata.shape[0]):
-            cdata = cdata[ tmask ]
-        lgm().log( f"getColors: norm cdata shape = {cdata.shape}, dims={cdata.dims}, crange={[norm.vmin,norm.vmax]}")
-        mapper = plt.cm.ScalarMappable( norm = norm, cmap="jet" )
-        colors = mapper.to_rgba( cdata.values )[:, :-1] * 255
-        if self.pick_point >= 0:
-            pid = self.voxelizer.gid2pid( self.pick_point )
-            colors[ pid ] = [255] * colors.shape[1]
-        return colors.astype(np.uint8)
-
-    def getColors1( self, **kwargs ):
-        from spectraclass.gui.spatial.map import MapManager, mm
-        norm: Normalize = kwargs.get('norm')
-        cdata: Optional[xa.DataArray] = mm().getPointData( current_frame=True )
-        if norm is None:
-            vr = mm().get_color_bounds( cdata )
-            norm = Normalize( vr['vmin'], vr['vmax'] )
-        tmask: np.ndarray = mm().block.get_threshold_mask(raster=False)
-        if (tmask is not None) and (tmask.shape[0] == cdata.shape[0]):
-            cdata = cdata[ tmask ]
-        lgm().log( f"getColors: norm cdata shape = {cdata.shape}, dims={cdata.dims}, crange={[norm.vmin,norm.vmax]}")
-        mapper = plt.cm.ScalarMappable( norm = norm, cmap="jet" )
+        # tmask: np.ndarray = mm().block.get_threshold_mask(raster=False)
+        # if (tmask is not None) and (tmask.shape[0] == cdata.shape[0]):
+        #     cdata = cdata[ tmask ]
+        lgm().log( f"getColors: norm cdata shape = {cdata.shape}, dims={cdata.dims}" ) # , crange={[norm.vmin,norm.vmax]}")
+        mapper = plt.cm.ScalarMappable(  norm = norm, cmap="jet" )
         colors = mapper.to_rgba( cdata.values )[:, :-1] * 255
         if self.pick_point >= 0:
             pid = self.voxelizer.gid2pid( self.pick_point )
@@ -361,10 +365,10 @@ class PointCloudManager(SCSingletonConfigurable):
                 lgm().log( f" $$$color_by_value (shape:{colors.shape}) ")
                 self.update_plot( cdata=colors, **kwargs)
 
-    def get_color_bounds(self):
-        from spectraclass.data.spatial.manager import SpatialDataManager
-        (ave, std) = (self._color_values.mean(), self._color_values.std())
-        return (ave - std * SpatialDataManager.colorstretch, ave + std * SpatialDataManager.colorstretch, ave, std)
+    # def get_color_bounds(self):
+    #     from spectraclass.data.spatial.manager import SpatialDataManager
+    #     (ave, std) = (self._color_values.mean(), self._color_values.std())
+    #     return (ave - std * SpatialDataManager.colorstretch, ave + std * SpatialDataManager.colorstretch, ave, std)
 
     def reset(self):
         self._xyz = None

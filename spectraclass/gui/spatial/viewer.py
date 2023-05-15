@@ -1,6 +1,7 @@
 import traceback, linecache
 from typing import List, Union, Tuple, Optional, Dict, Type, Hashable, Callable
 import hvplot.xarray
+from spectraclass.gui.pointcloud import PointCloudManager, pcm
 from panel.widgets.player import DiscretePlayer
 import holoviews as hv
 from spectraclass.data.base import dm
@@ -172,8 +173,10 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         if cname=="reproduction": return block.getReproduction(raster=True)
 
     def get_control_panel(self) -> Panel:
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         data_selection_panel = pn.Tabs(  ("Tile",dm().modal.gui()) ) # , ("Block",dm().modal.gui()) ] )
-        controls = pn.Accordion( ('Data Selection', data_selection_panel ), toggle=True, active=[0] )
+        manifold_panel = pn.Row( pcm().gui() )
+        controls = pn.Accordion( ('Data Selection', data_selection_panel ), ('Manifold', manifold_panel ), toggle=True, active=[0] )
         return pn.Column( self.alert, controls )
 
     def panel(self, title: str = None, **kwargs ) -> Panel:

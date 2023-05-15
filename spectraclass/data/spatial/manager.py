@@ -28,8 +28,6 @@ class SpatialDataManager(ModeDataManager):
 
     def __init__( self  ):   # Tile shape (y,x) matches image shape (row,col)
         super(SpatialDataManager, self).__init__()
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        self.tiles: TileManager = tm()
         self.spectral_means: List[ Tuple[int,np.ndarray] ] = []
 
     def getSpectralData( self, **kwargs ) -> Optional[xa.DataArray]:
@@ -62,7 +60,8 @@ class SpatialDataManager(ModeDataManager):
         return None # self.tile_selection_basemap.gui()
 
     def update_extent(self):
-        (x0, x1, y0, y1) = self.tiles.tile.extent
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        (x0, x1, y0, y1) = tm().tile.extent
  #       self.tile_selection_basemap.set_bounds( (x0, x1), (y0, y1) )
  #       self.tile_selection_basemap.update()
 
@@ -300,7 +299,7 @@ class SpatialDataManager(ModeDataManager):
             has_metadata = (self.metadata is not None)
             for image_index in range( dm().modal.num_images ):
                 self.set_current_image( image_index )
-                blocks = self.tiles.tile.getBlocks()
+                blocks = tm().tile.getBlocks()
                 action = "Preprocessing data blocks" if tm().reprocess else "Processing metadata"
                 lgm().log(f" {action} for image {dm().modal.image_name} with {len(blocks)} blocks.", print=True)
                 ufm().show( f"{action} for image {dm().modal.image_name}", "blue" )
@@ -320,9 +319,10 @@ class SpatialDataManager(ModeDataManager):
             lgm().exception("prepare_inputs error:")
 
     def process_spectral_mean(self):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         total_samples = sum( [ v[0] for v in self.spectral_means ]  )
         wmeans = [ (v[0]/total_samples)*v[1] for v in self.spectral_means ]
-        spectral_mean = xa.DataArray( np.add.reduce( wmeans ), dims=['band'], coords=dict( band=self.tiles.tile.data.band ) )
+        spectral_mean = xa.DataArray( np.add.reduce( wmeans ), dims=['band'], coords=dict( band=tm().tile.data.band ) )
         file_path = f"{dm().cache_dir}/{self.modelkey}.spectral_mean.nc"
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         try:

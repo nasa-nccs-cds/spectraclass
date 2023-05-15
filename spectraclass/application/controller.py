@@ -107,8 +107,6 @@ class SpectraclassController(SCSingletonConfigurable):
         lgm().log(f"                  ----> Controller[{self.__class__.__name__}] -> EMBED ")
         ufm().show( "Computing 3D embedding" )
         mm().update_pcm()
-        embedding = rm().umap_embedding()
-        pcm().update_plot( points=embedding )
         ufm().clear()
 
     @exception_handled
