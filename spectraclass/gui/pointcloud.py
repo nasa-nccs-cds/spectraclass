@@ -172,6 +172,7 @@ class PointCloudManager(SCSingletonConfigurable):
         model_data: Optional[xa.DataArray] = dm().getModelData()
 
         if (model_data is not None) and (model_data.shape[0] > 1):
+
             lgm().log(f"UMAP.init: model_data{model_data.dims} shape = {model_data.shape}",print=True)
             # flow: ActivationFlow = afm().getActivationFlow()
             # if flow is None: return False

@@ -1,9 +1,10 @@
 import pickle
-
+import panel as pn
+from panel.layout import Panel
+from panel.widgets import Button, Select, FloatSlider
 from joblib import cpu_count
 from spectraclass.gui.spatial.widgets.markers import Marker
 import xarray as xa
-import ipywidgets as ipw
 from functools import partial
 import numpy as np
 from typing import List, Tuple, Dict
@@ -17,33 +18,31 @@ import colorsys
 def clm() -> "ClusterManager":
     return ClusterManager.instance()
 
-class ClusterMagnitudeWidget(ipw.HBox):
+class ClusterMagnitudeWidget:
     height = 26
 
     def __init__(self, index: int, **kwargs ):
         cluster_color = f"rgb{ clm().cluster_color(index) }"
         self.init_value = kwargs.get( 'value', 1.0 )
-        handler = kwargs.get( 'handler', None )
         range = kwargs.get( 'range', [0.0,2.0] )
         step = kwargs.get( 'step', 0.05 )
         cname = "Threshold" if index == 0 else f"Cluster-{index}"
-        self.label = ipw.Button( description=cname, style=dict( button_color=cluster_color ) )
+        self.label = Button( name=cname, button_type='primary' ) # .opts( color=cluster_color ) name='Click me', button_type='primary'
         self._index = index
-        self.slider = ipw.FloatSlider( self.init_value, description="", min=range[0], max=range[1], step=step )
+        self.slider = FloatSlider( name='', start=range[0], end=range[1], step=step, value=self.init_value ) #self.init_value, description="", min=range[0], max=range[1], step=step )
         self.label.on_click( self.reset )
-        ipw.HBox.__init__( self, [self.label,self.slider], layout=ipw.Layout( width="550px", height=f"{self.height}px"), overflow="hidden" )
-        if handler is not None:
-            self.on_change( handler )
-            handler( self._index, dict(new=self.init_value) )
 
-    def set_color(self, color: str ):
-        self.label.style.button_color = color
-
-    def reset_color(self ):
-        self.label.style.button_color = f"rgb{ clm().cluster_color( self._index, False ) }"
+    def panel(self):
+        return pn.Row(  self.label, self.slider )  # , layout=ipw.Layout( width="550px", height=f"{self.height}px"), overflow="hidden" )
 
     def on_change(self, handler ):
-        self.slider.observe( partial( handler, self._index ), 'value' )
+        self.slider.param.watch( handler, ['value'], onlychanged=True )
+
+    def set_color(self, color: str ):
+        self.label.apply.opts( color = color )
+
+    def reset_color(self ):
+        self.label.apply.opts( color =  f"rgb{ clm().cluster_color( self._index, False ) }" )
 
     def reset(self, *args ):
         self.slider.value = self.init_value
@@ -56,7 +55,7 @@ class ClusterManager(SCSingletonConfigurable):
     def __init__(self, **kwargs ):
         super(ClusterManager, self).__init__(**kwargs)
         self._max_culsters = 15
-        self._ncluster_options = range( 2, self._max_culsters )
+        self._ncluster_options = list( range( 2, self._max_culsters ) )
         self._mid_options = [ "kmeans", "fuzzy cmeans", "bisecting kmeans" ]
         self._cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
@@ -67,10 +66,10 @@ class ClusterManager(SCSingletonConfigurable):
         self._cluster_points: xa.DataArray = None
         self._cluster_markers: Dict[int, Marker] = {}
         self._models: Dict[str,ClusterBase] = {}
-        self._model_selector = ipw.Select( options=self.mids, description='Methods:', value=self.modelid, disabled=False,
-                                          layout=ipw.Layout(width="500px"))
-        self._ncluster_selector = ipw.Select( options=self._ncluster_options, description='#Clusters:', disabled=False,
-                                             value=self.nclusters, layout=ipw.Layout(width="500px"))
+        self._model_selector = pn.widgets.Select(name='Methods', options=self.mids, value=self.modelid )
+        self._model_watcher = self._model_selector.param.watch( self.on_parameter_change, ['value'], onlychanged=True )
+        self._ncluster_selector = pn.widgets.Select(name='#Clusters', options=self._ncluster_options, value=self.nclusters )
+        self._ncluster_watcher = self._ncluster_selector.param.watch(self.on_parameter_change, ['value'], onlychanged=True )
 
     def update_model(self):
         if self.mid not in self._models:
@@ -258,18 +257,16 @@ class ClusterManager(SCSingletonConfigurable):
         #                                                norm=self.cspecs['norm'])
 
     @exception_handled
-    def gui(self) -> ipw.DOMWidget:
+    def gui(self) -> Panel:
         selectors = [ self._model_selector,self._ncluster_selector ]
-        for selector in selectors: selector.observe( self.on_parameter_change, names=['value'] )
-        selection_gui = ipw.HBox( selectors, layout=ipw.Layout(width="600px", max_height="150px", border='2px solid firebrick') )
-        config_panel = ipw.VBox( [ selection_gui, self.tuning_gui() ] )
-        actions_panel = ipw.VBox( self.action_buttons(), layout=ipw.Layout(width="150px", border='2px solid firebrick') )
-        return ipw.HBox( [ config_panel, actions_panel ] )
+        selection_gui = pn.Row( *selectors )
+        actions_panel = pn.Row( *self.action_buttons() )
+        return pn.Column( selection_gui, self.tuning_gui(), actions_panel )
 
     def action_buttons(self):
         buttons = []
         for task in [ "cluster", "embed" ]:
-            button = ipw.Button( description=task, border= '1px solid gray', layout = ipw.Layout( height="30px", width="auto" ) )
+            button = Button( name=task, button_type='primary' ) # .opts(color=cluster_color) name='Click me', button_type='primary'
             button.on_click( partial( self.on_action, task ) )
             buttons.append( button )
         return buttons
@@ -301,15 +298,17 @@ class ClusterManager(SCSingletonConfigurable):
             slider.reset_color()
 
     @exception_handled
-    def tuning_gui(self) -> ipw.DOMWidget:
+    def tuning_gui(self) -> Panel:
         if not self._tuning_sliders:
-            self.thresh_slider = ClusterMagnitudeWidget( 0, range=[0.0,1.0], value=0.5, step=0.02, handler=self.tune_cluster )
+            self.thresh_slider = ClusterMagnitudeWidget( 0, range=[0.0,1.0], value=0.5, step=0.02 )
+            self.thresh_slider.on_change( self.tune_cluster )
             self._tuning_sliders= [ self.thresh_slider ]
             for icluster in range( 1, self._max_culsters+1 ):
-                self._tuning_sliders.append( ClusterMagnitudeWidget( icluster, handler=self.tune_cluster ) )
-        tsh = len(self._tuning_sliders) * ( ClusterMagnitudeWidget.height + 2 )
-        slider_list = ipw.VBox(self._tuning_sliders, layout=ipw.Layout( width="600px", min_height=f"{tsh}px", overflow='hidden' ) )
-        return  ipw.HBox( [slider_list], layout=ipw.Layout( width="600px", height="200px", overflow='auto', border='2px solid firebrick' ) )
+                cmw = ClusterMagnitudeWidget( icluster )
+                self._tuning_sliders.append( cmw )
+                cmw.on_change( self.tune_cluster )
+        panels = [ ts.panel() for ts in self._tuning_sliders ]
+        return  pn.Column( *panels )
 
     @property
     def max_clusters(self):

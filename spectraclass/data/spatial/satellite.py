@@ -26,7 +26,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
         self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True)
         self.selection_points = hv.DynamicMap(self.select_points, streams=[self.tap_stream, self.double_tap_stream])
         self.tile_source: gv.element.geo.Tiles = None
-        pn.bind( self.set_extent, block_index=tm().block_selection )
+        pn.bind( self.set_extent, block_index=tm().block_selection.param.value )
 
     @property
     def block(self) -> Block:
@@ -77,5 +77,15 @@ class SatellitePlotManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block: Block = tm().getBlock( bindex=block_index )
         (xlim, ylim) = block.get_extent(self.projection)
-        self.tile_source.extents = (xlim[0], ylim[0], xlim[1], ylim[1] ) #   (left, bottom, right, top)
+        self.tile_source.apply.opts( xlim=xlim, ylim=ylim )
+
+    #     self.tile_source = hv.DynamicMap(self.get_tile_source,
+    #                                      streams=dict(block_index=tm().block_selection.param.value))
+    #
+    # def get_tile_source(self, block_index) -> gv.element.geo.Tiles:
+    #     from spectraclass.data.spatial.tile.manager import TileManager, tm
+    #     block: Block = tm().getBlock(bindex=block_index)
+    #     (xlim, ylim) = block.get_extent(self.projection)
+    #     self.tile_source.apply.opts(extents=(xlim[0], ylim[0], xlim[1], ylim[1]))  # (left, bottom, right, top)
+    #
 

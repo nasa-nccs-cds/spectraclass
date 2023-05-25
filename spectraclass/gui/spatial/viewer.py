@@ -163,7 +163,16 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
         self.panels.append(('satellite', spm().selection_basemap( point_selection=True ) ) )
         self.mapviews = pn.Tabs( *self.panels, dynamic=True )
+        self.tab_watcher = self.mapviews.param.watch(self.on_tab_change, ['active'], onlychanged=True)
         return self
+
+    @exception_handled
+    def on_tab_change(self, *events):
+        for event in events:
+            new_slider: DiscretePlayer = self.mapviews.objects[ event.new ].objects[2]
+            old_slider: DiscretePlayer = self.mapviews.objects[ event.old ].objects[2]
+            lgm().log( f" #TC: tab change event, old slider index= {old_slider.value}, new slider index= {new_slider.value}" )
+            new_slider.value.apply.opts( value=old_slider.value )
 
     def get_data( self, cname: str ) -> xa.DataArray:
         block: Block = tm().getBlock()
@@ -173,10 +182,12 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         if cname=="reproduction": return block.getReproduction(raster=True)
 
     def get_control_panel(self) -> Panel:
+        from spectraclass.learn.cluster.manager import clm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
         data_selection_panel = pn.Tabs(  ("Tile",dm().modal.gui()) ) # , ("Block",dm().modal.gui()) ] )
         manifold_panel = pn.Row( pcm().gui() )
-        controls = pn.Accordion( ('Data Selection', data_selection_panel ), ('Manifold', manifold_panel ), toggle=True, active=[0] )
+        analytics_gui = pn.Tabs( ("Cluster", clm().gui()) )
+        controls = pn.Accordion( ('Data Selection', data_selection_panel ), ('Analytics',analytics_gui), ('Manifold', manifold_panel ), toggle=True, active=[0] )
         return pn.Column( self.alert, controls )
 
     def panel(self, title: str = None, **kwargs ) -> Panel:

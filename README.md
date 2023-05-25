@@ -16,6 +16,8 @@ Conda CPU Environment Setup
     > conda activate spectraclass.hv
     > mamba install -c pyviz -c conda-forge ipympl jupytext pyepsg ipysheet tensorflow h5py pythreejs nb_conda_kernels nodejs jupyterlab jupyterlab_server  rasterio dask netcdf4 scikit-image numba owslib rioxarray bottleneck  
 
+    > jupyter labextension install jupyter-threejs
+
 The x-ray application requires the following additional packages:
 
     > mamba install -c conda-forge jupyter_bokeh
