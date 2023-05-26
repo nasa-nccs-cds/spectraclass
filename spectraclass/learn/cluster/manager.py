@@ -186,7 +186,7 @@ class ClusterManager(SCSingletonConfigurable):
         self.run_cluster_model( data )
         ccount = self._count.index + 1
         self._count.event( index=ccount )
-        lgm().log( f"#CLM: exec cluster, ccount={ccount}" )
+        lgm().log( f"#CLM: exec cluster, op count={ccount}" )
 
     @exception_handled
     def get_cluster_map( self ) -> xa.DataArray:
