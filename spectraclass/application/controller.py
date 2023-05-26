@@ -125,16 +125,6 @@ class SpectraclassController(SCSingletonConfigurable):
             if action.type == "classify":
                 mm().plot_labels_image( lm().get_label_map() )
 
-    @log_timing
-    def cluster(self):
-        from spectraclass.learn.cluster.manager import clm
-        from spectraclass.data.base import DataManager, dm
-        from spectraclass.gui.spatial.map import MapManager, mm
-        ufm().show(f"Creating clusters using {clm().mid}  ")
-        cluster_input: xa.DataArray = dm().getModelData()
-        cluster_image: xa.DataArray = clm().cluster( cluster_input )
-        mm().plot_cluster_image( cluster_image )
-        ufm().show(f"Clustering completed")
 
     def learn(self):
         from spectraclass.learn.manager import ClassificationManager, cm

@@ -3,6 +3,7 @@ from typing import List, Union, Tuple, Optional, Dict, Type, Hashable, Callable
 import hvplot.xarray
 from spectraclass.gui.pointcloud import PointCloudManager, pcm
 from panel.widgets.player import DiscretePlayer
+from spectraclass.learn.cluster.manager import clm
 import holoviews as hv
 from spectraclass.data.base import dm
 from panel.layout import Panel
@@ -162,6 +163,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         self.browsers['bands'].verification = plotopts.pop('verification',None)
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
         self.panels.append(('satellite', spm().selection_basemap( point_selection=True ) ) )
+        self.panels.append( ('clusters', clm().panel() ) )
         self.mapviews = pn.Tabs( *self.panels, dynamic=True )
         self.tab_watcher = self.mapviews.param.watch(self.on_tab_change, ['active'], onlychanged=True)
         return self
@@ -169,10 +171,14 @@ class hvSpectraclassGui(SCSingletonConfigurable):
     @exception_handled
     def on_tab_change(self, *events):
         for event in events:
-            new_slider: DiscretePlayer = self.mapviews.objects[ event.new ].objects[2]
-            old_slider: DiscretePlayer = self.mapviews.objects[ event.old ].objects[2]
-            lgm().log( f" #TC: tab change event, old slider index= {old_slider.value}, new slider index= {new_slider.value}" )
-            new_slider.value.apply.opts( value=old_slider.value )
+            new_panel = self.mapviews.objects[ event.new ]
+            old_panel = self.mapviews.objects[ event.old ]
+            if hasattr( new_panel, 'objects' ) and hasattr( old_panel, 'objects' ):
+                new_slider: DiscretePlayer = new_panel.objects[2]
+                old_slider: DiscretePlayer = old_panel.objects[2]
+                if len(new_slider.values) == len(old_slider.values):
+                    lgm().log( f" #TC: tab change event, old slider index= {old_slider.value}, new slider index= {new_slider.value}" )
+                    new_slider.value.apply.opts( value=old_slider.value )
 
     def get_data( self, cname: str ) -> xa.DataArray:
         block: Block = tm().getBlock()

@@ -1,9 +1,11 @@
 import pickle
 import panel as pn
 from panel.layout import Panel
+import holoviews as hv
 from panel.widgets import Button, Select, FloatSlider
 from joblib import cpu_count
 from spectraclass.gui.spatial.widgets.markers import Marker
+from spectraclass.gui.control import UserFeedbackManager, ufm
 import xarray as xa
 from functools import partial
 import numpy as np
@@ -15,6 +17,9 @@ from spectraclass.util.logs import lgm, exception_handled, log_timing
 from spectraclass.model.base import SCSingletonConfigurable
 import colorsys
 
+def arange( data: xa.DataArray, axis=None ) -> Tuple[np.ndarray,np.ndarray]:
+    return ( np.nanmin(data.values,axis=axis), np.nanmax(data.values,axis=axis) )
+
 def clm() -> "ClusterManager":
     return ClusterManager.instance()
 
@@ -22,7 +27,7 @@ class ClusterMagnitudeWidget:
     height = 26
 
     def __init__(self, index: int, **kwargs ):
-        cluster_color = f"rgb{ clm().cluster_color(index) }"
+      #  cluster_color = f"rgb{ clm().cluster_color(index) }"
         self.init_value = kwargs.get( 'value', 1.0 )
         range = kwargs.get( 'range', [0.0,2.0] )
         step = kwargs.get( 'step', 0.05 )
@@ -54,11 +59,14 @@ class ClusterManager(SCSingletonConfigurable):
 
     def __init__(self, **kwargs ):
         super(ClusterManager, self).__init__(**kwargs)
-        self._max_culsters = 15
+        self.width = kwargs.pop('width',600)
+        self.cmap = kwargs.pop('cmap', 'Category20')
+        self._max_culsters = 20
         self._ncluster_options = list( range( 2, self._max_culsters ) )
         self._mid_options = [ "kmeans", "fuzzy cmeans", "bisecting kmeans" ]
         self._cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
+        self._cluster_image = hv.DynamicMap( self.get_cluster_image )
         self._marked_colors: Dict[Tuple,Tuple[float,float,float]] = {}
         self._marked_clusters: Dict[Tuple, List] = {}
         self._tuning_sliders: List[ClusterMagnitudeWidget] = []
@@ -116,9 +124,6 @@ class ClusterManager(SCSingletonConfigurable):
         self.update_model()
         return self._models[ self.mid ]
 
-    def get_colormap( self, layer: bool ):
-        return self.get_layer_colormap() if layer else self.get_cluster_colormap()
-
     def get_cluster_colors( self, updated=True ) ->  np.ndarray:
         colors: np.ndarray = self._cluster_colors.copy()
         if updated:
@@ -172,18 +177,17 @@ class ClusterManager(SCSingletonConfigurable):
         self.model.cluster(data)
         self._cluster_points = self.model.cluster_data
 
-    def cluster(self, data: xa.DataArray ) -> xa.DataArray:
+    def cluster(self, data: xa.DataArray ):
         self.reset_clusters()
         self.run_cluster_model( data )
-        return self.get_cluster_map()
+        self._cluster_image.event()
 
     @exception_handled
-    def get_cluster_map( self, layer: bool = False ) -> xa.DataArray:
+    def get_cluster_map( self ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import tm
         if self.cluster_points is not None:
             block = tm().getBlock()
             self._cluster_raster: xa.DataArray = block.points2raster( self.cluster_points ).squeeze()
-            self._cluster_raster.attrs['cmap'] = self.get_colormap( layer )
         else:
             lgm().log( "get_cluster_map: cluster_points=NULL")
         return self._cluster_raster
@@ -257,6 +261,18 @@ class ClusterManager(SCSingletonConfigurable):
         #                                                norm=self.cspecs['norm'])
 
     @exception_handled
+    def panel(self) -> hv.DynamicMap:
+        return self._cluster_image
+
+    @exception_handled
+    def get_cluster_image(self) -> hv.Image:
+        raster: xa.DataArray = self.get_cluster_map()
+        iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False)
+        image =  raster.hvplot.image( **iopts )
+        lgm().log( f"#CLM: create cluster image, dims={raster.dims}, shape={raster.shape}")
+        return image
+
+    @exception_handled
     def gui(self) -> Panel:
         selectors = [ self._model_selector,self._ncluster_selector ]
         selection_gui = pn.Row( *selectors )
@@ -273,11 +289,14 @@ class ClusterManager(SCSingletonConfigurable):
 
     @exception_handled
     def on_action(self, action: str, *args, **kwargs ):
-        from spectraclass.application.controller import app
         if action == "embed":
             self.create_embedding()
         elif action == "cluster":
-            app().cluster()
+            from spectraclass.data.base import DataManager, dm
+            ufm().show(f"Creating clusters using {clm().mid}  ")
+            clm().cluster(dm().getModelData())
+            self._cluster_image.event()
+            ufm().show(f"Clustering completed")
 
     def create_embedding(self, ndim: int = 3):
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
@@ -287,15 +306,15 @@ class ClusterManager(SCSingletonConfigurable):
         pcm().update_plot( points=embedding )
 
     def reset_clusters(self):
-        from spectraclass.application.controller import app
+ #       from spectraclass.application.controller import app
         self._marked_colors = {}
         self._cluster_points = None
-        for (icluster, marker) in self._cluster_markers.items():
-            if marker.active():
-                app().remove_marker(marker)
-                self.get_marked_clusters(marker.cid).remove(icluster)
-        for slider in self._tuning_sliders:
-            slider.reset_color()
+        # for (icluster, marker) in self._cluster_markers.items():
+        #     if marker.active():
+        #         app().remove_marker(marker)
+        #         self.get_marked_clusters(marker.cid).remove(icluster)
+        # for slider in self._tuning_sliders:
+        #     slider.reset_color()
 
     @exception_handled
     def tuning_gui(self) -> Panel:
