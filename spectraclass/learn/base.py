@@ -149,7 +149,7 @@ class LearningModel:
                                            coords=dict(samples=input_data.coords['samples'], classes=range(pred_confidence.shape[1])))
             return self.classification, self.confidence
         except NotFittedError:
-            ufm().show( "Must learn a mapping before applying a classification", "red")
+            ufm().show( "Must learn a mapping before applying a classification", "warning")
 
     def predict( self, data: np.ndarray, **kwargs ):
         raise Exception( "abstract method LearningModel.predict called")

@@ -302,7 +302,7 @@ class SpatialDataManager(ModeDataManager):
                 blocks = tm().tile.getBlocks()
                 action = "Preprocessing data blocks" if tm().reprocess else "Processing metadata"
                 lgm().log(f" {action} for image {dm().modal.image_name} with {len(blocks)} blocks.", print=True)
-                ufm().show( f"{action} for image {dm().modal.image_name}", "blue" )
+                ufm().show( f"{action} for image {dm().modal.image_name}" )
                 for block in blocks:
                     result_dataset = self.process_block( block, has_metadata )
                     if result_dataset is not None:
@@ -318,6 +318,7 @@ class SpatialDataManager(ModeDataManager):
             print( f"\n *** Error in processing workflow, check log file for details: {lgm().log_file} *** ")
             lgm().exception("prepare_inputs error:")
 
+    @exception_handled
     def process_spectral_mean(self):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         total_samples = sum( [ v[0] for v in self.spectral_means ]  )

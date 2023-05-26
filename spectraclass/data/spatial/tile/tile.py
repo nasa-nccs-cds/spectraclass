@@ -595,7 +595,7 @@ class Block(DataContainer):
                     raw_raster.attrs[aid] = aval
             x,y = raw_raster.x.values, raw_raster.y.values
             lgm().log(f" @BLOCK{self.block_coords}->get_data: load-datafile raster shape={raw_raster.shape}, exent= ({x[0]},{x[-1]}) ({y[0]},{y[-1]})")
-            if raw_raster.size == 0: ufm().show( "This block does not appear to have any data.", "red" )
+            if raw_raster.size == 0: ufm().show( "This block does not appear to have any data.", "warning" )
         return raw_raster
 
     def getModelData(self, raster: bool = True ) -> xa.DataArray:

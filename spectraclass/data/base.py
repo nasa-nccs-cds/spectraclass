@@ -299,7 +299,7 @@ class DataManager(SCSingletonConfigurable):
                 assert self._project_data is not None, "Project initialization failed- check log file for details"
                 ns = self._project_data['samples'].size
                 lgm().log(f"LOAD TILE[{self.dsid()}]: #samples = {ns} ")
-                if ns == 0: ufm().show( "This tile contains no data","red")
+                if ns == 0: ufm().show( "This tile contains no data","warning")
                 self.save_config()
             return self._project_data
         else:

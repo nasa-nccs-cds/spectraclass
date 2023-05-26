@@ -202,7 +202,7 @@ class TileManager(SCSingletonConfigurable):
             if mvar in mask_dset.variables:
                 mask = mask_dset[mvar]
         if mask is None:
-            ufm().show( f"The mask for class {self.mask_class} has not yet been generated.", "red")
+            ufm().show( f"The mask for class {self.mask_class} has not yet been generated.", "warning")
             lgm().log( f"Can't apply mask for class {self.mask_class} because it has not yet been generated. Mask file: {mask_file}" )
         return mask.values if (mask is not None) else None
 
@@ -243,7 +243,7 @@ class TileManager(SCSingletonConfigurable):
             lgm().log( f"Poly selection-> Create marker[{marker.size}], cid = {cid}")
         except Exception as err:
             lgm().log( f"Error getting region marker, returning empty marker: {err}")
-            ufm().show( str(err), "red" )
+            ufm().show( str(err), "warning" )
         return marker
 
     def getTileFileName(self, with_extension = True ) -> str:
@@ -343,10 +343,11 @@ class TileManager(SCSingletonConfigurable):
         nodata_value = raster.attrs.get('data_ignore_value', -9999)
         return raster.where(raster != nodata_value, float('nan') )
 
-    def norm( self, data: xa.DataArray, axis=None ) -> xa.DataArray:
-        dave, dmag = np.nanmean(data.values, keepdims=True, axis=axis), np.nanstd(data.values, keepdims=True, axis=axis)
-        normed_data = (data.values - dave) / dmag
-        return data.copy(data=normed_data)
+    def norm( self, data: Optional[xa.DataArray], axis=None ) -> Optional[xa.DataArray]:
+        if data is not None:
+            dave, dmag = np.nanmean(data.values, keepdims=True, axis=axis), np.nanstd(data.values, keepdims=True, axis=axis)
+            normed_data = (data.values - dave) / dmag
+            return data.copy(data=normed_data)
 
 
 
