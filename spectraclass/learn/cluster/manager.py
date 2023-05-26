@@ -16,6 +16,8 @@ from .base import ClusterBase
 from spectraclass.util.logs import lgm, exception_handled, log_timing
 from spectraclass.model.base import SCSingletonConfigurable
 import colorsys
+from holoviews.streams import Stream, param
+Count = Stream.define('Count', index=param.Integer(default=0, doc='Cluster Operation count'))
 
 def arange( data: xa.DataArray, axis=None ) -> Tuple[np.ndarray,np.ndarray]:
     return ( np.nanmin(data.values,axis=axis), np.nanmax(data.values,axis=axis) )
@@ -63,10 +65,11 @@ class ClusterManager(SCSingletonConfigurable):
         self.cmap = kwargs.pop('cmap', 'Category20')
         self._max_culsters = 20
         self._ncluster_options = list( range( 2, self._max_culsters ) )
+        self._count = Count(index=0)
         self._mid_options = [ "kmeans", "fuzzy cmeans", "bisecting kmeans" ]
         self._cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
-        self._cluster_image = hv.DynamicMap( self.get_cluster_image )
+        self._cluster_image = hv.DynamicMap( self.get_cluster_image, streams=[ self._count ] )
         self._marked_colors: Dict[Tuple,Tuple[float,float,float]] = {}
         self._marked_clusters: Dict[Tuple, List] = {}
         self._tuning_sliders: List[ClusterMagnitudeWidget] = []
@@ -103,7 +106,7 @@ class ClusterManager(SCSingletonConfigurable):
         from  .kmeans import KMeansCluster, BisectingKMeans
         nclusters = self._ncluster_selector.value
         self.update_colors( self._max_culsters )
-        lgm().log( f"Creating {mid} model with {nclusters} clusters")
+        lgm().log( f"#CLM: Creating {mid} model with {nclusters} clusters")
         if mid == "kmeans":
             params = dict(  random_state= self.random_state, batch_size= 256 * cpu_count() )
             return KMeansCluster( nclusters, **params )
@@ -171,16 +174,19 @@ class ClusterManager(SCSingletonConfigurable):
 
     def run_cluster_model( self, data: xa.DataArray ):
         self.nclusters = self._ncluster_selector.value
-        lgm().log( f"Creating {self.nclusters} clusters from input data shape = {data.shape}")
+        lgm().log( f"#CLM: Creating {self.nclusters} clusters from input data shape = {data.shape}")
         self.clear()
         self.model.n_clusters = self.nclusters
         self.model.cluster(data)
         self._cluster_points = self.model.cluster_data
 
+    @exception_handled
     def cluster(self, data: xa.DataArray ):
-        self.reset_clusters()
+  #      self.reset_clusters()
         self.run_cluster_model( data )
-        self._cluster_image.event()
+        ccount = self._count.index + 1
+        self._count.event( index=ccount )
+        lgm().log( f"#CLM: exec cluster, ccount={ccount}" )
 
     @exception_handled
     def get_cluster_map( self ) -> xa.DataArray:
@@ -189,7 +195,7 @@ class ClusterManager(SCSingletonConfigurable):
             block = tm().getBlock()
             self._cluster_raster: xa.DataArray = block.points2raster( self.cluster_points ).squeeze()
         else:
-            lgm().log( "get_cluster_map: cluster_points=NULL")
+            lgm().log( "#CLM: get_cluster_map: cluster_points=NULL")
         return self._cluster_raster
 
     @property
@@ -207,7 +213,7 @@ class ClusterManager(SCSingletonConfigurable):
             result = self._cluster_points.values[pid, 0]
             return result
         else:
-            lgm().log( f" ------> Can find cluster: gid={gid}, samples: gid-in={gid in self.samples}, size={self.samples.size}, range={[self.samples.min(),self.samples.max()]}")
+            lgm().log( f"#CLM: Can find cluster: gid={gid}, samples: gid-in={gid in self.samples}, size={self.samples.size}, range={[self.samples.min(),self.samples.max()]}")
             pickle.dump( self.samples.tolist(), open("/tmp/cluster_gids.pkl","wb") )
             return -1
 
@@ -243,7 +249,7 @@ class ClusterManager(SCSingletonConfigurable):
         self.get_marked_clusters(cid).append( icluster )
         cmap = self.get_cluster_map().values
         marker = Marker("clusters", self.get_points(cid), cid, mask=(cmap == icluster))
-        lgm().log(f"#IA: mark_cluster[{icluster}]: ckey={ckey} cid={cid}, #pids = {marker.size}")
+        lgm().log(f"#CLM: mark_cluster[{icluster}]: ckey={ckey} cid={cid}, #pids = {marker.size}")
         self._cluster_markers[icluster] = marker
         return marker
 
@@ -265,11 +271,11 @@ class ClusterManager(SCSingletonConfigurable):
         return self._cluster_image
 
     @exception_handled
-    def get_cluster_image(self) -> hv.Image:
+    def get_cluster_image( self, index: int ) -> hv.Image:
         raster: xa.DataArray = self.get_cluster_map()
         iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False)
         image =  raster.hvplot.image( **iopts )
-        lgm().log( f"#CLM: create cluster image, dims={raster.dims}, shape={raster.shape}")
+        lgm().log( f"#CLM: create cluster image[{index}], dims={raster.dims}, shape={raster.shape}")
         return image
 
     @exception_handled
@@ -277,7 +283,8 @@ class ClusterManager(SCSingletonConfigurable):
         selectors = [ self._model_selector,self._ncluster_selector ]
         selection_gui = pn.Row( *selectors )
         actions_panel = pn.Row( *self.action_buttons() )
-        return pn.Column( selection_gui, self.tuning_gui(), actions_panel )
+        controls = pn.Column( selection_gui, actions_panel )
+        return pn.Tabs( ("controls",controls), ("tuning",self.tuning_gui()) )
 
     def action_buttons(self):
         buttons = []

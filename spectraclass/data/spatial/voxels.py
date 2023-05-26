@@ -11,12 +11,12 @@ def close( pt0, pt1, min_dist: float ):
 class Voxelizer:
 
     def __init__(self, points: xa.DataArray, resolution: float  ):
+        lgm().log(f"Voxelizer: data shape={points.shape}, dims={points.dims}")
         self.points = points.values
         self.resolution = resolution
         self.compute_bounds( points.values )
         self.compute_voxel_indices( points )
         self.vrange = ( self.vids.min(), self.vids.max() )
-        lgm().log(f"Voxelizer: data shape = {self.points.shape}")
         lgm().log( f" ** compute vindices[{self.vids.shape}]--> bounds: {[self.vids.min(), self.vids.max()]}")
 
     def compute_bounds(self, points: np.ndarray ):
