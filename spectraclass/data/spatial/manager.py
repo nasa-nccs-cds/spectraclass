@@ -221,14 +221,16 @@ class SpatialDataManager(ModeDataManager):
     def process_block( self, block: Block, has_metadata: bool  ) -> Optional[xa.Dataset]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.data.base import DataManager, dm
-        t0 = time.time()
+        t0, reprocess = time.time(), tm().reprocess
         block_data_file = dm().modal.dataFile(block=block)
-        if os.path.exists(block_data_file) and tm().reprocess: os.remove( block_data_file )
+        if os.path.exists(block_data_file) and reprocess:
+            os.remove( block_data_file )
 
         if os.path.exists(block_data_file):
             if not has_metadata:
                 lgm().log(f"** Reading BLOCK{block.cindex}: {block_data_file} " )
-                return xa.open_dataset( block_data_file )
+                block_dataset = xa.open_dataset( block_data_file )
+                return block_dataset
             else:
                 lgm().log(f"** Skipping processed BLOCK{block.cindex}: {block_data_file} " )
                 return None

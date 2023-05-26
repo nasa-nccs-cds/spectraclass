@@ -549,6 +549,7 @@ class MapManager(SCSingletonConfigurable):
                 if update:  self.update_plots()
                 self.update_block()
                 t2 = time.time()
+                clm().generate_clusters()
                 ufm().show(f" ** Block Loaded: {t1-t0:.2f} {t2-t1:.2f} ")
 
     # def gui(self,**kwargs):

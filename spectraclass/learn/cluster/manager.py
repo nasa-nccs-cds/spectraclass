@@ -82,6 +82,11 @@ class ClusterManager(SCSingletonConfigurable):
         self._ncluster_selector = pn.widgets.Select(name='#Clusters', options=self._ncluster_options, value=self.nclusters )
         self._ncluster_watcher = self._ncluster_selector.param.watch(self.on_parameter_change, ['value'], onlychanged=True )
 
+    def refresh(self) -> int:
+        ccount = self._count.index + 1
+        self._count.event( index=ccount )
+        return ccount
+
     def update_model(self):
         if self.mid not in self._models:
             self._models[ self.mid ] = self.create_model( self.mid )
@@ -182,20 +187,18 @@ class ClusterManager(SCSingletonConfigurable):
 
     @exception_handled
     def cluster(self, data: xa.DataArray ):
-  #      self.reset_clusters()
         self.run_cluster_model( data )
-        ccount = self._count.index + 1
-        self._count.event( index=ccount )
+        ccount = self.refresh()
         lgm().log( f"#CLM: exec cluster, op count={ccount}" )
 
     @exception_handled
     def get_cluster_map( self ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import tm
-        if self.cluster_points is not None:
-            block = tm().getBlock()
-            self._cluster_raster: xa.DataArray = block.points2raster( self.cluster_points ).squeeze()
-        else:
-            lgm().log( "#CLM: get_cluster_map: cluster_points=NULL")
+        from spectraclass.data.base import DataManager, dm
+        if self.cluster_points is None:
+            self.cluster( dm().getModelData() )
+        block = tm().getBlock()
+        self._cluster_raster: xa.DataArray = block.points2raster( self.cluster_points ).squeeze()
         return self._cluster_raster
 
     @property
@@ -299,11 +302,14 @@ class ClusterManager(SCSingletonConfigurable):
         if action == "embed":
             self.create_embedding()
         elif action == "cluster":
-            from spectraclass.data.base import DataManager, dm
-            ufm().show(f"Creating clusters using {clm().mid}  ")
-            clm().cluster(dm().getModelData())
-            self._cluster_image.event()
-            ufm().show(f"Clustering completed")
+            self.generate_clusters()
+
+    def generate_clusters(self):
+        from spectraclass.data.base import DataManager, dm
+        ufm().show(f"Creating clusters using {clm().mid}  ")
+        clm().cluster(dm().getModelData())
+        self.refresh()
+        ufm().show(f"Clustering completed")
 
     def create_embedding(self, ndim: int = 3):
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
