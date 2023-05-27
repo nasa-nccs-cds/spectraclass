@@ -8,8 +8,8 @@ pn.extension()
 hv.extension('bokeh')
 
 dm: DataManager = DataManager.initialize( "AGB", 'neon' )
-tm().reprocess = False
-dm.modal.refresh_model = False
+tm().reprocess = True
+dm.modal.refresh_model = True
 
 block_size = 250
 model_dims = 3

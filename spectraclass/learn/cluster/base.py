@@ -107,7 +107,7 @@ class GenericClusterBase(ClusterBase):
             try:
                 self._max_cluster_distance = max( self._max_cluster_distance, cluster_distance.max() )
             except Exception as err:
-                lgm().log( f"Error computing cluster distances for cluster {iC}, cluster distance shape={cluster_distance.shape}: {err}" )
+                lgm().log( f"Error computing max cluster distance for cluster {iC}, cluster distance shape={cluster_distance.shape}: {err}" )
 
     def get_cluster_membership(self, model_data: xa.DataArray) -> xa.DataArray:
         coords = [np.linalg.norm(model_data.values - self._model.cluster_centers_[iC], axis=1) for iC in range(self.n_clusters)]
