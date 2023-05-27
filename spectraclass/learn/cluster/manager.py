@@ -179,9 +179,9 @@ class ClusterManager(SCSingletonConfigurable):
 
     def run_cluster_model( self, data: xa.DataArray ):
         self.nclusters = self._ncluster_selector.value
-        lgm().log( f"#CLM: Creating {self.nclusters} clusters from input data shape = {data.shape}")
         self.clear()
         self.model.n_clusters = self.nclusters
+        lgm().log( f"#CLM: Creating {self.nclusters} clusters from input data shape = {data.shape}")
         self.model.cluster(data)
         self._cluster_points = self.model.cluster_data
 
