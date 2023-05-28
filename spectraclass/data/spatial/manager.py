@@ -238,44 +238,46 @@ class SpatialDataManager(ModeDataManager):
             ea1, ea2 = np.empty(shape=[0], dtype=np.float32), np.empty(shape=[0, 0], dtype=np.float32)
             coord_data = {}
             ufm().show( f" *** Processing Block{block.block_coords}" )
-            raw_data: xa.DataArray = block.data
-            try:
-                blocks_point_data, coord_data = block.getPointData(norm=False,anomaly="none")
-                lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}")
-            except NoDataInBounds:
-                blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
+            raw_data: Optional[xa.DataArray] = block.data
+            result_dataset: Optional[xa.Dataset] = None
+            if raw_data is not None:
+                try:
+                    blocks_point_data, coord_data = block.getPointData(norm=False,anomaly="none")
+                    lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}")
+                except NoDataInBounds:
+                    blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
 
-            if blocks_point_data.size == 0:
-                ufm().show(f" *** NO DATA in BLOCK {block.block_coords} *** ")
-                return None
-            smean = np.nanmean( block.raw_point_data.values, axis=0 )
-            ptcount = np.count_nonzero( ~np.isnan(block.raw_point_data) )
-            self.spectral_means.append( ( ptcount, smean ) )
-            data_vars = dict( raw=raw_data )
-            lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.shape[0]} samples" )
-            data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y', 'x'], coords={d: raw_data.coords[d] for d in ['x', 'y']} )
-            result_dataset = xa.Dataset(data_vars)
-            result_dataset.attrs['tile_shape'] = tm().tile.data.shape
-            result_dataset.attrs['block_dims'] = tm().block_dims
-            result_dataset.attrs['tile_size'] = tm().tile_size
-            result_dataset.attrs['nsamples'] = blocks_point_data.shape[0]
-            result_dataset.attrs['nbands'] = blocks_point_data.shape[1]
-            result_dataset.attrs['valid_bands'] = str(dm().valid_bands())
-            for (aid, aiv) in tm().tile.data.attrs.items():
-                if aid not in result_dataset.attrs:
-                    result_dataset.attrs[aid] = aiv
-            lgm().log( f" Writing preprocessed output to {block_data_file} with {blocks_point_data.size} samples, dset attrs:")
-            for varname, da in result_dataset.data_vars.items():
-                da.attrs['long_name'] = ".".join([block.file_name, varname])
-            for vname, v in data_vars.items():
-                lgm().log( f" ---> {vname}: shape={v.shape}, size={v.size}, dims={v.dims}, coords={[':'.join([cid, str(c.shape)]) for (cid, c) in v.coords.items()]}")
-            write_dir = os.path.dirname(block_data_file)
-            open_perm = stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO
-            os.makedirs(write_dir, exist_ok=True)
-            os.chmod( write_dir, open_perm )
-            result_dataset.to_netcdf(block_data_file)
-            os.chmod( block_data_file, open_perm )
-            lgm().log( f" ---------  FINISHED PROCESSING BLOCK {block.block_coords} in {time.time()-t0:.2f} sec ---------  ")
+                if blocks_point_data.size == 0:
+                    ufm().show(f" *** NO DATA in BLOCK {block.block_coords} *** ")
+                    return None
+                smean = np.nanmean( block.raw_point_data.values, axis=0 )
+                ptcount = np.count_nonzero( ~np.isnan(block.raw_point_data) )
+                self.spectral_means.append( ( ptcount, smean ) )
+                data_vars = dict( raw=raw_data )
+                lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.shape[0]} samples" )
+                data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y', 'x'], coords={d: raw_data.coords[d] for d in ['x', 'y']} )
+                result_dataset = xa.Dataset(data_vars)
+                result_dataset.attrs['tile_shape'] = tm().tile.data.shape
+                result_dataset.attrs['block_dims'] = tm().block_dims
+                result_dataset.attrs['tile_size'] = tm().tile_size
+                result_dataset.attrs['nsamples'] = blocks_point_data.shape[0]
+                result_dataset.attrs['nbands'] = blocks_point_data.shape[1]
+                result_dataset.attrs['valid_bands'] = str(dm().valid_bands())
+                for (aid, aiv) in tm().tile.data.attrs.items():
+                    if aid not in result_dataset.attrs:
+                        result_dataset.attrs[aid] = aiv
+                lgm().log( f" Writing preprocessed output to {block_data_file} with {blocks_point_data.size} samples, dset attrs:")
+                for varname, da in result_dataset.data_vars.items():
+                    da.attrs['long_name'] = ".".join([block.file_name, varname])
+                for vname, v in data_vars.items():
+                    lgm().log( f" ---> {vname}: shape={v.shape}, size={v.size}, dims={v.dims}, coords={[':'.join([cid, str(c.shape)]) for (cid, c) in v.coords.items()]}")
+                write_dir = os.path.dirname(block_data_file)
+                open_perm = stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO
+                os.makedirs(write_dir, exist_ok=True)
+                os.chmod( write_dir, open_perm )
+                result_dataset.to_netcdf(block_data_file)
+                os.chmod( block_data_file, open_perm )
+                lgm().log( f" ---------  FINISHED PROCESSING BLOCK {block.block_coords} in {time.time()-t0:.2f} sec ---------  ")
             return result_dataset
 
     def get_scaling( self, sums: List[xa.DataArray] ) -> xa.DataArray:

@@ -18,6 +18,10 @@ def combine_masks( mask1: Optional[np.ndarray], mask2: Optional[np.ndarray] ) ->
     if mask2 is None: return mask1
     return mask1 & mask2
 
+
+def size( array: Optional[Union[np.ndarray,xa.DataArray]] ):
+    return "NONE" if (array is None) else array.size
+
 def shp( array: Optional[Union[np.ndarray,xa.DataArray]] ):
     return "NONE" if (array is None) else array.shape
 
@@ -68,11 +72,12 @@ class DataContainer:
         return self._transformer
 
     @property
-    def data(self) -> xa.DataArray:
+    def data(self) -> Optional[xa.DataArray]:
         if self._data is None:
             self._data = self._get_data()
-            lgm().log( f"IA: block data, shape: {shp(self._data)}, dims: {self._data.dims}")
-        return self._data
+        sz = size( self._data )
+        lgm().log( f"IA: block data, shape: {shp(self._data)}, dims: {self._data.dims}, size={sz}")
+        return None if (sz==0) else self._data
 
     def _get_data(self) -> xa.DataArray:
         raise NotImplementedError(f" Attempt to call abstract method _get_data on {self.__class__.__name__}")
