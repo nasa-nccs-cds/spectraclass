@@ -87,7 +87,7 @@ class ModeDataManager(SCSingletonConfigurable):
     reduce_nblocks = tl.Int(250).tag(config=True, sync=True)
     reduce_dropout = tl.Float( 0.01 ).tag(config=True, sync=True)
     reduce_learning_rate = tl.Float(1e-3).tag(config=True, sync=True)
-    reduce_focus_nepoch = tl.Int(20).tag(config=True, sync=True)
+    reduce_focus_nepoch = tl.Int(0).tag(config=True, sync=True)
     reduce_focus_ratio = tl.Float(2.0).tag(config=True, sync=True)
     reduce_niter = tl.Int(1).tag(config=True, sync=True)
     reduce_sparsity = tl.Float( 0.0 ).tag(config=True,sync=True)
