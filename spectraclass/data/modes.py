@@ -386,25 +386,27 @@ class ModeDataManager(SCSingletonConfigurable):
         niter: int = kwargs.get( 'niter', self.reduce_niter )
         method: str = kwargs.get( 'method', self.reduce_method )
         dropout: float = kwargs.get('dropout', self.reduce_dropout)
-        input_dims = tm().getBlock().data.shape[0]
-        lr = kwargs.get('lr', self.reduce_learning_rate )
-        self.vae = (method.strip().lower() == 'vae')
-        aefiles = self.autoencoder_files(**kwargs)
-        lgm().log(f"#AEC autoencoder_preprocess, aefiles = {aefiles}" )
-        if self.refresh_model:
-            for aef in aefiles:
-                for ifile in glob.glob(aef + ".*"): os.remove(ifile)
-        self.build_encoder( input_dims, dropout=dropout, lr=lr, **kwargs )
-        weights_loaded = self.load_weights(**kwargs)
-        initial_epoch = 0
-        if not weights_loaded:
-            for iter in range(niter):
-                initial_epoch = self.general_training( initial_epoch, **kwargs )
-                if self.reduce_focus_nepoch > 0:
-                    initial_epoch = self.focused_training( initial_epoch, **kwargs )
-            self._autoencoder.save_weights( aefiles[0] )
-            self._encoder.save_weights( aefiles[1] )
-            lgm().log(f"#AEC autoencoder_preprocess completed, saved model weights to files={aefiles}", print=True)
+        input_data: Optional[xa.DataArray] = tm().getBlock().data
+        if input_data is not None:
+            input_dims = input_data.shape[0]
+            lr = kwargs.get('lr', self.reduce_learning_rate )
+            self.vae = (method.strip().lower() == 'vae')
+            aefiles = self.autoencoder_files(**kwargs)
+            lgm().log(f"#AEC autoencoder_preprocess, aefiles = {aefiles}" )
+            if self.refresh_model:
+                for aef in aefiles:
+                    for ifile in glob.glob(aef + ".*"): os.remove(ifile)
+            self.build_encoder( input_dims, dropout=dropout, lr=lr, **kwargs )
+            weights_loaded = self.load_weights(**kwargs)
+            initial_epoch = 0
+            if not weights_loaded:
+                for iter in range(niter):
+                    initial_epoch = self.general_training( initial_epoch, **kwargs )
+                    if self.reduce_focus_nepoch > 0:
+                        initial_epoch = self.focused_training( initial_epoch, **kwargs )
+                self._autoencoder.save_weights( aefiles[0] )
+                self._encoder.save_weights( aefiles[1] )
+                lgm().log(f"#AEC autoencoder_preprocess completed, saved model weights to files={aefiles}", print=True)
 
     def general_training(self, initial_epoch = 0, **kwargs ):
         from spectraclass.data.base import DataManager, dm
