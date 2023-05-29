@@ -7,20 +7,10 @@ Conda CPU Environment Setup
 ---------------
 
     > conda create --prefix /explore/nobackup/projects/ilab/conda/envs/spectraclass -c conda-forge python=3.9 mamba
-    > conda activate spectraclass
-    > mamba install -c conda-forge ipympl jupytext pyepsg ipysheet tensorflow h5py pythreejs nb_conda_kernels nodejs jupyterlab jupyterlab_server ipywidgets numpy xarray matplotlib rasterio scipy scikit-learn dask netcdf4 scikit-image numba gdal owslib rioxarray cartopy shapely bottleneck geopandas 
-
-    > conda create --name spectraclass.hv -c pyviz -c conda-forge mamba holoviews geopandas geoviews hvplot
-    > conda create --prefix /explore/nobackup/projects/ilab/conda/envs/spectraclass.hv -c pyviz -c conda-forge mamba holoviews geopandas geoviews hvplot
-
     > conda activate spectraclass.hv
-    > mamba install -c pyviz -c conda-forge ipympl jupytext pyepsg ipysheet tensorflow h5py pythreejs nb_conda_kernels nodejs jupyterlab jupyterlab_server  rasterio dask netcdf4 scikit-image numba owslib rioxarray bottleneck  
+    > mamba install -c pyviz -c conda-forge ipympl jupytext pyepsg ipysheet tensorflow h5py nb_conda_kernels nodejs jupyterlab jupyterlab_server rasterio dask netcdf4 scikit-image numba owslib rioxarray bottleneck  
+    > pip install pythreejs
 
-    > jupyter labextension install jupyter-threejs
-
-The x-ray application requires the following additional packages:
-
-    > mamba install -c conda-forge jupyter_bokeh
 
 Installation
 ------------

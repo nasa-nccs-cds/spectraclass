@@ -1,6 +1,8 @@
-import ipywidgets as ipw
 import pythreejs as p3js
 from functools import partial
+from panel.layout import Panel
+from panel.widgets import FloatSlider
+import panel as pn
 import holoviews as hv
 from spectraclass.reduction.embedding import ReductionManager, rm
 import time, math, os, sys, numpy as np
@@ -40,8 +42,8 @@ class PointCloudManager(SCSingletonConfigurable):
         self.raycaster = p3js.Raycaster()
         self.point_picker: p3js.Picker = None
         self.marker_picker: p3js.Picker = None
-        self.control_panel: ipw.DOMWidget = None
-        self.size_control: ipw.FloatSlider = None
+        self.control_panel: Panel = None
+        self.size_control: FloatSlider = None
         self.point_locator: np.ndarray = None
         self._color_values = None
         self.reduced_opacity = 0.111111
@@ -126,8 +128,8 @@ class PointCloudManager(SCSingletonConfigurable):
         if self.marker_points is None:
             self.marker_points = p3js.Points( geometry=self.getMarkerGeometry(), material=self.marker_material )
             self.scene.add( [self.marker_points] )
-            ipw.jslink((self.scene_controls['marker.material.size'],   'value'),  (self.marker_points.material, 'size') )
-            ipw.jslink((self.scene_controls['marker.material.opacity'], 'value'), (self.marker_points.material, 'opacity') )
+            self.scene_controls[ 'marker.material.size'   ].jslink( target=self.marker_points.material,  value="size" )
+            self.scene_controls[ 'marker.material.opacity'].jslink( target=self.marker_points.material,  value="opacity" )
             self.marker_picker = p3js.Picker(controlling=self.marker_points, event='click')
             self.marker_picker.observe( partial( self.on_pick, True ), names=['point'] )
             self.renderer.controls = self.renderer.controls + [self.marker_picker]
@@ -137,8 +139,8 @@ class PointCloudManager(SCSingletonConfigurable):
         if self.probe_points is None:
             self.probe_points = p3js.Points( geometry=self.getMarkerGeometry( probes=True ), material=self.probe_material )
             self.scene.add( [self.probe_points] )
-            ipw.jslink((self.scene_controls['probe.material.size'],   'value'),  (self.probe_points.material, 'size') )
-            ipw.jslink((self.scene_controls['probe.material.opacity'], 'value'), (self.probe_points.material, 'opacity') )
+            self.scene_controls[ 'probe.material.size'   ].jslink( target=self.probe_points.material,   value = 'size' )
+            self.scene_controls[ 'probe.material.opacity'].jslink( target=self.probe_points.material,   value = 'opacity' )
         else:
             self.probe_points.geometry = self.getMarkerGeometry( probes=True )
 
@@ -260,24 +262,29 @@ class PointCloudManager(SCSingletonConfigurable):
         points_material = p3js.PointsMaterial( vertexColors='VertexColors', transparent=True )
         self.points = p3js.Points( geometry=points_geometry, material=points_material )
 
-    def getControlsWidget(self) -> ipw.DOMWidget:
-        self.scene_controls['point.material.size']     = ipw.FloatSlider( value=0.015 * self.scale, min=0.0, max=0.05 * self.scale, step=0.0002 * self.scale)
-        self.scene_controls['point.material.opacity']  = ipw.FloatSlider( value=1.0, min=0.0, max=1.0, step=0.01 )
-        self.scene_controls['marker.material.size']    = ipw.FloatSlider( value=0.05 * self.scale, min=0.0, max=0.1 * self.scale, step=0.001 * self.scale )
-        self.scene_controls['marker.material.opacity'] = ipw.FloatSlider( value=1.0, min=0.0, max=1.0, step=0.01 )
-        self.scene_controls['probe.material.size']    = ipw.FloatSlider( value=0.05 * self.scale, min=0.0, max=0.2 * self.scale, step=0.001 * self.scale )
-        self.scene_controls['probe.material.opacity'] = ipw.FloatSlider( value=1.0, min=0.0, max=1.0, step=0.01 )
-        self.scene_controls['window.scene.background'] = ipw.ColorPicker( value="black" )
-        ipw.jslink( (self.scene_controls['point.material.size'],     'value'),   ( self.points.material, 'size' ) )
-        ipw.jslink( (self.scene_controls['point.material.opacity'],  'value'),   ( self.points.material, 'opacity' ) )
-        ipw.jslink( (self.scene_controls['window.scene.background'], 'value'),   ( self.scene, 'background') )
-        return ipw.VBox( [ ipw.HBox( [ self.control_label(name), ctrl ] ) for name, ctrl in self.scene_controls.items() ] )
+    def getControlsWidget(self) -> Panel:
+        self.scene_controls['point.material.size']     = FloatSlider( name="point size",     value=0.015 * self.scale,  start=0.0, end=0.05 * self.scale, step=0.0002 * self.scale)
+        self.scene_controls['point.material.opacity']  = FloatSlider( name="point opacity",  value=1.0,                 start=0.0, end=1.0,               step=0.01 )
+        self.scene_controls['marker.material.size']    = FloatSlider( name="marker size",    value=0.05 * self.scale,   start=0.0, end=0.1 * self.scale,  step=0.001 * self.scale )
+        self.scene_controls['marker.material.opacity'] = FloatSlider( name="marker opacity", value=1.0,                 start=0.0, end=1.0,               step=0.01 )
+        self.scene_controls['probe.material.size']     = FloatSlider( name="probe size",     value=0.05 * self.scale,   start=0.0, end=0.2 * self.scale,  step=0.001 * self.scale )
+        self.scene_controls['probe.material.opacity']  = FloatSlider( name="probe opacity",  value=1.0,                 start=0.0, end=1.0,               step=0.01 )
+        self.scene_controls['window.scene.background'] = pn.widgets.ColorPicker( value="black" )
+        self.scene_controls[ 'point.material.size'   ].jslink( target=self.points.material, value="size"  )
+        self.scene_controls[ 'point.material.opacity'].jslink( target=self.points.material, value="opacity" )
+        self.scene_controls[ 'window.scene.background'].jslink( target=self.scene, value="background" )
 
-    def control_label(self, name: str ) -> ipw.Label:
-        toks = name.split(".")
-        return ipw.Label( f"{toks[0]} {toks[2]}" )
+        return pn.Column( *self.scene_controls.values() )
 
-    def _get_gui( self ) -> ipw.DOMWidget:
+    # def update_parameter(self, name: str, value: float ):
+    #     param = self.get_parametere( name )
+    #     param = value
+    #
+    # def update_parameter(self, name ):
+    #     toks = name.split(".")
+    #     if toks[0] == 'point': return
+
+    def _get_gui( self ) -> Panel:
         ecoords = dict(samples=[], model=np.arange(0, 3))
         init_data = xa.DataArray(np.empty([0, 3]), dims=['samples', 'model'], coords=ecoords, attrs={})
         self.createPoints( init_data=init_data )
@@ -287,7 +294,7 @@ class PointCloudManager(SCSingletonConfigurable):
         self.point_picker.observe( partial( self.on_pick, False ), names=['point'])
         self.renderer.controls = self.renderer.controls + [self.point_picker]
         self.control_panel = self.getControlsWidget()
-        return ipw.VBox( [ self.renderer, self.control_panel ]  )
+        return pn.Column( self.renderer, self.control_panel  )
 
     @exception_handled
     def on_pick(self, highlight: bool, event: Dict ):
@@ -306,7 +313,7 @@ class PointCloudManager(SCSingletonConfigurable):
             self.mark_point( self.pick_point, 0 )
             self.points.geometry = self.getGeometry()
 
-    def gui(self, **kwargs ) -> ipw.DOMWidget:
+    def gui(self, **kwargs ) -> Panel:
         if self._gui is None:
             self._gui = self._get_gui()
         return self._gui
