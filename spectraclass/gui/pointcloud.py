@@ -4,8 +4,9 @@ from panel.layout import Panel
 from panel.widgets import FloatSlider
 import panel as pn
 import holoviews as hv
+import numpy as np
 from spectraclass.reduction.embedding import ReductionManager, rm
-import time, math, os, sys, numpy as np
+import time, math, os, sys
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.gui.spatial.widgets.markers import Marker
 from typing import List, Union, Tuple, Optional, Dict, Callable, Iterable
@@ -68,12 +69,9 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @exception_handled
     def set_block_callback(self,*events):
-        from spectraclass.data.spatial.tile.tile import Block
         for event in events:
             if event.name == 'value':
-                block_index = event.new
-                block: Block = tm().getBlock( block_index )
-                self.update_plot( points=block.getModelData(raster=False) )
+                self.update_plot( block=event.new )
 
     def set_alpha(self, opacity: float ):
         self.scene_controls[ 'marker.material.opacity' ] = opacity
@@ -151,10 +149,11 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @xyz.setter
     def xyz(self, data_array: Union[xa.DataArray,np.ndarray] ):
-        self._xyz = self.xyz.copy( data=data_array ) if (type(data_array) == np.ndarray) else data_array
+        self._xyz = self._xyz.copy( data=data_array ) if (type(data_array) == np.ndarray) else data_array
         self._bounds = []
         self.voxelizer = Voxelizer( self._xyz, 0.1*self.scale )
         self.point_locator = self.xyz.values.sum(axis=1)
+        lgm().log( f"PCM: set points data, shape = {self._xyz.shape}")
 
     def initialize_points(self):
         self._xyz: xa.DataArray = self.empty_pointset
@@ -162,6 +161,9 @@ class PointCloudManager(SCSingletonConfigurable):
     @property
     def empty_pointset(self) -> xa.DataArray:
         return xa.DataArray( np.empty(shape=[0, 3], dtype=np.float32), dims=["samples","model"] )
+
+    def toxa(self, data: np.ndarray ) -> xa.DataArray:
+        return xa.DataArray( data, dims=["samples","model"] )
 
     @property
     def empty_pids(self) -> np.ndarray:
@@ -180,7 +182,7 @@ class PointCloudManager(SCSingletonConfigurable):
             # if flow is None: return False
             # node_data = model_data if refresh else None
             # flow.setNodeData( node_data )
-            embedding = rm().umap_init( model_data, **kwargs )
+            embedding = rm().umap_init( model_data, **kwargs ) if model_data.shape[1] > 3 else model_data
             self.xyz = self.pnorm(embedding)
         else:
             lgm().log(f"UMAP.init: model_data is empty",print=True)
@@ -229,8 +231,7 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @exception_handled
     def getGeometry( self, **kwargs ) -> Optional[p3js.BufferGeometry]:
-        geometry_data = kwargs.get( 'init_data', None )
-        if geometry_data is None: geometry_data = self.xyz
+        geometry_data = kwargs.get( 'init_data', self.xyz )
         colors = self.getColors(**kwargs)
         lgm().log(f" *** getGeometry: xyz shape = {geometry_data.shape}, color shape = {colors.shape}")
         attrs = dict( position = p3js.BufferAttribute( geometry_data, normalized=False ),
@@ -284,10 +285,10 @@ class PointCloudManager(SCSingletonConfigurable):
     #     toks = name.split(".")
     #     if toks[0] == 'point': return
 
+    @exception_handled
     def _get_gui( self ) -> Panel:
-        ecoords = dict(samples=[], model=np.arange(0, 3))
-        init_data = xa.DataArray(np.empty([0, 3]), dims=['samples', 'model'], coords=ecoords, attrs={})
-        self.createPoints( init_data=init_data )
+        self.init_data(refresh=True)
+        self.createPoints()
         self.scene = p3js.Scene( children=[ self.points, self.camera, p3js.AmbientLight(intensity=0.8)  ] )
         self.renderer = p3js.Renderer( scene=self.scene, camera=self.camera, controls=[self.orbit_controls], width=800, height=500 )
         self.point_picker = p3js.Picker(controlling=self.points, event='click')
@@ -331,11 +332,17 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @exception_handled
     def update_plot(self, **kwargs) -> bool:
+        from spectraclass.data.spatial.tile.tile import Block
         t0 = time.time()
         if 'points' in kwargs:
             embedding = kwargs['points']
             lgm().log( f"PCM->plot embedding: shape = {embedding.shape}")
             self.xyz = self.pnorm( embedding )
+        elif 'block' in kwargs:
+            block: Block = tm().getBlock(kwargs['block'])
+            model_data = block.getModelData( raster=False )
+            embedding = rm().umap_init( model_data, **kwargs ) if model_data.shape[1] > 3 else model_data
+            self.xyz = self.pnorm(embedding)
         if not self.initialized:
             return False
         t1 = time.time()
