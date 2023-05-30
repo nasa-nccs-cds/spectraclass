@@ -165,6 +165,9 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         self.panels.append(('satellite', spm().selection_basemap( point_selection=True ) ) )
         self.panels.append( ('clusters', clm().panel() ) )
         self.mapviews = pn.Tabs( *self.panels, dynamic=True )
+
+        self.mapviews = pn.Tabs( ('bands', self.browsers['bands'].plot(**plotopts)), ('reproduction', self.browsers['reproduction'].plot(**plotopts)), dynamic=True )
+
         self.tab_watcher = self.mapviews.param.watch(self.on_tab_change, ['active'], onlychanged=True)
         return self
 
@@ -201,11 +204,15 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         rows = [ self.mapviews ]
         if title is not None: rows.insert( 0, title )
         background = kwargs.get( 'background', 'WhiteSmoke')
-        image_column = pn.Column( *rows, background=background )
+        image_column = pn.Column( *rows )  # , styles={'background':background}  )
         if devel:
             return pn.Row(  image_column, self.get_control_panel() )
         else:
             return image_column
+
+
+
+
 
 #
 # class VariableBrowser1:

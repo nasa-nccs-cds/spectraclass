@@ -318,13 +318,13 @@ class TileManager(SCSingletonConfigurable):
 #         point_data.attrs['dsid'] = result.attrs['dsid']
 #         return ( point_data, point_coords)
 
-    def get_block_transform( self, iy, ix ) -> ProjectiveTransform:
-        tr0 = self.transform
-        iy0, ix0 = iy * self.block_shape[0], ix * self.block_shape[1]
-        y0, x0 = tr0[5] + iy0 * tr0[4], tr0[2] + ix0 * tr0[0]
-        tr1 = [ tr0[0], tr0[1], x0, tr0[3], tr0[4], y0, 0, 0, 1  ]
-        lgm().log( f"Tile transform: {tr0}, Block transform: {tr1}, block indices = [ {iy}, {ix} ]" )
-        return  ProjectiveTransform( np.array(tr1).reshape(3, 3) )
+    # def get_block_transform( self, iy, ix ) -> ProjectiveTransform:
+    #     tr0 = self.transform
+    #     iy0, ix0 = iy * self.block_shape[0], ix * self.block_shape[1]
+    #     y0, x0 = tr0[5] + iy0 * tr0[4], tr0[2] + ix0 * tr0[0]
+    #     tr1 = [ tr0[0], tr0[1], x0, tr0[3], tr0[4], y0, 0, 0, 1  ]
+    #     lgm().log( f"Tile transform: {tr0}, Block transform: {tr1}, block indices = [ {iy}, {ix} ]" )
+    #     return  ProjectiveTransform( np.array(tr1).reshape(3, 3) )
 
     def _readTileFile(self) -> xa.DataArray:
         from spectraclass.data.base import DataManager, dm
