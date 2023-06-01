@@ -1,18 +1,11 @@
 from ..graph.manager import ActivationFlowManager
 from sklearn.decomposition import PCA, FastICA
-from tensorflow.keras import losses, regularizers
-from tensorflow.keras.layers import Input, Dense, Dropout, Lambda
-from tensorflow.keras.models import Model
-from tensorflow.keras import backend as K
-from tensorflow.keras.losses import mse, binary_crossentropy
-from tensorflow.keras.regularizers import l2
 import xarray as xa
 from ..model.labels import LabelsManager
 import traitlets as tl
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from spectraclass.model.base import SCSingletonConfigurable
 import pickle, random, time, numpy as np
-from spectraclass.data.spatial.tile.manager import TileManager, tm
 from typing import List, Optional, Dict, Tuple
 import os, shutil
 
@@ -28,20 +21,6 @@ def scale( x: xa.DataArray, axis = 0 ) -> xa.DataArray:
     result = x / x.mean(axis=axis)
     result.attrs.update( x.attrs )
     return result
-
-def vae_loss( inputs, outputs, n_features, z_mean, z_log ):
-    """ Loss = Recreation loss + Kullback-Leibler loss
-    for probability function divergence (ELBO).
-    gamma > 1 and capacity != 0 for beta-VAE
-    """
-    gamma = 1.0
-    capacity = 0.0
-    reconstruction_loss = mse( inputs, outputs )
-    reconstruction_loss *= n_features
-    kl_loss = 1 + z_log - K.square(z_mean) - K.exp(z_log)
-    kl_loss = -0.5 * K.sum(kl_loss, axis=-1)
-    kl_loss = gamma * K.abs( kl_loss - capacity )
-    return K.mean(reconstruction_loss + kl_loss)
 
 class ReductionManager(SCSingletonConfigurable):
     init = tl.Unicode("random").tag(config=True,sync=True)

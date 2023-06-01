@@ -108,12 +108,7 @@ class DataManager(SCSingletonConfigurable):
             if str(mdm.reduce_method).lower() == "none": mdm.model_dims = 0
             if mdm.model_dims == 0:  mdm.reduce_method = "none"
             lgm().log("Logging configured")
-            dataManager.keras_init()
         return dataManager
-
-    def keras_init(self):
-        if self.proc_type == "cpu":
-            os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
     def hasMetadata(self):
         return os.path.isfile( self.metadata_file )

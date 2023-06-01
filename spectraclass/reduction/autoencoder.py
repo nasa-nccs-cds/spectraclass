@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Tuple, Type, Optional, Union
 from collections import OrderedDict
 import torch, math
 from functools import partial
-from spectraclass.util.logs import LogManager, lgm
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from torch import Tensor, nn
 import xarray as xa, numpy as np
 from enum import Enum
@@ -26,28 +26,31 @@ class Autoencoder(nn.Module):
         self.model_dims = model_dims
         self._layer_outputs: Dict[int, List[np.ndarray]] = {}
         self._layer_weights: Dict[int, List[np.ndarray]] = {}
-        self._netlayers: Dict[int, nn.Module] = {}
-        self._modules: OrderedDict = OrderedDict()
         self._activation = kwargs.get('activation', 'celu')
         self._actparm = kwargs.get('actparm', 1.0)
         self._stage = ProcessingStage.PreTrain
-        self._network = None
-        self._encoder = None
+        self._decoder: nn.Sequential = None
+        self._encoder: nn.Sequential = None
         self._l1_strength: np.ndarray = None
         self._l2_strength: np.ndarray = None
         self.init_bias = kwargs.get('init_bias',0.0)
         self.wmag = kwargs.get('wmag', 0.0)
         self.nLayers = 0
         self._L0 = 0.0
-        self.build_ae_model()
 
     @property
     def output_dim(self):
         return self._n_species
 
-    @property
-    def network(self) -> nn.Sequential:
-        return self._network
+    def encoder(self, input: Tensor ) -> Tensor:
+        if self._encoder is None:
+            self.build_ae_model()
+        return self._encoder( input )
+
+    def decoder(self, input: Tensor) ->  Tensor:
+        if self._decoder is None:
+            self.build_ae_model()
+        return self._decoder( input )
 
     def weights_init_uniform_rule(self, m: nn.Module):
         classname = m.__class__.__name__
@@ -63,39 +66,40 @@ class Autoencoder(nn.Module):
             torch.nn.init.xavier_normal_(m.weight, self.wmag)
             torch.nn.init.uniform_(m.bias, -self.init_bias, self.init_bias)
 
+    @exception_handled
     def build_ae_model(self, **kwargs):
         lgm().log(f"#AEC: RM BUILD AEC NETWORK: {self.input_dims} -> {self.model_dims}")
         reduction_factor = 2
 #        dargs = dict( kernel_initializer=tf.keras.initializers.RandomNormal(stddev=winit), bias_initializer=tf.keras.initializers.Zeros() )
         in_features, iLayer = self.input_dims, 0
+        encoder_modules = OrderedDict()
         while in_features > self.model_dims:
             out_features = max( int(round(in_features / reduction_factor)), self.model_dims )
             linear = nn.Linear(in_features=in_features, out_features=out_features, bias=True)
-            self._add_layer( iLayer, linear, self._activation )
-            in_features, iLayer = out_features, iLayer
-        self._encoder = nn.Sequential(self._modules)
+            activation = None if (out_features == self.model_dims) else self._activation
+            self._add_layer( encoder_modules, iLayer, linear, activation )
+            in_features, iLayer = out_features, iLayer + 1
+        self._encoder = nn.Sequential(encoder_modules)
+        decoder_modules = OrderedDict()
         while in_features < self.input_dims:
             out_features = min( in_features * reduction_factor, self.input_dims )
             linear = nn.Linear( in_features=in_features, out_features=out_features, bias=True )
-            self._add_layer( iLayer, linear, self._activation )
-            in_features = out_features
-        self._network = nn.Sequential(self._modules)
+            activation = None if (out_features==self.input_dims) else self._activation
+            self._add_layer( decoder_modules, iLayer, linear, activation )
+            in_features, iLayer = out_features, iLayer + 1
+        self._decoder = nn.Sequential(decoder_modules)
 
     def init_weights(self):
-        self._network.apply(self.weights_init_xavier)
+        self._decoder.apply(self.weights_init_xavier)
 
-    def _add_layer(self, ilayer: int, layer: nn.Linear, activation: str):
-        self._netlayers[ilayer] = layer
-        self._modules[f"layer-{ilayer}"] = layer
+    def _add_layer(self, modules: OrderedDict, ilayer: int, layer: nn.Linear, activation: str):
+        modules[f"layer-{ilayer}"] = layer
         print(f" * Add linear layer[{ilayer}]: {layer.in_features}->{layer.out_features}")
         if activation != "linear":
             print(f"   ---> Add activation: {activation}")
-            self._modules[f"activation-{ilayer}"] = self._get_activation_function(activation)
+            modules[f"activation-{ilayer}"] = self._get_activation_function(activation)
         layer.register_forward_hook(partial(self.layer_forward_hook, ilayer))
         layer.register_forward_pre_hook(partial(self.layer_forward_pre_hook, ilayer))
-
-    def get_prior(self) -> torch.Tensor:
-        return torch.from_numpy(self.trainer.prior.values)
 
     def layer_forward_hook(self, iLayer: int, module: nn.Linear, inputs: Tuple[Tensor], output: Tensor):
         if self._stage == ProcessingStage.Training:
@@ -113,8 +117,7 @@ class Autoencoder(nn.Module):
         return np.stack(self._layer_weights[iLayer], axis=1)
 
     def get_layer_output(self, iLayer) -> np.ndarray:
-        lIndex = iLayer if (iLayer >= 0) else self.nlayers - 1
-        return np.stack(self._layer_outputs[lIndex], axis=1)
+        return np.stack(self._layer_outputs[iLayer], axis=1)
 
     @property
     def feature_layer_index(self):
@@ -135,10 +138,6 @@ class Autoencoder(nn.Module):
 
     def get_top_weights(self) -> np.array:
         return self.get_layer_weights(self.top_layer_index)
-
-    @property
-    def nlayers(self):
-        return len(self._netlayers)
 
     def _get_activation_function(self, activation: str = None) -> nn.Module:
         if activation is None: activation = self._activation
@@ -171,8 +170,16 @@ class Autoencoder(nn.Module):
         return xa.DataArray(result, dims=['samples', 'y'],
                             coords=dict(samples=data.coords['samples'], y=range(result.shape[1])), attrs=data.attrs)
 
+    def encode(self, data: xa.DataArray) -> xa.DataArray:
+        input: Tensor = torch.from_numpy(data.values)
+        result: np.ndarray = self.encoder(input).detach()
+        return xa.DataArray(result, dims=['samples', 'features'],
+                            coords=dict(samples=data.coords['samples'], features=range(result.shape[1])), attrs=data.attrs)
+
     def forward(self, x: Tensor) -> Tensor:
-        return self.network(x)
+        encoded: Tensor = self.encoder(x)
+        result = self.decoder(encoded)
+        return result
 
     @property
     def network_type(self) -> str:
@@ -208,17 +215,6 @@ class Autoencoder(nn.Module):
             mval = self.get_metric_values(mid)
             if mval is not None: metrics[mid] = mval
         return metrics
-
-    @classmethod
-    def entropy(cls, P: Tensor) -> Tensor:
-        L = torch.log(P)
-        return -torch.sum(P * L, dim=0)
-
-    @classmethod
-    def entropy_norm(cls, y: Tensor) -> Tensor:
-        H = cls.entropy(y)
-        z = torch.exp(H) * y
-        return z / (1 + z)
 
     def pdist(self, y: Tensor) -> Tensor:
         z = torch.exp(y)

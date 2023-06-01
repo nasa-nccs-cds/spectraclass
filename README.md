@@ -12,6 +12,7 @@ Conda CPU Environment Setup
     > conda activate spectraclass.hv
     > mamba install -c pyviz -c conda-forge jupytext nb_conda_kernels holoviews geopandas geoviews hvplot scikit-image pytorch nodejs jupyterlab jupyterlab_server numpy xarray rasterio dask netcdf4 numba cartopy rioxarray bottleneck  
     > pip install pythreejs
+    > pip install hydra-core --upgrade
 
 Installation
 ------------

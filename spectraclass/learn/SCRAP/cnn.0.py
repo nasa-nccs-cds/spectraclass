@@ -3,7 +3,6 @@ import time, traceback, abc
 from sklearn.model_selection import train_test_split
 import numpy as np
 import scipy, sklearn
-from tensorflow.keras.models import Model
 from typing import List, Tuple, Optional, Dict
 from model.labels import LabelsManager
 import traitlets as tl
@@ -11,8 +10,6 @@ import traitlets.config as tlc
 import ipywidgets as ipw
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
-import tensorflow as tf
-from tensorflow.keras import datasets, layers, models
 import torch, time
 import torch.nn.functional as F
 from learn.base import LearningModel

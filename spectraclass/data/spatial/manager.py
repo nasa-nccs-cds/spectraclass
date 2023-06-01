@@ -1,6 +1,6 @@
 import numpy as np
 import xarray as xa
-import ipywidgets as ip
+from spectraclass.reduction.trainer import mt
 import numpy.ma as ma
 from pathlib import Path
 from spectraclass.gui.control import ufm
@@ -316,7 +316,8 @@ class SpatialDataManager(ModeDataManager):
                 self.process_spectral_mean()
             if not has_metadata:
                 self.write_metadata(block_sizes, attrs)
-            self.autoencoder_preprocess( bands=nbands, **kwargs )
+            mt().train()
+
 
         except Exception as err:
             print( f"\n *** Error in processing workflow, check log file for details: {lgm().log_file} *** ")
