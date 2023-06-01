@@ -105,8 +105,6 @@ class DataManager(SCSingletonConfigurable):
             if mode.lower() not in cls._mode_data_managers_: raise Exception( f"Mode {mode} is not defined, available modes = {cls._mode_data_managers_.keys()}")
             mdm = cls._mode_data_managers_[ mode ].instance()
             dataManager._mode_data_manager_ = mdm
-            if str(mdm.reduce_method).lower() == "none": mdm.model_dims = 0
-            if mdm.model_dims == 0:  mdm.reduce_method = "none"
             lgm().log("Logging configured")
         return dataManager
 

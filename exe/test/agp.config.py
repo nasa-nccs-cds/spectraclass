@@ -3,7 +3,6 @@ c.ModeDataManager.reduce_nepoch = 5
 c.ModeDataManager.reduce_niter = 2
 c.ModeDataManager.reduce_sparsity = 0.0
 c.ModeDataManager.subsample_index = 1
-c.ModeDataManager.reduce_method = "Autoencoder"
 c.ModeDataManager.class_file = "NONE"
 c.ModeDataManager.refresh_model = False
 c.DataManager.proc_type = "skl"

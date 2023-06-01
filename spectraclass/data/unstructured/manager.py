@@ -49,13 +49,12 @@ class UnstructuredDataManager(ModeDataManager):
             pspec = self.INPUTS['plot']
             data_vars.update(  {f'plot-{vid}': dm().getXarray(pspec[vid], xcoords, xdims, norm=pspec.get('norm','spectral')) for vid in ['x', 'y'] } )
             self.set_progress(0.1)
-            if self.reduce_method and (self.reduce_method.lower() != "none"):
-                input_data = data_vars['spectra']
-                ( reduced_spectra, reproduced_spectra ) = rm().modal.reduce( input_data )[0]
-                coords = dict(samples=xcoords['samples'], model=np.arange(self.model_dims))
-                data_vars['reduction'] = xa.DataArray(reduced_spectra, dims=['samples', 'model'], coords=coords)
-                data_vars['reproduction'] = reproduced_spectra
-                self.set_progress(0.8)
+            input_data = data_vars['spectra']
+            ( reduced_spectra, reproduced_spectra ) = rm().modal.reduce( input_data )[0]
+            coords = dict(samples=xcoords['samples'], model=np.arange(self.model_dims))
+            data_vars['reduction'] = xa.DataArray(reduced_spectra, dims=['samples', 'model'], coords=coords)
+            data_vars['reproduction'] = reproduced_spectra
+            self.set_progress(0.8)
 
             result_dataset = xa.Dataset(data_vars, coords=xcoords, attrs={'type': 'spectra'})
             result_dataset.attrs["colnames"] = mdata_vars

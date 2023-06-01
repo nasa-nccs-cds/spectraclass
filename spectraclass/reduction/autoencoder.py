@@ -190,24 +190,36 @@ class Autoencoder(nn.Module):
         from spectraclass.data.base import DataManager, dm
         return dm().cache_dir
 
-    def save(self, name: str) -> str:
+    def save(self, name: str):
         models_dir = f"{self.results_dir}/models"
         os.makedirs(models_dir, exist_ok=True)
-        model_path = f"{models_dir}/{name}.{self.network_type}.pth"
         try:
-            torch.save(self.network.state_dict(), model_path)
-            print(f"Saved model to file '{model_path}'")
+            model_path = f"{models_dir}/{name}.encoder.{self.network_type}.pth"
+            torch.save(self._encoder.state_dict(), model_path )
+            print(f"Saved encoder to file '{model_path}'" )
+            model_path = f"{models_dir}/{name}.decoder.{self.network_type}.pth"
+            torch.save(self._decoder.state_dict(), model_path)
+            print(f"Saved decoder to file '{model_path}'")
         except Exception as err:
             print(f"Error saving model {name}: {err}")
-        return model_path
 
-    def load(self, name: str) -> str:
-        model_path = f"{self.results_dir}/models/{name}.{self.network_type}.pth"
-        weights = torch.load(model_path)
-        self.network.load_state_dict(weights)
+    def load(self, name: str, **kwargs) -> bool:
+        models_dir = f"{self.results_dir}/models"
+        os.makedirs(models_dir, exist_ok=True)
+        try:
+            model_path = f"{models_dir}/{name}.encoder.{self.network_type}.pth"
+            weights = torch.load(model_path)
+            self._encoder.load_state_dict(weights)
+            print(f"Loaded encoder from file '{model_path}'")
+            model_path = f"{models_dir}/{name}.decoder.{self.network_type}.pth"
+            weights = torch.load(model_path)
+            self._decoder.load_state_dict(weights)
+            print(f"Loaded decoder from file '{model_path}'")
+        except Exception as err:
+            print(f"Error loading model {name}: {err}")
+            return False
         self.eval()
-        print(f"Loaded model from file '{model_path}'")
-        return model_path
+        return True
 
     def get_learning_metrics(self):
         metrics = {}

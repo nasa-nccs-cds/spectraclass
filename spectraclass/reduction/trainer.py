@@ -18,8 +18,8 @@ def mt() -> "ModelTrainer":
 
 class ProgressPanel:
 
-    def __init__(self, nepochs: int, abort_callback: Callable ):
-        self._progress = pn.indicators.Progress(name='Iterations', value=0, width=400, max=nepochs )
+    def __init__(self, niter: int, abort_callback: Callable ):
+        self._progress = pn.indicators.Progress(name='Iterations', value=0, width=400, max=niter )
         self._log = pn.pane.Markdown("Iteration: 0")
         self._abort = pn.widgets.Button(name='Abort', button_type='primary')
         self._abort.on_click( abort_callback )
@@ -40,7 +40,8 @@ class ModelTrainer(SCSingletonConfigurable):
     model_dims = tl.Int(3).tag(config=True, sync=True)
     modelkey = tl.Unicode(default_value="").tag(config=True, sync=True)
     nepoch = tl.Int(1).tag(config=True, sync=True)
-    niter = tl.Int(100).tag(config=True, sync=True)
+    niter = tl.Int(5).tag(config=True, sync=True)
+    refresh_model = tl.Bool(False).tag(config=True, sync=True)
 
     def __init__(self, **kwargs ):
         super(ModelTrainer, self).__init__()
@@ -51,7 +52,7 @@ class ModelTrainer(SCSingletonConfigurable):
         self._abort = False
         self._optimizer = None
         self.loss = torch.nn.MSELoss( **kwargs )
-        self.progress = ProgressPanel( self.nepoch, self.abort_callback )
+        self.progress = ProgressPanel( self.niter, self.abort_callback )
 
     @property
     def optimizer(self):
@@ -85,8 +86,10 @@ class ModelTrainer(SCSingletonConfigurable):
             raise Exception(f" Unknown optimizer: {oid}")
 
 
-    def load(self, modelId: str ):
-        self.model.load( modelId )
+    def load(self, **kwargs ) -> bool:
+        modelId = kwargs.get('id', dm().dsid())
+        if self.refresh_model: return False
+        return self.model.load( modelId )
 
     def save(self, **kwargs):
         model_id = kwargs.get('id', dm().dsid() )
@@ -120,10 +123,13 @@ class ModelTrainer(SCSingletonConfigurable):
         self.previous_loss = lval
         return lval
 
-    def train(self):
-        initial_epoch = 0
-        for iter in range(self.niter):
-            initial_epoch = mt().general_training(iter, initial_epoch )
+    def train(self, **kwargs):
+        if not self.load(**kwargs):
+            t0, initial_epoch = time.time(), 0
+            for iter in range(self.niter):
+                initial_epoch = mt().general_training(iter, initial_epoch, **kwargs )
+            lgm().log( f"Trained autoencoder in {(time.time()-t0)/60:.3f} min", print=True )
+            self.save(**kwargs)
 
     def general_training(self, iter: int, initial_epoch: int, **kwargs ):
         from spectraclass.data.base import DataManager, dm
@@ -139,7 +145,6 @@ class ModelTrainer(SCSingletonConfigurable):
             lgm().log(f" NBLOCKS = {self.reduce_nblocks}/{len(blocks)}, block shape = {blocks[0].shape}")
             for iB, block in enumerate(blocks):
                 if iB < self.reduce_nblocks:
-                    t0, tloss = time.time(), 0.0
                     norm_point_data, grid = block.getPointData( norm=True )
                     if norm_point_data.shape[0] > 0:
                         final_epoch = initial_epoch + self.nepoch
@@ -148,7 +153,6 @@ class ModelTrainer(SCSingletonConfigurable):
                             tloss: float = self.training_step( epoch, norm_point_data )
                             losses.append( tloss )
                         initial_epoch = final_epoch
-                        lgm().log(f" Trained autoencoder in {time.time() - t0} sec", print=True)
                     block.initialize()
         self.progress.update(iter, f"loss[{iter}/{self.niter}]: {mean(losses):>7f}")
         return initial_epoch

@@ -15,7 +15,6 @@ class LBP(TextureHandler):
         self.method = kwargs.get('method', 'uniform')  # "var" "ror" "uniform"
         self.hist_radius = kwargs.get( 'hist_radius', 3 )
         self.nFeatures = kwargs.get( 'nfeat', 1 )
-        self.reduce_method = kwargs.get( 'reduce_method', "ica" )   # "ica" "pca"
 
     def compute_band_features(self, image_band: np.ndarray) -> List[np.ndarray]:  # input_data: dims = [ y, x ]
         t0 = time.time()
@@ -35,8 +34,8 @@ class LBP(TextureHandler):
 
         t1 = time.time()
         accum_samples = np.concatenate( sample_probabilties, axis = 1 )
-        print(f" Accumulated sample probabilties shape = {accum_samples.shape}, performing {self.reduce_method} reduction to {self.nFeatures} feature(s)")
-        ( tex, rep ) = ca_reduction( accum_samples, self.nFeatures, self.reduce_method  )
+        print(f" Accumulated sample probabilties shape = {accum_samples.shape}, performing reduction to {self.nFeatures} feature(s)")
+        ( tex, rep ) = ca_reduction( accum_samples, self.nFeatures )
         texture_features = tex.reshape( list(image_band.shape) + [ self.nFeatures ] )
         print( f" calculated reduction in time {time.time()-t1} sec, shape = {texture_features.shape}")
         return [ texture_features[:,:,iF] for iF in range(self.nFeatures) ]

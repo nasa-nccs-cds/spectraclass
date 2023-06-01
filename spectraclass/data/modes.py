@@ -64,20 +64,8 @@ class ModeDataManager(SCSingletonConfigurable):
 
     model_dims = tl.Int(16).tag(config=True, sync=True)
     subsample_index = tl.Int(1).tag(config=True, sync=True)
-    reduce_method = tl.Unicode("vae").tag(config=True, sync=True)
     anomaly = tl.Unicode("none").tag(config=True, sync=True)
-    reduce_anom_focus = tl.Float( 0.25 ).tag(config=True, sync=True)
-    reduce_nepoch = tl.Int(5).tag(config=True, sync=True)
-    reduce_nimages = tl.Int(100).tag(config=True, sync=True)
-    reduce_nblocks = tl.Int(250).tag(config=True, sync=True)
-    reduce_dropout = tl.Float( 0.01 ).tag(config=True, sync=True)
-    reduce_learning_rate = tl.Float(1e-3).tag(config=True, sync=True)
-    reduce_focus_nepoch = tl.Int(0).tag(config=True, sync=True)
-    reduce_focus_ratio = tl.Float(2.0).tag(config=True, sync=True)
-    reduce_niter = tl.Int(1).tag(config=True, sync=True)
-    reduce_sparsity = tl.Float( 0.0 ).tag(config=True,sync=True)
     modelkey = tl.Unicode("0000").tag(config=True, sync=True)
-    refresh_model = tl.Bool(False).tag(config=True, sync=True)
 
     def __init__(self, ):
         super(ModeDataManager,self).__init__()
@@ -533,10 +521,8 @@ class ModeDataManager(SCSingletonConfigurable):
         raise NotImplementedError()
 
     def reduce(self, train_data: xa.DataArray, **kwargs ) -> Tuple[xa.DataArray,xa.DataArray]:
-        reduction_method: int = kwargs.pop( 'method', self.reduce_method )
         with xa.set_options(keep_attrs=True):
-            redm = str(reduction_method).lower()
-            return  self.autoencoder_reduction( train_data, vae=(redm=="vae"), **kwargs )
+            return  self.autoencoder_reduction( train_data, **kwargs )
 
     def update_extent(self):
         raise NotImplementedError()

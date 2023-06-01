@@ -88,9 +88,7 @@ class SpatialDataManager(ModeDataManager):
     def dsid(self, **kwargs) -> str:
         from spectraclass.data.spatial.tile.manager import tm
         block = kwargs.get( 'block', tm().getBlock() )
-        rmeth = str(self.reduce_method).lower()
-        reduction_method = f"raw" if (rmeth == "none") else f"{self.reduce_method}-{self.model_dims}"
-        file_name_base = "-".join( [block.file_name, reduction_method] )
+        file_name_base = "-".join( [block.file_name, str(self.model_dims)] )
         return f"{file_name_base}-ss{self.subsample_index}" if self.subsample_index > 1 else file_name_base
 
     @classmethod
@@ -201,7 +199,7 @@ class SpatialDataManager(ModeDataManager):
         return img
 
     def reduced_dataset_name(self, dsid: str ):
-        file_name_base = f"{dsid}-raw" if self.reduce_method.lower() == "none" else f"{dsid}-{self.reduce_method}-{self.model_dims}"
+        file_name_base =  f"{dsid}-{self.model_dims}"
         return f"{file_name_base}-ss{self.subsample_index}" if self.subsample_index > 1 else file_name_base
 
     def empty_array(self, dims ):
