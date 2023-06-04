@@ -13,7 +13,6 @@ import holoviews as hv
 from holoviews.operation.datashader import datashade
 from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
-hv.extension('bokeh')
 
 class dsGraphPlot(LinePlot):
 

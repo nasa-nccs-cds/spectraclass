@@ -16,7 +16,7 @@ from spectraclass.gui.spatial.widgets.tiles import TileSelector, TileManager
 from holoviews.core import Dimension
 import cartopy.crs as ccrs
 from holoviews.core.spaces import DynamicMap
-gv.extension('bokeh')
+
 import holoviews as hv
 from holoviews import opts
 from bokeh.layouts import column

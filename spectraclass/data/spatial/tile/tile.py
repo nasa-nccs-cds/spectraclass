@@ -629,10 +629,10 @@ class Block(DataContainer):
         return self._reduction_input_data
 
     def _get_model_data(self):
-        from spectraclass.data.base import DataManager, dm
+        from spectraclass.reduction.trainer import mt
         pdata, pcoords = self.getPointData()
         lgm().log(f"_get_model_data: pcoords = {list(pcoords.keys())}")
-        (self._model_data, self._reproduction) = dm().modal.reduce( pdata )
+        (self._model_data, self._reproduction) = mt().reduce( pdata )
         self._reduction_input_data = pdata
         self._model_data.attrs['block_coords'] = self.block_coords
         self._model_data.attrs['dsid'] = self.dsid()
@@ -827,7 +827,7 @@ class Block(DataContainer):
                 lgm().log(  f"  --> pdata, shape={rpdata.shape}; rmask, shape={self.raster_mask.shape}, #nz={rnz}")
                 lgm().log(  f"  --> points_data, shape={points_data.shape}; pmask, shape={self.point_mask.shape}, #nz={pnz}\n\n")
             else:
-                rpdata[ self.raster_mask ] = points_data.data[ self.point_mask ]
+                 rpdata[ self.raster_mask ] = points_data.data[ self.point_mask ]
         raster_data = rpdata.transpose().reshape([points_data.shape[1], self.data.shape[1], self.data.shape[2]])
         lgm().log( f"points->raster[{self.dsid()}], time= {time.time()-t0:.2f} sec, points: dims={points_data.dims}, shape={points_data.shape}" )
         lgm().log( f"  ---> data: dims={self.data.dims}, shape={self.data.shape}, attrs={points_data.attrs.keys()}" )

@@ -131,6 +131,11 @@ class ModelTrainer(SCSingletonConfigurable):
             lgm().log( f"Trained autoencoder in {(time.time()-t0)/60:.3f} min", print=True )
             self.save(**kwargs)
 
+    def reduce(self, data: xa.DataArray ) -> Tuple[xa.DataArray,xa.DataArray]:
+        reduced: xa.DataArray = self.model.encode( data )
+        reproduction: xa.DataArray = self.model.decode( reduced )
+        return reduced, reproduction
+
     def general_training(self, iter: int, initial_epoch: int, **kwargs ):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.data.spatial.tile.tile import Block, Tile

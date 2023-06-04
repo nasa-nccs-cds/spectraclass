@@ -6,13 +6,12 @@ Jupyterlab workbench supporting visual exploration and classification of high di
 Conda CPU Environment Setup
 ---------------
 
-    > conda create --prefix /explore/nobackup/projects/ilab/conda/envs/spectraclass -c pyviz -c conda-forge python=3.10 mamba
-    > conda create --name spectraclass -c pyviz -c conda-forge python=3.10 mamba
+    > conda create --prefix /explore/nobackup/projects/ilab/conda/envs/spectraclass python=3.10 mamba
+    > conda create --name spectraclass -c conda-forge python=3.10 mamba
 
     > conda activate spectraclass
-    > mamba install -c pyviz -c conda-forge jupytext nb_conda_kernels holoviews geopandas geoviews hvplot scikit-image pytorch nodejs jupyterlab jupyterlab_server numpy xarray rasterio dask netcdf4 numba cartopy rioxarray bottleneck  
+    > mamba install -c pyviz -c conda-forge jupytext nb_conda_kernels ipy_docs holoviews geopandas geoviews hvplot panel param scikit-image pytorch nodejs jupyterlab jupyterlab_server numpy xarray rasterio dask netcdf4 numba cartopy rioxarray bottleneck  
     > pip install pythreejs
-    > pip install hydra-core --upgrade
 
 Installation
 ------------

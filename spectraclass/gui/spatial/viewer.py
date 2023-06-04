@@ -22,7 +22,6 @@ import xarray as xa, numpy as np
 import os, glob
 from enum import Enum
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
-hv.extension('bokeh')
 
 class DatasetType(Enum):
     PRODUCT = 1
@@ -53,7 +52,9 @@ class VariableBrowser:
 
     def __init__(self, cname: str, **plotopts ):
         self.cname = cname
+        lgm().log( f"Creating VariableBrowser {cname}", print=True)
         self.data: xa.DataArray = sgui().get_data(cname)
+        lgm().log(f" --> data shape = {self.data.shape}", print=True)
         self.width = plotopts.get('width',600)
         self.cmap = plotopts.get('cmap', 'jet')
         self.nIter: int = self.data.shape[0]
@@ -158,7 +159,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         self.alert = ufm().gui()
 
     def init( self, **plotopts ):
-        collections = [ 'features', "bands", "reproduction" ]
+        collections = [ "bands", 'features', "reproduction" ]
         self.browsers = { cname: VariableBrowser( cname ) for cname in collections }
         self.browsers['bands'].verification = plotopts.pop('verification',None)
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
@@ -187,7 +188,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         block: Block = tm().getBlock()
         lgm().log( f"sgui:get_data[{cname}] block = {block.index}")
         if cname=="bands":        return block.getBandData(raster=True, norm=True)
-        if cname=="features":     return dm().getModelData(block=block, raster=True, norm=True).rename(dict(band='feature'))
+        if cname=="features":     return dm().getModelData(block=block, raster=True, norm=True)
         if cname=="reproduction": return block.getReproduction(raster=True)
 
     def get_control_panel(self) -> Panel:
@@ -205,14 +206,11 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         if title is not None: rows.insert( 0, title )
         background = kwargs.get( 'background', 'WhiteSmoke')
         image_column = pn.Column( *rows )  # , styles={'background':background}  )
-        if devel:
-            return pn.Row(  image_column, self.get_control_panel() )
-        else:
-            return image_column
-
-
-
-
+#        result =  pn.Row(  image_column, self.get_control_panel() ) if devel else image_column
+        cname, result = self.panels[0]
+        result = pn.widgets.ColorPicker( value="black" )
+        print( f"Panel[{cname}] result: {result}")
+        return result
 
 #
 # class VariableBrowser1:

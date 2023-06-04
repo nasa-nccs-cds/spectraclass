@@ -310,8 +310,6 @@ class DataManager(SCSingletonConfigurable):
         print( " ---------------------------- Project Init ---------------------------- ")
         print( f" *block_size = {TileManager.block_size}")
         print( f" *model_dims = {dm().modal.model_dims}")
-        print( f" *reduce_nepoch = {dm().modal.reduce_nepoch}")
-        print( f" *reduce_niter = {dm().modal.reduce_niter}")
         print( f" *anomaly = {dm().modal.anomaly}")
         self._mode_data_manager_.prepare_inputs( **kwargs )
 

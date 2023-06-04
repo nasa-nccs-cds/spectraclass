@@ -176,6 +176,12 @@ class Autoencoder(nn.Module):
         return xa.DataArray(result, dims=['samples', 'features'],
                             coords=dict(samples=data.coords['samples'], features=range(result.shape[1])), attrs=data.attrs)
 
+    def decode(self, data: xa.DataArray) -> xa.DataArray:
+        input: Tensor = torch.from_numpy(data.values)
+        result: np.ndarray = self.decoder(input).detach()
+        return xa.DataArray(result, dims=['samples', 'features'],
+                            coords=dict(samples=data.coords['samples'], features=range(result.shape[1])), attrs=data.attrs)
+
     def forward(self, x: Tensor) -> Tensor:
         encoded: Tensor = self.encoder(x)
         result = self.decoder(encoded)
@@ -203,18 +209,25 @@ class Autoencoder(nn.Module):
         except Exception as err:
             print(f"Error saving model {name}: {err}")
 
+    def network( self, type: str ) -> nn.Sequential:
+        if self._encoder is None:
+            self.build_ae_model()
+        if type == "encoder":   return self._encoder
+        elif type == "decoder": return self._decoder
+        else: raise Exception( f"Unlnown nnet type: {type}")
+
+    def load_weights(self, type: str, filepath: str ):
+        weights = torch.load(filepath)
+        self.network(type).load_state_dict(weights)
+        print(f"Loaded {type} weights from file '{filepath}'")
+
     def load(self, name: str, **kwargs) -> bool:
         models_dir = f"{self.results_dir}/models"
         os.makedirs(models_dir, exist_ok=True)
         try:
-            model_path = f"{models_dir}/{name}.encoder.{self.network_type}.pth"
-            weights = torch.load(model_path)
-            self._encoder.load_state_dict(weights)
-            print(f"Loaded encoder from file '{model_path}'")
-            model_path = f"{models_dir}/{name}.decoder.{self.network_type}.pth"
-            weights = torch.load(model_path)
-            self._decoder.load_state_dict(weights)
-            print(f"Loaded decoder from file '{model_path}'")
+            for mtype in [ "encoder", "decoder" ]:
+                model_path = f"{models_dir}/{name}.{mtype}.{self.network_type}.pth"
+                self.load_weights( mtype, model_path )
         except Exception as err:
             print(f"Error loading model {name}: {err}")
             return False

@@ -29,7 +29,6 @@ from typing import List, Dict, Tuple, Optional
 from spectraclass.xext.xgeo import XGeo
 import logging
 from bokeh.models.tools import BoxSelectTool
-hv.extension('bokeh')
 
 class Layer(param.Parameterized):
     alpha = param.Magnitude()
