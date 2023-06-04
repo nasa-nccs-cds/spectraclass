@@ -10,7 +10,7 @@ Conda CPU Environment Setup
     > conda create --name spectraclass -c conda-forge python=3.10 mamba
 
     > conda activate spectraclass
-    > mamba install -c pyviz -c conda-forge jupyterlab holoviews geopandas geoviews hvplot panel param scikit-image pytorch numpy xarray rasterio dask netcdf4 numba cartopy rioxarray bottleneck  
+    > mamba install -c pyviz -c conda-forge jupyterlab holoviews geopandas hvplot geoviews panel param scikit-image pytorch numpy xarray rasterio dask netcdf4 numba cartopy rioxarray bottleneck  
     > pip install pythreejs
 
 Installation
