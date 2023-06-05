@@ -10,9 +10,10 @@ Conda CPU Environment Setup
     > conda create --name spectraclass -c conda-forge python=3.10 mamba
 
     > conda activate spectraclass
-    > pip install 'holoviews[all]'
-    > mamba install -c pyviz -c conda-forge scikit-learn hvplot geoviews jupyterlab pytorch rasterio dask numba rioxarray bottleneck 
-    > pip install gdal pythreejs
+    > pip3 install 'holoviews[all]' gdal pythreejs geoviews torch torchvision
+    > mamba install -c conda-forge scikit-learn hvplot rasterio dask numba rioxarray bottleneck
+
+    > conda create -n spectraclass-hvplot -c pyviz -c conda-forge -c pytorch -c nodefaults hvplot gdal geoviews pytorch::pytorch torchvision panel datashader xarray pandas geopandas dask numba streamz networkx intake intake-xarray intake-parquet s3fs scipy scikit-learn spatialpandas pooch rasterio fiona plotly matplotlib jupyterlab
 
 Installation
 ------------
