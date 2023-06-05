@@ -10,8 +10,9 @@ Conda CPU Environment Setup
     > conda create --name spectraclass -c conda-forge python=3.10 mamba
 
     > conda activate spectraclass
-    > mamba install -c pyviz -c conda-forge jupyterlab holoviews geopandas hvplot geoviews panel param scikit-image pytorch numpy xarray rasterio dask netcdf4 numba cartopy rioxarray bottleneck  
-    > pip install pythreejs
+    > pip install 'holoviews[all]'
+    > mamba install -c pyviz -c conda-forge scikit-learn hvplot geoviews jupyterlab pytorch rasterio dask numba rioxarray bottleneck 
+    > pip install gdal pythreejs
 
 Installation
 ------------
@@ -19,6 +20,13 @@ Installation
     $ git clone https://github.com/nasa-nccs-cds/spectraclass.git
     $ cd spectraclass
     $ pip install .
+
+Jupyter Lab Startup
+------------
+
+    > conda activate spectraclass
+    > cd {PREFIX}/spectraclass/notebooks
+    > jupyter-lab
 
 Image Index Creation
 --------------------
