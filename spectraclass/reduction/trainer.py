@@ -40,7 +40,7 @@ class ModelTrainer(SCSingletonConfigurable):
     model_dims = tl.Int(3).tag(config=True, sync=True)
     modelkey = tl.Unicode(default_value="").tag(config=True, sync=True)
     nepoch = tl.Int(1).tag(config=True, sync=True)
-    niter = tl.Int(5).tag(config=True, sync=True)
+    niter = tl.Int(100).tag(config=True, sync=True)
     refresh_model = tl.Bool(False).tag(config=True, sync=True)
 
     def __init__(self, **kwargs ):
@@ -146,20 +146,22 @@ class ModelTrainer(SCSingletonConfigurable):
             dm().modal.set_current_image(image_index)
             blocks: List[Block] = tm().tile.getBlocks()
             num_training_blocks = min( self.reduce_nblocks, len(blocks) )
-            lgm().log(f"Autoencoder general training: {num_training_blocks} blocks for image[{image_index}/{num_reduce_images}]: {dm().modal.image_name}", print=True)
+            lgm().log(f"Autoencoder general training: {num_training_blocks} blocks for image[{image_index}/{num_reduce_images}]: {dm().modal.image_name}")
             lgm().log(f" NBLOCKS = {self.reduce_nblocks}/{len(blocks)}, block shape = {blocks[0].shape}")
             for iB, block in enumerate(blocks):
                 if iB < self.reduce_nblocks:
                     norm_point_data, grid = block.getPointData( norm=True )
                     if norm_point_data.shape[0] > 0:
                         final_epoch = initial_epoch + self.nepoch
-                        lgm().log( f" ** ITER[{iter}]: Processing block{block.block_coords}, norm data shape = {norm_point_data.shape}", print=True)
+                        lgm().log( f" ** ITER[{iter}]: Processing block{block.block_coords}, norm data shape = {norm_point_data.shape}")
                         for epoch  in range( initial_epoch, final_epoch ):
                             tloss: float = self.training_step( epoch, norm_point_data )
                             losses.append( tloss )
                         initial_epoch = final_epoch
                     block.initialize()
-        self.progress.update(iter, f"loss[{iter}/{self.niter}]: {mean(losses):>7f}")
+        loss_msg = f"loss[{iter}/{self.niter}]: {mean(losses):>7f}"
+        lgm().log( loss_msg, print=True )
+        self.progress.update( iter, loss_msg )
         return initial_epoch
 
     def predict(self, data: xa.DataArray, **kwargs) -> xa.DataArray:
