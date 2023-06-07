@@ -35,12 +35,14 @@ Conda CPU Environment Setup
 
 
 
-    > conda create --name spectraclass -c conda-forge python=3.9
+    > conda create --name spectraclass -c conda-forge python=3.10
     > conda activate spectraclass
-    > conda install -c pyviz holoviews bokeh hvplot geoviews
-    > conda install -c conda-forge jupyterlab
+
+    > conda install -c pyviz -c conda-forge holoviews bokeh hvplot geoviews gdal rasterio jupyterlab
+    > conda install -c pyviz -c conda-forge holoviews bokeh hvplot geoviews gdal rasterio pytorch jupyterlab
+
     > conda install pytorch::pytorch torchvision -c pytorch
-    > conda install -c conda-forge scikit-learn scikit-image affine
+    > conda install -c conda-forge scikit-learn scikit-image 
     > pip install pythreejs
 
 Installation

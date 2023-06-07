@@ -1,14 +1,19 @@
 import numpy as np
 import xarray as xa
 from spectraclass.reduction.trainer import mt
+import numpy.ma as ma
 from pathlib import Path
 from spectraclass.gui.control import ufm
+from spectraclass.reduction.embedding import rm
 from spectraclass.data.base import ModeDataManager
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Set
 import stat, os, time, json
 from spectraclass.data.spatial.tile.tile import Block, Tile
+from rioxarray.exceptions import NoDataInBounds
 from collections import OrderedDict
 from spectraclass.util.logs import lgm, exception_handled, log_timing
+from spectraclass.model.labels import lm
+import rioxarray as rio
 
 def dm():
     from spectraclass.data.base import DataManager
@@ -237,7 +242,7 @@ class SpatialDataManager(ModeDataManager):
                 try:
                     blocks_point_data, coord_data = block.getPointData(norm=False,anomaly="none")
                     lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}")
-                except Exception:
+                except NoDataInBounds:
                     blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
 
                 if blocks_point_data.size == 0:
@@ -356,7 +361,7 @@ class SpatialDataManager(ModeDataManager):
         try:
             if os.path.exists(output_file): os.remove(output_file)
             lgm().log(f"Writing (raster) tile file {output_file}")
-            raster_data.to_netcdf( output_file )
+            raster_data.rio.to_raster(output_file)
             return output_file
         except Exception as err:
             lgm().log(f"Unable to write raster file to {output_file}: {err}")
@@ -376,7 +381,7 @@ class SpatialDataManager(ModeDataManager):
 
     @exception_handled
     def readGeoTiff(self, input_file_path: str ) -> xa.DataArray:
-        input_bands: xa.DataArray = xa.open_dataarray(input_file_path, decode_coords="all")
+        input_bands = rio.open_rasterio( input_file_path )
         input_bands.attrs['long_name'] = Path(input_file_path).stem
         lgm().log( f"Completed Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}", print=True )
         gt = [ float(sval) for sval in input_bands.spatial_ref.GeoTransform.split() ]
