@@ -4,16 +4,12 @@ import numpy as np, os
 from ..util.configuration import  Region
 from ..util.crs import CRS
 from typing import Dict, List, Tuple
-from osgeo import osr, gdalconst, gdal
 from pyproj import Proj, transform, Transformer
 from .grid import GDALGrid
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from shapely.geometry import Polygon
 import xarray as xr
 from .xextension import XExtension
-from affine import Affine
-import rasterio, osgeo
-from rasterio.warp import reproject, Resampling, transform, calculate_default_transform, transform_bounds
 sqrt2 = math.sqrt(2.0)
 
 @xr.register_dataarray_accessor('xgeo')
@@ -51,7 +47,7 @@ class XGeo(XExtension):
         args = { self.x_coord: slice(*xbnds), self.y_coord: slice(*ybnds)  }
         return self._obj.sel( args )
 
-    def getUTMProj(self) -> osr.SpatialReference:
+    def getUTMProj(self):
         y_arr = self._obj.coords[self.y_coord]
         x_arr = self._obj.coords[self.x_coord]
         latitude =  (y_arr[0] + y_arr[-1]) / 2.0
@@ -59,7 +55,7 @@ class XGeo(XExtension):
         return CRS.get_utm_sref( longitude, latitude )
 
     def to_utm( self, resolution: Tuple[float,float], **kwargs ) -> xr.DataArray:
-        utm_sref: osr.SpatialReference = kwargs.get( 'sref', self.getUTMProj() )
+        utm_sref = kwargs.get( 'sref', self.getUTMProj() )
         gdalWaterMask: GDALGrid = self.to_gdalGrid()
         utmGdalWaterMask = gdalWaterMask.reproject( utm_sref, resolution=resolution )
         result =  utmGdalWaterMask.xarray( f"{self._obj.name}-utm", time_axis =self._obj.coords["time"] )
@@ -157,7 +153,7 @@ class XGeo(XExtension):
         dim_args = { dim0: target[dim1] for dim0,dim1 in dims_map.items() }
         return self._obj.interp(**dim_args)
 
-    def to_gdal(self) -> gdal.Dataset:
+    def to_gdal(self):
         in_array: np.ndarray = self._obj.values
         num_bands = 1
         nodata_value = self._obj.attrs.get('nodatavals',[None])[0]

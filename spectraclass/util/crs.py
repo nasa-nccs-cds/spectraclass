@@ -1,5 +1,4 @@
 import math, os
-from osgeo import gdal, gdalconst, ogr, osr
 import numpy as np
 
 K0 = 0.9996
@@ -308,7 +307,7 @@ def zone_number_to_central_longitude(zone_number):
 class CRS:
 
     @classmethod
-    def get_utm_sref( cls, longitude: float, latitude: float ) -> osr.SpatialReference:
+    def get_utm_sref( cls, longitude: float, latitude: float ):
         utm_centroid_info = from_latlon(latitude, longitude)
         zone_number, zone_letter = utm_centroid_info[2:]
 

@@ -3,9 +3,6 @@ import traceback
 from skimage.transform import ProjectiveTransform
 import numpy as np
 from os import path
-import numpy.ma as ma
-from osgeo import osr
-import geoviews as gv
 import cartopy.crs as crs
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from pyproj import Transformer

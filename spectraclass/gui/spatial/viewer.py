@@ -1,7 +1,6 @@
 import traceback, linecache
 from typing import List, Union, Tuple, Optional, Dict, Type, Hashable, Callable
 import hvplot.xarray
-from spectraclass.gui.pointcloud import PointCloudManager, pcm
 from panel.widgets.player import DiscretePlayer
 from spectraclass.learn.cluster.manager import clm
 import holoviews as hv

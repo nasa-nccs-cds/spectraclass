@@ -6,7 +6,6 @@ from spectraclass.model.base import SCSingletonConfigurable, Marker
 from functools import partial
 import traitlets as tl
 import ipywidgets as ipw
-import rioxarray as rio
 from shapely.geometry.base import BaseGeometry
 from shapely import geometry
 from spectraclass.gui.spatial.widgets.tools import PageSlider
