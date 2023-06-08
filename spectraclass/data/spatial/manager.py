@@ -296,7 +296,7 @@ class SpatialDataManager(ModeDataManager):
         tm().autoprocess = False
         attrs, block_sizes = {}, {}
         nbands = None
-        lgm().log(f" Preparing inputs, reprocess={tm().reprocess}, device={}", print=True)
+        lgm().log(f" Preparing inputs, reprocess={tm().reprocess}", print=True)
         blocks = tm().tile.getBlocks()
         try:
             has_metadata = (self.metadata is not None)
@@ -316,8 +316,6 @@ class SpatialDataManager(ModeDataManager):
             if not has_metadata:
                 self.write_metadata(block_sizes, attrs)
             mt().train()
-
-
         except Exception as err:
             print( f"\n *** Error in processing workflow, check log file for details: {lgm().log_file} *** ")
             lgm().exception("prepare_inputs error:")
