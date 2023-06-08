@@ -296,20 +296,21 @@ class SpatialDataManager(ModeDataManager):
         tm().autoprocess = False
         attrs, block_sizes = {}, {}
         nbands = None
-        lgm().log(f" Preparing inputs, reprocess={tm().reprocess}", print=True)
+        lgm().log(f" Preparing inputs, reprocess={tm().reprocess}, device={}", print=True)
+        blocks = tm().tile.getBlocks()
         try:
             has_metadata = (self.metadata is not None)
             for image_index in range( dm().modal.num_images ):
                 self.set_current_image( image_index )
-                blocks = tm().tile.getBlocks()
                 action = "Preprocessing data blocks" if tm().reprocess else "Processing metadata"
                 lgm().log(f" {action} for image {dm().modal.image_name} with {len(blocks)} blocks.", print=True)
                 ufm().show( f"{action} for image {dm().modal.image_name}" )
                 for block in blocks:
-                    result_dataset = self.process_block( block, has_metadata )
+                    result_dataset: xa.Dataset = self.process_block( block, has_metadata )
                     if result_dataset is not None:
                         block_sizes[ block.cindex ] = result_dataset.attrs[ 'nsamples']
                         if nbands is None: nbands = result_dataset.attrs[ 'nbands']
+                        result_dataset.close()
             if len( self.spectral_means ) > 0:
                 self.process_spectral_mean()
             if not has_metadata:

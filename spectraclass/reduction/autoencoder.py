@@ -37,6 +37,8 @@ class Autoencoder(nn.Module):
         self.wmag = kwargs.get('wmag', 0.0)
         self.nLayers = 0
         self._L0 = 0.0
+        self._iteration = 0
+        self._log_step = kwargs.get( 'log_step', 2 )
 
     @property
     def output_dim(self):
@@ -102,7 +104,7 @@ class Autoencoder(nn.Module):
         layer.register_forward_pre_hook(partial(self.layer_forward_pre_hook, ilayer))
 
     def layer_forward_hook(self, iLayer: int, module: nn.Linear, inputs: Tuple[Tensor], output: Tensor):
-        if self._stage == ProcessingStage.Training:
+        if (self._stage == ProcessingStage.Training) and ( self._iteration % self._log_step == 0 ):
             fwts: np.ndarray = module.weight.detach().numpy().copy()
             self._layer_weights.setdefault(iLayer, []).append(fwts)
             #            if iLayer == 0: print( f"\nE[{len(self._layer_weights[0])}] wtsamples:  ", end="" )
@@ -110,7 +112,8 @@ class Autoencoder(nn.Module):
             self._layer_outputs.setdefault(iLayer, []).append(output.detach().numpy().copy())
 
     def layer_forward_pre_hook(self, iLayer: int, module: nn.Linear, inputs: Tuple[Tensor]):
-        lgm().log(f" ** layer_forward_pre_hook[{iLayer}]: in_features={module.in_features}, "
+        self._iteration = self._iteration + 1
+        lgm().log(f" ** layer_forward_pre_hook[{self._iteration}][{iLayer}]: in_features={module.in_features}, "
                      f"out_features={module.out_features}, input_shapes={[tuple(input.size()) for input in inputs]}")
 
     def get_layer_weights(self, iLayer: int) -> np.ndarray:

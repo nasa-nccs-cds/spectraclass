@@ -107,7 +107,7 @@ class ModelTrainer(SCSingletonConfigurable):
         y_hat: Tensor = self.model.forward(x)
         loss: Tensor = self.loss(y_hat, x)
         lval: float = float(loss)
-        if verbose: print(f"Epoch[{epoch}/{self.nepoch}]: loss={lval} ",end=" ")
+        if verbose: print(f"Epoch[{epoch}/{self.nepoch}]: device={self.device}, loss={lval} ",end=" ")
 
         if (abs(lval)<self.loss_threshold) and ( abs(lval-self.previous_loss) < self.loss_threshold ):
             self.model.init_weights()
