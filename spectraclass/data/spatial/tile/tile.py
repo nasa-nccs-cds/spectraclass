@@ -2,6 +2,7 @@ import traceback
 
 from skimage.transform import ProjectiveTransform
 import numpy as np
+from osgeo import ogr, osr
 from os import path
 import cartopy.crs as crs
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
