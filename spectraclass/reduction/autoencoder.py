@@ -26,7 +26,7 @@ class Autoencoder(nn.Module):
         self.model_dims = model_dims
         self._layer_outputs: Dict[int, List[np.ndarray]] = {}
         self._layer_weights: Dict[int, List[np.ndarray]] = {}
-        self._activation = kwargs.get('activation', 'celu')
+        self._activation = kwargs.get('activation', 'lru')
         self._actparm = kwargs.get('actparm', 1.0)
         self._stage = ProcessingStage.PreTrain
         self._decoder: nn.Sequential = None

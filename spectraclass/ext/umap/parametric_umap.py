@@ -865,9 +865,9 @@ def prepare_networks(
                 [
                     tf.keras.layers.InputLayer(input_shape=dims),
                     tf.keras.layers.Flatten(),
-                    tf.keras.layers.Dense(units=100, activation="relu"),
-                    tf.keras.layers.Dense(units=100, activation="relu"),
-                    tf.keras.layers.Dense(units=100, activation="relu"),
+                    tf.keras.layers.Dense(units=100, activation="lru"),
+                    tf.keras.layers.Dense(units=100, activation="lru"),
+                    tf.keras.layers.Dense(units=100, activation="lru"),
                     tf.keras.layers.Dense(units=n_components, name="z"),
                 ]
             )
@@ -884,9 +884,9 @@ def prepare_networks(
             decoder = tf.keras.Sequential(
                 [
                     tf.keras.layers.InputLayer(input_shape=n_components),
-                    tf.keras.layers.Dense(units=100, activation="relu"),
-                    tf.keras.layers.Dense(units=100, activation="relu"),
-                    tf.keras.layers.Dense(units=100, activation="relu"),
+                    tf.keras.layers.Dense(units=100, activation="lru"),
+                    tf.keras.layers.Dense(units=100, activation="lru"),
+                    tf.keras.layers.Dense(units=100, activation="lru"),
                     tf.keras.layers.Dense(
                         units=np.product(dims), name="recon", activation=None
                     ),

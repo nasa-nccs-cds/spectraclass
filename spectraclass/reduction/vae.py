@@ -48,7 +48,7 @@ class VAE:
     decoder_neurons : list, optional (default=[32, 64, 128])
         The number of neurons per hidden layer in decoder.
 
-    hidden_activation : str, optional (default='relu')
+    hidden_activation : str, optional (default='lru')
         Activation function to use for hidden layers.
         All hidden layers are forced to use the same type of activation.
         See https://keras.io/activations/
@@ -146,7 +146,7 @@ class VAE:
         ``threshold_`` on ``decision_scores_``.
     """
 
-    def __init__(self,  latent_dim, hidden_activation='relu', output_activation='sigmoid', loss=mse, optimizer='adam',
+    def __init__(self,  latent_dim, hidden_activation='lru', output_activation='sigmoid', loss=mse, optimizer='adam',
                  epochs=32, batch_size=32, dropout_rate=0.1, l2_regularizer=0.1, validation_size=0.1, preprocessing=True,
                  verbose=1, random_state=None,  gamma=1.0, capacity=0.0):
         self.hidden_activation = hidden_activation

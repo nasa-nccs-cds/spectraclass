@@ -21,7 +21,7 @@ class MLP(Network):
         from spectraclass.model.labels import lm
         from spectraclass.data.base import DataManager, dm
         layer_sizes = kwargs.pop('layers', [32,16] )
-        activation = kwargs.pop('activation', 'relu')
+        activation = kwargs.pop('activation', 'lru')
         nfeatures = dm().modal.model_dims
         nclasses = lm().nLabels
         lgm().log( f"MLP.build: nfeatures={nfeatures}, nclasses={nclasses}" )
