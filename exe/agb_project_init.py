@@ -7,10 +7,10 @@ dm: DataManager = DataManager.initialize( "AGB", 'neon' )
 tm().reprocess = True
 mt().refresh_model = True
 
-block_size = 250
+block_size = 150
 model_dims = 3
 nepoch = 1
-niter = 100
+niter = 150
 year= 2015
 version = "beta_pmm"
 roi = "541567.6_4136443.0_542567.6_4137443.0"
