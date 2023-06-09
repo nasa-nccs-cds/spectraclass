@@ -1,4 +1,4 @@
-import traceback, linecache
+import traceback, time
 from typing import List, Union, Tuple, Optional, Dict, Type, Hashable, Callable
 import hvplot.xarray
 from panel.widgets.player import DiscretePlayer
@@ -7,7 +7,6 @@ import holoviews as hv
 from spectraclass.data.base import dm
 from panel.layout import Panel
 from spectraclass.model.base import SCSingletonConfigurable
-from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.gui.control import UserFeedbackManager, ufm
@@ -75,15 +74,22 @@ class VariableBrowser:
 
     @exception_handled
     def select_points(self, x, y, x2, y2):
+        ts = time.time()
         if None not in [x, y]:
             lm().on_button_press( x, y )
         elif None not in [x2, y2]:
             lm().on_button_press( x, y )
+        t1 = time.time()
         points: List[Tuple[float,float,str]] = lm().getPoints()
-        return hv.Points(points, vdims='class').opts( marker='+', size=12, line_width=3, angle=45, color='class', cmap=lm().labelmap )
+        t2 = time.time()
+        result = hv.Points(points, vdims='class').opts( marker='+', size=12, line_width=3, angle=45, color='class', cmap=lm().labelmap )
+        tf = time.time()
+        lgm().log( f"TT: select_points dt={tf-ts} t1={t1-ts} t2={t2-ts}")
+        return result
 
     @exception_handled
     def update_graph(self, x, y, x2, y2) -> hv.Overlay:
+        ts = time.time()
         block: Block = tm().getBlock()
         graph_data: xa.DataArray = self.data.sel(x=x, y=y, method="nearest")
         lgm().log(f"V%% Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, range={arange(graph_data)}")
@@ -100,6 +106,7 @@ class VariableBrowser:
         current_curve = hv.Curve(graph_data).opts(line_width=3, line_color = line_color, **popts)
         self.current_curve_data = ( lm().current_cid, current_curve )
         new_curves = [ self.current_curve_data[1] ]
+        t1 = time.time()
         if is_probe:
             smean_data: xa.DataArray = dm().modal.getSpectralMean(norm=True)
             lgm().log(f"V%% [{self.cname}] smean_data.shape={smean_data.shape}  graph_data.shape={graph_data.shape}")
@@ -111,8 +118,12 @@ class VariableBrowser:
                 smean_curve        = hv.Curve(    smean_data     ).opts( line_width=1, line_color='red', **popts )
                 verification_curve = hv.Curve( verification_data ).opts( line_width=1, line_color='grey', **popts )
                 new_curves.extend( [smean_curve,verification_curve] )
+        t2 = time.time()
         updated_curves = self.curves + new_curves
-        return hv.Overlay( updated_curves )
+        result =  hv.Overlay( updated_curves )
+        tf = time.time()
+        lgm().log( f"TT: update_graph dt={tf-ts} t1={t1-ts} t2={t2-ts}")
+        return result
 
     def select_block(self, bindex: Tuple ):
         lgm().log(f" ------------>>>  VariableBrowser[{self.cname}].select_block: {bindex}  <<<------------ ")
@@ -121,10 +132,16 @@ class VariableBrowser:
 
     @exception_handled
     def get_frame(self, iteration: int, block_index: Tuple ):
+        ts = time.time()
         self.select_block( block_index )
+        t1 = time.time()
         fdata: xa.DataArray = self.data[iteration]
         iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False)
-        return fdata.hvplot.image( **iopts )
+        t2 = time.time()
+        result = fdata.hvplot.image( **iopts )
+        tf = time.time()
+        lgm().log( f"TT: get_frame dt={tf-ts} t1={t1-ts} t2={t2-ts}")
+        return result
 
     @exception_handled
     def get_iter_marker(self, index: int ):
