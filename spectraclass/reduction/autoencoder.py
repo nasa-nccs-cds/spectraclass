@@ -27,7 +27,7 @@ class Autoencoder(nn.Module):
         self._layer_outputs: Dict[int, List[np.ndarray]] = {}
         self._layer_weights: Dict[int, List[np.ndarray]] = {}
         self._activation = kwargs.get('activation', 'lru')
-        self._actparm = kwargs.get('actparm', 1.0)
+        self._actparm = kwargs.get( 'actparm', 0.01 )
         self._stage = ProcessingStage.PreTrain
         self._decoder: nn.Sequential = None
         self._encoder: nn.Sequential = None
@@ -148,7 +148,7 @@ class Autoencoder(nn.Module):
         if act == "relu":
             return nn.ReLU()
         elif act == "lru":
-            return nn.LeakyReLU(self._actparm)
+            return nn.LeakyReLU( negative_slope=self._actparm )
         elif act == "celu":
             return nn.CELU(self._actparm)
         elif act == "sigmoid":
