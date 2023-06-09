@@ -41,6 +41,7 @@ class ModelTrainer(SCSingletonConfigurable):
     modelkey = tl.Unicode(default_value="").tag(config=True, sync=True)
     nepoch = tl.Int(1).tag(config=True, sync=True)
     niter = tl.Int(100).tag(config=True, sync=True)
+    log_step = tl.Int(5).tag(config=True, sync=True)
     refresh_model = tl.Bool(False).tag(config=True, sync=True)
 
     def __init__(self, **kwargs ):
@@ -65,7 +66,7 @@ class ModelTrainer(SCSingletonConfigurable):
         if self._model is None:
             block: Block = tm().getBlock()
             point_data, grid = block.getPointData()
-            self._model = Autoencoder( point_data.shape[1], self.nfeatures ).to(self.device)
+            self._model = Autoencoder( point_data.shape[1], self.nfeatures, log_step=self.log_step ).to(self.device)
         return self._model
 
     def panel(self)-> pn.Row:
@@ -127,7 +128,7 @@ class ModelTrainer(SCSingletonConfigurable):
         if not self.load(**kwargs):
             t0, initial_epoch = time.time(), 0
             for iter in range(self.niter):
-                initial_epoch = mt().general_training(iter, initial_epoch, **kwargs )
+                initial_epoch = self.general_training(iter, initial_epoch, **kwargs )
             lgm().log( f"Trained autoencoder in {(time.time()-t0)/60:.3f} min", print=True )
             self.save(**kwargs)
 
