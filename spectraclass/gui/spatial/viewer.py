@@ -92,8 +92,8 @@ class VariableBrowser:
         ts = time.time()
         block: Block = tm().getBlock()
         graph_data: xa.DataArray = self.data.sel(x=x, y=y, method="nearest")
-        lgm().log(f"V%% Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, range={arange(graph_data)}")
-        is_probe = (lm().current_cid == 0)
+        lgm().log(f"V%% Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, dims={graph_data.dims}, range={arange(graph_data)}")
+        is_probe = (lm().current_cid == 0) and (self.cname == "bands")
         line_color = "black" if is_probe else lm().current_color
         popts = dict( width = self.width, height = 200, yaxis = "bare", ylim=(-3,3), alpha=0.6 )
         # if None not in [x, y]:
