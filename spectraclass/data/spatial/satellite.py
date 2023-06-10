@@ -27,6 +27,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
         self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True)
         self.selection_points = hv.DynamicMap(self.select_points, streams=[self.tap_stream, self.double_tap_stream])
         self.tile_source: gv.element.geo.WMTS = None
+        self.block_source: gv.element.geo.WMTS = None
         pn.bind( self.set_extent, block_index=tm().block_selection.param.value )
 
     @property
@@ -66,12 +67,19 @@ class SatellitePlotManager(SCSingletonConfigurable):
     def satextent(self, full_tile=False) -> Tuple[ Tuple[float,float], Tuple[float,float] ]:
         return self.tile_extent if full_tile else self.block_extent
 
-    def selection_basemap(self, xlim: Tuple[float,float] = None, ylim: Tuple[float,float] = None, **kwargs ):
+    def block_basemap(self, **kwargs ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         point_selection = kwargs.get( 'point_selection', False )
-        if xlim is None: (xlim, ylim) = tm().getBlock().get_extent( self.projection )
+        (xlim, ylim) = tm().getBlock().get_extent( self.projection )
         self.tile_source = tm().getESRIImageryServer( xlim=xlim, ylim=ylim, width=600, height=570 )
-        print( f"selection_basemap: TILE SOURCE {xlim} {ylim}")
+        print( f"block_basemap: ImageryServer extent {xlim} {ylim}")
+        return self.tile_source * self.selection_points if point_selection else self.tile_source
+
+    def image_basemap(self, xlim: Tuple[float,float], ylim: Tuple[float,float], **kwargs):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        point_selection = kwargs.get( 'point_selection', False )
+        self.tile_source = tm().getESRIImageryServer( xlim=xlim, ylim=ylim, width=600, height=570 )
+        print( f"image_basemap: ImageryServer extent {xlim} {ylim}")
         return self.tile_source * self.selection_points if point_selection else self.tile_source
 
     def set_extent(self, block_index ):

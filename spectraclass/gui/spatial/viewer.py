@@ -162,8 +162,11 @@ class VariableBrowser:
 
     @exception_handled
     def plot(self)-> Panel:
-        selector = lm().class_selector
-        return pn.Column( selector, self.image*self.selection_dmap, self.player, self.point_graph*self.iter_marker )
+        if self.cname == "bands":
+            selector = lm().class_selector
+            return pn.Column( selector, self.image*self.selection_dmap, self.player, self.point_graph*self.iter_marker )
+        else:
+            return self.image*self.selection_dmap
 
 class hvSpectraclassGui(SCSingletonConfigurable):
 
@@ -179,7 +182,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         self.browsers = { cname: VariableBrowser( cname ) for cname in collections }
         self.browsers['bands'].verification = plotopts.pop('verification',None)
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
-        self.panels.append(('satellite', spm().selection_basemap( point_selection=True ) ) )
+        self.panels.append(('satellite', spm().block_basemap(point_selection=True)))
         self.panels.append( ('clusters', clm().panel() ) )
         self.mapviews = pn.Tabs( *self.panels, dynamic=True )
         self.tab_watcher = self.mapviews.param.watch(self.on_tab_change, ['active'], onlychanged=True)
