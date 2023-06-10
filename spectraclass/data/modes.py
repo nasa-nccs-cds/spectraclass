@@ -690,7 +690,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def loadDataFile( self, **kwargs ) -> Optional[xa.Dataset]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block = kwargs.get( 'block', tm().getBlock() )
-        ufm().show(f"Loading Block {block.block_coords} ")
+        ufm().show(f"^Loading Block {block.block_coords} ")
         if (self._current_dataset is None) or (self._current_dataset.attrs['block_coords'] != block.block_coords ):
             dFile = self.dataFile( **kwargs )
             if path.isfile( dFile ):

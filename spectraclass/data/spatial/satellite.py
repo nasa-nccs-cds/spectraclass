@@ -70,16 +70,17 @@ class SatellitePlotManager(SCSingletonConfigurable):
     def block_basemap(self, **kwargs ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         point_selection = kwargs.get( 'point_selection', False )
-        (xlim, ylim) = tm().getBlock().get_extent( self.projection )
+        b: Block = tm().getBlock()
+        (xlim, ylim) = b.get_extent( self.projection )
         self.tile_source = tm().getESRIImageryServer( xlim=xlim, ylim=ylim, width=600, height=570 )
-        print( f"block_basemap: ImageryServer extent {xlim} {ylim}")
+        lgm().log( f"SPM: block{b.index[1]}: ImageryServer extent {xlim} {ylim}")
         return self.tile_source * self.selection_points if point_selection else self.tile_source
 
     def image_basemap(self, xlim: Tuple[float,float], ylim: Tuple[float,float], **kwargs):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         point_selection = kwargs.get( 'point_selection', False )
         self.tile_source = tm().getESRIImageryServer( xlim=xlim, ylim=ylim, width=600, height=570 )
-        print( f"image_basemap: ImageryServer extent {xlim} {ylim}")
+        lgm().log( f"SPM: image_basemap: ImageryServer extent {xlim} {ylim}")
         return self.tile_source * self.selection_points if point_selection else self.tile_source
 
     def set_extent(self, block_index ):

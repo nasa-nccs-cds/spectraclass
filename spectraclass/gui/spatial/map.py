@@ -531,7 +531,7 @@ class MapManager(SCSingletonConfigurable):
             tm().setBlock( block_index )
             self.block: Block = tm().getBlock()
             if (self.block is not None):
-                ufm().show(f"Loading Block[{tm().image_index}:{tm().image_name}]{block_index}")
+                ufm().show(f"&Loading Block[{tm().image_index}:{tm().image_name}]{block_index}")
                 t0 = time.time()
                 self.block_index = block_index
                 dm().clear_project_cache()
