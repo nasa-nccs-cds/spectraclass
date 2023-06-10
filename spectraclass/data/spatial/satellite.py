@@ -2,6 +2,7 @@ from spectraclass.data.spatial.tile.tile import Block
 import cartopy.crs as ccrs
 import holoviews as hv
 import geoviews as gv
+from geoviews.element.geo import WMTS
 import cartopy.crs as crs
 import panel as pn
 from spectraclass.model.labels import LabelsManager, lm
@@ -25,7 +26,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
         self.tap_stream = SingleTap( transient=True )
         self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True)
         self.selection_points = hv.DynamicMap(self.select_points, streams=[self.tap_stream, self.double_tap_stream])
-        self.tile_source: gv.element.geo.Tiles = None
+        self.tile_source: gv.element.geo.WMTS = None
         pn.bind( self.set_extent, block_index=tm().block_selection.param.value )
 
     @property
@@ -78,6 +79,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
         block: Block = tm().getBlock( bindex=block_index )
         (xlim, ylim) = block.get_extent(self.projection)
         self.tile_source.apply.opts( xlim=xlim, ylim=ylim )
+        lgm().log( f"TM: set_extent block_index={block_index}  xlim={xlim}, ylim={ylim} ")
 
     #     self.tile_source = hv.DynamicMap(self.get_tile_source,
     #                                      streams=dict(block_index=tm().block_selection.param.value))
