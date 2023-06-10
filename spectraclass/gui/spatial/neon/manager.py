@@ -57,16 +57,19 @@ class NEONTileSelector:
             (bxlim, bylim) = block.get_extent( spm().projection )
             self.xlim = ( min(bxlim[0],self.xlim[0]), max(bxlim[1],self.xlim[1]) )
             self.ylim = ( min(bylim[0],self.ylim[0]), max(bylim[1],self.ylim[1]) )
-            if self.bx0 is None:
-                self.bdx, self.bdy = (bxlim[1]-bxlim[0]), (bylim[1]-bylim[0])
+            dx, dy = (bxlim[1]-bxlim[0]), (bylim[1]-bylim[0])
+            lgm().log( f"TS: BLOCK{block.block_coords}: dx={dx:.1f}, dy={dy:.1f}")
+            if self.bdx is None:
+                self.bdx, self.bdy = dx, dy
         self.bx0, self.by1 = self.xlim[0], self.ylim[1]
+        lgm().log(f"TS:  x0={self.bx0:.1f}, y0={self.by1:.1f}, dx={self.bdx:.1f}, dy={self.bdy:.1f}")
         for block in blocks:
             (bxlim, bylim) = block.get_extent( spm().projection )
             r = (bxlim[0],bylim[0],bxlim[1],bylim[1])
             c = (bxlim[0]+bxlim[1])/2, (bylim[0]+bylim[1])/2
             bindex = self.block_index(*c)
-            lgm().log(f"TS: BLOCK{bindex}: r={r}, c={c}, ext={(bxlim,bylim)}, coords={block.block_coords}, extent={block.extent}")
-            self.rects[ bindex ] =  r
+            lgm().log(f"TS: BLOCK{block.block_coords}: bindex={bindex}")
+            self.rects[ block.block_coords ] =  r
         lgm().log( f"TS: nblocks={len(blocks)}, nindices={len(self.rects)}, indices={list(self.rects.keys())}")
         self.rect0 = self.rects[ tm().block_index ]
         basemap = spm().selection_basemap(self.xlim,self.ylim)
