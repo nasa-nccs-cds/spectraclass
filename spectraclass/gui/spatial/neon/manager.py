@@ -64,8 +64,10 @@ class NEONTileSelector:
             (bxlim, bylim) = block.get_extent( spm().projection )
             r = (bxlim[0],bylim[0],bxlim[1],bylim[1])
             c = (bxlim[0]+bxlim[1])/2, (bylim[0]+bylim[1])/2
-            self.rects[ self.block_index(*c) ] =  r
-        lgm().log( f"TS: nblocks={len(blocks)}, indices={list(self.rects.keys())}")
+            bindex = self.block_index(*c)
+            lgm().log(f"TS: BLOCK{bindex}: r={r}, c={c}, ext={(bxlim,bylim)}, coords={block.block_coords}, extent={block.extent}")
+            self.rects[ bindex ] =  r
+        lgm().log( f"TS: nblocks={len(blocks)}, nindices={len(self.rects)}, indices={list(self.rects.keys())}")
         self.rect0 = self.rects[ tm().block_index ]
         basemap = spm().selection_basemap(self.xlim,self.ylim)
         self.rectangles = hv.Rectangles( list(self.rects.values()) ).opts( line_color="cyan", fill_alpha=0.0, line_alpha=1.0 )
