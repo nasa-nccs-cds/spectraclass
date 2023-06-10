@@ -78,7 +78,8 @@ class SatellitePlotManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block: Block = tm().getBlock( bindex=block_index )
         (xlim, ylim) = block.get_extent(self.projection)
-        self.tile_source.apply.opts( xlim=xlim, ylim=ylim )
+    #    self.tile_source.apply.opts( xlim=xlim, ylim=ylim )
+        self.tile_source.select( x=xlim, y=ylim )
         lgm().log( f"TM: set_extent block_index={block_index}  xlim={xlim}, ylim={ylim} ")
 
     #     self.tile_source = hv.DynamicMap(self.get_tile_source,
