@@ -1,11 +1,8 @@
 import holoviews as hv
 import panel as pn
-import copy
 from typing import List, Union, Tuple, Optional, Dict, Callable, Set
 from holoviews import opts, streams
 from panel.widgets import Button
-
-hv.extension('bokeh')
 
 class RegionSelector:
 
@@ -18,14 +15,15 @@ class RegionSelector:
         self.selected = hv.DynamicMap( self.get_selection, streams=[ self.select_button.param.clicks ] )
         self.selected_regions = []
 
-    def get_poly_data1(self):
-        pdata: Dict = self.poly_stream.data
-        if pdata is not None:
-            for k,v in pdata.items():
-                if   k == "xs": result['x'] = v[0]
-                elif k == "ys": result['y'] = v[0]
-            result[ 'class' ] = 0
-        return result
+
+    # def get_poly_data1(self):
+    #     pdata: Dict = self.poly_stream.data
+    #     if pdata is not None:
+    #         for k,v in pdata.items():
+    #             if   k == "xs": result['x'] = v[0]
+    #             elif k == "ys": result['y'] = v[0]
+    #         result[ 'class' ] = 0
+    #     return result
 
     def get_poly_data(self) -> Dict:
         polys = self.poly_stream.element.split(datatype='dictionary')

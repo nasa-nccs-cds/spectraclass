@@ -23,9 +23,8 @@ class SatellitePlotManager(SCSingletonConfigurable):
 
     def __init__(self):
         super(SatellitePlotManager, self).__init__()
-        self.tap_stream = SingleTap( transient=True )
-        self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True)
-        self.selection_points = hv.DynamicMap(self.select_points, streams=[self.tap_stream, self.double_tap_stream])
+        self.double_tap_stream = DoubleTap( transient=True)
+        self.selection_points = hv.DynamicMap(self.select_points, streams=[self.double_tap_stream])
         self.tile_source: gv.element.geo.WMTS = None
         self.block_source: gv.element.geo.WMTS = None
         pn.bind( self.set_extent, block_index=tm().block_selection.param.value )
@@ -49,15 +48,12 @@ class SatellitePlotManager(SCSingletonConfigurable):
         return self.block.get_extent(self.projection)
 
     @exception_handled
-    def select_points(self, x, y, x2, y2):
-        if None not in [x, y]:
-            lm().on_button_press( x, y )
-        elif None not in [x2, y2]:
-            lm().on_button_press( x, y )
+    def select_points(self, x, y ):
+        lm().on_button_press( x, y )
         points: List[Tuple[float,float,str]] = lm().getPoints()
         [x, y] = [ np.array( [pt[idim] for pt in points] ) for idim in [0,1] ]
         points: np.ndarray = self.projection.transform_points(self.points_projection, x, y )
-        lgm().log( f" @@SatellitePlotManager.select_points: {points.tolist()}")
+        lgm().log( f"SPM: select_points: {points.tolist()}")
         return hv.Points(points, vdims='class').opts( marker='+', size=12, line_width=3, angle=45, color='class', cmap=lm().labelmap )
 
     def register_point_selection(self, x, y ):
