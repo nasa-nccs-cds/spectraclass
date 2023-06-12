@@ -221,7 +221,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         if title is not None: rows.insert( 0, title )
         background = kwargs.get( 'background', 'WhiteSmoke')
         image_column = pn.Column( *rows )  # , styles={'background':background}  )
-        result =  pn.Row(  image_column, self.get_control_panel(), background=background )
+        result =  pn.Row(  image_column, self.get_control_panel(), styles={'background': background} )
         return result
 
 #

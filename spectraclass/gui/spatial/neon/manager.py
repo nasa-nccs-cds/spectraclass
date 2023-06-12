@@ -21,9 +21,9 @@ class NEONTileSelector:
         self.slw = kwargs.get("slw", 2)
         self.colorstretch = 2.0
         self.tap_stream = SingleTap( transient=True )
-        self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True)
-        self.selected_rec = hv.DynamicMap(self.select_rec, streams=[self.tap_stream, self.double_tap_stream])
-        self.indicated_rec = hv.DynamicMap(self.indicate_rec, streams=[self.tap_stream, self.double_tap_stream])
+        self.double_tap_stream = DoubleTap( transient=True )
+        self.selected_rec = hv.DynamicMap(self.select_rec, streams=[self.double_tap_stream])
+        self.indicated_rec = hv.DynamicMap(self.indicate_rec, streams=[self.tap_stream])
         self. rectangles: hv.Rectangles = None # ([(0, 0, 1, 1), (2, 3, 4, 6), (0.5, 2, 1.5, 4), (2, 1, 3.5, 2.5)])
         self._transformed_block_data = None
         self._selected_block: Tuple[int,int] = (0,0)
@@ -36,18 +36,20 @@ class NEONTileSelector:
         self.rect0 = None
 
     @exception_handled
-    def select_rec(self, x, y, x2, y2):
-        bindex = self.block_index(x2,y2)
+    def select_rec(self, x, y ):
+        bindex = self.block_index(x,y)
         new_rect = self.rects.get( bindex, self.rect0 )
         if new_rect != self.rect0:
-            tm().block_selection.value = bindex
+            lgm().log(f"NTS: NEONTileSelector-> select block {bindex}" )
+            ufm().show( f"select block {bindex}")
+            tm().setBlock( bindex )
             self.rect0 = new_rect
         ufm().clear()
         return hv.Rectangles( [self.rect0] ).opts( line_color="white", fill_alpha=0.0, line_alpha=1.0, line_width=3 )
 
     @exception_handled
-    def indicate_rec(self, x, y, x2, y2):
-        bindex = self.block_index(x2,y2)
+    def indicate_rec(self, x, y ):
+        bindex = self.block_index(x,y)
         rect = self.rects.get( bindex, self.rect0 )
         return hv.Rectangles( [rect] ).opts( line_color="yellow", fill_alpha=0.0, line_alpha=1.0, line_width=1 )
 

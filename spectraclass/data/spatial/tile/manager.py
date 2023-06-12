@@ -159,6 +159,7 @@ class TileManager(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm, DataType
         if tuple(block_index) != self.block_index:
             self.block_index = tuple(block_index)
+            self.block_selection = tuple(block_index)
             dm().loadCurrentProject( 'setBlock', True )
             return True
         return False
