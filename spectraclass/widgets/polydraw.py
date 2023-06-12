@@ -33,11 +33,10 @@ class RegionSelector:
             return pdata
 
     def get_selection(self, clicks: int, *args, **kwargs ):
-        pdata = self.get_poly_data()
+        pdata = self.poly_stream.element
         if pdata is not None: self.selected_regions.append( pdata )
-        result: hv.Path = hv.Path( pdata )
-        print(f" get_selection.selected_regions = {pdata}, {result.data}")
-        return result
+        print(f" get_selection.selected_region = {pdata}")
+        return pdata
 
     def get_poly_data1(self) -> Dict:
         polys = self.poly_stream.element.split(datatype='dictionary')
