@@ -12,9 +12,8 @@ class RegionSelector:
         self.select_button: Button = Button( name='Select', button_type='primary')
         self.buttonbox = pn.Row( self.select_button )
         self.selection = self.poly.opts(opts.Polygons(fill_alpha=0.3, active_tools=['poly_draw']))
-        self.selected = hv.DynamicMap( self.get_selection, kdims="polydata" ) #, streams=[ self.select_button.param.clicks ] )
+        self.selected = hv.DynamicMap( self.get_selection, streams=dict( clicks=self.select_button.param.clicks ) )
         self.selected_regions = []
-        self.select_button.on_click( self.on_select )
 
 
     # def get_poly_data1(self):
@@ -33,10 +32,11 @@ class RegionSelector:
             print( f" poly(split)= {pdata}" )
             return pdata
 
-    def get_selection(self, polydata, *args, **kwargs ):
-        if polydata is not None: self.selected_regions.append( polydata )
-        result: hv.Path = hv.Path( polydata )
-        print(f" get_selection.selected_regions = {polydata}, {result.data}")
+    def get_selection(self, clicks: int, *args, **kwargs ):
+        pdata = self.get_poly_data()
+        if pdata is not None: self.selected_regions.append( pdata )
+        result: hv.Path = hv.Path( pdata )
+        print(f" get_selection.selected_regions = {pdata}, {result.data}")
         return result
 
     def get_poly_data1(self) -> Dict:
@@ -51,11 +51,6 @@ class RegionSelector:
         if pdata is not None: self.selected_regions.append( pdata )
         print(f" get_selection.selected_regions = {self.selected_regions}")
         return hv.Polygons( self.selected_regions ).opts( opts.Polygons(fill_alpha=0.6) )
-
-    def on_select(self, *args, **kwargs ):
-        pdata = self.get_poly_data()
-        print( f"Select: pdata = {pdata}")
-        self.selected.event(polydata=pdata)
 
     def panel(self):
         return pn.Column( self.selection+self.selected, self.buttonbox )
