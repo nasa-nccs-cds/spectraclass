@@ -21,11 +21,12 @@ class RegionSelector:
         ccolor = class_colors[cindex]
         selection: hv.Polygons = self.poly_stream.element.opts( color=ccolor, line_width=1, alpha=0.3, line_color="black" )
         print( f"Add poly_stream element: {selection.data}")
-        self.selections.append( selection.clone( selection.data, shared_data=False ) )
+        self.selections.append( selection.clone(link=False) )
       if removeclicks > self._removeclks:
         print("Remove selected element")
         self.selections.pop()
       self._addclks, self._removeclks = addclicks, removeclicks
+      print(f"Current Selections: {self.selections}")
       return hv.Overlay( self.selections )
 
     def indicate( self, x, y ):
