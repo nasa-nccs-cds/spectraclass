@@ -50,6 +50,7 @@ class VariableBrowser:
 
     def __init__(self, cname: str, **plotopts ):
         self.cname = cname
+        self.block_index = None
         lgm().log( f"Creating VariableBrowser {cname}", print=True)
         self.data: xa.DataArray = sgui().get_data(cname)
         lgm().log(f" --> data shape = {self.data.shape}", print=True)
@@ -125,23 +126,23 @@ class VariableBrowser:
         lgm().log( f"TT: update_graph dt={tf-ts} t1={t1-ts} t2={t2-ts}")
         return result
 
-    def select_block(self, bindex: Tuple ):
+    def update_block(self, bindex: Tuple ):
         lgm().log(f" ------------>>>  VariableBrowser[{self.cname}].select_block: {bindex}  <<<------------ ")
-        tm().setBlock( bindex )
-        self.data = sgui().get_data(self.cname)
+        if self.block_index != tm().block_selection:
+            self.data = sgui().get_data(self.cname)
+            self.block_index = tm().block_selection
 
     @exception_handled
     def get_frame(self, iteration: int, block_index: Tuple ):
         ts = time.time()
         lgm().log( f"Viewer {self.cname}-> get_frame: iteration={iteration} block_index={block_index} ")
-        self.select_block( block_index )
-        t1 = time.time()
+        self.update_block( block_index )
         fdata: xa.DataArray = self.data[iteration]
         iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False)
         t2 = time.time()
         result = fdata.hvplot.image( **iopts )
         tf = time.time()
-        lgm().log( f"TT: get_frame dt={tf-ts} t1={t1-ts} t2={t2-ts}")
+        lgm().log( f"TT: get_frame dt={tf-ts} t2={t2-ts}")
         return result
 
     @exception_handled

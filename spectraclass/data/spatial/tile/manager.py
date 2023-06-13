@@ -160,8 +160,8 @@ class TileManager(SCSingletonConfigurable):
         if tuple(block_index) != self.block_index:
             lgm().log( f"TileManager.setBlock -> {block_index}")
             self.block_index = tuple(block_index)
-            self.block_selection = tuple(block_index)
             dm().loadCurrentProject( 'setBlock', True )
+            self.block_selection = tuple(block_index)
             return True
         return False
 
