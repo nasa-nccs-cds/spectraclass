@@ -133,6 +133,7 @@ class VariableBrowser:
     @exception_handled
     def get_frame(self, iteration: int, block_index: Tuple ):
         ts = time.time()
+        lgm().log( f"Viewer {self.cname}-> get_frame: iteration={iteration} block_index={block_index} ")
         self.select_block( block_index )
         t1 = time.time()
         fdata: xa.DataArray = self.data[iteration]
