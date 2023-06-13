@@ -20,8 +20,10 @@ class RegionSelector:
         cindex = addclicks % len(class_colors)
         ccolor = class_colors[cindex]
         selection = self.poly_stream.element.opts( color=ccolor, line_width=1, alpha=0.3, line_color="black" )
+        print( "Add poly_stream element")
         self.selections.append( selection )
       if removeclicks > self._removeclks:
+        print("Remove selected element")
         self.selections.pop()
       self._addclks, self._removeclks = addclicks, removeclicks
       return hv.Overlay( self.selections )
