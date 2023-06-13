@@ -1,5 +1,6 @@
 import holoviews as hv, panel as pn
 from holoviews import opts, streams
+from copy import deepcopy
 from panel.widgets import Button, Select
 class_colors = [ 'blue', 'yellow', 'green', 'cyan', 'brown', 'magenta' ]
 
@@ -21,7 +22,7 @@ class RegionSelector:
         ccolor = class_colors[cindex]
         selection: hv.Polygons = self.poly_stream.element.opts( color=ccolor, line_width=1, alpha=0.3, line_color="black" )
         print( f"Add poly_stream element: {selection.data}")
-        self.selections.append( selection.clone(shared_data=False,link=False) )
+        self.selections.append( hv.Polygons( deepcopy(selection.data) ) )
       if removeclicks > self._removeclks:
         print("Remove selected element")
         self.selections.pop()
