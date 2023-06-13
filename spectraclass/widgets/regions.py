@@ -36,4 +36,4 @@ class RegionSelector:
 
         canvas = self.poly.opts( opts.Polygons(fill_alpha=0.3, active_tools=['poly_draw']))
         buttonbox = pn.Row( self.select_button, self.undo_button )
-        pn.Column( canvas*selected*indication,buttonbox )
+        return pn.Column( canvas*selected*indication,buttonbox )
