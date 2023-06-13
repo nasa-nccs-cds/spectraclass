@@ -62,7 +62,7 @@ class VariableBrowser:
         self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True )
         self.selection_dmap = hv.DynamicMap( self.select_points, streams=[self.tap_stream, self.double_tap_stream] )
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream, self.double_tap_stream] )
-        self.image = hv.DynamicMap( self.get_frame, streams=dict( iteration=self.player.param.value, block_index=tm().block_selection.param.value ) )
+        self.image = hv.DynamicMap( self.get_frame, streams=dict( iteration=self.player.param.value, block_index=tm().block_selection ) )
         self.iter_marker = hv.DynamicMap( self.get_iter_marker, streams=dict( index=self.player.param.value ) )
         self.graph_data = xa.DataArray([])
         self.curves: List[hv.Curve] = []
@@ -126,14 +126,14 @@ class VariableBrowser:
         lgm().log( f"TT: update_graph dt={tf-ts} t1={t1-ts} t2={t2-ts}")
         return result
 
-    def update_block(self, bindex: Tuple ):
-        lgm().log(f" ------------>>>  VariableBrowser[{self.cname}].select_block: {bindex}  <<<------------ ")
-        if self.block_index != tm().block_selection:
-            self.data = sgui().get_data(self.cname)
-            self.block_index = tm().block_selection
+    def update_block(self, block_index: int ):
+        lgm().log(f" ------------>>>  VariableBrowser[{self.cname}].select_block: {block_index}  <<<------------ ")
+        if self.block_index != block_index:
+            self.data = sgui().get_data(self.cname, block_index=block_index )
+            self.block_index = block_index
 
     @exception_handled
-    def get_frame(self, iteration: int, block_index: Tuple ):
+    def get_frame(self, iteration: int, block_index: int ):
         ts = time.time()
         lgm().log( f"Viewer {self.cname}-> get_frame: iteration={iteration} block_index={block_index} ")
         self.update_block( block_index )
@@ -202,8 +202,8 @@ class hvSpectraclassGui(SCSingletonConfigurable):
                     lgm().log( f" #TC: tab change event, old slider index= {old_slider.value}, new slider index= {new_slider.value}" )
                     new_slider.value.apply.opts( value=old_slider.value )
 
-    def get_data( self, cname: str ) -> xa.DataArray:
-        block: Block = tm().getBlock()
+    def get_data( self, cname: str, **kwargs ) -> xa.DataArray:
+        block: Block = tm().getBlock( **kwargs )
         lgm().log( f"sgui:get_data[{cname}] block = {block.index}")
         if cname=="bands":        return block.getBandData(raster=True, norm=True)
         if cname=="features":     return dm().getModelData(block=block, raster=True, norm=True)

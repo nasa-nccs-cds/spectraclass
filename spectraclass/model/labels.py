@@ -273,7 +273,7 @@ class LabelsManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block_data = { ( marker.image_index, marker.block_coords ) for marker in self._markers }
         lgm().log( f" ----------------------------->>>  getTrainingBlocks: block_data= {block_data}, #markers={len(self._markers)}" )
-        return [ tm().getBlock(tindex=tindex, bindex=bindex) for (tindex,bindex) in block_data ]
+        return [ tm().getBlock(tindex=tindex, block_coords=block_coords) for (tindex,block_coords) in block_data ]
 
     def getLabelsArray(self) -> xa.DataArray:
         self.updateLabels()

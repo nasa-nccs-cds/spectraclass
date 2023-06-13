@@ -79,9 +79,9 @@ class SatellitePlotManager(SCSingletonConfigurable):
         lgm().log( f"SPM: image_basemap: ImageryServer extent {xlim} {ylim}")
         return self.tile_source * self.selection_points if point_selection else self.tile_source
 
-    def set_extent(self, block_index ):
+    def set_extent(self, block_index: int ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        block: Block = tm().getBlock( bindex=block_index )
+        block: Block = tm().getBlock( block_index=block_index )
         (xlim, ylim) = block.get_extent(self.projection)
     #    self.tile_source.apply.opts( xlim=xlim, ylim=ylim )
         self.tile_source.select( x=xlim, y=ylim )

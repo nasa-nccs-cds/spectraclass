@@ -30,7 +30,7 @@ classes = [ ('Class-1', "cyan"),
 
 dm.loadCurrentProject()
 lm().setLabels( classes )
-block: Block = tm().getBlock( bindex=(4,4) )
+block: Block = tm().getBlock( block_coords=(4,4) )
 (pdata, pcoords) = block.getPointData()
 samples: np.ndarray = pdata.samples.values
 x,y = pcoords['x'], pcoords['y']

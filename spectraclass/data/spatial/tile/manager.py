@@ -69,7 +69,7 @@ class TileManager(SCSingletonConfigurable):
 
     @property
     def block_shape(self):
-        block = self.getBlock( bindex=(0,0) )
+        block = self.getBlock( block_coords=(0,0) )
         return block.shape
 
     @tl.observe('block_index')

@@ -71,8 +71,8 @@ class LearningModel:
         input_data: xa.DataArray = None
         label_data = lm().getTrainingLabels()
         training_data, training_labels = None, None
-        for ( (tindex, bindex, cid), gids ) in label_data.items():
-            block = tm().getBlock( tindex=tindex, bindex=bindex )
+        for ( (tindex, block_coords, cid), gids ) in label_data.items():
+            block = tm().getBlock( tindex=tindex, block_coords=block_coords )
             if   self.mtype == ModelType.MODEL:
                 input_data = block.model_data
             elif self.mtype == ModelType.SPECTRAL:
@@ -83,7 +83,7 @@ class LearningModel:
             training_mask: np.ndarray = np.isin( input_data.samples.values, gids )
             tdata: np.ndarray = input_data.values[ training_mask ]
             tlabels: np.ndarray = np.full([gids.size], cid)
-            lgm().log( f"Adding training data: tindex={tindex} bindex={bindex} cid={cid} #gids={gids.size} data.shape={tdata.shape} labels.shape={tlabels.shape} mask.shape={training_mask.shape}")
+            lgm().log( f"Adding training data: tindex={tindex} bindex={block_coords} cid={cid} #gids={gids.size} data.shape={tdata.shape} labels.shape={tlabels.shape} mask.shape={training_mask.shape}")
             training_data   = tdata   if (training_data   is None) else np.append( training_data,   tdata,   axis=0 )
             training_labels = tlabels if (training_labels is None) else np.append( training_labels, tlabels, axis=0 )
         lgm().log(f"SHAPES--> training_data: {training_data.shape}, training_labels: {training_labels.shape}" )
