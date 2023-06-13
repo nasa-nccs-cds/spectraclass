@@ -1,8 +1,15 @@
 import holoviews as hv, panel as pn
 from holoviews import opts, streams
 from copy import deepcopy
+from typing import List, Union, Tuple, Optional, Dict
+import numpy as np
 from panel.widgets import Button, Select
 class_colors = [ 'blue', 'yellow', 'green', 'cyan', 'brown', 'magenta' ]
+
+def center( polydata: Dict ) -> str:
+    x: np.ndarray = polydata['x']
+    y: np.ndarray = polydata['y']
+    return f"({x.mean():0.2f},{y.mean():0.2f})"
 
 class RegionSelector:
 
@@ -21,13 +28,13 @@ class RegionSelector:
         cindex = addclicks % len(class_colors)
         ccolor = class_colors[cindex]
         selection: hv.Polygons = self.poly_stream.element.opts( color=ccolor, line_width=1, alpha=0.3, line_color="black" )
-        print( f"Add poly_stream element: {selection.data}")
+        print( f"Add poly_stream element: {center(selection.data)}")
         self.selections.append( hv.Polygons( deepcopy(selection.data) ) )
       if removeclicks > self._removeclks:
-        print("Remove selected element")
-        self.selections.pop()
+        removed = self.selections.pop()
+        print(f"Remove selected element: {center(removed)}")
       self._addclks, self._removeclks = addclicks, removeclicks
-      print(f"Current Selections: {[ s.data for s in self.selections ]}")
+      print(f"Current Selections: {[ center(s.data) for s in self.selections ]}")
       return hv.Overlay( self.selections )
 
     def indicate( self, x, y ):
