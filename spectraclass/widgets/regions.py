@@ -19,9 +19,8 @@ class RegionSelector:
       if addclicks > self._addclks:
         cindex = addclicks % len(class_colors)
         ccolor = class_colors[cindex]
-    #    selection = self.poly_stream.element.opts( color=ccolor, line_width=1, alpha=0.3, line_color="black" )
-        selection = self.poly.opts(color=ccolor, line_width=1, alpha=0.3, line_color="black")
-        print( "Add poly_stream element")
+        selection: hv.Polygons = self.poly_stream.element.opts( color=ccolor, line_width=1, alpha=0.3, line_color="black" )
+        print( f"Add poly_stream element: {selection}")
         self.selections.append( selection )
       if removeclicks > self._removeclks:
         print("Remove selected element")
