@@ -62,7 +62,7 @@ class VariableBrowser:
         self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True )
         self.selection_dmap = hv.DynamicMap( self.select_points, streams=[self.tap_stream, self.double_tap_stream] )
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream, self.double_tap_stream] )
-        self.image = hv.DynamicMap( self.get_frame, streams=dict( iteration=self.player.param.value, block_index=tm().block_selection ) )
+        self.image = hv.DynamicMap( self.get_frame, streams=dict( iteration=self.player.param.value, block_index=tm().block_selection.block_index ) )
         self.iter_marker = hv.DynamicMap( self.get_iter_marker, streams=dict( index=self.player.param.value ) )
         self.graph_data = xa.DataArray([])
         self.curves: List[hv.Curve] = []

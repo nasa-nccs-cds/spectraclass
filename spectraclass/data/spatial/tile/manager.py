@@ -33,7 +33,7 @@ class PointsOutOfBoundsException(Exception):
         return "Points out of bounds"
 
 class BlockSelection(param.Parameterized):
-    value = param.Tuple(default=(0,0), doc="selected block index")
+    block_index = param.Tuple(default=(0,0), doc="selected block index")
 
 class TileManager(SCSingletonConfigurable):
 
@@ -53,7 +53,7 @@ class TileManager(SCSingletonConfigurable):
         self._idxtiles: Dict[int, Tile] = {}
         self.cacheTileData = True
         self._scale: Tuple[np.ndarray,np.ndarray] = None
-        self.block_selection = BlockSelection(value=self.block_index)
+        self.block_selection = BlockSelection( block_index=self.block_index )
 
     def getESRIImageryServer(self,**kwargs) -> gv.element.geo.Tiles:
         url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{Z}/{Y}/{X}.jpg'
