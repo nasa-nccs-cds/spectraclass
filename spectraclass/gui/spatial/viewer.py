@@ -59,9 +59,9 @@ class VariableBrowser:
         self.nIter: int = self.data.shape[0]
         self.player: DiscretePlayer = DiscretePlayer(name='Iteration', options=list(range(self.nIter)), value=self.nIter - 1)
         self.tap_stream = SingleTap( transient=True )
-        self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True )
-        self.selection_dmap = hv.DynamicMap( self.select_points, streams=[self.tap_stream, self.double_tap_stream] )
-        self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream, self.double_tap_stream] )
+    #    self.double_tap_stream = DoubleTap( transient=True )
+        self.selection_dmap = hv.DynamicMap( self.select_points, streams=[self.tap_stream] )
+        self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream] )
         self.image = hv.DynamicMap(self.get_frame, streams=dict(iteration=self.player.param.value, block_selection=tm().block_selection.param.index))
         self.iter_marker = hv.DynamicMap( self.get_iter_marker, streams=dict( index=self.player.param.value ) )
         self.graph_data = xa.DataArray([])
@@ -88,7 +88,7 @@ class VariableBrowser:
         return result
 
     @exception_handled
-    def update_graph(self, x, y, x2, y2) -> hv.Overlay:
+    def update_graph(self, x, y) -> hv.Overlay:
         lgm().log(f"DYM: update_graph")
         ts = time.time()
         block: Block = tm().getBlock()
