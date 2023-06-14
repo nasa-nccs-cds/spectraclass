@@ -136,16 +136,17 @@ class VariableBrowser:
 
     @exception_handled
     def get_frame(self, iteration: int, block_selection: int ):
-        ts = time.time()
-        lgm().log( f"Viewer {self.cname}-> get_frame: iteration={iteration} block_selection={block_selection} ")
-        self.update_block( block_selection )
-        fdata: xa.DataArray = self.data[iteration]
-        iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False)
-        t2 = time.time()
-        result = fdata.hvplot.image( **iopts )
-        tf = time.time()
-        lgm().log( f"TT: get_frame dt={tf-ts} t2={t2-ts}")
-        return result
+        if block_selection >= 0:
+            ts = time.time()
+            lgm().log( f"Viewer {self.cname}-> get_frame: iteration={iteration} block_selection={block_selection} ")
+            self.update_block( block_selection )
+            fdata: xa.DataArray = self.data[iteration]
+            iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False)
+            t2 = time.time()
+            result = fdata.hvplot.image( **iopts )
+            tf = time.time()
+            lgm().log( f"TT: get_frame dt={tf-ts} t2={t2-ts}")
+            return result
 
     @exception_handled
     def get_iter_marker(self, index: int ):

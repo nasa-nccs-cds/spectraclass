@@ -27,7 +27,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
         self.selection_points = hv.DynamicMap(self.select_points, streams=[self.double_tap_stream])
         self.tile_source: gv.element.geo.WMTS = None
         self.block_source: gv.element.geo.WMTS = None
-        pn.bind( self.set_extent, block_index=tm().block_selection.param.value )
+        pn.bind( self.set_extent, block_selection=tm().block_selection.param.index )
 
     @property
     def block(self) -> Block:
@@ -79,13 +79,14 @@ class SatellitePlotManager(SCSingletonConfigurable):
         lgm().log( f"SPM: image_basemap: ImageryServer extent {xlim} {ylim}")
         return self.tile_source * self.selection_points if point_selection else self.tile_source
 
-    def set_extent(self, block_index: int ):
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        block: Block = tm().getBlock( block_index=block_index )
-        (xlim, ylim) = block.get_extent(self.projection)
-    #    self.tile_source.apply.opts( xlim=xlim, ylim=ylim )
-        self.tile_source.select( x=xlim, y=ylim )
-        lgm().log( f"TM: set_extent block_index={block_index}  xlim={xlim}, ylim={ylim} ")
+    def set_extent(self, block_selection: int ):
+        if block_selection > 0:
+            from spectraclass.data.spatial.tile.manager import TileManager, tm
+            block: Block = tm().getBlock( bindex= tm().bi2c(block_selection) )
+            (xlim, ylim) = block.get_extent(self.projection)
+        #    self.tile_source.apply.opts( xlim=xlim, ylim=ylim )
+            self.tile_source.select( x=xlim, y=ylim )
+            lgm().log( f"TM: set_extent block_selection={block_selection}  xlim={xlim}, ylim={ylim} ")
 
     #     self.tile_source = hv.DynamicMap(self.get_tile_source,
     #                                      streams=dict(block_index=tm().block_selection.param.value))

@@ -22,7 +22,7 @@ class RegionSelector:
         self.poly = hv.Polygons([])
         self.poly_stream = streams.PolyDraw(source=self.poly, drag=False, num_objects=1, show_vertices=True, styles={'fill_color': ['red']})
         self.select_button: Button = Button( name='Select', button_type='primary')
-        self.undo_button: Button = Button( name='Undo', button_type='primary')
+        self.undo_button: Button = Button( name='Undo', button_type='info')
         self.indicator = streams.SingleTap(transient=True)
         self.selections = []
 

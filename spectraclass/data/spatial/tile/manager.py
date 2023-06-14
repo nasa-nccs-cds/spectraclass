@@ -33,7 +33,7 @@ class PointsOutOfBoundsException(Exception):
         return "Points out of bounds"
 
 class BlockSelection(param.Parameterized):
-    index = param.Integer(default=0, doc="selected block index")
+    index = param.Integer(default=-1, doc="selected block index")
 
     def __init__(self,  **params  ):
         param.Parameterized.__init__( **params  )
@@ -57,7 +57,7 @@ class TileManager(SCSingletonConfigurable):
         self._idxtiles: Dict[int, Tile] = {}
         self.cacheTileData = True
         self._scale: Tuple[np.ndarray,np.ndarray] = None
-        self.block_selection = BlockSelection( index=self.c2bi(self.block_index) )
+        self.block_selection = BlockSelection()
 
     def bi2c(self, bindex: int ) -> Tuple[int,int]:
         ts1: int = self.tile_shape[1]
