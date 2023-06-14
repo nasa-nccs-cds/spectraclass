@@ -190,7 +190,7 @@ class PointCloudManager(SCSingletonConfigurable):
             attrs = {} if (model_data is None) else model_data.attrs
             self.xyz = xa.DataArray( np.empty([0,3]), dims=['samples','model'], coords=ecoords, attrs=attrs )
 
-        self.block_watcher = tm().block_selection.param.watch(self.set_block_callback, ['index'], onlychanged=True)
+#        self.block_watcher = tm().block_selection.param.watch(self.set_block_callback, ['index'], onlychanged=True)
 
     def pnorm(self, point_data: xa.DataArray) -> xa.DataArray:
         return (point_data - point_data.mean()) * (self.scale / point_data.std())

@@ -74,11 +74,10 @@ class VariableBrowser:
     #     self.yrange[1] = max( self.yrange[1], new_range[1] )
 
     @exception_handled
-    def select_points(self, x, y, x2, y2):
+    def select_points(self, x, y):
+        lgm().log(f"DYM: select_points")
         ts = time.time()
         if None not in [x, y]:
-            lm().on_button_press( x, y )
-        elif None not in [x2, y2]:
             lm().on_button_press( x, y )
         t1 = time.time()
         points: List[Tuple[float,float,str]] = lm().getPoints()
@@ -90,6 +89,7 @@ class VariableBrowser:
 
     @exception_handled
     def update_graph(self, x, y, x2, y2) -> hv.Overlay:
+        lgm().log(f"DYM: update_graph")
         ts = time.time()
         block: Block = tm().getBlock()
         graph_data: xa.DataArray = self.data.sel(x=x, y=y, method="nearest")
@@ -136,20 +136,22 @@ class VariableBrowser:
 
     @exception_handled
     def get_frame(self, iteration: int, block_selection: int ):
+        lgm().log(f"DYM: get_frame")
+        ts = time.time()
         if block_selection >= 0:
-            ts = time.time()
             lgm().log( f"Viewer {self.cname}-> get_frame: iteration={iteration} block_selection={block_selection} ")
             self.update_block( block_selection )
-            fdata: xa.DataArray = self.data[iteration]
-            iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False)
-            t2 = time.time()
-            result = fdata.hvplot.image( **iopts )
-            tf = time.time()
-            lgm().log( f"TT: get_frame dt={tf-ts} t2={t2-ts}")
-            return result
+        fdata: xa.DataArray = self.data[iteration]
+        iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False)
+        t2 = time.time()
+        result = fdata.hvplot.image( **iopts )
+        tf = time.time()
+        lgm().log( f"TT: get_frame dt={tf-ts} t2={t2-ts}")
+        return result
 
     @exception_handled
     def get_iter_marker(self, index: int ):
+        lgm().log(f"DYM: get_iter_marker")
         coord: np.ndarray = self.data.coords[ self.data.dims[0] ].values
         vline = hv.VLine( coord[index], label="current iteration")
         return vline.opts( color="grey", alpha=0.5 )

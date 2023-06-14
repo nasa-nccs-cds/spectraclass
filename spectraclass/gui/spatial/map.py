@@ -365,18 +365,6 @@ class MapManager(SCSingletonConfigurable):
     def currentFrame(self):
         return self._currentFrame
 
-    @currentFrame.setter
-    def currentFrame(self, value: int ):
-        lgm().log( f"MM: Set current Frame: {value}")
-        self._currentFrame = value
-        self.update_thresholds()
-        self.update_pcm()
- #       self.update_spectral_image()
-
-    @exception_handled
-    def _update( self, val: float ):
-        self.currentFrame = int( val )
-
     @exception_handled
     def update_message(self):
         from spectraclass.data.base import DataManager, dm
