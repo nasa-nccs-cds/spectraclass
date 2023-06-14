@@ -70,8 +70,8 @@ class PointCloudManager(SCSingletonConfigurable):
     @exception_handled
     def set_block_callback(self,*events):
         for event in events:
-            if event.name == 'value':
-                self.update_plot( block=event.new )
+            if (event.name == 'index') and (event.new>=0):
+                self.update_plot( bindex=tm().bi2c(event.new) )
 
     def set_alpha(self, opacity: float ):
         self.scene_controls[ 'marker.material.opacity' ] = opacity
@@ -190,7 +190,7 @@ class PointCloudManager(SCSingletonConfigurable):
             attrs = {} if (model_data is None) else model_data.attrs
             self.xyz = xa.DataArray( np.empty([0,3]), dims=['samples','model'], coords=ecoords, attrs=attrs )
 
-        self.block_watcher = tm().block_selection.param.watch(self.set_block_callback, ['value'], onlychanged=True)
+        self.block_watcher = tm().block_selection.param.watch(self.set_block_callback, ['index'], onlychanged=True)
 
     def pnorm(self, point_data: xa.DataArray) -> xa.DataArray:
         return (point_data - point_data.mean()) * (self.scale / point_data.std())
@@ -338,8 +338,8 @@ class PointCloudManager(SCSingletonConfigurable):
             embedding = kwargs['points']
             lgm().log( f"PCM->plot embedding: shape = {embedding.shape}")
             self.xyz = self.pnorm( embedding )
-        elif 'block' in kwargs:
-            block: Block = tm().getBlock(kwargs['block'])
+        elif 'bindex' in kwargs:
+            block: Block = tm().getBlock(kwargs['bindex'])
             model_data = block.getModelData( raster=False )
             embedding = rm().umap_init( model_data, **kwargs ) if model_data.shape[1] > 3 else model_data
             self.xyz = self.pnorm(embedding)
