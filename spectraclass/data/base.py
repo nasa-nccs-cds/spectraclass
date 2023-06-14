@@ -283,13 +283,13 @@ class DataManager(SCSingletonConfigurable):
     def getInputFileData(self, vname: str = None, **kwargs ) -> np.ndarray:
         return self._mode_data_manager_.getInputFileData( vname, **kwargs )
 
-    def loadCurrentProject(self, caller_id: str = "main", clear = False ) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
+    def loadCurrentProject(self, caller_id: str = "main", clear = False, **kwargs ) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
         lgm().log( f" DataManager: loadCurrentProject: {caller_id}" )
         if clear: self._project_data = None
         self.prepare_inputs()
         if self._mode_data_manager_ is not None:
             if self._project_data is None:
-                self._project_data = self._mode_data_manager_.loadCurrentProject()
+                self._project_data = self._mode_data_manager_.loadCurrentProject(**kwargs)
                 assert self._project_data is not None, "Project initialization failed- check log file for details"
                 ns = self._project_data['samples'].size
                 lgm().log(f"LOAD TILE[{self.dsid()}]: #samples = {ns} ")

@@ -644,7 +644,7 @@ class ModeDataManager(SCSingletonConfigurable):
             lgm().log(f"Load dataset {self.dsid()}, current datasets = {list(self.datasets.keys())}")
             if not dm().refresh_data:
                 self._current_dataset = self.loadDataFile(**kwargs)
-            block: Block = tm().getBlock()
+            block: Block = tm().getBlock(**kwargs)
             if self._current_dataset is None:
                 has_metadata = (self.metadata is not None)
                 self._current_dataset = self.process_block( block, has_metadata )
@@ -723,8 +723,8 @@ class ModeDataManager(SCSingletonConfigurable):
         filenames = [Path(f).stem for f in files]
         return self.filterCommonPrefix( filenames )
 
-    def loadCurrentProject(self) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
-        return self.loadDataset( )
+    def loadCurrentProject( self, **kwargs ) -> Optional[ Dict[str,Union[xa.DataArray,List,Dict]] ]:
+        return self.loadDataset( **kwargs )
 
     @property
     def datasetDir(self):

@@ -169,7 +169,7 @@ class TileManager(SCSingletonConfigurable):
             lgm().log( f"TileManager.setBlock -> {block_index}")
             ufm().show( f"Set Block: {block_index}")
             self.block_index = tuple(block_index)
-            dm().loadCurrentProject( 'setBlock', True )
+            dm().loadCurrentProject( 'setBlock', True, bindex=block_index )
             self.block_selection.index = self.c2bi(block_index)
             return True
         return False
