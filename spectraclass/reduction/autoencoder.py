@@ -228,14 +228,17 @@ class Autoencoder(nn.Module):
     def load(self, name: str, **kwargs) -> bool:
         models_dir = f"{self.results_dir}/models"
         os.makedirs(models_dir, exist_ok=True)
+        mpaths = []
         try:
             for mtype in [ "encoder", "decoder" ]:
                 model_path = f"{models_dir}/{name}.{mtype}.{self.network_type}.pth"
+                mpaths.append( model_path )
                 self.load_weights( mtype, model_path )
         except Exception as err:
-            print(f"Error loading model {name}: {err}")
+            lgm().log(f"Error loading model {name} ({mpaths[-1]}):\n  ---> {err}")
             return False
         self.eval()
+        lgm().log(f"Loaded MODEL {name}: {mpaths}")
         return True
 
     def get_learning_metrics(self):

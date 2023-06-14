@@ -89,7 +89,9 @@ class ModelTrainer(SCSingletonConfigurable):
 
     def load(self, **kwargs ) -> bool:
         modelId = kwargs.get('id', dm().dsid())
-        if self.refresh_model: return False
+        if self.refresh_model:
+            lgm().log( "REFRESH MODEL")
+            return False
         return self.model.load( modelId )
 
     def save(self, **kwargs):
