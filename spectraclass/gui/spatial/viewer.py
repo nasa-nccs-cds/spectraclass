@@ -46,6 +46,11 @@ def find_varname( selname: str, varlist: List[str]) -> str:
 def sgui() -> "hvSpectraclassGui":
     return hvSpectraclassGui.instance()
 
+def bounds( data: xa.DataArray ) -> Tuple[ Tuple[float,float], Tuple[float,float] ]:
+    xaxis, yaxis = data.coords['x'], data.coords['y']
+    dx, dy = (xaxis[1]-xaxis[0]), (yaxis[1]-yaxis[0])
+    return ( xaxis[0]-dx, xaxis[1]+dx ), ( yaxis[0]-dy, yaxis[1]+dy )
+
 class VariableBrowser:
 
     def __init__(self, cname: str, **plotopts ):
@@ -142,7 +147,8 @@ class VariableBrowser:
             lgm().log( f"Viewer {self.cname}-> get_frame: iteration={iteration} block_selection={block_selection} ")
             self.update_block( block_selection )
         fdata: xa.DataArray = self.data[iteration]
-        iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False)
+        xlim, ylim = bounds( fdata )
+        iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, xlim=xlim, ylim=ylim )
         t2 = time.time()
         result = fdata.hvplot.image( **iopts )
         tf = time.time()
