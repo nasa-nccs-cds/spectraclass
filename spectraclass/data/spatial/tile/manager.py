@@ -35,10 +35,6 @@ class PointsOutOfBoundsException(Exception):
 class BlockSelection(param.Parameterized):
     index = param.Integer(default=-1, doc="selected block index")
 
-    def __init__(self,  **params  ):
-        param.Parameterized.__init__( **params  )
-
-
 class TileManager(SCSingletonConfigurable):
 
     block_size = tl.Int(250).tag( config=True, sync=True )
