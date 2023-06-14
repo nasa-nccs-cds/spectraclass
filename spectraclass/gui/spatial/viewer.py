@@ -182,6 +182,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         self.mapviews: pn.Tabs = None
         self.alert = ufm().gui()
 
+    @exception_handled
     def init( self, **plotopts ):
         collections = [ "bands", 'features', "reproduction" ]
         self.browsers = { cname: VariableBrowser( cname ) for cname in collections }
@@ -221,6 +222,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         controls = pn.Accordion( ('Data Selection', data_selection_panel ), ('Analytics',analytics_gui), ('Manifold', manifold_panel ), toggle=True, active=[0] )
         return pn.Column( self.alert, controls )
 
+    @exception_handled
     def panel(self, title: str = None, **kwargs ) -> Panel:
         rows = [ self.mapviews ]
         if title is not None: rows.insert( 0, title )

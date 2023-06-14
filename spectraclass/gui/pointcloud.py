@@ -70,7 +70,7 @@ class PointCloudManager(SCSingletonConfigurable):
     @exception_handled
     def set_block_callback(self,*events):
         for event in events:
-            if (event.name == 'index') and (event.new>=0):
+            if (event.name == 'index') and (event.new >= 0):
                 self.update_plot( bindex=tm().bi2c(event.new) )
 
     def set_alpha(self, opacity: float ):
