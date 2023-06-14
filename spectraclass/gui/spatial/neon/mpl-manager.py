@@ -259,14 +259,14 @@ class NEONDatasetManager:
             srec.set_color( self.grid_color )
         r.set_linewidth(self.slw)
         r.set_color( self.selection_color )
-        self._selected_block = r.block_index
+        self._selected_block = r._block_selection
         self.ax.figure.canvas.draw_idle()
 
     @log_timing
     def select_block(self, r: Rectangle = None ):
         from spectraclass.data.spatial.manager import SpatialDataManager
         if r is not None:
-            self._selected_block = r.block_index
+            self._selected_block = r._block_selection
             self.clear_block_cache()
             self.highlight_block( r )
         band_data = self.overlay_image_data()

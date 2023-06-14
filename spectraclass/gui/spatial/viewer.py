@@ -50,7 +50,7 @@ class VariableBrowser:
 
     def __init__(self, cname: str, **plotopts ):
         self.cname = cname
-        self.block_index = None
+        self._block_selection: int = None
         lgm().log( f"Creating VariableBrowser {cname}", print=True)
         self.data: xa.DataArray = sgui().get_data(cname)
         lgm().log(f" --> data shape = {self.data.shape}", print=True)
@@ -62,7 +62,7 @@ class VariableBrowser:
         self.double_tap_stream = DoubleTap( rename={'x': 'x2', 'y': 'y2'}, transient=True )
         self.selection_dmap = hv.DynamicMap( self.select_points, streams=[self.tap_stream, self.double_tap_stream] )
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream, self.double_tap_stream] )
-        self.image = hv.DynamicMap( self.get_frame, streams=dict( iteration=self.player.param.value, block_index=tm().block_selection.block_index ) )
+        self.image = hv.DynamicMap(self.get_frame, streams=dict(iteration=self.player.param.value, block_selection=tm().block_selection.param.index))
         self.iter_marker = hv.DynamicMap( self.get_iter_marker, streams=dict( index=self.player.param.value ) )
         self.graph_data = xa.DataArray([])
         self.curves: List[hv.Curve] = []
@@ -126,17 +126,19 @@ class VariableBrowser:
         lgm().log( f"TT: update_graph dt={tf-ts} t1={t1-ts} t2={t2-ts}")
         return result
 
-    def update_block(self, block_index: int ):
-        lgm().log(f" ------------>>>  VariableBrowser[{self.cname}].select_block: {block_index}  <<<------------ ")
-        if self.block_index != block_index:
-            self.data = sgui().get_data(self.cname, block_index=block_index )
-            self.block_index = block_index
+    def update_block(self, block_selection: int ):
+        if self._block_selection != block_selection:
+            lgm().log(f" ------------>>>  VariableBrowser[{self.cname}].select_block: {block_selection}  <<<------------ ")
+            bcoords = tm().bi2c(block_selection)
+            print( f"Select block {bcoords}")
+            self.data = sgui().get_data( self.cname, bindex=bcoords )
+            self._block_selection = block_selection
 
     @exception_handled
-    def get_frame(self, iteration: int, block_index: int ):
+    def get_frame(self, iteration: int, block_selection: int ):
         ts = time.time()
-        lgm().log( f"Viewer {self.cname}-> get_frame: iteration={iteration} block_index={block_index} ")
-        self.update_block( block_index )
+        lgm().log( f"Viewer {self.cname}-> get_frame: iteration={iteration} block_selection={block_selection} ")
+        self.update_block( block_selection )
         fdata: xa.DataArray = self.data[iteration]
         iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False)
         t2 = time.time()

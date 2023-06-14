@@ -1,4 +1,3 @@
-from skimage.transform import ProjectiveTransform
 import numpy as np
 import codecs
 import xarray as xa
@@ -17,6 +16,7 @@ from spectraclass.gui.spatial.widgets.markers import Marker
 import geoviews as gv
 from pyproj import Transformer
 from .tile import Tile, Block
+from spectraclass.gui.control import UserFeedbackManager, ufm
 
 def get_rounded_dims( master_shape: List[int], subset_shape: List[int] ) -> List[int]:
     dims = [ int(round(ms/ss)) for (ms,ss) in zip(master_shape,subset_shape) ]
@@ -33,7 +33,11 @@ class PointsOutOfBoundsException(Exception):
         return "Points out of bounds"
 
 class BlockSelection(param.Parameterized):
-    block_index = param.Tuple(default=(0,0), doc="selected block index")
+    index = param.Integer(default=0, doc="selected block index")
+
+    def __init__(self,  **params  ):
+        param.Parameterized.__init__( **params  )
+
 
 class TileManager(SCSingletonConfigurable):
 
@@ -53,7 +57,15 @@ class TileManager(SCSingletonConfigurable):
         self._idxtiles: Dict[int, Tile] = {}
         self.cacheTileData = True
         self._scale: Tuple[np.ndarray,np.ndarray] = None
-        self.block_selection = BlockSelection( block_index=self.block_index )
+        self.block_selection = BlockSelection( index=self.c2bi(self.block_index) )
+
+    def bi2c(self, bindex: int ) -> Tuple[int,int]:
+        ts1: int = self.tile_shape[1]
+        return ( bindex//ts1, bindex%ts1 )
+
+    def c2bi(self, bcoords: Tuple[int,int] ) -> int:
+        ts1 = self.tile_shape[1]
+        return bcoords[0]*ts1 + bcoords[1]
 
     def getESRIImageryServer(self,**kwargs) -> gv.element.geo.Tiles:
         url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{Z}/{Y}/{X}.jpg'
@@ -72,10 +84,10 @@ class TileManager(SCSingletonConfigurable):
         block = self.getBlock( block_coords=(0,0) )
         return block.shape
 
-    @tl.observe('block_index')
-    def _block_index_changed(self, change):
-        from spectraclass.gui.pointcloud import PointCloudManager, pcm
-        pcm().refresh()
+    # @tl.observe('block_index')
+    # def _block_index_changed(self, change):
+    #     from spectraclass.gui.pointcloud import PointCloudManager, pcm
+    #     pcm().refresh()
 
     @property
     def tile(self) -> Tile:
@@ -159,9 +171,10 @@ class TileManager(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm, DataType
         if tuple(block_index) != self.block_index:
             lgm().log( f"TileManager.setBlock -> {block_index}")
+            ufm().show( f"Set Block: {block_index}")
             self.block_index = tuple(block_index)
             dm().loadCurrentProject( 'setBlock', True )
-            self.block_selection = tuple(block_index)
+            self.block_selection.index = self.c2bi(block_index)
             return True
         return False
 
