@@ -182,7 +182,7 @@ class VariableBrowser:
             selector = lm().class_selector
             return pn.Column( selector, self.image*self.selection_dmap, self.player, self.point_graph*self.iter_marker )
         else:
-            return self.image*self.selection_dmap
+            return pn.Column( self.image*self.selection_dmap, self.player )
 
 class hvSpectraclassGui(SCSingletonConfigurable):
 
