@@ -26,6 +26,12 @@ def asarray( data: Union[np.ndarray,Iterable], dtype  ) -> np.ndarray:
     if isinstance( data, np.ndarray ): return data
     else: return np.array( list(data), dtype = np.dtype(dtype) )
 
+def autocorr( data: xa.DataArray, dims: Tuple[int,int]=(0,1) ) -> float:
+    from scipy.stats import pearsonr
+    dslices = [ data.values[:,iD] for iD in dims ]
+    acorr, _ = pearsonr(*dslices)
+    return acorr
+
 class PointCloudManager(SCSingletonConfigurable):
 
     color_map = tl.Unicode("gist_rainbow").tag(config=True)  # "gist_rainbow" "jet"
@@ -177,14 +183,15 @@ class PointCloudManager(SCSingletonConfigurable):
         model_data: Optional[xa.DataArray] = dm().getModelData()
 
         if (model_data is not None) and (model_data.shape[0] > 1):
-
-            lgm().log(f"UMAP.init: model_data{model_data.dims} shape = {model_data.shape}",print=True)
+            use_umap = model_data.shape[1] > 3
+            lgm().log(f"PCM: model_data{model_data.dims} shape = {model_data.shape}, use_umap={use_umap}")
             # flow: ActivationFlow = afm().getActivationFlow()
             # if flow is None: return False
             # node_data = model_data if refresh else None
             # flow.setNodeData( node_data )
-            embedding = rm().umap_init( model_data, **kwargs ) if model_data.shape[1] > 3 else model_data
+            embedding = rm().umap_init( model_data, **kwargs ) if use_umap else model_data
             self.xyz = self.pnorm(embedding)
+            print( f"PCM: autocorr = {autocorr(self.xyz)}")
         else:
             lgm().log(f"UMAP.init: model_data is empty",print=True)
             ecoords = dict( samples=[], model=np.arange(0,3) )
