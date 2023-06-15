@@ -49,7 +49,7 @@ def sgui() -> "hvSpectraclassGui":
 def bounds( data: xa.DataArray ) -> Tuple[ Tuple[float,float], Tuple[float,float] ]:
     xaxis, yaxis = data.coords['x'].values, data.coords['y'].values
     dx, dy = (xaxis[1]-xaxis[0]), (yaxis[1]-yaxis[0])
-    return ( xaxis[0]-dx, xaxis[1]+dx ), ( yaxis[0]-dy, yaxis[1]+dy )
+    return ( xaxis[0]-dx, xaxis[-1]+dx ), ( yaxis[0]-dy, yaxis[-1]+dy )
 
 class VariableBrowser:
 
