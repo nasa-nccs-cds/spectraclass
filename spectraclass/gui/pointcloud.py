@@ -265,18 +265,41 @@ class PointCloudManager(SCSingletonConfigurable):
         self.points = p3js.Points( geometry=points_geometry, material=points_material )
 
     def getControlsWidget(self) -> Panel:
+        s = ipw.FloatSlider()
+        s.observe()
         self.scene_controls['point.material.size']     = ipw.FloatSlider( description="point size",     value=0.015 * self.scale,  min=0.0, max=0.05 * self.scale, step=0.0002 * self.scale)
         self.scene_controls['point.material.opacity']  = ipw.FloatSlider( description="point opacity",  value=1.0,                 min=0.0, max=1.0,               step=0.01 )
         self.scene_controls['marker.material.size']    = ipw.FloatSlider( description="marker size",    value=0.05 * self.scale,   min=0.0, max=0.1 * self.scale,  step=0.001 * self.scale )
         self.scene_controls['marker.material.opacity'] = ipw.FloatSlider( description="marker opacity", value=1.0,                 min=0.0, max=1.0,               step=0.01 )
-        self.scene_controls['probe.material.size']     = ipw.FloatSlider( description="probe size",     value=0.05 * self.scale,   min=0.0, max=0.2 * self.scale,  step=0.001 * self.scale )
-        self.scene_controls['probe.material.opacity']  = ipw.FloatSlider( description="probe opacity",  value=1.0,                 min=0.0, max=1.0,               step=0.01 )
-        self.scene_controls['window.scene.background'] = pn.widgets.ColorPicker( value="black" )
-        self.scene_controls[ 'point.material.size'   ].jslink( target=self.points.material, value="size"  )
-        self.scene_controls[ 'point.material.opacity'].jslink( target=self.points.material, value="opacity" )
-        self.scene_controls[ 'window.scene.background'].jslink( target=self.scene, value="background" )
+  #      self.scene_controls['probe.material.size']     = ipw.FloatSlider( description="probe size",     value=0.05 * self.scale,   min=0.0, max=0.2 * self.scale,  step=0.001 * self.scale )
+  #      self.scene_controls['probe.material.opacity']  = ipw.FloatSlider( description="probe opacity",  value=1.0,                 min=0.0, max=1.0,               step=0.01 )
+        self.scene_controls['window.scene.background'] = ipw.ColorPicker() # pn.widgets.ColorPicker( value="black" )
+        # self.scene_controls[ 'point.material.size'   ].observe(  partial( self.update_parameter, 'point.size',    names=['value'] )  )
+        # self.scene_controls[ 'point.material.opacity'].observe(  partial( self.update_parameter, 'point.opacity', names=['value'] ) )
+        # self.scene_controls[ 'window.scene.background'].observe( partial( self.update_parameter, 'background',    names=['value'] ) )
+        self.link_controls()
         controls = ipw.VBox( list(self.scene_controls.values()) )
         return pn.Column( controls )
+
+    def link_controls(self):
+        for name, ctrl in self.scene_controls.items():
+            toks = name.split(".")
+            if toks[1] == "scene":
+                object = self.scene
+            elif toks[1] == "material":
+                object = self.points.material if toks[0] == "point" else self.marker_points.material
+            else:
+                raise Exception( f"Unrecognized control domain: {toks[1]}")
+            ipw.jslink( (ctrl, 'value'), (object, toks[2]) )
+
+    # def update_parameter(self, name, event ):
+    #     print( f"update_parameter[{name}] = {event}")
+    #     if name == 'point.opacity': self.points.material.opacity = event['new']
+
+
+        # self.scene_controls[ 'point.material.size'   ].observe( target=self.points.material, value="size"  )
+        # self.scene_controls[ 'point.material.opacity'].observe( target=self.points.material, value="opacity" )
+        # self.scene_controls[ 'window.scene.background'].observe( target=self.scene, value="background" )
 
     # def update_parameter(self, name: str, value: float ):
     #     param = self.get_parametere( name )
