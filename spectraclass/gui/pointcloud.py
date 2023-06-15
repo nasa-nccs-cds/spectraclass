@@ -265,8 +265,6 @@ class PointCloudManager(SCSingletonConfigurable):
         self.points = p3js.Points( geometry=points_geometry, material=points_material )
 
     def getControlsWidget(self) -> Panel:
-        s = ipw.FloatSlider()
-        s.observe()
         self.scene_controls['point.material.size']     = ipw.FloatSlider( description="point size",     value=0.015 * self.scale,  min=0.0, max=0.05 * self.scale, step=0.0002 * self.scale)
         self.scene_controls['point.material.opacity']  = ipw.FloatSlider( description="point opacity",  value=1.0,                 min=0.0, max=1.0,               step=0.01 )
         self.scene_controls['marker.material.size']    = ipw.FloatSlider( description="marker size",    value=0.05 * self.scale,   min=0.0, max=0.1 * self.scale,  step=0.001 * self.scale )

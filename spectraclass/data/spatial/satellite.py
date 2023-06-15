@@ -76,12 +76,13 @@ class SatellitePlotManager(SCSingletonConfigurable):
         lgm().log( f"SPM: block{b.index[1]}: ImageryServer extent {xlim} {ylim}")
         return self.tile_source * self.selection_points if point_selection else self.tile_source
 
+    @exception_handled
     def get_image_basemap(self, bounds: Tuple[float,float,float,float], **kwargs):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         xlim, ylim = bounds[:2], bounds[2:]
         point_selection = kwargs.get( 'point_selection', False )
         tile_source: gv.element.geo.WMTS = tm().getESRIImageryServer( xlim=xlim, ylim=ylim, width=600, height=570 )
-        print( f"get_image_basemap: bounds={bounds}, server={id(tile_source)}")
+        lgm().log( f"SPM: get_image_basemap: bounds={bounds}, server={id(tile_source)}")
         return tile_source * self.selection_points if point_selection else self.tile_source
 
     def set_extent(self, block_selection: int ):
@@ -89,10 +90,11 @@ class SatellitePlotManager(SCSingletonConfigurable):
             from spectraclass.data.spatial.tile.manager import TileManager, tm
             block: Block = tm().getBlock( bindex= tm().bi2c(block_selection) )
             (xlim, ylim) = block.get_extent(self.projection)
+            lgm().log(f"SPM: set_extent block_selection={block_selection}  xlim={xlim}, ylim={ylim} ")
             self.bounds_stream.event( xylim = xlim+ylim )
         #    self.tile_source.apply.opts( xlim=xlim, ylim=ylim )
         #    self.tile_source.select( x=xlim, y=ylim )
-            lgm().log( f"TM: set_extent block_selection={block_selection}  xlim={xlim}, ylim={ylim} ")
+
 
     #     self.tile_source = hv.DynamicMap(self.get_tile_source,
     #                                      streams=dict(block_index=tm().block_selection.param.value))
