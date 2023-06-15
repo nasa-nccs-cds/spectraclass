@@ -177,7 +177,7 @@ class PointCloudManager(SCSingletonConfigurable):
         return np.empty(shape=[0], dtype=np.int32)
 
     @exception_handled
-    def init_data(self, **kwargs):
+    def init_data( self, **kwargs ):
         from spectraclass.reduction.embedding import ReductionManager, rm
         from spectraclass.data.base import dm
         model_data: Optional[xa.DataArray] = dm().getModelData()
