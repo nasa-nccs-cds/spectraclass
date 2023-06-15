@@ -146,6 +146,10 @@ class DataContainer:
         return self._xlim
 
     @property
+    def bounds(self) -> Tuple[float,float,float,float]:
+        return self.xlim + self.ylim
+
+    @property
     def ylim(self) -> Tuple[float,float]:
         if self._ylim is None:
             yc: np.ndarray = self.ycoord
