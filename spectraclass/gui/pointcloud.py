@@ -191,7 +191,7 @@ class PointCloudManager(SCSingletonConfigurable):
             # flow.setNodeData( node_data )
             embedding = rm().umap_init( model_data, **kwargs ) if use_umap else model_data
             self.xyz = self.pnorm(embedding)
-            print( f"PCM: autocorr = {autocorr(self.xyz)}")
+            lgm().log( f"PCM: autocorr = {autocorr(self.xyz)}")
         else:
             lgm().log(f"UMAP.init: model_data is empty",print=True)
             ecoords = dict( samples=[], model=np.arange(0,3) )
