@@ -2,6 +2,7 @@ import pythreejs as p3js
 from functools import partial
 from panel.layout import Panel
 from panel.widgets import FloatSlider
+import ipywidgets as ipw
 import panel as pn
 import holoviews as hv
 import numpy as np
@@ -264,18 +265,18 @@ class PointCloudManager(SCSingletonConfigurable):
         self.points = p3js.Points( geometry=points_geometry, material=points_material )
 
     def getControlsWidget(self) -> Panel:
-        self.scene_controls['point.material.size']     = FloatSlider( name="point size",     value=0.015 * self.scale,  start=0.0, end=0.05 * self.scale, step=0.0002 * self.scale)
-        self.scene_controls['point.material.opacity']  = FloatSlider( name="point opacity",  value=1.0,                 start=0.0, end=1.0,               step=0.01 )
-        self.scene_controls['marker.material.size']    = FloatSlider( name="marker size",    value=0.05 * self.scale,   start=0.0, end=0.1 * self.scale,  step=0.001 * self.scale )
-        self.scene_controls['marker.material.opacity'] = FloatSlider( name="marker opacity", value=1.0,                 start=0.0, end=1.0,               step=0.01 )
-        self.scene_controls['probe.material.size']     = FloatSlider( name="probe size",     value=0.05 * self.scale,   start=0.0, end=0.2 * self.scale,  step=0.001 * self.scale )
-        self.scene_controls['probe.material.opacity']  = FloatSlider( name="probe opacity",  value=1.0,                 start=0.0, end=1.0,               step=0.01 )
+        self.scene_controls['point.material.size']     = ipw.FloatSlider( description="point size",     value=0.015 * self.scale,  min=0.0, max=0.05 * self.scale, step=0.0002 * self.scale)
+        self.scene_controls['point.material.opacity']  = ipw.FloatSlider( description="point opacity",  value=1.0,                 min=0.0, max=1.0,               step=0.01 )
+        self.scene_controls['marker.material.size']    = ipw.FloatSlider( description="marker size",    value=0.05 * self.scale,   min=0.0, max=0.1 * self.scale,  step=0.001 * self.scale )
+        self.scene_controls['marker.material.opacity'] = ipw.FloatSlider( description="marker opacity", value=1.0,                 min=0.0, max=1.0,               step=0.01 )
+        self.scene_controls['probe.material.size']     = ipw.FloatSlider( description="probe size",     value=0.05 * self.scale,   min=0.0, max=0.2 * self.scale,  step=0.001 * self.scale )
+        self.scene_controls['probe.material.opacity']  = ipw.FloatSlider( description="probe opacity",  value=1.0,                 min=0.0, max=1.0,               step=0.01 )
         self.scene_controls['window.scene.background'] = pn.widgets.ColorPicker( value="black" )
         self.scene_controls[ 'point.material.size'   ].jslink( target=self.points.material, value="size"  )
         self.scene_controls[ 'point.material.opacity'].jslink( target=self.points.material, value="opacity" )
         self.scene_controls[ 'window.scene.background'].jslink( target=self.scene, value="background" )
-
-        return pn.Column( *self.scene_controls.values() )
+        controls = ipw.VBox( list(self.scene_controls.values()) )
+        return pn.Column( controls )
 
     # def update_parameter(self, name: str, value: float ):
     #     param = self.get_parametere( name )

@@ -49,7 +49,6 @@ def sgui() -> "hvSpectraclassGui":
 def bounds( data: xa.DataArray ) -> Tuple[ Tuple[float,float], Tuple[float,float] ]:
     xaxis, yaxis = data.coords['x'].values, data.coords['y'].values
     dx, dy = (xaxis[1]-xaxis[0]), (yaxis[1]-yaxis[0])
-    print( f"BOUNDS: {dx} {dy}")
     xlim = ( xaxis[0]-dx, xaxis[-1]+dx )
     ylim = ( yaxis[0]-dy, yaxis[-1]+dy ) if dy>0 else ( yaxis[-1]+dy, yaxis[0]-dy )
     return xlim,ylim

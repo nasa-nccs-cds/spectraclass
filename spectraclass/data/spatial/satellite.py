@@ -81,6 +81,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
         xlim, ylim = bounds[:2], bounds[2:]
         point_selection = kwargs.get( 'point_selection', False )
         tile_source: gv.element.geo.WMTS = tm().getESRIImageryServer( xlim=xlim, ylim=ylim, width=600, height=570 )
+        print( f"get_image_basemap: bounds={bounds}, server={id(tile_source)}")
         return tile_source * self.selection_points if point_selection else self.tile_source
 
     def set_extent(self, block_selection: int ):
