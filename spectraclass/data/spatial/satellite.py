@@ -73,7 +73,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
         b: Block = tm().getBlock()
         (xlim, ylim) = b.get_extent( self.projection )
         self.tile_source = tm().getESRIImageryServer( xlim=xlim, ylim=ylim, width=600, height=570 )
-        lgm().log( f"SPM: block{b.index[1]}: ImageryServer extent {xlim} {ylim}")
+        lgm().log( f"SPM: block{b.index[1]}: ImageryServer extent {xlim} {ylim}, server= {id(self.tile_source)}")
         return self.tile_source * self.selection_points if point_selection else self.tile_source
 
     @exception_handled
@@ -90,7 +90,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
             from spectraclass.data.spatial.tile.manager import TileManager, tm
             block: Block = tm().getBlock( bindex= tm().bi2c(block_selection) )
             (xlim, ylim) = block.get_extent(self.projection)
-            lgm().log(f"SPM: set_extent block_selection={block_selection}  xlim={xlim}, ylim={ylim} ")
+            lgm().log(f"SPM: set_extent block_selection={block_selection}  xlim={xlim}, ylim={ylim}, server= {id(self.tile_source)} ")
             self.bounds_stream.event( xylim = xlim+ylim )
         #    self.tile_source.apply.opts( xlim=xlim, ylim=ylim )
         #    self.tile_source.select( x=xlim, y=ylim )

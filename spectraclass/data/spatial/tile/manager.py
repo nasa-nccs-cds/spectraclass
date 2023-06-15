@@ -65,7 +65,7 @@ class TileManager(SCSingletonConfigurable):
 
     def getESRIImageryServer(self,**kwargs) -> gv.element.geo.Tiles:
         url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{Z}/{Y}/{X}.jpg'
-        return gv.element.geo.WMTS( url, name="EsriImagery").opts( **kwargs )
+        return gv.element.geo.Tiles( url, name="EsriImagery").opts( **kwargs )
 
     @classmethod
     def encode( cls, obj ) -> str:

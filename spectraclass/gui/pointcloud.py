@@ -285,10 +285,14 @@ class PointCloudManager(SCSingletonConfigurable):
             if toks[1] == "scene":
                 object = self.scene
             elif toks[1] == "material":
-                object = self.points.material if toks[0] == "point" else self.marker_points.material
+                if toks[0] == "point":
+                    object = self.points.material
+                else:
+                    object = self.marker_points.material if (self.marker_points is not None) else None
             else:
                 raise Exception( f"Unrecognized control domain: {toks[1]}")
-            ipw.jslink( (ctrl, 'value'), (object, toks[2]) )
+            if object is not None:
+                ipw.jslink( (ctrl, 'value'), (object, toks[2]) )
 
     # def update_parameter(self, name, event ):
     #     print( f"update_parameter[{name}] = {event}")
