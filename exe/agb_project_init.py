@@ -11,6 +11,8 @@ block_size = 150
 model_dims = 3
 nepoch = 1
 niter = 100
+init_wts = 1.0
+init_bias = 1.0
 year= 2015
 version = "beta_pmm"
 roi = "541567.6_4136443.0_542567.6_4137443.0"
@@ -22,6 +24,8 @@ mt().model_dims = model_dims
 mt().modelkey = f"agp.neon.{version}.{year}.{roi}.{block_size}"
 mt().nepoch = nepoch
 mt().niter = niter
+mt().init_wts_mag = init_wts
+mt().init_bias_mag = init_bias
 
 dm.prepare_inputs()
 
