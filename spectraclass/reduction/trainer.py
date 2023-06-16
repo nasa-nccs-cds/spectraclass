@@ -24,6 +24,7 @@ class ProgressPanel:
         self._abort = pn.widgets.Button(name='Abort', button_type='primary')
         self._abort.on_click( abort_callback )
 
+    @exception_handled
     def update(self, iteration: int, message: str ):
         self._progress.value = iteration
         self._log.object = message
@@ -43,7 +44,7 @@ class ModelTrainer(SCSingletonConfigurable):
     modelkey = tl.Unicode(default_value="").tag(config=True, sync=True)
     nepoch = tl.Int(1).tag(config=True, sync=True)
     niter = tl.Int(100).tag(config=True, sync=True)
-    log_step = tl.Int(5).tag(config=True, sync=True)
+    log_step = tl.Int(10).tag(config=True, sync=True)
     refresh_model = tl.Bool(False).tag(config=True, sync=True)
 
     def __init__(self, **kwargs ):
@@ -55,7 +56,13 @@ class ModelTrainer(SCSingletonConfigurable):
         self._abort = False
         self._optimizer = None
         self.loss = torch.nn.MSELoss( **kwargs )
-        self.progress = ProgressPanel( self.niter, self.abort_callback )
+        self._progress = None
+
+    @property
+    def progress(self) -> ProgressPanel:
+        if self._progress is None:
+            self._progress = ProgressPanel( self.niter, self.abort_callback )
+        return self._progress
 
     @property
     def optimizer(self):
