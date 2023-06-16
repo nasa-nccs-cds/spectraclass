@@ -90,6 +90,7 @@ class Autoencoder(nn.Module):
             self._add_layer( decoder_modules, iLayer, linear, activation )
             in_features, iLayer = out_features, iLayer + 1
         self._decoder = nn.Sequential(decoder_modules)
+        self.init_weights()
 
     def init_weights(self):
         self._encoder.apply(self.weights_init_xavier)

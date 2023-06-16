@@ -132,7 +132,6 @@ class ModelTrainer(SCSingletonConfigurable):
     def train(self, **kwargs):
         if not self.load(**kwargs):
             self.model.train()
-            self.model.init_weights()
             t0, initial_epoch = time.time(), 0
             for iter in range(self.niter):
                 initial_epoch = self.general_training(iter, initial_epoch, **kwargs )
