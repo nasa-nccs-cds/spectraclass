@@ -87,7 +87,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
         block: Block = tm().getBlock( bindex=bindex )
         (xlim, ylim) = block.get_extent(self.projection)
         lgm().log(f"SPM: set_extent block_selection={block_selection}  xlim={xlim}, ylim={ylim} ")
-        self.bounds_stream.event( xylim = xlim+ylim )
+        self.bounds_stream.event( bounds = xlim+ylim )
     #    self.tile_source.apply.opts( xlim=xlim, ylim=ylim )
     #    self.tile_source.select( x=xlim, y=ylim )
 
