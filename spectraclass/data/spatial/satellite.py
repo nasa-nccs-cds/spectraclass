@@ -83,8 +83,8 @@ class SatellitePlotManager(SCSingletonConfigurable):
 
     def set_extent(self, block_selection: int = -1 ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        if block_selection == -1: block_selection = tm().block_selection.index
-        block: Block = tm().getBlock( bindex= tm().bi2c(block_selection) )
+        bindex = tm().block_index if (block_selection == -1) else tm().bi2c(block_selection)
+        block: Block = tm().getBlock( bindex=bindex )
         (xlim, ylim) = block.get_extent(self.projection)
         lgm().log(f"SPM: set_extent block_selection={block_selection}  xlim={xlim}, ylim={ylim} ")
         self.bounds_stream.event( xylim = xlim+ylim )
