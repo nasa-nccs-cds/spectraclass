@@ -62,6 +62,7 @@ class VariableBrowser:
         self.data: xa.DataArray = sgui().get_data(cname)
         lgm().log(f" --> data shape = {self.data.shape}", print=True)
         self.width = plotopts.get('width',600)
+        self.height = plotopts.get('height', 600)
         self.cmap = plotopts.get('cmap', 'jet')
         self.nIter: int = self.data.shape[0]
         self.player: DiscretePlayer = DiscretePlayer(name='Iteration', options=list(range(self.nIter)), value=self.nIter - 1)
@@ -150,7 +151,7 @@ class VariableBrowser:
             self.update_block( block_selection )
         fdata: xa.DataArray = self.data[iteration]
         xlim, ylim = bounds( fdata )
-        iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, xlim=xlim, ylim=ylim )
+        iopts = dict(width=self.width, height=self.height, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, xlim=xlim, ylim=ylim )
         t2 = time.time()
         result = fdata.hvplot.image( **iopts )
         tf = time.time()
