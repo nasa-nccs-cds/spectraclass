@@ -94,8 +94,8 @@ class Autoencoder(nn.Module):
         self.init_weights()
 
     def init_weights(self):
-        self._encoder.apply(self.weights_init_xavier)
-        self._decoder.apply(self.weights_init_xavier)
+        self._encoder.apply(self.weights_init_uniform_rule)
+        self._decoder.apply(self.weights_init_uniform_rule)
 
     def _add_layer(self, modules: OrderedDict, ilayer: int, layer: nn.Linear, activation: str):
         modules[f"layer-{ilayer}"] = layer
