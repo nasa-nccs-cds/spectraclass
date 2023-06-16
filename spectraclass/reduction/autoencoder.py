@@ -66,7 +66,8 @@ class Autoencoder(nn.Module):
     def weights_init_xavier(self, m: nn.Module):
         if isinstance(m, nn.Linear):
             torch.nn.init.xavier_uniform_(m.weight) # , self.wmag)
-            torch.nn.init.uniform_(m.bias, -self.init_bias, self.init_bias)
+            m.bias.data.fill_(0)
+ #           torch.nn.init.uniform_(m.bias, -self.init_bias, self.init_bias)
 
     @exception_handled
     def build_ae_model(self, **kwargs):
