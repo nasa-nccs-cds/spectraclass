@@ -144,10 +144,9 @@ class VariableBrowser:
 
     @exception_handled
     def get_frame(self, iteration: int, block_selection: int ):
-        lgm().log(f"DYM: get_frame")
         ts = time.time()
         if block_selection >= 0:
-            lgm().log( f"Viewer {self.cname}-> get_frame: iteration={iteration} block_selection={block_selection} ")
+            lgm().log( f"VB: {self.cname}-> get_frame: iteration={iteration} block_selection={block_selection} ")
             self.update_block( block_selection )
         fdata: xa.DataArray = self.data[iteration]
         xlim, ylim = bounds( fdata )
@@ -161,7 +160,6 @@ class VariableBrowser:
 
     @exception_handled
     def get_iter_marker(self, index: int ):
-        lgm().log(f"DYM: get_iter_marker")
         coord: np.ndarray = self.data.coords[ self.data.dims[0] ].values
         vline = hv.VLine( coord[index], label="current iteration")
         return vline.opts( color="grey", alpha=0.5 )
