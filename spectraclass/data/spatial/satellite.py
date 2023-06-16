@@ -19,7 +19,7 @@ from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timin
 def spm() -> "SatellitePlotManager":
     return SatellitePlotManager.instance()
 
-Bounds = Stream.define('Bounds', xylim=param.Tuple(default=(0.0, 1.0, 0.0, 1.0), doc='Image Axis Bounds: x0, x1, y0, y1') )
+Bounds = Stream.define('Bounds', bounds=param.Tuple(default=(0.0, 1.0, 0.0, 1.0), doc='Image Axis Bounds: x0, x1, y0, y1') )
 
 class SatellitePlotManager(SCSingletonConfigurable):
     projection = ccrs.GOOGLE_MERCATOR
