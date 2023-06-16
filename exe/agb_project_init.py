@@ -9,8 +9,8 @@ mt().refresh_model = True
 
 block_size = 150
 model_dims = 3
-nepoch = 1
-niter = 200
+nepoch = 5
+niter = 25
 init_wts = 1.0
 init_bias = 1.0
 year= 2015

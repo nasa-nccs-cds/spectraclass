@@ -298,68 +298,7 @@ class ModeDataManager(SCSingletonConfigurable):
     #                 block.initialize()
     #     return initial_epoch
     #
-    # def focused_training(self, initial_epoch = 0, **kwargs) -> bool:
-    #     from spectraclass.data.base import DataManager, dm
-    #     from spectraclass.data.spatial.tile.tile import Block, Tile
-    #     nepoch: int = kwargs.get( 'nepoch', self.reduce_focus_nepoch )
-    #     anom_focus: float = kwargs.get( 'anom_focus', self.reduce_anom_focus )
-    #     if (anom_focus == 0.0) or (nepoch==0): return False
-    #
-    #     anomalies = {}
-    #     num_reduce_images = min(dm().modal.num_images, self.reduce_nimages)
-    #     for image_index in range(num_reduce_images):
-    #         dm().modal.set_current_image(image_index)
-    #         blocks: List[Block] = tm().tile.getBlocks()
-    #         num_training_blocks = min(self.reduce_nblocks, len(blocks))
-    #         lgm().log(f"Autoencoder focused training: {num_training_blocks} blocks for image[{image_index}/{num_reduce_images}]: {dm().modal.image_name}", print=True)
-    #         for iB, block in enumerate(blocks):
-    #             if iB < self.reduce_nblocks:
-    #                 point_data, grid = block.getPointData()
-    #                 if point_data.shape[0] > 0:
-    #                     reproduced_data: np.ndarray = self._autoencoder.predict( point_data.values )
-    #                     anomalies[(image_index,iB)] = self.get_anomaly( point_data.data, reproduced_data )
-    #     full_anomaly: np.ndarray = np.concatenate( list(anomalies.values()) )
-    #     t = self.get_anomaly_threshold(full_anomaly, anom_focus)
-    #     lgm().log(f"autoencoder focus({anom_focus}) training: anomaly threshold = {t}", print=True)
-    #     focused_datsets = []
-    #     for image_index in range(num_reduce_images):
-    #         dm().modal.set_current_image(image_index)
-    #         blocks: List[Block] = tm().tile.getBlocks()
-    #         for iB, block in enumerate(blocks):
-    #             if iB < self.reduce_nblocks:
-    #                 point_data, grid = block.getPointData()
-    #                 if point_data.shape[0] > 0:
-    #                     anomaly = anomalies[(image_index,iB)]
-    #                     focused_point_data = self.get_focused_dataset(point_data.data, anomaly, t )
-    #                     focused_datsets.append( focused_point_data )
-    #                     ntrainsamples = nsamples( focused_datsets )
-    #                     lgm().log(f" --> BLOCK[{image_index}:{block.block_coords}]: ntrainsamples = {ntrainsamples}", print=True)
-    #                     if ntrainsamples > point_data.shape[0]:
-    #                         focused_training_data = np.concatenate( focused_datsets )
-    #                         lgm().log( f" --> Focused Training with #samples = {ntrainsamples}", print=True)
-    #                         history: tf.keras.callbacks.History = self._autoencoder.fit( focused_training_data, focused_training_data, initial_epoch=initial_epoch,
-    #                                                                   epochs=initial_epoch + nepoch, batch_size=256, shuffle=True)
-    #                         initial_epoch = initial_epoch + nepoch
-    #                         focused_datsets = []
-    #     ntrainsamples = nsamples( focused_datsets )
-    #     if ntrainsamples > 0:
-    #         focused_training_data = np.concatenate( focused_datsets )
-    #         lgm().log(f" --> Focused Training with #samples = {ntrainsamples}", print=True)
-    #         history: tf.keras.callbacks.History = self._autoencoder.fit(focused_training_data, focused_training_data, initial_epoch=initial_epoch,
-    #                                                  epochs=initial_epoch + nepoch, batch_size=256, shuffle=True)
-    #     return initial_epoch
-    #
-    # def get_focused_dataset(self, train_data: np.ndarray, anomaly: np.ndarray, threshold: float ) -> np.ndarray:
-    #     rng = np.random.default_rng()
-    #     amask: np.ndarray = (anomaly > threshold)
-    #     anom_data, std_data = train_data[amask], train_data[~amask]
-    #     num_standard_samples = round( anom_data.shape[0]/self.reduce_focus_ratio )
-    #     if num_standard_samples >= std_data.shape[0]:
-    #         return train_data
-    #     else:
-    #         std_data_sample = rng.choice( std_data, num_standard_samples, replace=False, axis=0, shuffle=False )
-    #         new_data = np.concatenate((anom_data, std_data_sample), axis=0)
-    #         return new_data
+
 
     def get_anomaly(self, train_data: np.ndarray, reproduced_data ) -> np.ndarray:
         return np.abs(train_data - reproduced_data).sum(axis=-1, keepdims=False)
