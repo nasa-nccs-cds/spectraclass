@@ -33,8 +33,8 @@ class Autoencoder(nn.Module):
         self._encoder: nn.Sequential = None
         self._l1_strength: np.ndarray = None
         self._l2_strength: np.ndarray = None
-        self.init_bias = kwargs.get('init_bias',0.0)
-        self.wmag = kwargs.get('wmag', 0.0)
+        self.init_bias = kwargs.get('init_bias', 0.01 )
+        self.wmag = kwargs.get('wmag', 0.01 )
         self.nLayers = 0
         self._L0 = 0.0
         self._iteration = 0
@@ -92,6 +92,7 @@ class Autoencoder(nn.Module):
         self._decoder = nn.Sequential(decoder_modules)
 
     def init_weights(self):
+        self._encoder.apply(self.weights_init_xavier)
         self._decoder.apply(self.weights_init_xavier)
 
     def _add_layer(self, modules: OrderedDict, ilayer: int, layer: nn.Linear, activation: str):

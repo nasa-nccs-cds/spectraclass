@@ -35,6 +35,8 @@ class ModelTrainer(SCSingletonConfigurable):
     optimizer_type = tl.Unicode(default_value="adam").tag(config=True, sync=True)
     learning_rate = tl.Float(0.0001).tag(config=True, sync=True)
     loss_threshold = tl.Float(1e-6).tag(config=True, sync=True)
+    init_wts_mag = tl.Float(0.1).tag(config=True, sync=True)
+    init_bias_mag = tl.Float(0.1).tag(config=True, sync=True)
     reduce_nblocks = tl.Int(250).tag(config=True, sync=True)
     reduce_nimages = tl.Int(100).tag(config=True, sync=True)
     model_dims = tl.Int(3).tag(config=True, sync=True)
@@ -66,7 +68,8 @@ class ModelTrainer(SCSingletonConfigurable):
         if self._model is None:
             block: Block = tm().getBlock()
             point_data, grid = block.getPointData()
-            self._model = Autoencoder( point_data.shape[1], self.nfeatures, log_step=self.log_step ).to(self.device)
+            opts = dict ( wmag=self.init_wts_mag, init_bias=self.init_bias_mag, log_step=self.log_step )
+            self._model = Autoencoder( point_data.shape[1], self.nfeatures, **opts ).to(self.device)
         return self._model
 
     def panel(self)-> pn.Row:
@@ -128,6 +131,8 @@ class ModelTrainer(SCSingletonConfigurable):
 
     def train(self, **kwargs):
         if not self.load(**kwargs):
+            self.model.train()
+            self.model.init_weights()
             t0, initial_epoch = time.time(), 0
             for iter in range(self.niter):
                 initial_epoch = self.general_training(iter, initial_epoch, **kwargs )
@@ -143,7 +148,6 @@ class ModelTrainer(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.data.spatial.tile.tile import Block, Tile
         num_reduce_images = min( dm().modal.num_images, self.reduce_nimages )
-        self.model.train()
         losses = []
         for image_index in range( num_reduce_images ):
             dm().modal.set_current_image(image_index)
