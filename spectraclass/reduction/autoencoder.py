@@ -108,7 +108,6 @@ class Autoencoder(nn.Module):
 
     def layer_forward_hook(self, iLayer: int, module: nn.Linear, inputs: Tuple[Tensor], output: Tensor):
         if (self._stage == ProcessingStage.Training) and ( self._iteration % self._log_step == 0 ):
-            if iLayer == 0: lgm().log(f"II: Iteration-{self._iteration}: save layer weights & outputs")
             fwts: np.ndarray = module.weight.detach().numpy().copy()
             self._layer_weights.setdefault(iLayer, []).append(fwts)
             #            if iLayer == 0: print( f"\nE[{len(self._layer_weights[0])}] wtsamples:  ", end="" )

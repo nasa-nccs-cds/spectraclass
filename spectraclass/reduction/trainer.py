@@ -162,7 +162,7 @@ class ModelTrainer(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.data.spatial.tile.tile import Block, Tile
         num_reduce_images = min( dm().modal.num_images, self.reduce_nimages )
-        losses = []
+        losses, tloss = [], 0.0
         y_hat: Tensor = None
         for image_index in range( num_reduce_images ):
             dm().modal.set_current_image(image_index)
@@ -177,17 +177,17 @@ class ModelTrainer(SCSingletonConfigurable):
                         input_tensor: Tensor = torch.from_numpy(norm_point_data.values)
                         x = input_tensor.to(self.device)
                         final_epoch = initial_epoch + self.nepoch
-                        lgm().log( f" ** ITER[{iter}]: Processing block{block.block_coords}, norm data shape = {norm_point_data.shape}")
                         for epoch  in range( initial_epoch, final_epoch ):
                             tloss, x, y_hat = self.training_step( epoch, x )
                             losses.append( tloss )
+                        lgm().log( f" ** ITER[{iter}]: Processed block{block.block_coords}, norm data shape = {norm_point_data.shape}, losses = {losses[-self.nepoch:]}")
                         initial_epoch = final_epoch
                         if self.focus_nepoch > 0:
                             final_epoch = initial_epoch + self.focus_nepoch
-                            lgm().log( f" ** ITER[{iter}]: Focused processing block{block.block_coords}, norm data shape = {norm_point_data.shape}")
                             for epoch  in range( initial_epoch, final_epoch ):
                                 tloss, x, y_hat = self.focused_training_step( x, y_hat )
                                 losses.append( tloss )
+                            lgm().log( f" ** ITER[{iter}]: Focus-processed block{block.block_coords}, norm data shape = {norm_point_data.shape}, losses = {losses[-self.focus_nepoch:]}")
                             initial_epoch = final_epoch
                     block.initialize()
         loss_msg = f"loss[{iter}/{self.niter}]: {mean(losses):>7f}"
