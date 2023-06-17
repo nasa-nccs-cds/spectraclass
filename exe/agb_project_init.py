@@ -9,8 +9,11 @@ mt().refresh_model = True
 
 block_size = 150
 model_dims = 3
-nepoch = 5
-niter = 25
+nepoch = 10
+focus_nepoch = 5
+focus_ratio = 10
+focus_threshold = 0.1
+niter = 20
 init_wts = 1.0
 init_bias = 1.0
 year= 2015
@@ -23,9 +26,11 @@ tm().block_size = block_size
 mt().model_dims = model_dims
 mt().modelkey = f"agp.neon.{version}.{year}.{roi}.{block_size}"
 mt().nepoch = nepoch
+mt().focus_nepoch = focus_nepoch
+mt().focus_ratio = focus_ratio
+mt().focus_threshold = focus_threshold
 mt().niter = niter
-mt().init_wts_mag = init_wts
-mt().init_bias_mag = init_bias
+
 
 dm.prepare_inputs()
 

@@ -16,6 +16,13 @@ import hvplot.xarray  # noqa
 def mt() -> "ModelTrainer":
     return ModelTrainer.instance()
 
+def random_sample( tensor: Tensor, nsamples: int, axis=0 ) -> Tensor:
+    perm = torch.randperm( tensor.size(axis) )
+    return tensor[ perm[:nsamples] ]
+
+def anomaly( train_data: Tensor, reproduced_data: Tensor ) -> Tensor:
+    return torch.sum( torch.abs(train_data - reproduced_data), 1 )
+
 class ProgressPanel:
 
     def __init__(self, niter: int, abort_callback: Callable ):
@@ -43,8 +50,9 @@ class ModelTrainer(SCSingletonConfigurable):
     model_dims = tl.Int(3).tag(config=True, sync=True)
     modelkey = tl.Unicode(default_value="").tag(config=True, sync=True)
     nepoch = tl.Int(5).tag(config=True, sync=True)
-    reduce_focus_nepoch = tl.Int(5).tag(config=True, sync=True)
-    reduce_focus_ratio = tl.Int(10.0).tag(config=True, sync=True)
+    focus_nepoch = tl.Int(5).tag(config=True, sync=True)
+    focus_ratio = tl.Float(10.0).tag(config=True, sync=True)
+    focus_threshold = tl.Float(0.1).tag(config=True, sync=True)
     niter = tl.Int(25).tag(config=True, sync=True)
     log_step = tl.Int(10).tag(config=True, sync=True)
     refresh_model = tl.Bool(False).tag(config=True, sync=True)
@@ -115,10 +123,8 @@ class ModelTrainer(SCSingletonConfigurable):
         W: np.ndarray = self.model.get_layer_weights(iL - 1)
         print( f" L[{iL}]: Oms{O.shape}=[{abs(O).mean():.4f}, {O.std():.4f}], Wms{W.shape}=[{abs(W).mean():.4f}, {W.std():.4f}]", **kwargs )
 
-    def training_step(self, epoch: int, input_data: xa.DataArray, **kwargs) -> float:
+    def training_step(self, epoch: int, x: Tensor, **kwargs) -> Tuple[float,Tensor,Tensor]:
         verbose = kwargs.get( 'verbose', False )
-        input_tensor: Tensor = torch.from_numpy( input_data.values )
-        x = input_tensor.to( self.device )
         y_hat: Tensor = self.model.forward(x)
         loss: Tensor = self.loss(y_hat, x)
         lval: float = float(loss)
@@ -136,7 +142,7 @@ class ModelTrainer(SCSingletonConfigurable):
             loss.backward()
             self.optimizer.step()
         self.previous_loss = lval
-        return lval
+        return lval, x, y_hat
 
     def train(self, **kwargs):
         if not self.load(**kwargs):
@@ -144,8 +150,6 @@ class ModelTrainer(SCSingletonConfigurable):
             t0, initial_epoch = time.time(), 0
             for iter in range(self.niter):
                 initial_epoch = self.general_training(iter, initial_epoch, **kwargs )
-                if self.reduce_focus_nepoch > 0:
-                    initial_epoch = self.focused_training( initial_epoch, **kwargs )
             lgm().log( f"Trained autoencoder in {(time.time()-t0)/60:.3f} min", print=True )
             self.save(**kwargs)
 
@@ -159,6 +163,7 @@ class ModelTrainer(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.tile import Block, Tile
         num_reduce_images = min( dm().modal.num_images, self.reduce_nimages )
         losses = []
+        y_hat: Tensor = None
         for image_index in range( num_reduce_images ):
             dm().modal.set_current_image(image_index)
             blocks: List[Block] = tm().tile.getBlocks()
@@ -169,24 +174,41 @@ class ModelTrainer(SCSingletonConfigurable):
                 if iB < self.reduce_nblocks:
                     norm_point_data, grid = block.getPointData( norm=True )
                     if norm_point_data.shape[0] > 0:
+                        input_tensor: Tensor = torch.from_numpy(norm_point_data.values)
+                        x = input_tensor.to(self.device)
                         final_epoch = initial_epoch + self.nepoch
                         lgm().log( f" ** ITER[{iter}]: Processing block{block.block_coords}, norm data shape = {norm_point_data.shape}")
                         for epoch  in range( initial_epoch, final_epoch ):
-                            tloss: float = self.training_step( epoch, norm_point_data )
+                            tloss, x, y_hat = self.training_step( epoch, x )
                             losses.append( tloss )
                         initial_epoch = final_epoch
+                        if self.focus_nepochn > 0:
+                            final_epoch = initial_epoch + self.focus_nepochn
+                            lgm().log( f" ** ITER[{iter}]: Focused processing block{block.block_coords}, norm data shape = {norm_point_data.shape}")
+                            for epoch  in range( initial_epoch, final_epoch ):
+                                tloss, x, y_hat = self.focused_training_step( epoch, x, y_hat )
+                                losses.append( tloss )
+                            initial_epoch = final_epoch
                     block.initialize()
         loss_msg = f"loss[{iter}/{self.niter}]: {mean(losses):>7f}"
         lgm().log( loss_msg, print=True )
         self.progress.update( iter, loss_msg )
         return initial_epoch
 
-    def focused_training(self, initial_epoch = 0, **kwargs) -> int:
-        return initial_epoch
+    def focused_training_step(self, train_input: Tensor, y_hat: Tensor ) -> Tuple[float,Tensor,Tensor]:
+        x = self.get_focused_traindata( train_input, y_hat )
+        y_hat: Tensor = self.model.forward(x)
+        loss: Tensor = self.loss(y_hat, x)
+        lval: float = float(loss)
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+        self.previous_loss = lval
+        return lval, x, y_hat
     #
     #     from spectraclass.data.base import DataManager, dm
     #     from spectraclass.data.spatial.tile.tile import Block, Tile
-    #     nepoch: int = kwargs.get( 'nepoch', self.reduce_focus_nepoch )
+    #     nepoch: int = kwargs.get( 'nepoch', self.focus_nepochn )
     #     anom_focus: float = kwargs.get( 'anom_focus', self.reduce_anom_focus )
     #     if (anom_focus == 0.0) or (nepoch==0): return False
     #
@@ -234,17 +256,13 @@ class ModelTrainer(SCSingletonConfigurable):
     #                                                  epochs=initial_epoch + nepoch, batch_size=256, shuffle=True)
     #     return initial_epoch
     #
-    # def get_focused_dataset(self, train_data: np.ndarray, anomaly: np.ndarray, threshold: float ) -> np.ndarray:
-    #     rng = np.random.default_rng()
-    #     amask: np.ndarray = (anomaly > threshold)
-    #     anom_data, std_data = train_data[amask], train_data[~amask]
-    #     num_standard_samples = round( anom_data.shape[0]/self.reduce_focus_ratio )
-    #     if num_standard_samples >= std_data.shape[0]:
-    #         return train_data
-    #     else:
-    #         std_data_sample = rng.choice( std_data, num_standard_samples, replace=False, axis=0, shuffle=False )
-    #         new_data = np.concatenate((anom_data, std_data_sample), axis=0)
-    #         return new_data
+    def get_focused_traindata(self, train_data: Tensor, y_hat: Tensor ) -> Tensor:
+        anom: Tensor = anomaly( train_data, y_hat )
+        amask: Tensor = (anom > self.focus_threshold)
+        anom_data, std_data = train_data[amask], train_data[~amask]
+        num_standard_samples = round( anom_data.shape[0]/self.focus_ratio )
+        std_data_sample = std_data if (num_standard_samples >= std_data.shape[0]) else random_sample( std_data, num_standard_samples )
+        return torch.cat((anom_data, std_data_sample), 0)
 
     def predict(self, data: xa.DataArray, **kwargs) -> xa.DataArray:
         block: Block = tm().getBlock()

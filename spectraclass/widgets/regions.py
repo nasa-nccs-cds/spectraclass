@@ -25,6 +25,11 @@ class RegionSelector:
         self.undo_button: Button = Button( name='Undo', button_type='warning')
         self.indicator = streams.SingleTap(transient=True)
         self.selections = []
+        self.indication = hv.DynamicMap( self.indicate, streams=[self.indicator])
+        self.selected = hv.DynamicMap( self.get_selections, streams=dict( addclicks=self.select_button.param.clicks, removeclicks=self.undo_button.param.clicks ) )
+        self.canvas = self.poly.opts( opts.Polygons(fill_alpha=0.3, active_tools=['poly_draw']))
+        self.buttonbox = pn.Row( self.select_button, self.undo_button )
+
 
     def get_selections( self, addclicks: int, removeclicks: int ):
       if addclicks > self._addclks:
@@ -37,7 +42,7 @@ class RegionSelector:
         removed = self.selections.pop()
         print(f"Remove selected element: {centers(removed)}")
       self._addclks, self._removeclks = addclicks, removeclicks
-      print(f"Current Selections: {[ centers(s) for s in self.selections ]}")
+      print(f" *** Current Selections: {[ centers(s) for s in self.selections ]}")
       return hv.Overlay( self.selections )
 
     def indicate( self, x, y ):
@@ -45,9 +50,4 @@ class RegionSelector:
       return hv.Points( [(x,y)] ).opts( color="black" )
 
     def panel(self):
-        indication = hv.DynamicMap( self.indicate, streams=[self.indicator])
-        selected = hv.DynamicMap( self.get_selections, streams=dict( addclicks=self.select_button.param.clicks, removeclicks=self.undo_button.param.clicks ) )
-
-        canvas = self.poly.opts( opts.Polygons(fill_alpha=0.3, active_tools=['poly_draw']))
-        buttonbox = pn.Row( self.select_button, self.undo_button )
-        return pn.Column( canvas*selected*indication,buttonbox )
+        return pn.Column( self.canvas*self.selected, self.buttonbox )
