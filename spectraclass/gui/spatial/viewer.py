@@ -38,6 +38,10 @@ def extract_species( data: xa.DataArray, species:str ) -> xa.DataArray:
     result = data.sel(species=species) if 'species' in data.dims else data
     return result.squeeze()
 
+def crange( data: xa.DataArray, dim:str ) -> str:
+    c: np.ndarray = data.coords[dim].values
+    return f"[{c.min():.2f}, {c.max():.2f}]"
+
 def find_varname( selname: str, varlist: List[str]) -> str:
     for varname in varlist:
         if selname.lower() in varname.lower(): return varname
@@ -121,9 +125,9 @@ class VariableBrowser:
             if smean_data.shape[0] == graph_data.shape[0]:
                 reproduction: xa.DataArray = block.getReproduction(raster=True)
                 verification_data: xa.DataArray = reproduction.sel( x=x, y=y, method="nearest" )
-                lgm().log(f"V%%  [{self.cname}]  input_data       shape={graph_data.shape}, dims={graph_data.dims}")
-                lgm().log( f"V%% [{self.cname}] verification_data shape={verification_data.shape}, dims={graph_data.dims}" )
-                lgm().log( f"V%% [{self.cname}] smean_data        shape={smean_data.shape}, dims={graph_data.dims}")
+                lgm().log(f"V%%  [{self.cname}]  input_data       shape={graph_data.shape}, band_range={crange(graph_data,'band')}")
+                lgm().log( f"V%% [{self.cname}] verification_data shape={verification_data.shape}, band_range={crange(verification_data,'band')}" )
+                lgm().log( f"V%% [{self.cname}] smean_data        shape={smean_data.shape}, band_range={crange(smean_data,'band')}")
                 smean_curve        = hv.Curve(    smean_data     ).opts( line_width=1, line_color='red', **popts )
                 verification_curve = hv.Curve( verification_data ).opts( line_width=1, line_color='grey', **popts )
                 new_curves.extend( [smean_curve,verification_curve] )
