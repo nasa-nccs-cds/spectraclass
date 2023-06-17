@@ -118,12 +118,12 @@ class VariableBrowser:
         t1 = time.time()
         if is_probe:
             smean_data: xa.DataArray = dm().modal.getSpectralMean(norm=True)
-            lgm().log(f"V%% [{self.cname}] smean_data.shape={smean_data.shape}  graph_data.shape={graph_data.shape}")
             if smean_data.shape[0] == graph_data.shape[0]:
                 reproduction: xa.DataArray = block.getReproduction(raster=True)
                 verification_data: xa.DataArray = reproduction.sel( x=x, y=y, method="nearest" )
-                lgm().log( f"V%% [{self.cname}] verification_data curve{verification_data.dims}, range = {arange(verification_data)}, shape={verification_data.shape}" )
-                lgm().log( f"V%% [{self.cname}] smean_data curve{smean_data.dims}, range = {arange(smean_data)}, shape={smean_data.shape}")
+                lgm().log(f"V%%  [{self.cname}]  input_data       shape={graph_data.shape}")
+                lgm().log( f"V%% [{self.cname}] verification_data shape={verification_data.shape}" )
+                lgm().log( f"V%% [{self.cname}] smean_data        shape={smean_data.shape}")
                 smean_curve        = hv.Curve(    smean_data     ).opts( line_width=1, line_color='red', **popts )
                 verification_curve = hv.Curve( verification_data ).opts( line_width=1, line_color='grey', **popts )
                 new_curves.extend( [smean_curve,verification_curve] )
