@@ -182,11 +182,11 @@ class ModelTrainer(SCSingletonConfigurable):
                             tloss, x, y_hat = self.training_step( epoch, x )
                             losses.append( tloss )
                         initial_epoch = final_epoch
-                        if self.focus_nepochn > 0:
-                            final_epoch = initial_epoch + self.focus_nepochn
+                        if self.focus_nepoch > 0:
+                            final_epoch = initial_epoch + self.focus_nepoch
                             lgm().log( f" ** ITER[{iter}]: Focused processing block{block.block_coords}, norm data shape = {norm_point_data.shape}")
                             for epoch  in range( initial_epoch, final_epoch ):
-                                tloss, x, y_hat = self.focused_training_step( epoch, x, y_hat )
+                                tloss, x, y_hat = self.focused_training_step( x, y_hat )
                                 losses.append( tloss )
                             initial_epoch = final_epoch
                     block.initialize()
