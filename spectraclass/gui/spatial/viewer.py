@@ -125,7 +125,8 @@ class VariableBrowser:
             smean_data: xa.DataArray = dm().modal.getSpectralMean(norm=True)
             if smean_data.shape[0] == graph_data.shape[0]:
                 reproduction: xa.DataArray = block.getReproduction(raster=True)
-                verification_data: xa.DataArray = reproduction.sel( x=x, y=y, method="nearest" )
+                reproduction_data: xa.DataArray = reproduction.sel( x=x, y=y, method="nearest" )
+                verification_data: xa.DataArray = xa.DataArray( reproduction_data.values, dims=graph_data.dims, coords=graph_data.coords, attrs=reproduction_data.attrs)
                 lgm().log(f"V%%  [{self.cname}]  input_data[{graph_data.dims[0]}]       shape={graph_data.shape}, band_range={crange(graph_data,0)}")
                 lgm().log( f"V%% [{self.cname}] verification_data[{verification_data.dims[0]}]  shape={verification_data.shape}, band_range={crange(verification_data,0)}" )
                 lgm().log( f"V%% [{self.cname}] smean_data[{smean_data.dims[0]}]        shape={smean_data.shape}, band_range={crange(smean_data,0)}")
