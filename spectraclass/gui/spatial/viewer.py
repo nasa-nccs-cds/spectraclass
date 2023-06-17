@@ -121,9 +121,9 @@ class VariableBrowser:
             if smean_data.shape[0] == graph_data.shape[0]:
                 reproduction: xa.DataArray = block.getReproduction(raster=True)
                 verification_data: xa.DataArray = reproduction.sel( x=x, y=y, method="nearest" )
-                lgm().log(f"V%%  [{self.cname}]  input_data       shape={graph_data.shape}")
-                lgm().log( f"V%% [{self.cname}] verification_data shape={verification_data.shape}" )
-                lgm().log( f"V%% [{self.cname}] smean_data        shape={smean_data.shape}")
+                lgm().log(f"V%%  [{self.cname}]  input_data       shape={graph_data.shape}, dims={graph_data.dims}")
+                lgm().log( f"V%% [{self.cname}] verification_data shape={verification_data.shape}, dims={graph_data.dims}" )
+                lgm().log( f"V%% [{self.cname}] smean_data        shape={smean_data.shape}, dims={graph_data.dims}")
                 smean_curve        = hv.Curve(    smean_data     ).opts( line_width=1, line_color='red', **popts )
                 verification_curve = hv.Curve( verification_data ).opts( line_width=1, line_color='grey', **popts )
                 new_curves.extend( [smean_curve,verification_curve] )
