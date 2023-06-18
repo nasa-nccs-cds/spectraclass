@@ -58,8 +58,10 @@ def bounds( data: xa.DataArray ) -> Tuple[ Tuple[float,float], Tuple[float,float
     ylim = ( yaxis[0]-dy, yaxis[-1]+dy ) if dy>0 else ( yaxis[-1]+dy, yaxis[0]-dy )
     return xlim,ylim
 
-def datatable( data: xa.DataArray ) -> Tuple[np.ndarray,np.ndarray]:
-    return ( data.coords[data.dims[0]].values, data.values )
+#def datatable( data: xa.DataArray ) -> Tuple[np.ndarray,np.ndarray]:
+#    return ( data.coords[data.dims[0]].values, data.values )
+
+def datatable( data: xa.DataArray ) -> xa.DataArray:  return data
 
 class VariableBrowser:
 
