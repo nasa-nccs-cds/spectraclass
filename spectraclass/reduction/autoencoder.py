@@ -191,8 +191,8 @@ class Autoencoder(nn.Module):
     @exception_handled
     def decode(self, data: Union[np.ndarray,Tensor]) -> np.ndarray:
         input: Tensor = torch.from_numpy(data) if (type(data) == np.ndarray) else data
-        result: np.ndarray = self.decoder(input).detach().numpy()
-        return result
+        result: Tensor = self.decoder(input)
+        return result.detach().numpy()
 
     def forward(self, x: Tensor) -> Tensor:
         encoded: Tensor = self.encoder(x)
