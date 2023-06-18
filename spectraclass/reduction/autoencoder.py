@@ -186,12 +186,12 @@ class Autoencoder(nn.Module):
         detach = kwargs.get('detach',False)
         input: Tensor = torch.from_numpy(data)
         result: Tensor = self.encoder(input)
-        return result.detach() if detach else result
+        return result.detach().numpy() if detach else result
 
     @exception_handled
     def decode(self, data: Union[np.ndarray,Tensor]) -> np.ndarray:
         input: Tensor = torch.from_numpy(data) if (type(data) == np.ndarray) else data
-        result: np.ndarray = self.decoder(input).detach()
+        result: np.ndarray = self.decoder(input).detach().numpy()
         return result
 
     def forward(self, x: Tensor) -> Tensor:
