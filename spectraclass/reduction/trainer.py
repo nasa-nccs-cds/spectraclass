@@ -159,9 +159,10 @@ class ModelTrainer(SCSingletonConfigurable):
             self.save(**kwargs)
 
     def reduce(self, data: xa.DataArray ) -> Tuple[xa.DataArray,xa.DataArray]:
-        reduced: xa.DataArray = self.model.encode( data )
-        reproduction: xa.DataArray = self.model.decode( reduced )
-        return reduced, reproduction
+        reduced: np.ndarray = self.model.encode( data.values )
+        reproduction: np.ndarray = self.model.decode( reduced )
+        xreduced = xa.DataArray(reduced, dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(reduced.shape[1])), attrs=data.attrs)
+        return xreduced, data.copy( data=reproduction )
 
     def general_training(self, iter: int, initial_epoch: int, **kwargs ):
         from spectraclass.data.base import DataManager, dm
@@ -278,8 +279,9 @@ class ModelTrainer(SCSingletonConfigurable):
     def encode(self, data: xa.DataArray, **kwargs) -> xa.DataArray:
         block: Block = tm().getBlock()
         raster = kwargs.get( 'raster', "False")
-        raw_result: xa.DataArray = self.model.encode( data )
-        return block.points2raster( raw_result ) if raster else raw_result
+        raw_result: np.ndarray = self.model.encode( data.values )
+        xresult = xa.DataArray(raw_result, dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(raw_result.shape[1])), attrs=data.attrs)
+        return block.points2raster( xresult ) if raster else raw_result
 
 
     def event(self, source: str, event ):

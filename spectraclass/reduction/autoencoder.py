@@ -182,17 +182,16 @@ class Autoencoder(nn.Module):
                             coords=dict(samples=data.coords['samples'], y=range(result.shape[1])), attrs=data.attrs)
 
     @exception_handled
-    def encode(self, data: xa.DataArray) -> xa.DataArray:
-        input: Tensor = torch.from_numpy(data.values)
+    def encode(self, data: np.ndarray) -> np.ndarray:
+        input: Tensor = torch.from_numpy(data)
         result: np.ndarray = self.encoder(input).detach()
-        return xa.DataArray(result, dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(result.shape[1])), attrs=data.attrs)
+        return result
 
     @exception_handled
-    def decode(self, data: xa.DataArray) -> xa.DataArray:
-        input: Tensor = torch.from_numpy(data.values)
+    def decode(self, data: np.ndarray) -> np.ndarray:
+        input: Tensor = torch.from_numpy(data)
         result: np.ndarray = self.decoder(input).detach()
-  #      lgm().log( f"AD: DECODE, result, nbands={result.shape[1]}, bands range: {crange(data,1)}" )
-        return data.copy(data=result)
+        return result
 
     def forward(self, x: Tensor) -> Tensor:
         encoded: Tensor = self.encoder(x)
