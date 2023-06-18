@@ -182,14 +182,15 @@ class Autoencoder(nn.Module):
                             coords=dict(samples=data.coords['samples'], y=range(result.shape[1])), attrs=data.attrs)
 
     @exception_handled
-    def encode(self, data: np.ndarray) -> np.ndarray:
+    def encode(self, data: np.ndarray, **kwargs) -> Union[np.ndarray,Tensor]:
+        detach = kwargs.get('detach',False)
         input: Tensor = torch.from_numpy(data)
-        result: np.ndarray = self.encoder(input).detach()
-        return result
+        result: Tensor = self.encoder(input)
+        return result.detach() if detach else result
 
     @exception_handled
-    def decode(self, data: np.ndarray) -> np.ndarray:
-        input: Tensor = torch.from_numpy(data)
+    def decode(self, data: Union[np.ndarray,Tensor]) -> np.ndarray:
+        input: Tensor = torch.from_numpy(data) if (type(data) == np.ndarray) else data
         result: np.ndarray = self.decoder(input).detach()
         return result
 
