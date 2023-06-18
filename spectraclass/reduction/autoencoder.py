@@ -190,10 +190,8 @@ class Autoencoder(nn.Module):
     def decode(self, data: xa.DataArray) -> xa.DataArray:
         input: Tensor = torch.from_numpy(data.values)
         result: np.ndarray = self.decoder(input).detach()
-        samples = data.coords['samples']
-        print( f"AD: DECODE, result{samples.shape}, data samples range: {crange(data,0)}" )
-        return xa.DataArray(result, dims=['samples', 'features'],
-                            coords=dict(samples=samples, features=range(result.shape[1])), attrs=data.attrs)
+  #      lgm().log( f"AD: DECODE, result, nbands={result.shape[1]}, bands range: {crange(data,1)}" )
+        return data.copy(data=result)
 
     def forward(self, x: Tensor) -> Tensor:
         encoded: Tensor = self.encoder(x)
