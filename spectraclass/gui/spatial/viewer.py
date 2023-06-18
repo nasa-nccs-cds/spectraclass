@@ -218,7 +218,6 @@ class hvSpectraclassGui(SCSingletonConfigurable):
                 new_slider: DiscretePlayer = new_panel.objects[2]
                 old_slider: DiscretePlayer = old_panel.objects[2]
                 if len(new_slider.values) == len(old_slider.values):
-                    lgm().log( f" #TC: tab change event, old slider index= {old_slider.value}, new slider index= {new_slider.value}" )
                     new_slider.value.apply.opts( value=old_slider.value )
 
     def get_data( self, cname: str, **kwargs ) -> xa.DataArray:
