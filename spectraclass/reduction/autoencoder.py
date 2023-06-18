@@ -11,6 +11,11 @@ from enum import Enum
 def tsum(t: torch.Tensor):
     return torch.sum(t, dim=0, keepdim=False)
 
+def crange( data: xa.DataArray, idim:int ) -> str:
+    sdim = data.dims[idim]
+    c: np.ndarray = data.coords[sdim].values
+    return f"[{c.min():.2f}, {c.max():.2f}]"
+
 class ProcessingStage(Enum):
     PreTrain = 0
     Training = 1
@@ -185,8 +190,10 @@ class Autoencoder(nn.Module):
     def decode(self, data: xa.DataArray) -> xa.DataArray:
         input: Tensor = torch.from_numpy(data.values)
         result: np.ndarray = self.decoder(input).detach()
+        samples = data.coords['samples']
+        print( f"AD: DECODE, result{samples.shape}, data samples range: {crange(data,0)}" )
         return xa.DataArray(result, dims=['samples', 'features'],
-                            coords=dict(samples=data.coords['samples'], features=range(result.shape[1])), attrs=data.attrs)
+                            coords=dict(samples=samples, features=range(result.shape[1])), attrs=data.attrs)
 
     def forward(self, x: Tensor) -> Tensor:
         encoded: Tensor = self.encoder(x)

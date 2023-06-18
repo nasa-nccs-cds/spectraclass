@@ -13,6 +13,11 @@ from .autoencoder import Autoencoder
 import holoviews as hv, panel as pn
 import hvplot.xarray  # noqa
 
+def crange( data: xa.DataArray, idim:int ) -> str:
+    sdim = data.dims[idim]
+    c: np.ndarray = data.coords[sdim].values
+    return f"[{c.min():.2f}, {c.max():.2f}]"
+
 def mt() -> "ModelTrainer":
     return ModelTrainer.instance()
 
