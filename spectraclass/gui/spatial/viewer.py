@@ -58,6 +58,9 @@ def bounds( data: xa.DataArray ) -> Tuple[ Tuple[float,float], Tuple[float,float
     ylim = ( yaxis[0]-dy, yaxis[-1]+dy ) if dy>0 else ( yaxis[-1]+dy, yaxis[0]-dy )
     return xlim,ylim
 
+def datatable( data: xa.DataArray ) -> Dict[str,np.ndarray]:
+    return dict( y=data.values, x=data.coords[data.dims[0]].values )
+
 class VariableBrowser:
 
     def __init__(self, cname: str, **plotopts ):
@@ -117,7 +120,7 @@ class VariableBrowser:
 
         if (self.current_curve_data is not None) and (self.current_curve_data[0] > 0):
             self.curves.append( self.current_curve_data[1].opts(line_width=1) )
-        current_curve = hv.Curve( graph_data.values ).opts(line_width=3, line_color = line_color, **popts)
+        current_curve = hv.Curve( datatable(graph_data) ).opts(line_width=3, line_color = line_color, **popts)
         self.current_curve_data = ( lm().current_cid, current_curve )
         new_curves = [ current_curve ]
         t1 = time.time()
@@ -125,13 +128,12 @@ class VariableBrowser:
             smean_data: xa.DataArray = dm().modal.getSpectralMean(norm=True)
             if smean_data.shape[0] == graph_data.shape[0]:
                 reproduction: xa.DataArray = block.getReproduction(raster=True)
-                reproduction_data: xa.DataArray = reproduction.sel( x=x, y=y, method="nearest" )
-                verification_data: xa.DataArray = xa.DataArray( reproduction_data.values, dims=graph_data.dims, coords=graph_data.coords, attrs=reproduction_data.attrs)
+                verification_data: xa.DataArray = reproduction.sel( x=x, y=y, method="nearest" )
                 lgm().log(f"V%%  [{self.cname}]  input_data[{graph_data.dims[0]}]       shape={graph_data.shape}, band_range={crange(graph_data,0)}")
                 lgm().log( f"V%% [{self.cname}] verification_data[{verification_data.dims[0]}]  shape={verification_data.shape}, band_range={crange(verification_data,0)}" )
                 lgm().log( f"V%% [{self.cname}] smean_data[{smean_data.dims[0]}]        shape={smean_data.shape}, band_range={crange(smean_data,0)}")
-                smean_curve        = hv.Curve(    smean_data.values     ).opts( line_width=1, line_color='red', **popts )
-                verification_curve = hv.Curve( verification_data.values ).opts( line_width=1, line_color='grey', **popts )
+                smean_curve        = hv.Curve(    datatable(smean_data)     ).opts( line_width=1, line_color='red', **popts )
+                verification_curve = hv.Curve( datatable(verification_data) ).opts( line_width=1, line_color='grey', **popts )
                 new_curves.extend( [smean_curve,verification_curve] )
         t2 = time.time()
         updated_curves = self.curves + new_curves

@@ -597,8 +597,8 @@ class Block(DataContainer):
             dataset: xa.Dataset = dm().modal.loadDataFile( block=self )
             raw_raster = tm().mask_nodata( dataset["raw"] )
             lgm().log( f" @BLOCK{self.block_coords}---> raw data attrs = {dataset['raw'].attrs.keys()}" )
-            if self.block_coords == (0,0):
-                lgm().trace("LOADING BLOCK (0,0):")
+            # if self.block_coords == (0,0):
+            #     lgm().trace("LOADING BLOCK (0,0):")
             for aid, aval in dataset.attrs.items():
                 if aid not in raw_raster.attrs:
                     raw_raster.attrs[aid] = aval
