@@ -161,7 +161,7 @@ class ModelTrainer(SCSingletonConfigurable):
     def reduce(self, data: xa.DataArray ) -> Tuple[xa.DataArray,xa.DataArray]:
         reduced: Tensor = self.model.encode( data.values, detach=False )
         reproduction: np.ndarray = self.model.decode( reduced )
-        xreduced = xa.DataArray( reduced.detach().numpy(), dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(reproduction.shape[1])), attrs=data.attrs)
+        xreduced = xa.DataArray( reduced.detach().numpy(), dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(reduced.shape[1])), attrs=data.attrs)
         xreproduction = data.copy( data=reproduction )
         return xreduced, xreproduction
 
