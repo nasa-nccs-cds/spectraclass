@@ -185,11 +185,12 @@ class VariableBrowser:
 
     @exception_handled
     def plot(self)-> Panel:
+        image_panel = self.image*self.selection_dmap*self.region_selector
         if self.cname == "bands":
             selector = lm().class_selector
-            return pn.Column( selector, self.image*self.selection_dmap, self.player, self.point_graph*self.iter_marker )
+            return pn.Column( selector, image_panel, self.player, self.point_graph*self.iter_marker )
         else:
-            return pn.Column( self.image*self.selection_dmap, self.player )
+            return pn.Column( image_panel, self.player )
 
 class hvSpectraclassGui(SCSingletonConfigurable):
 
