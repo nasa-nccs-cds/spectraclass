@@ -48,7 +48,7 @@ class RegionSelector(SCSingletonConfigurable):
       if addclicks > self._addclks:
         ic, ccolor = lm().selectedColor( True )
         selection: hv.Polygons = self.poly_stream.element.opts( color=ccolor, line_width=1, alpha=0.3, line_color="black" )
-        print( f"Add poly_stream element: {centers(selection)}")
+        print( f"Add poly_stream element: {centers(selection)}, ic={ic}, color={ccolor}")
         self.selections.append( hv.Polygons( deepcopy(selection.data) ) )
       if removeclicks > self._removeclks:
         removed = self.selections.pop()
