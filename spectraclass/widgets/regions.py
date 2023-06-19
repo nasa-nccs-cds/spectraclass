@@ -6,6 +6,7 @@ from spectraclass.util.logs import lgm, exception_handled, log_timing
 from typing import List, Union, Tuple, Optional, Dict
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.model.labels import LabelsManager, lm
+from spectraclass.gui.control import UserFeedbackManager, ufm
 import numpy as np
 from panel.widgets import Button, Select
 
@@ -46,8 +47,9 @@ class RegionSelector(SCSingletonConfigurable):
     @exception_handled
     def get_selections( self, addclicks: int, removeclicks: int ):
       if addclicks > self._addclks:
+        ufm().show( f"Selecting region as class '{lm().selectedLabel()}'")
         ic, ccolor = lm().selectedColor( True )
-        selection: hv.Polygons = self.poly_stream.element.opts( color=ccolor, line_width=1, alpha=0.3, line_color="black" )
+        selection: hv.Polygons = self.poly_stream.element.opts( fill_color=ccolor, line_width=1, alpha=0.3, line_color="black" )
         print( f"Add poly_stream element: {centers(selection)}-> ic={ic}, color={ccolor}")
         self.selections.append( hv.Polygons( deepcopy(selection.data) ) )
       if removeclicks > self._removeclks:
