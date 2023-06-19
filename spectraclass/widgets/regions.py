@@ -4,9 +4,13 @@ from copy import deepcopy
 from panel.layout import Panel
 from spectraclass.util.logs import lgm, exception_handled, log_timing
 from typing import List, Union, Tuple, Optional, Dict
+from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.model.labels import LabelsManager, lm
 import numpy as np
 from panel.widgets import Button, Select
+
+def rs() -> "RegionSelector":
+    return RegionSelector.instance()
 
 def centers( polygons: hv.Polygons ) -> str:
     pds = []
@@ -16,14 +20,16 @@ def centers( polygons: hv.Polygons ) -> str:
         pds.append( f"({x.mean():0.2f},{y.mean():0.2f})" )
     return str(pds)
 
-class RegionSelector:
+class RegionSelector(SCSingletonConfigurable):
 
     def __init__(self ):
+        super(RegionSelector, self).__init__()
         self._addclks = 0
         self._removeclks = 0
         self.poly = hv.Polygons([])
         self.poly_stream = streams.PolyDraw(source=self.poly, drag=False, num_objects=1, show_vertices=True, styles={'fill_color': ['red']})
         self.select_button: Button = Button( name='Select', button_type='primary')
+        self.learn_button: Button = Button( name='Learn', button_type='primary')
         self.undo_button: Button = Button( name='Undo', button_type='warning')
         self.indicator = streams.SingleTap(transient=True)
         self.selections = []
@@ -31,7 +37,7 @@ class RegionSelector:
         self.selected  = hv.DynamicMap( self.get_selections, streams=dict( addclicks=self.select_button.param.clicks, removeclicks=self.undo_button.param.clicks ) )
         self.canvas = self.poly.opts( opts.Polygons(fill_alpha=0.3, active_tools=['poly_draw']))
         self.buttonbox = pn.Row( self.select_button, self.undo_button )
-        self.undo_button.on_click( self.reset )
+#        self.undo_button.on_click( self.reset )
 
     @exception_handled
     def reset(self, *args, **kwargs ):
@@ -63,4 +69,4 @@ class RegionSelector:
         return self.buttonbox
 
     def get_selector(self):
-        return  self.canvas * self.selected
+        return self.canvas * self.selected
