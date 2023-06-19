@@ -1,10 +1,11 @@
 import holoviews as hv, panel as pn
 from holoviews import opts, streams
 from copy import deepcopy
+from panel.layout import Panel
 from typing import List, Union, Tuple, Optional, Dict
+from spectraclass.model.labels import LabelsManager, lm
 import numpy as np
 from panel.widgets import Button, Select
-class_colors = [ 'blue', 'yellow', 'green', 'cyan', 'brown', 'magenta' ]
 
 def centers( polygons: hv.Polygons ) -> str:
     pds = []
@@ -26,15 +27,17 @@ class RegionSelector:
         self.indicator = streams.SingleTap(transient=True)
         self.selections = []
         self.indication = hv.DynamicMap( self.indicate, streams=[self.indicator])
-        self.selected = hv.DynamicMap( self.get_selections, streams=dict( addclicks=self.select_button.param.clicks, removeclicks=self.undo_button.param.clicks ) )
+        self.selected  = hv.DynamicMap( self.get_selections, streams=dict( addclicks=self.select_button.param.clicks, removeclicks=self.undo_button.param.clicks ) )
         self.canvas = self.poly.opts( opts.Polygons(fill_alpha=0.3, active_tools=['poly_draw']))
         self.buttonbox = pn.Row( self.select_button, self.undo_button )
+        self.undo_button.on_click( self.reset )
 
+    def reset(self, *args, **kwargs ):
+        self.selected.reset()
 
     def get_selections( self, addclicks: int, removeclicks: int ):
       if addclicks > self._addclks:
-        cindex = addclicks % len(class_colors)
-        ccolor = class_colors[cindex]
+        ic, ccolor = lm().selectedColor( True )
         selection: hv.Polygons = self.poly_stream.element.opts( color=ccolor, line_width=1, alpha=0.3, line_color="black" )
         print( f"Add poly_stream element: {centers(selection)}")
         self.selections.append( hv.Polygons( deepcopy(selection.data) ) )
@@ -51,3 +54,9 @@ class RegionSelector:
 
     def panel(self):
         return pn.Column( self.canvas*self.selected, self.buttonbox )
+
+    def get_control_panel(self) -> Panel:
+        return self.buttonbox
+
+    def get_selector(self):
+        return  self.canvas * self.selected

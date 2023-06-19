@@ -6,6 +6,7 @@ from spectraclass.learn.cluster.manager import clm
 import holoviews as hv
 from spectraclass.data.base import dm
 from panel.layout import Panel
+from spectraclass.widgets.regions import RegionSelector
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.model.labels import LabelsManager, lm
@@ -80,6 +81,8 @@ class VariableBrowser:
         self.graph_data = xa.DataArray([])
         self.curves: List[hv.Curve] = []
         self.current_curve_data: Tuple[int,hv.Curve] = None
+        self.region_selector = RegionSelector()
+
 
 
     # def update_yrange( self, new_range: Tuple[float,float] ):
