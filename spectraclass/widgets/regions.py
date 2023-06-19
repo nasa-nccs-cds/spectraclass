@@ -47,7 +47,7 @@ class RegionSelector(SCSingletonConfigurable):
     @exception_handled
     def get_selections( self, addclicks: int, removeclicks: int ):
       if addclicks > self._addclks:
-        ufm().show( f"Selecting region as class '{lm().selectedLabel()}'")
+        ufm().show( f"Selecting region as class '{lm().selectedLabel}'")
         ic, ccolor = lm().selectedColor( True )
         selection: hv.Polygons = self.poly_stream.element.opts( fill_color=ccolor, line_width=1, alpha=0.3, line_color="black" )
         print( f"Add poly_stream element: {centers(selection)}-> ic={ic}, color={ccolor}")
