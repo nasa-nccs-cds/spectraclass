@@ -47,11 +47,12 @@ class RegionSelector(SCSingletonConfigurable):
     @exception_handled
     def get_selections( self, addclicks: int, removeclicks: int ):
       if addclicks > self._addclks:
-        ufm().show( f"Selecting region as class '{lm().selectedLabel}'")
         ic, ccolor = lm().selectedColor( True )
-        selection: hv.Polygons = self.poly_stream.element.opts( fill_color=ccolor, line_width=1, alpha=0.3, line_color="black" )
+        ufm().show( f"Selecting region as class '{lm().selectedLabel}({ic}): color={ccolor}'")
+        selection: hv.Polygons = self.poly_stream.element
         print( f"Add poly_stream element: {centers(selection)}-> ic={ic}, color={ccolor}")
-        self.selections.append( hv.Polygons( deepcopy(selection.data) ) )
+        spoly = hv.Polygons( selection.data ).opts( fill_color=ccolor, line_width=1, alpha=0.3, line_color="black" )
+        self.selections.append( spoly )
       if removeclicks > self._removeclks:
         removed = self.selections.pop()
         print(f"Remove selected element: {centers(removed)}")
