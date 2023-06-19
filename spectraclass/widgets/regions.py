@@ -2,6 +2,7 @@ import holoviews as hv, panel as pn
 from holoviews import opts, streams
 from copy import deepcopy
 from panel.layout import Panel
+from spectraclass.util.logs import lgm, exception_handled, log_timing
 from typing import List, Union, Tuple, Optional, Dict
 from spectraclass.model.labels import LabelsManager, lm
 import numpy as np
@@ -32,9 +33,11 @@ class RegionSelector:
         self.buttonbox = pn.Row( self.select_button, self.undo_button )
         self.undo_button.on_click( self.reset )
 
+    @exception_handled
     def reset(self, *args, **kwargs ):
         self.selected.reset()
 
+    @exception_handled
     def get_selections( self, addclicks: int, removeclicks: int ):
       if addclicks > self._addclks:
         ic, ccolor = lm().selectedColor( True )
@@ -48,6 +51,7 @@ class RegionSelector:
       print(f" *** Current Selections: {[ centers(s) for s in self.selections ]}")
       return hv.Overlay( self.selections )
 
+    @exception_handled
     def indicate( self, x, y ):
       print( f"indicate: {x} {y}")
       return hv.Points( [(x,y)] ).opts( color="black" )
