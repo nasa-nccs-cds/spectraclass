@@ -7,6 +7,8 @@ from typing import List, Union, Tuple, Optional, Dict
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.gui.control import UserFeedbackManager, ufm
+from spectraclass.gui.spatial.widgets.markers import Marker
+from spectraclass.application.controller import app
 import numpy as np
 from panel.widgets import Button, Select
 
@@ -38,7 +40,8 @@ class RegionSelector(SCSingletonConfigurable):
         self.selected  = hv.DynamicMap( self.get_selections, streams=dict( addclicks=self.select_button.param.clicks, removeclicks=self.undo_button.param.clicks ) )
         self.canvas = self.poly.opts( opts.Polygons(fill_alpha=0.3, active_tools=['poly_draw']))
         self.buttonbox = pn.Row( self.select_button, self.undo_button )
-#        self.undo_button.on_click( self.reset )
+        self.markers: Dict[ hv.Polygons, Marker ] = {}
+        self.undo_button.on_click( self.reset )
 
     @exception_handled
     def reset(self, *args, **kwargs ):
@@ -46,13 +49,18 @@ class RegionSelector(SCSingletonConfigurable):
 
     @exception_handled
     def get_selections( self, addclicks: int, removeclicks: int ):
+      from spectraclass.data.spatial.tile.manager import TileManager, tm
       if addclicks > self._addclks:
         ic, ccolor = lm().selectedColor( True )
         ufm().show( f"Selecting region as class '{lm().selectedLabel}({ic}): color={ccolor}'")
         selection: hv.Polygons = self.poly_stream.element
         print( f"Add poly_stream element: {centers(selection)}-> ic={ic}, color={ccolor}")
+        print( f"PolyData: {selection.data}")
         spoly = hv.Polygons( selection.data ).opts( fill_color=ccolor, line_width=1, alpha=0.3, line_color="black" )
         self.selections.append( spoly )
+        marker = tm().get_region_marker( spoly )
+        self.markers[ spoly ] = marker
+        app().add_marker(marker)
       if removeclicks > self._removeclks:
         removed = self.selections.pop()
         print(f"Remove selected element: {centers(removed)}")

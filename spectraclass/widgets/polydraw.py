@@ -2,6 +2,7 @@ import holoviews as hv
 import panel as pn
 from typing import List, Union, Tuple, Optional, Dict, Callable, Set
 from holoviews import opts, streams
+from spectraclass.gui.spatial.widgets.markers import Marker
 from panel.widgets import Button
 
 class RegionSelector:
@@ -13,8 +14,12 @@ class RegionSelector:
         self.buttonbox = pn.Row( self.select_button )
         self.selection = self.poly.opts(opts.Polygons(fill_alpha=0.3, active_tools=['poly_draw']))
         self.selected = hv.DynamicMap( self.get_selection, streams=dict( clicks=self.select_button.param.clicks ) )
+        self.markers: Dict[ PolyRec, Marker ] = {}
         self.selected_regions = []
 
+
+# self.markers[self.prec] = marker
+# app().add_marker(marker)
 
     # def get_poly_data1(self):
     #     pdata: Dict = self.poly_stream.data

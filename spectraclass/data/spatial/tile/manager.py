@@ -2,6 +2,7 @@ import numpy as np
 import codecs
 import xarray as xa
 import geoviews.tile_sources as gts
+import holoviews as hv
 import shapely.vectorized as svect
 from typing import List, Union, Tuple, Optional, Dict
 from pyproj import Proj
@@ -229,9 +230,12 @@ class TileManager(SCSingletonConfigurable):
         ic = cid if (cid >= 0) else lm().current_cid
         return Marker( "marker", [gid], ic, **kwargs )
 
+
+
+
     @exception_handled
     @log_timing
-    def get_region_marker(self, prec: PolyRec, cid: int = -1 ) -> Optional[Marker]:
+    def get_region_marker(self, prec: hv.Polygons, cid: int = -1 ) -> Optional[Marker]:
         from spectraclass.data.spatial.tile.tile import Block, Tile
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.control import UserFeedbackManager, ufm
@@ -242,9 +246,10 @@ class TileManager(SCSingletonConfigurable):
         raster:  xa.DataArray = block.data[0].squeeze()
         X, Y = raster.x.values, raster.y.values
         try:
+            prec.data
 #            xy = prec.poly.get_xy()
 #            [yi,xi] = block.multi_coords2indices( xy[:,1], xy[:,0] )
-            polygon = Polygon(prec.poly.get_xy())
+            polygon = Polygon( prec.poly.get_xy() )
             MX, MY = np.meshgrid(X, Y)
             PID: np.ndarray = np.array(range(raster.size))
             mask: np.ndarray = svect.contains( polygon, MX, MY ).flatten()
@@ -256,6 +261,35 @@ class TileManager(SCSingletonConfigurable):
         except Exception as err:
             lgm().log( f"Error getting region marker, returning empty marker: {err}")
             ufm().show( str(err), "warning" )
+        return marker
+
+    @exception_handled
+    @log_timing
+    def get_region_marker_legacy(self, prec: PolyRec, cid: int = -1) -> Optional[Marker]:
+        from spectraclass.data.spatial.tile.tile import Block, Tile
+        from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.gui.control import UserFeedbackManager, ufm
+        from shapely.geometry import Polygon
+        marker = None
+        if cid == -1: cid = lm().current_cid
+        block: Block = self.getBlock()
+        raster: xa.DataArray = block.data[0].squeeze()
+        X, Y = raster.x.values, raster.y.values
+        try:
+            #            xy = prec.poly.get_xy()
+            #            [yi,xi] = block.multi_coords2indices( xy[:,1], xy[:,0] )
+            polygon = Polygon(prec.poly.get_xy())
+            MX, MY = np.meshgrid(X, Y)
+            PID: np.ndarray = np.array(range(raster.size))
+            mask: np.ndarray = svect.contains(polygon, MX, MY).flatten()
+            mask_pids = PID[mask]  # idx2pid[ PID[mask] ]
+            pids = mask_pids[mask_pids > -1].tolist()
+            if not self.in_bounds(pids): raise PointsOutOfBoundsException()
+            marker = Marker("label", pids, cid)
+            lgm().log(f"Poly selection-> Create marker[{marker.size}], cid = {cid}")
+        except Exception as err:
+            lgm().log(f"Error getting region marker, returning empty marker: {err}")
+            ufm().show(str(err), "warning")
         return marker
 
     def getTileFileName(self, with_extension = True ) -> str:
