@@ -66,7 +66,7 @@ class RegionSelector(SCSingletonConfigurable):
       return hv.Points( [(x,y)] ).opts( color="black" )
 
     def panel(self):
-        return pn.Column( self.canvas*self.selected, self.buttonbox )
+        return pn.Column( self.canvas, self.buttonbox )   # *self.selected
 
     def get_control_panel(self) -> Panel:
         return self.buttonbox
