@@ -73,7 +73,6 @@ class VariableBrowser:
         self.nIter: int = self.data.shape[0]
         self.player: DiscretePlayer = DiscretePlayer(name='Iteration', options=list(range(self.nIter)), value=self.nIter - 1)
         self.tap_stream = SingleTap( transient=True )
-    #    self.double_tap_stream = DoubleTap( transient=True )
         self.selection_dmap = hv.DynamicMap( self.select_points, streams=[self.tap_stream] )
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream] )
         self.image = hv.DynamicMap(self.get_frame, streams=dict(iteration=self.player.param.value, block_selection=tm().block_selection.param.index))
@@ -81,6 +80,10 @@ class VariableBrowser:
         self.graph_data = xa.DataArray([])
         self.curves: List[hv.Curve] = []
         self.current_curve_data: Tuple[int,hv.Curve] = None
+
+    def update_point_selection(self, activate: bool ):
+        if activate: self.tap_stream.add_subscriber( self.point_graph )
+        else: self.tap_stream.clear()
 
     # def update_yrange( self, new_range: Tuple[float,float] ):
     #     self.yrange[0] = min( self.yrange[0], new_range[0] )

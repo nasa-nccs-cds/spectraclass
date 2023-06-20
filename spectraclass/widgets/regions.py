@@ -32,9 +32,9 @@ class RegionSelector(SCSingletonConfigurable):
         self.select_button: Button = Button( name='Select', button_type='primary')
         self.learn_button: Button = Button( name='Learn', button_type='primary')
         self.undo_button: Button = Button( name='Undo', button_type='warning')
-        self.indicator = streams.SingleTap(transient=True)
+ #       self.indicator = streams.SingleTap(transient=True)
         self.selections = []
-        self.indication = hv.DynamicMap( self.indicate, streams=[self.indicator])
+ #       self.indication = hv.DynamicMap( self.indicate, streams=[self.indicator])
         self.selected  = hv.DynamicMap( self.get_selections, streams=dict( addclicks=self.select_button.param.clicks, removeclicks=self.undo_button.param.clicks ) )
         self.canvas = self.poly.opts( opts.Polygons(fill_alpha=0.3, active_tools=['poly_draw']))
         self.buttonbox = pn.Row( self.select_button, self.undo_button )
@@ -66,7 +66,7 @@ class RegionSelector(SCSingletonConfigurable):
       return hv.Points( [(x,y)] ).opts( color="black" )
 
     def panel(self):
-        return pn.Column( self.canvas, self.buttonbox )   # *self.selected
+        return pn.Column( self.canvas*self.selected, self.buttonbox )
 
     def get_control_panel(self) -> Panel:
         return self.buttonbox

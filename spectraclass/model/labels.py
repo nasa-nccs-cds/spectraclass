@@ -508,12 +508,13 @@ class LabelsManager(SCSingletonConfigurable):
     def setLabels(self, labels: List[Tuple[str, str]], **kwargs):
         unlabeled_color = kwargs.get( 'unlabeled', "white" )
         load_existing = kwargs.get('load',False)
+        selected = kwargs.get('selected',0)
         label_list = [ ('Unlabeled', unlabeled_color ) ] + labels
         for ( label, color ) in labels:
             if color.lower() == unlabeled_color: raise Exception( f"{unlabeled_color} is a reserved color")
         self._colors = [ item[1] for item in label_list ]
         self._labels = [ item[0] for item in label_list ]
-        self.class_selector = pn.widgets.RadioButtonGroup(name='Class Selection', value=self._labels[0], options=self._labels)
+        self.class_selector = pn.widgets.RadioButtonGroup(name='Class Selection', value=self._labels[selected], options=self._labels)
         if load_existing:
             self.loadLabelData( load_existing )
 
