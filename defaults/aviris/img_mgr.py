@@ -1,4 +1,4 @@
-c.ModeDataManager.model_dims = 32
+c.ModeDataManager.nclasses = 32
 c.ModeDataManager.reduce_nepoch = 5
 c.ModeDataManager.reduce_niter = 2
 c.ModeDataManager.reduce_sparsity = 0.0
@@ -42,7 +42,7 @@ c.AvirisDataManager.reduce_method = "aec"
 c.AvirisDataManager.reduce_sparsity = 0.0
 c.AvirisDataManager.subsample_index = 1
 c.AvirisDataManager.valid_aviris_bands = [ [0, 10000], ]
-c.AvirisDataManager.model_dims = 32
+c.AvirisDataManager.nclasses = 32
 c.AvirisDataManager.reduce_nepoch = 3
 c.AvirisDataManager.reduce_niter = 1
 c.AvirisDataManager.refresh_model = False

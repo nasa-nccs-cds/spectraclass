@@ -1,4 +1,4 @@
-c.ModeDataManager.model_dims = 32
+c.ModeDataManager.nclasses = 32
 c.ModeDataManager.reduce_sparsity = 0.0
 c.ModeDataManager.subsample_index = 1
 c.ModeDataManager.class_file = "NONE"

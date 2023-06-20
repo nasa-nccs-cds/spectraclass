@@ -1,4 +1,4 @@
-c.ModeDataManager.model_dims = 32
+c.ModeDataManager.nclasses = 32
 c.ModeDataManager.subsample_index = 1
 c.ModeDataManager.class_file = "NONE"
 c.DataManager.proc_type = "skl"

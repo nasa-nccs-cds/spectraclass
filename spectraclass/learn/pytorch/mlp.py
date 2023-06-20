@@ -24,19 +24,18 @@ class ProcessingStage(Enum):
     Attribution = 3
     Evaluation = 4
 
-class Autoencoder(nn.Module):
+class MLP(nn.Module):
 
-    def __init__(self, input_dims: int, model_dims: int, **kwargs) -> None:
+    def __init__(self, input_dims: int, nclasses: int, **kwargs) -> None:
         super().__init__()
         self.input_dims = input_dims
-        self.model_dims = model_dims
+        self.nclasses = nclasses
         self._layer_outputs: Dict[int, List[np.ndarray]] = {}
         self._layer_weights: Dict[int, List[np.ndarray]] = {}
         self._activation = kwargs.get('activation', 'lru')
         self._actparm = kwargs.get( 'actparm', 0.01 )
         self._stage = ProcessingStage.PreTrain
-        self._decoder: nn.Sequential = None
-        self._encoder: nn.Sequential = None
+        self._network: nn.Sequential = None
         self._l1_strength: np.ndarray = None
         self._l2_strength: np.ndarray = None
         self.init_bias = kwargs.get('init_bias', 0.01 )
@@ -45,20 +44,6 @@ class Autoencoder(nn.Module):
         self._L0 = 0.0
         self._iteration = 0
         self._log_step = kwargs.get( 'log_step', 2 )
-
-    @property
-    def output_dim(self):
-        return self._n_species
-
-    def encoder(self, input: Tensor ) -> Tensor:
-        if self._encoder is None:
-            self.build_ae_model()
-        return self._encoder( input )
-
-    def decoder(self, input: Tensor) ->  Tensor:
-        if self._decoder is None:
-            self.build_ae_model()
-        return self._decoder( input )
 
     def weights_init_uniform_rule(self, m: nn.Module):
         classname = m.__class__.__name__
@@ -76,41 +61,23 @@ class Autoencoder(nn.Module):
  #           torch.nn.init.uniform_(m.bias, -self.init_bias, self.init_bias)
 
     @exception_handled
-    def build_ae_model(self, **kwargs):
-        lgm().log(f"#AEC: RM BUILD AEC NETWORK: {self.input_dims} -> {self.model_dims}")
-        reduction_factor = 2
-#        dargs = dict( kernel_initializer=tf.keras.initializers.RandomNormal(stddev=winit), bias_initializer=tf.keras.initializers.Zeros() )
+    def build_model(self, layer_sizes, **kwargs):
+        lgm().log(f"#MPL: BUILD NETWORK: {self.input_dims} -> {self.nclasses}")
         in_features, iLayer = self.input_dims, 0
-        encoder_modules = OrderedDict()
-        while in_features > self.model_dims:
-            out_features = max( int(round(in_features / reduction_factor)), self.model_dims )
-            linear = nn.Linear(in_features=in_features, out_features=out_features, bias=True)
-            activation = None if (out_features == self.model_dims) else self._activation
-            self._add_layer( encoder_modules, iLayer, linear, activation )
-            in_features, iLayer = out_features, iLayer + 1
-        self._encoder = nn.Sequential(encoder_modules)
-        decoder_modules = OrderedDict()
-        while in_features < self.input_dims:
-            out_features = min( in_features * reduction_factor, self.input_dims )
-            linear = nn.Linear( in_features=in_features, out_features=out_features, bias=True )
-            activation = None if (out_features==self.input_dims) else self._activation
-            self._add_layer( decoder_modules, iLayer, linear, activation )
-            in_features, iLayer = out_features, iLayer + 1
-        self._decoder = nn.Sequential(decoder_modules)
+        self._network = nn.Sequential()
+        for iL, layer_size in enumerate(layer_sizes):
+            linear = nn.Linear(in_features=in_features, out_features=layer_size, bias=True)
+            linear.register_forward_hook(partial(self.layer_forward_hook, iL))
+            linear.register_forward_pre_hook(partial(self.layer_forward_pre_hook, iL))
+            self._network.append( linear )
+            self._network.append( self._activation )
+            in_features, iLayer = layer_size, iLayer + 1
+        linear = nn.Linear(in_features=in_features, out_features=self.nclasses, bias=True)
+        self._network.append( linear )
         self.init_weights()
 
     def init_weights(self):
-        self._encoder.apply(self.weights_init_uniform_rule)
-        self._decoder.apply(self.weights_init_uniform_rule)
-
-    def _add_layer(self, modules: OrderedDict, ilayer: int, layer: nn.Linear, activation: str):
-        modules[f"layer-{ilayer}"] = layer
-        print(f" * Add linear layer[{ilayer}]: {layer.in_features}->{layer.out_features}")
-        if activation != "linear":
-            print(f"   ---> Add activation: {activation}")
-            modules[f"activation-{ilayer}"] = self._get_activation_function(activation)
-        layer.register_forward_hook(partial(self.layer_forward_hook, ilayer))
-        layer.register_forward_pre_hook(partial(self.layer_forward_pre_hook, ilayer))
+        self._network.apply(self.weights_init_uniform_rule)
 
     def layer_forward_hook(self, iLayer: int, module: nn.Linear, inputs: Tuple[Tensor], output: Tensor):
         if (self._stage == ProcessingStage.Training) and ( self._iteration % self._log_step == 0 ):
@@ -132,23 +99,20 @@ class Autoencoder(nn.Module):
         return np.stack(self._layer_outputs[iLayer], axis=1)
 
     @property
-    def feature_layer_index(self):
+    def class_layer_index(self):
         return len(self._layer_outputs) - 2
 
     @property
     def top_layer_index(self):
         return len(self._layer_outputs) - 1
 
-    def get_features(self, thresholded: bool = True) -> List[np.array]:
-        features: List[np.array] = self._layer_outputs[self.feature_layer_index]
+    def get_classes(self, thresholded: bool = True) -> List[np.array]:
+        classes: List[np.array] = self._layer_outputs[self.feature_layer_index]
         act = self._get_activation_function()
-        if thresholded: features = [act(torch.from_numpy(f)).detach().numpy() for f in features]
-        return features
+        if thresholded: classes = [act(torch.from_numpy(f)).detach().numpy() for f in classes]
+        return classes
 
-    def get_feature_weights(self) -> np.array:
-        return self.get_layer_weights(self.feature_layer_index)
-
-    def get_top_weights(self) -> np.array:
+    def get_class_weights(self) -> np.array:
         return self.get_layer_weights(self.top_layer_index)
 
     def _get_activation_function(self, activation: str = None) -> nn.Module:
@@ -178,31 +142,16 @@ class Autoencoder(nn.Module):
 
     def predict(self, data: xa.DataArray) -> xa.DataArray:
         input: Tensor = torch.from_numpy(data.values)
-        result: np.ndarray = self.forward(input).detach()
-        return xa.DataArray(result, dims=['samples', 'y'],
-                            coords=dict(samples=data.coords['samples'], y=range(result.shape[1])), attrs=data.attrs)
-
-    @exception_handled
-    def encode(self, data: np.ndarray, **kwargs) -> Union[np.ndarray,Tensor]:
-        detach = kwargs.get('detach',False)
-        input: Tensor = torch.from_numpy(data)
-        result: Tensor = self.encoder(input)
-        return result.detach().numpy() if detach else result
-
-    @exception_handled
-    def decode(self, data: Union[np.ndarray,Tensor]) -> np.ndarray:
-        input: Tensor = torch.from_numpy(data) if (type(data) == np.ndarray) else data
-        result: Tensor = self.decoder(input)
-        return result.detach().numpy()
+        result: np.ndarray = self.forward(input).detach().numpy()
+        return xa.DataArray(result, dims=['samples', 'y'], coords=dict(samples=data.coords['samples'], y=range(result.shape[1])), attrs=data.attrs)
 
     def forward(self, x: Tensor) -> Tensor:
-        encoded: Tensor = self.encoder(x)
-        result = self.decoder(encoded)
+        result: Tensor = self.network(x)
         return result
 
     @property
     def network_type(self) -> str:
-        return f"{self.input_dims}-{self.model_dims}"
+        return f"{self.input_dims}-{self.nclasses}"
 
     @property
     def results_dir(self):
@@ -213,41 +162,34 @@ class Autoencoder(nn.Module):
         models_dir = f"{self.results_dir}/models"
         os.makedirs(models_dir, exist_ok=True)
         try:
-            model_path = f"{models_dir}/{name}.encoder.{self.network_type}.pth"
-            torch.save(self._encoder.state_dict(), model_path )
-            print(f"Saved encoder to file '{model_path}'" )
-            model_path = f"{models_dir}/{name}.decoder.{self.network_type}.pth"
-            torch.save(self._decoder.state_dict(), model_path)
-            print(f"Saved decoder to file '{model_path}'")
+            model_path = f"{models_dir}/{name}.{self.network_type}.pth"
+            torch.save(self._network.state_dict(), model_path)
+            print(f"Saved network to file '{model_path}'" )
         except Exception as err:
             print(f"Error saving model {name}: {err}")
 
-    def network( self, type: str ) -> nn.Sequential:
-        if self._encoder is None:
-            self.build_ae_model()
-        if type == "encoder":   return self._encoder
-        elif type == "decoder": return self._decoder
-        else: raise Exception( f"Unlnown nnet type: {type}")
+    @property
+    def network( self ) -> nn.Sequential:
+        if self._network is None:
+            self.build_model()
+        return self._network
 
-    def load_weights(self, type: str, filepath: str ):
+    def load_weights(self, filepath: str ):
         weights = torch.load(filepath)
-        self.network(type).load_state_dict(weights)
-        print(f"Loaded {type} weights from file '{filepath}'")
+        self.network().load_state_dict(weights)
+        print(f"Loaded weights from file '{filepath}'")
 
     def load(self, name: str, **kwargs) -> bool:
         models_dir = f"{self.results_dir}/models"
         os.makedirs(models_dir, exist_ok=True)
-        mpaths = []
         try:
-            for mtype in [ "encoder", "decoder" ]:
-                model_path = f"{models_dir}/{name}.{mtype}.{self.network_type}.pth"
-                mpaths.append( model_path )
-                self.load_weights( mtype, model_path )
+            model_path = f"{models_dir}/{name}.{self.network_type}.pth"
+            self.load_weights( model_path )
         except Exception as err:
-            lgm().log(f"Error loading model {name} ({mpaths[-1]}):\n  ---> {err}")
+            lgm().log(f"Error loading model {name} (model_path):\n  ---> {err}")
             return False
         self.eval()
-        lgm().log(f"Loaded MODEL {name}: {mpaths}")
+        lgm().log(f"Loaded MODEL {name}: {model_path}")
         return True
 
     def get_learning_metrics(self):
