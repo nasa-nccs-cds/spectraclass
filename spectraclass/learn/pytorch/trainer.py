@@ -1,6 +1,7 @@
 from typing import List, Union, Tuple, Optional, Dict, Type, Callable
 import torch, time
 import traitlets as tl
+from spectraclass.gui.control import ufm
 from statistics import mean
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
@@ -73,6 +74,15 @@ class ModelTrainer(SCSingletonConfigurable):
         self.loss = torch.nn.MSELoss( **kwargs )
         self._progress = None
 
+    def learn_classification(self, **kwargs):
+        training_data, training_labels, sample_weight, test_mask = self.get_training_set(**kwargs)
+        t1 = time.time()
+        if np.count_nonzero(training_labels > 0) == 0:
+            ufm().show("Must label some points before learning the classification")
+            return None
+        self.fit(training_data, training_labels, sample_weight=sample_weight, **kwargs)
+        lgm().log(f"Completed learning in {time.time() - t1} sec.")
+
     @property
     def progress(self) -> ProgressPanel:
         if self._progress is None:
@@ -99,6 +109,25 @@ class ModelTrainer(SCSingletonConfigurable):
 
     def abort_callback(self, event ):
         self._abort = True
+
+
+    def get_training_set(self, **kwargs ) -> Tuple[np.ndarray,np.ndarray]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.model.labels import LabelsManager, Action, lm
+        input_data: xa.DataArray = None
+        label_data = lm().getTrainingLabels()
+        training_data, training_labels = None, None
+        for ( (tindex, block_coords, cid), gids ) in label_data.items():
+            block = tm().getBlock( tindex=tindex, block_coords=block_coords )
+            input_data = block.model_data
+            training_mask: np.ndarray = np.isin( input_data.samples.values, gids )
+            tdata: np.ndarray = input_data.values[ training_mask ]
+            tlabels: np.ndarray = np.full([gids.size], cid)
+            lgm().log( f"Adding training data: tindex={tindex} bindex={block_coords} cid={cid} #gids={gids.size} data.shape={tdata.shape} labels.shape={tlabels.shape} mask.shape={training_mask.shape}")
+            training_data   = tdata   if (training_data   is None) else np.append( training_data,   tdata,   axis=0 )
+            training_labels = tlabels if (training_labels is None) else np.append( training_labels, tlabels, axis=0 )
+        lgm().log(f"SHAPES--> training_data: {training_data.shape}, training_labels: {training_labels.shape}" )
+        return ( training_data, training_labels )
 
     def get_optimizer(self):
         oid = self.optimizer_type
@@ -128,10 +157,10 @@ class ModelTrainer(SCSingletonConfigurable):
         W: np.ndarray = self.model.get_layer_weights(iL - 1)
         print( f" L[{iL}]: Oms{O.shape}=[{abs(O).mean():.4f}, {O.std():.4f}], Wms{W.shape}=[{abs(W).mean():.4f}, {W.std():.4f}]", **kwargs )
 
-    def training_step(self, epoch: int, x: Tensor, **kwargs) -> Tuple[float,Tensor,Tensor]:
+    def training_epoch(self, epoch: int, x: Tensor, y: Tensor, **kwargs) -> Tuple[float,Tensor,Tensor]:
         verbose = kwargs.get( 'verbose', False )
         y_hat: Tensor = self.model.forward(x)
-        loss: Tensor = self.loss(y_hat, x)
+        loss: Tensor = self.loss(y_hat, y)
         lval: float = float(loss)
         if verbose: print(f"Epoch[{epoch}/{self.nepoch}]: device={self.device}, loss={lval} ",end=" ")
 
@@ -153,8 +182,9 @@ class ModelTrainer(SCSingletonConfigurable):
         if not self.load(**kwargs):
             self.model.train()
             t0, initial_epoch = time.time(), 0
+            (train_data, labels_data) = self.get_training_set(**kwargs)
             for iter in range(self.niter):
-                initial_epoch = self.general_training(iter, initial_epoch, **kwargs )
+                initial_epoch = self.training_iteration(iter, initial_epoch, train_data, labels_data, **kwargs)
             lgm().log( f"Trained autoencoder in {(time.time()-t0)/60:.3f} min", print=True )
             self.save(**kwargs)
 
@@ -165,44 +195,32 @@ class ModelTrainer(SCSingletonConfigurable):
         xreproduction = data.copy( data=reproduction )
         return xreduced, xreproduction
 
-    def general_training(self, iter: int, initial_epoch: int, **kwargs ):
+    def training_iteration(self, iter: int, initial_epoch: int, train_data: np.ndarray, labels_data: np.ndarray, **kwargs):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.data.spatial.tile.tile import Block, Tile
         num_reduce_images = min( dm().modal.num_images, self.reduce_nimages )
         losses, tloss = [], 0.0
         y_hat: Tensor = None
-        for image_index in range( num_reduce_images ):
-            dm().modal.set_current_image(image_index)
-            blocks: List[Block] = tm().tile.getBlocks()
-            num_training_blocks = min( self.reduce_nblocks, len(blocks) )
-            lgm().log(f"Autoencoder general training: {num_training_blocks} blocks for image[{image_index}/{num_reduce_images}]: {dm().modal.image_name}")
-            lgm().log(f" NBLOCKS = {self.reduce_nblocks}/{len(blocks)}, block shape = {blocks[0].shape}")
-            for iB, block in enumerate(blocks):
-                if iB < self.reduce_nblocks:
-                    norm_point_data, grid = block.getPointData( norm=True )
-                    if norm_point_data.shape[0] > 0:
-                        input_tensor: Tensor = torch.from_numpy(norm_point_data.values)
-                        x = input_tensor.to(self.device)
-                        final_epoch = initial_epoch + self.nepoch
-                        for epoch  in range( initial_epoch, final_epoch ):
-                            tloss, x, y_hat = self.training_step( epoch, x )
-                            losses.append( tloss )
-                        lgm().log( f" ** ITER[{iter}]: Processed block{block.block_coords}, norm data shape = {norm_point_data.shape}, losses = {losses[-self.nepoch:]}")
-                        initial_epoch = final_epoch
-                        if self.focus_nepoch > 0:
-                            final_epoch = initial_epoch + self.focus_nepoch
-                            for epoch  in range( initial_epoch, final_epoch ):
-                                tloss, x, y_hat = self.focused_training_step( x, y_hat )
-                                losses.append( tloss )
-                            lgm().log( f" ** ITER[{iter}]: Focus-processed block{block.block_coords}, norm data shape = {norm_point_data.shape}, losses = {losses[-self.focus_nepoch:]}")
-                            initial_epoch = final_epoch
-                    block.initialize()
+        [x, y] = [torch.from_numpy(tdata).to(self.device) for tdata in [train_data,labels_data]]
+        final_epoch = initial_epoch + self.nepoch
+        for epoch  in range( initial_epoch, final_epoch ):
+            tloss, x, y_hat = self.training_epoch(epoch, x, y)
+            losses.append( tloss )
+        lgm().log( f" ** ITER[{iter}]: norm data shape = {train_data.shape}, losses = {losses[-self.nepoch:]}")
+        initial_epoch = final_epoch
+        if self.focus_nepoch > 0:
+            final_epoch = initial_epoch + self.focus_nepoch
+            for epoch  in range( initial_epoch, final_epoch ):
+                tloss, x, y_hat = self.focused_training_epoch(x, y_hat)
+                losses.append( tloss )
+            lgm().log( f" ** ITER[{iter}]: Focus-processing losses = {losses[-self.focus_nepoch:]}")
+            initial_epoch = final_epoch
         loss_msg = f"loss[{iter}/{self.niter}]: {mean(losses):>7f}"
         lgm().log( loss_msg, print=True )
         self.progress.update( iter, loss_msg )
         return initial_epoch
 
-    def focused_training_step(self, train_input: Tensor, y_hat: Tensor ) -> Tuple[float,Tensor,Tensor]:
+    def focused_training_epoch(self, train_input: Tensor, y_hat: Tensor) -> Tuple[float,Tensor,Tensor]:
         x = self.get_focused_traindata( train_input, y_hat )
         y_hat: Tensor = self.model.forward(x)
         loss: Tensor = self.loss(y_hat, x)
@@ -276,14 +294,6 @@ class ModelTrainer(SCSingletonConfigurable):
         raster = kwargs.get( 'raster', "False")
         raw_result: xa.DataArray = self.model.predict( data )
         return block.points2raster( raw_result ) if raster else raw_result
-
-    def encode(self, data: xa.DataArray, **kwargs) -> xa.DataArray:
-        block: Block = tm().getBlock()
-        raster = kwargs.get( 'raster', "False")
-        raw_result: np.ndarray = self.model.encode( data.values )
-        xresult = xa.DataArray(raw_result, dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(raw_result.shape[1])), attrs=data.attrs)
-        return block.points2raster( xresult ) if raster else raw_result
-
 
     def event(self, source: str, event ):
         print( f"Processing event[{source}]: {event}")

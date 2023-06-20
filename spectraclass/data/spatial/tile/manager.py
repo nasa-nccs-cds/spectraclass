@@ -219,7 +219,6 @@ class TileManager(SCSingletonConfigurable):
             lgm().log( f"Can't apply mask for class {self.mask_class} because it has not yet been generated. Mask file: {mask_file}" )
         return mask.values if (mask is not None) else None
 
-
     def get_marker(self, lon: float, lat: float, cid: int =-1, **kwargs ) -> Marker:
         from spectraclass.model.labels import LabelsManager, lm
         block = self.getBlock()
@@ -229,9 +228,6 @@ class TileManager(SCSingletonConfigurable):
         assert gid >= 0, f"Marker selection error, no points for coord[{ix},{iy}]: {[x,y]}"
         ic = cid if (cid >= 0) else lm().current_cid
         return Marker( "marker", [gid], ic, **kwargs )
-
-
-
 
     @exception_handled
     @log_timing
@@ -246,10 +242,9 @@ class TileManager(SCSingletonConfigurable):
         raster:  xa.DataArray = block.data[0].squeeze()
         X, Y = raster.x.values, raster.y.values
         try:
-            prec.data
-#            xy = prec.poly.get_xy()
-#            [yi,xi] = block.multi_coords2indices( xy[:,1], xy[:,0] )
-            polygon = Polygon( prec.poly.get_xy() )
+            lgm().log(f"Poly selection-> Polygons data: {prec.data}")
+            pdata = np.concatenate( [ prec.data['x'], prec.data['y'] ], axis=1 )
+            polygon = Polygon( pdata )
             MX, MY = np.meshgrid(X, Y)
             PID: np.ndarray = np.array(range(raster.size))
             mask: np.ndarray = svect.contains( polygon, MX, MY ).flatten()
