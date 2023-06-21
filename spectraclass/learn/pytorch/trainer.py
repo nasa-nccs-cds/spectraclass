@@ -2,13 +2,15 @@ from typing import List, Union, Tuple, Optional, Dict, Type, Callable
 import torch, time
 import traitlets as tl
 from spectraclass.gui.control import ufm
+from torch.nn.functional import one_hot
 from statistics import mean
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.data.base import DataManager, dm
-from torch import Tensor
+from torch.nn import CrossEntropyLoss
+from torch import Tensor, argmax
 import xarray as xa, numpy as np
 from .mlp import MLP
 import holoviews as hv, panel as pn
@@ -47,7 +49,7 @@ class ProgressPanel:
 
 class ModelTrainer(SCSingletonConfigurable):
     optimizer_type = tl.Unicode(default_value="adam").tag(config=True, sync=True)
-    learning_rate = tl.Float(0.0001).tag(config=True, sync=True)
+    learning_rate = tl.Float(0.01).tag(config=True, sync=True)
     loss_threshold = tl.Float(1e-6).tag(config=True, sync=True)
     init_wts_mag = tl.Float(0.1).tag(config=True, sync=True)
     init_bias_mag = tl.Float(0.1).tag(config=True, sync=True)
@@ -72,7 +74,7 @@ class ModelTrainer(SCSingletonConfigurable):
         self._model: MLP = None
         self._abort = False
         self._optimizer = None
-        self.loss = torch.nn.MSELoss( **kwargs )
+        self.loss = CrossEntropyLoss( **kwargs )
         self._progress = None
 
     def set_network_size(self, layer_sizes: List[int], nclasses: int):
@@ -153,7 +155,8 @@ class ModelTrainer(SCSingletonConfigurable):
     def training_epoch(self, epoch: int, x: Tensor, y: Tensor, **kwargs) -> Tuple[float,Tensor,Tensor]:
         verbose = kwargs.get( 'verbose', False )
         y_hat: Tensor = self.model.forward(x)
-        loss: Tensor = self.loss(y_hat, y)
+ #       y1: Tensor = one_hot( y, y_hat.shape[1] )
+        loss: Tensor = self.loss( y_hat, y )
         lval: float = float(loss)
         if verbose: print(f"Epoch[{epoch}/{self.nepoch}]: device={self.device}, loss={lval} ",end=" ")
 
