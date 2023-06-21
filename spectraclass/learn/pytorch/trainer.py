@@ -114,7 +114,6 @@ class ModelTrainer(SCSingletonConfigurable):
     def get_training_set(self, **kwargs ) -> Tuple[np.ndarray,np.ndarray]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.model.labels import LabelsManager, Action, lm
-        input_data: xa.DataArray = None
         label_data = lm().getTrainingLabels()
         training_data, training_labels = None, None
         for ( (tindex, block_coords, cid), gids ) in label_data.items():
@@ -196,40 +195,18 @@ class ModelTrainer(SCSingletonConfigurable):
         return xreduced, xreproduction
 
     def training_iteration(self, iter: int, initial_epoch: int, train_data: np.ndarray, labels_data: np.ndarray, **kwargs):
-        from spectraclass.data.base import DataManager, dm
-        from spectraclass.data.spatial.tile.tile import Block, Tile
-        num_reduce_images = min( dm().modal.num_images, self.reduce_nimages )
         losses, tloss = [], 0.0
-        y_hat: Tensor = None
         [x, y] = [torch.from_numpy(tdata).to(self.device) for tdata in [train_data,labels_data]]
         final_epoch = initial_epoch + self.nepoch
         for epoch  in range( initial_epoch, final_epoch ):
             tloss, x, y_hat = self.training_epoch(epoch, x, y)
             losses.append( tloss )
         lgm().log( f" ** ITER[{iter}]: norm data shape = {train_data.shape}, losses = {losses[-self.nepoch:]}")
-        initial_epoch = final_epoch
-        if self.focus_nepoch > 0:
-            final_epoch = initial_epoch + self.focus_nepoch
-            for epoch  in range( initial_epoch, final_epoch ):
-                tloss, x, y_hat = self.focused_training_epoch(x, y_hat)
-                losses.append( tloss )
-            lgm().log( f" ** ITER[{iter}]: Focus-processing losses = {losses[-self.focus_nepoch:]}")
-            initial_epoch = final_epoch
         loss_msg = f"loss[{iter}/{self.niter}]: {mean(losses):>7f}"
         lgm().log( loss_msg, print=True )
         self.progress.update( iter, loss_msg )
-        return initial_epoch
+        return final_epoch
 
-    def focused_training_epoch(self, train_input: Tensor, y_hat: Tensor) -> Tuple[float,Tensor,Tensor]:
-        x = self.get_focused_traindata( train_input, y_hat )
-        y_hat: Tensor = self.model.forward(x)
-        loss: Tensor = self.loss(y_hat, x)
-        lval: float = float(loss)
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-        self.previous_loss = lval
-        return lval, x, y_hat
     #
     #     from spectraclass.data.base import DataManager, dm
     #     from spectraclass.data.spatial.tile.tile import Block, Tile
