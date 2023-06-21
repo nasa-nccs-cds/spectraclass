@@ -26,10 +26,11 @@ class ProcessingStage(Enum):
 
 class MLP(nn.Module):
 
-    def __init__(self, input_dims: int, nclasses: int, **kwargs) -> None:
+    def __init__(self, input_dims: int, nclasses: int, layer_sizes: List[int], **kwargs) -> None:
         super().__init__()
         self.input_dims = input_dims
         self.nclasses = nclasses
+        self._layer_sizes = layer_sizes
         self._layer_outputs: Dict[int, List[np.ndarray]] = {}
         self._layer_weights: Dict[int, List[np.ndarray]] = {}
         self._activation = kwargs.get('activation', 'lru')
@@ -61,11 +62,11 @@ class MLP(nn.Module):
  #           torch.nn.init.uniform_(m.bias, -self.init_bias, self.init_bias)
 
     @exception_handled
-    def build_model(self, layer_sizes, **kwargs):
+    def build_model(self):
         lgm().log(f"#MPL: BUILD NETWORK: {self.input_dims} -> {self.nclasses}")
         in_features, iLayer = self.input_dims, 0
         self._network = nn.Sequential()
-        for iL, layer_size in enumerate(layer_sizes):
+        for iL, layer_size in enumerate(self._layer_sizes):
             linear = nn.Linear(in_features=in_features, out_features=layer_size, bias=True)
             linear.register_forward_hook(partial(self.layer_forward_hook, iL))
             linear.register_forward_pre_hook(partial(self.layer_forward_pre_hook, iL))

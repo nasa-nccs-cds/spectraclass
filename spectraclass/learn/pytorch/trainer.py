@@ -66,7 +66,8 @@ class ModelTrainer(SCSingletonConfigurable):
     def __init__(self, **kwargs ):
         super(ModelTrainer, self).__init__()
         self.device = kwargs.get('device','cpu')
-        self.nfeatures = kwargs.get('nfeatures',3)
+        self.layer_sizes = [64,32]
+        self.nclasses = 5
         self.previous_loss: float = 1e10
         self._model: MLP = None
         self._abort = False
@@ -74,14 +75,9 @@ class ModelTrainer(SCSingletonConfigurable):
         self.loss = torch.nn.MSELoss( **kwargs )
         self._progress = None
 
-    def learn_classification(self, **kwargs):
-        training_data, training_labels, sample_weight, test_mask = self.get_training_set(**kwargs)
-        t1 = time.time()
-        if np.count_nonzero(training_labels > 0) == 0:
-            ufm().show("Must label some points before learning the classification")
-            return None
-        self.fit(training_data, training_labels, sample_weight=sample_weight, **kwargs)
-        lgm().log(f"Completed learning in {time.time() - t1} sec.")
+    def set_network_size(self, layer_sizes: List[int], nclasses: int):
+        self.layer_sizes = layer_sizes
+        self.nclasses = nclasses
 
     @property
     def progress(self) -> ProgressPanel:
@@ -98,10 +94,8 @@ class ModelTrainer(SCSingletonConfigurable):
     @property
     def model(self):
         if self._model is None:
-            block: Block = tm().getBlock()
-            point_data, grid = block.getPointData()
             opts = dict ( wmag=self.init_wts_mag, init_bias=self.init_bias_mag, log_step=self.log_step )
-            self._model = MLP( point_data.shape[1], self.nfeatures, **opts ).to(self.device)
+            self._model = MLP( self.model_dims, self.nclasses, self.layer_sizes, **opts ).to(self.device)
         return self._model
 
     def panel(self)-> pn.Row:

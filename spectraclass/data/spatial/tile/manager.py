@@ -229,21 +229,29 @@ class TileManager(SCSingletonConfigurable):
         ic = cid if (cid >= 0) else lm().current_cid
         return Marker( "marker", [gid], ic, **kwargs )
 
+    def relative_to_absolute(self, polydata: Dict[str,np.ndarray] ) -> Dict[str,np.ndarray]:
+        [x0,x1,y0,y1] = self.getBlock().extent
+        dx, dy = x1-x0, y1-y0
+        xc, yc = polydata['x'], polydata['y'],
+        return dict( x = x0 + xc*dx, y = y0 + yc*dy )
+
     @exception_handled
     @log_timing
-    def get_region_marker(self, prec: hv.Polygons, cid: int = -1 ) -> Optional[Marker]:
+    def get_region_marker(self, polydata: Dict[str,np.ndarray], cid: int = -1, **kwargs ) -> Optional[Marker]:
         from spectraclass.data.spatial.tile.tile import Block, Tile
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.gui.control import UserFeedbackManager, ufm
         from shapely.geometry import Polygon
+        relative = kwargs.get( 'relative', False )
         marker = None
         if cid == -1: cid = lm().current_cid
         block: Block = self.getBlock()
         raster:  xa.DataArray = block.data[0].squeeze()
         X, Y = raster.x.values, raster.y.values
+        if relative: polydata = self.relative_to_absolute( polydata )
         try:
-            lgm().log(f"Poly selection-> Polygons data: {prec.data}")
-            pdata = np.concatenate( [ prec.data['x'], prec.data['y'] ], axis=1 )
+            pdata = np.stack( [ polydata['x'], polydata['y'] ], axis=-1 )
+            lgm().log(f"Poly selection-> Polygons data: {polydata}, stacked data shape: {pdata.shape}")
             polygon = Polygon( pdata )
             MX, MY = np.meshgrid(X, Y)
             PID: np.ndarray = np.array(range(raster.size))
@@ -254,7 +262,7 @@ class TileManager(SCSingletonConfigurable):
             marker = Marker( "label", pids, cid )
             lgm().log( f"Poly selection-> Create marker[{marker.size}], cid = {cid}")
         except Exception as err:
-            lgm().log( f"Error getting region marker, returning empty marker: {err}")
+            lgm().exception( f"Error getting region marker, returning empty marker: {err}")
             ufm().show( str(err), "warning" )
         return marker
 

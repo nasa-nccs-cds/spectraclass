@@ -58,9 +58,9 @@ class RegionSelector(SCSingletonConfigurable):
         print( f"PolyData: {selection.data}")
         spoly = hv.Polygons( selection.data ).opts( fill_color=ccolor, line_width=1, alpha=0.3, line_color="black" )
         self.selections.append( spoly )
-        marker = tm().get_region_marker( spoly )
+        marker = tm().get_region_marker( spoly.data[0] )
         self.markers[ spoly ] = marker
-        app().add_marker(marker)
+#        app().add_marker(marker)
       if removeclicks > self._removeclks:
         removed = self.selections.pop()
         print(f"Remove selected element: {centers(removed)}")

@@ -21,6 +21,7 @@ import xarray as xa, numpy as np
 import os, glob
 from enum import Enum
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
+from spectraclass.gui.spatial.widgets.markers import Marker
 
 class DatasetType(Enum):
     PRODUCT = 1
@@ -151,7 +152,7 @@ class VariableBrowser:
             self._block_selection = block_selection
 
     @exception_handled
-    def get_frame(self, iteration: int, block_selection: int ):
+    def get_frame(self, iteration: int, block_selection: int ) -> hv.Image:
         ts = time.time()
         if block_selection >= 0:
             lgm().log( f"VB: {self.cname}-> get_frame: iteration={iteration} block_selection={block_selection} ")
@@ -160,8 +161,8 @@ class VariableBrowser:
         xlim, ylim = bounds( fdata )
         iopts = dict(width=self.width, height=self.height, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, xlim=xlim, ylim=ylim )
         t2 = time.time()
-        result = fdata.hvplot.image( **iopts )
-        lgm().log(f"VB: result: {result}")
+        result: hv.Image = fdata.hvplot.image( **iopts )
+        lgm().log(f"VB: iteration={iteration}, block={block_selection}, data shape={fdata.shape}, result: {result}")
         tf = time.time()
         lgm().log( f"TT: get_frame dt={tf-ts} t2={t2-ts}")
         return result
@@ -213,16 +214,30 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         self.tab_watcher = self.mapviews.param.watch(self.on_tab_change, ['active'], onlychanged=True)
         return self
 
+    def learning_test( self, rpolys: List[Dict[str,Union[np.ndarray,int]]], **kwargs ):
+        from spectraclass.learn.pytorch.trainer import mt
+        self.add_test_markers( rpolys, **kwargs )
+        mt().train()
+
+    def add_test_markers(self, rpolys: List[Dict[str,Union[np.ndarray,int]]], **kwargs ) -> List[Marker]:
+        markers = []
+        for rpoly in rpolys:
+            marker = tm().get_region_marker( rpoly, rpoly['ic'], **kwargs )
+            markers.append( marker )
+            lm().addMarker(marker)
+        return markers
+
     @exception_handled
     def on_tab_change(self, *events):
         for event in events:
-            new_panel = self.mapviews.objects[ event.new ]
-            old_panel = self.mapviews.objects[ event.old ]
-            if hasattr( new_panel, 'objects' ) and hasattr( old_panel, 'objects' ):
-                new_slider: DiscretePlayer = new_panel.objects[2]
-                old_slider: DiscretePlayer = old_panel.objects[2]
-                if len(new_slider.values) == len(old_slider.values):
-                    new_slider.value.apply.opts( value=old_slider.value )
+            lgm().log(f"on_tab_change: {event.old} -> {event.new}" )
+ #           new_panel = self.mapviews.objects[ event.new ]
+ #           old_panel = self.mapviews.objects[ event.old ]
+            # if hasattr( new_panel, 'objects' ) and hasattr( old_panel, 'objects' ):
+            #     new_slider: DiscretePlayer = new_panel.objects[2]
+            #     old_slider: DiscretePlayer = old_panel.objects[2]
+            #     if len(new_slider.values) == len(old_slider.values):
+            #         new_slider.value.apply.opts( value=old_slider.value )
 
     def get_data( self, cname: str, **kwargs ) -> xa.DataArray:
         block: Block = tm().getBlock( **kwargs )
@@ -231,22 +246,24 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         if cname=="features":     return dm().getModelData(block=block, raster=True, norm=True)
         if cname=="reproduction": return block.getReproduction(raster=True)
 
+    @exception_handled
     def get_control_panel(self) -> Panel:
         from spectraclass.learn.cluster.manager import clm
-        from spectraclass.gui.pointcloud import PointCloudManager, pcm
+#        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         data_selection_panel = pn.Tabs(  ("Tile",dm().modal.gui()) ) # , ("Block",dm().modal.gui()) ] )
-        manifold_panel = pn.Row( pcm().gui() )
+ #       manifold_panel = pn.Row( pcm().gui() )
         analytics_gui = pn.Tabs( ("Cluster", clm().gui()), ("Classify", rs().get_control_panel() ) )
-        controls = pn.Accordion( ('Data Selection', data_selection_panel ), ('Analytics',analytics_gui), ('Manifold', manifold_panel ), toggle=True, active=[0] )
+#        controls = pn.Accordion( ('Data Selection', data_selection_panel ), ('Analytics',analytics_gui), ('Manifold', manifold_panel ), toggle=True, active=[0] )
+        controls = pn.Accordion( ('Data Selection', data_selection_panel ), ('Analytics',analytics_gui), toggle=True, active=[0] )
         return pn.Column( self.alert, controls )
 
     @exception_handled
     def panel(self, title: str = None, **kwargs ) -> Panel:
+        reduced = kwargs.get( 'reduced', False )
         rows = [ self.mapviews ]
         if title is not None: rows.insert( 0, title )
         image_column = pn.Column( *rows )
-        result =  pn.Row(  image_column, self.get_control_panel() )
-        return result
+        return image_column if reduced else pn.Row(  image_column, self.get_control_panel() )
 
 #
 # class VariableBrowser1:
