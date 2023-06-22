@@ -159,7 +159,7 @@ class VariableBrowser:
             self.update_block( block_selection )
         fdata: xa.DataArray = self.data[iteration]
         xlim, ylim = bounds( fdata )
-        iopts = dict(width=self.width, height=self.height, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, xlim=xlim, ylim=ylim )
+        iopts = dict(width=self.width, height=self.height, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False ) #, xlim=xlim, ylim=ylim )
         t2 = time.time()
         result: hv.Image = fdata.hvplot.image( **iopts )
         lgm().log(f"VB: iteration={iteration}, block={block_selection}, data shape={fdata.shape}, result: {result}")
@@ -186,7 +186,7 @@ class VariableBrowser:
 
     @exception_handled
     def plot(self)-> Panel:
-        image_panel = self.image * self.selection_dmap * rs().get_selector()
+        image_panel = self.image # * self.selection_dmap * rs().get_selector()
         if self.cname == "bands":
             selector = lm().class_selector
             return pn.Column( selector, image_panel, self.player, self.point_graph*self.iter_marker )
