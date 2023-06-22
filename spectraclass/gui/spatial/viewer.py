@@ -186,7 +186,7 @@ class VariableBrowser:
 
     @exception_handled
     def plot(self)-> Panel:
-        image_panel = self.image # * self.selection_dmap * rs().get_selector()
+        image_panel = self.image * self.selection_dmap # * rs().get_selector()
         if self.cname == "bands":
             selector = lm().class_selector
             return pn.Column( selector, image_panel, self.player, self.point_graph*self.iter_marker )
