@@ -38,9 +38,9 @@ class NEONTileSelector:
     @exception_handled
     def select_rec(self, x, y ):
         bindex = self.block_index(x,y)
-        new_rect = self.rects.get( bindex, self.rect0 )
+        new_rect = self.rects[bindex]
         if new_rect != self.rect0:
-            lgm().log(f"NTS: NEONTileSelector-> select block {bindex}" )
+            lgm().log(f"NTS: NEONTileSelector-> select block {bindex}, new_rect={new_rect}" )
             ufm().show( f"select block {bindex}")
             tm().setBlock( bindex )
             self.rect0 = new_rect
