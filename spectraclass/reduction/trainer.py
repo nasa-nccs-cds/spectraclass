@@ -120,7 +120,7 @@ class ModelTrainer(SCSingletonConfigurable):
         return self.model.load( modelId )
 
     def save(self, **kwargs):
-        model_id = kwargs.get('id', dm().dsid() )
+        model_id = kwargs.get('id', tm().tileid )
         self.model.save( model_id )
 
     def print_layer_stats(self, iL: int, **kwargs ):
