@@ -38,7 +38,11 @@ class NEONTileSelector:
     @exception_handled
     def select_rec(self, x, y ):
         bindex = self.block_index(x,y)
-        new_rect = self.rects[bindex]
+        try:
+            new_rect = self.rects[bindex]
+        except KeyError as err:
+            lgm().log( f"Error accessing block, bindex={bindex}, rect keys={list(self.rects.keys())}")
+            raise err
         if new_rect != self.rect0:
             lgm().log(f"NTS: NEONTileSelector-> select block {bindex}, new_rect={new_rect}" )
             ufm().show( f"select block {bindex}")
@@ -81,7 +85,9 @@ class NEONTileSelector:
     @exception_handled
     def block_index(self, x, y ) -> Tuple[int,int]:
         if x is None: (x,y) = tm().block_index
-        return  math.floor( (x-self.bx0)/self.bdx ),  math.floor( (self.by1-y)/self.bdy )
+        bindex =   math.floor( (x-self.bx0)/self.bdx ),  math.floor( (self.by1-y)/self.bdy )
+        lgm().log( f"TS: block_index: {bindex}, x,y={(x,y)}, bx0={self.bx0}, by1={self.by1}, bdx,bdy={(self.bdx,self.bdy)}" )
+        return bindex
 
     @property
     def image_index(self) -> int:
