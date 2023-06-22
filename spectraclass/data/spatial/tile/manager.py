@@ -303,6 +303,10 @@ class TileManager(SCSingletonConfigurable):
     def tileName( self, **kwargs ) -> str:
         return self.get_image_name( **kwargs )
 
+    @property
+    def tileid(self):
+        return f"{self.tileName()}_b-{self.block_size}"
+
     def fmt(self, value) -> str:
         return str(value).strip("([])").replace(",", "-").replace(" ", "")
 

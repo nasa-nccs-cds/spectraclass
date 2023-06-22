@@ -88,8 +88,7 @@ class SpatialDataManager(ModeDataManager):
     def dsid(self, **kwargs) -> str:
         from spectraclass.data.spatial.tile.manager import tm
         block = kwargs.get( 'block', tm().getBlock() )
-        file_name_base = "-".join( [block.file_name, str(self.model_dims)] )
-        return f"{file_name_base}-ss{self.subsample_index}" if self.subsample_index > 1 else file_name_base
+        return f"{block.file_name}-ss{self.subsample_index}" if self.subsample_index > 1 else block.file_name
 
     @classmethod
     def getRGB(cls, raster_data: xa.DataArray ) -> xa.DataArray:

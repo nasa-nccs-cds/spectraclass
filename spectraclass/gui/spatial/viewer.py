@@ -249,12 +249,11 @@ class hvSpectraclassGui(SCSingletonConfigurable):
     @exception_handled
     def get_control_panel(self) -> Panel:
         from spectraclass.learn.cluster.manager import clm
-#        from spectraclass.gui.pointcloud import PointCloudManager, pcm
+        from spectraclass.gui.pointcloud import PointCloudManager, pcm
         data_selection_panel = pn.Tabs(  ("Tile",dm().modal.gui()) ) # , ("Block",dm().modal.gui()) ] )
- #       manifold_panel = pn.Row( pcm().gui() )
+        manifold_panel = pn.Row( pcm().gui() )
         analytics_gui = pn.Tabs( ("Cluster", clm().gui()), ("Classify", rs().get_control_panel() ) )
-#        controls = pn.Accordion( ('Data Selection', data_selection_panel ), ('Analytics',analytics_gui), ('Manifold', manifold_panel ), toggle=True, active=[0] )
-        controls = pn.Accordion( ('Data Selection', data_selection_panel ), ('Analytics',analytics_gui), toggle=True, active=[0] )
+        controls = pn.Accordion( ('Data Selection', data_selection_panel ), ('Analytics',analytics_gui), ('Manifold', manifold_panel ), toggle=True, active=[0] )
         return pn.Column( self.alert, controls )
 
     @exception_handled
