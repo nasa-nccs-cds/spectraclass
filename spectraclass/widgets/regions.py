@@ -39,13 +39,19 @@ class RegionSelector(SCSingletonConfigurable):
  #       self.indication = hv.DynamicMap( self.indicate, streams=[self.indicator])
         self.selected  = hv.DynamicMap( self.get_selections, streams=dict( addclicks=self.select_button.param.clicks, removeclicks=self.undo_button.param.clicks ) )
         self.canvas = self.poly.opts( opts.Polygons(fill_alpha=0.3, active_tools=['poly_draw']))
-        self.buttonbox = pn.Row( self.select_button, self.undo_button )
+        self.buttonbox = pn.Row( self.select_button, self.learn_button )
         self.markers: Dict[ hv.Polygons, Marker ] = {}
         self.undo_button.on_click( self.reset )
+        self.learn_button.on_click( self.learn_classification )
 
     @exception_handled
     def reset(self, *args, **kwargs ):
         self.selected.reset()
+
+    @exception_handled
+    def learn_classification(self, *args, **kwargs ):
+        from spectraclass.reduction.trainer import mt
+        mt().train()
 
     @exception_handled
     def get_selections( self, addclicks: int, removeclicks: int ):

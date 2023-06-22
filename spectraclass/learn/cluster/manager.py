@@ -270,8 +270,10 @@ class ClusterManager(SCSingletonConfigurable):
         #                                                norm=self.cspecs['norm'])
 
     @exception_handled
-    def panel(self) -> hv.DynamicMap:
-        return self._cluster_image
+    def panel(self, **kwargs ) -> hv.DynamicMap:
+        width = kwargs.get('width', 600)
+        height = kwargs.get('height', 500)
+        return self._cluster_image.opts( width=width, height=height )
 
     @exception_handled
     def get_cluster_image( self, index: int ) -> hv.Image:
