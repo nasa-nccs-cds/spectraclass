@@ -72,9 +72,6 @@ class NEONTileSelector:
         for block in blocks:
             (bxlim, bylim) = block.get_extent( spm().projection )
             r = (bxlim[0],bylim[0],bxlim[1],bylim[1])
-            c = (bxlim[0]+bxlim[1])/2, (bylim[0]+bylim[1])/2
-            bindex = self.block_index(*c)
-            lgm().log(f"TS: BLOCK{block.block_coords}: bindex={bindex}")
             self.rects[ block.block_coords ] =  r
         lgm().log( f"TS: nblocks={len(blocks)}, nindices={len(self.rects)}, indices={list(self.rects.keys())}")
         self.rect0 = self.rects[ tm().block_index ]
@@ -85,6 +82,7 @@ class NEONTileSelector:
     @exception_handled
     def block_index(self, x, y ) -> Tuple[int,int]:
         if x is None: (x,y) = tm().block_index
+        if type(x) == int: return (x,y)
         bindex =   math.floor( (x-self.bx0)/self.bdx ),  math.floor( (self.by1-y)/self.bdy )
         lgm().log( f"TS: block_index: {bindex}, x,y={(x,y)}, bx0={self.bx0}, by1={self.by1}, bdx,bdy={(self.bdx,self.bdy)}" )
         return bindex
