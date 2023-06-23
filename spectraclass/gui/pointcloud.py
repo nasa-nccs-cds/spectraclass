@@ -243,9 +243,10 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @exception_handled
     def getGeometry( self, **kwargs ) -> Optional[p3js.BufferGeometry]:
-        geometry_data = kwargs.get( 'init_data', self.xyz )
+        geometry_data: xa.DataArray = kwargs.get( 'init_data', self.xyz )
         colors = self.getColors(**kwargs)
-        lgm().log(f"PCM: *** getGeometry: xyz shape = {geometry_data.shape}, color shape = {colors.shape}")
+        vrange = [ geometry_data.values.min(axis=0), geometry_data.values.max(axis=0) ]
+        lgm().log(f"PCM: *** getGeometry: xyz shape = {geometry_data.shape}, color shape = {colors.shape}, vrange={vrange}")
         attrs = dict( position = p3js.BufferAttribute( geometry_data, normalized=False ),
                       color =    p3js.BufferAttribute( list(map(tuple, colors))) )
         return p3js.BufferGeometry( attributes=attrs )
