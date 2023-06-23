@@ -333,7 +333,7 @@ class PointCloudManager(SCSingletonConfigurable):
         self.init_data(refresh=True)
         self.createPoints()
         self.scene = p3js.Scene( children=[ self.points, self.camera, p3js.AmbientLight(intensity=0.8)  ] )
-        self.scene.add( self.get_frame() )
+    #    self.scene.add( self.get_frame() )
         self.renderer = p3js.Renderer( scene=self.scene, camera=self.camera, controls=[self.orbit_controls], width=800, height=500 )
         self.point_picker = p3js.Picker(controlling=self.points, event='click')
         self.point_picker.observe( partial( self.on_pick, False ), names=['point'])
