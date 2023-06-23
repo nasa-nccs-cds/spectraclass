@@ -17,6 +17,7 @@ reduction_factor = 5
 anomaly = "none"
 niter = 20
 year= 2016
+activation = "lru"
 version = "beta_pmm"
 roi = "364203.7_4305235.0_365203.7_4306235.0"
 
@@ -32,7 +33,7 @@ mt().nepoch = nepoch
 mt().focus_nepoch = focus_nepoch
 mt().focus_ratio = focus_ratio
 mt().focus_threshold = focus_threshold
-mt().activation = "relu"
+mt().activation = activation
 mt().reduction_factor = reduction_factor
 mt().niter = niter
 
