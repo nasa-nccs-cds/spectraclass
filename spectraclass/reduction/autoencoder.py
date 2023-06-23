@@ -30,6 +30,7 @@ class Autoencoder(nn.Module):
         super().__init__()
         self.input_dims = input_dims
         self.model_dims = model_dims
+        self.reduction_factor = kwargs.get("reduction_factor",2)
         self._layer_outputs: Dict[int, List[np.ndarray]] = {}
         self._layer_weights: Dict[int, List[np.ndarray]] = {}
         self._activation = kwargs.get('activation', 'lru')
@@ -78,12 +79,12 @@ class Autoencoder(nn.Module):
     @exception_handled
     def build_ae_model(self, **kwargs):
         lgm().log(f"#AEC: RM BUILD AEC NETWORK: {self.input_dims} -> {self.model_dims}")
-        reduction_factor = 2
+
 #        dargs = dict( kernel_initializer=tf.keras.initializers.RandomNormal(stddev=winit), bias_initializer=tf.keras.initializers.Zeros() )
         in_features, iLayer = self.input_dims, 0
         encoder_modules = OrderedDict()
         while in_features > self.model_dims:
-            out_features = max( int(round(in_features / reduction_factor)), self.model_dims )
+            out_features = max( int(round(in_features / self.reduction_factor)), self.model_dims )
             linear = nn.Linear(in_features=in_features, out_features=out_features, bias=True)
             activation = None if (out_features == self.model_dims) else self._activation
             self._add_layer( encoder_modules, iLayer, linear, activation )
@@ -91,7 +92,7 @@ class Autoencoder(nn.Module):
         self._encoder = nn.Sequential(encoder_modules)
         decoder_modules = OrderedDict()
         while in_features < self.input_dims:
-            out_features = min( in_features * reduction_factor, self.input_dims )
+            out_features = min( in_features * self.reduction_factor, self.input_dims )
             linear = nn.Linear( in_features=in_features, out_features=out_features, bias=True )
             activation = None if (out_features==self.input_dims) else self._activation
             self._add_layer( decoder_modules, iLayer, linear, activation )
