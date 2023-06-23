@@ -59,6 +59,7 @@ class ModelTrainer(SCSingletonConfigurable):
     focus_nepoch = tl.Int(5).tag(config=True, sync=True)
     focus_ratio = tl.Float(10.0).tag(config=True, sync=True)
     focus_threshold = tl.Float(0.1).tag(config=True, sync=True)
+    activation = tl.Unicode(default_value="relu").tag(config=True, sync=True)
     niter = tl.Int(25).tag(config=True, sync=True)
     log_step = tl.Int(10).tag(config=True, sync=True)
     refresh_model = tl.Bool(False).tag(config=True, sync=True)
@@ -91,7 +92,7 @@ class ModelTrainer(SCSingletonConfigurable):
         if self._model is None:
             block: Block = tm().getBlock()
             point_data, grid = block.getPointData()
-            opts = dict ( wmag=self.init_wts_mag, init_bias=self.init_bias_mag, reduction_factor=self.reduction_factor, log_step=self.log_step )
+            opts = dict ( wmag=self.init_wts_mag, init_bias=self.init_bias_mag, activation=self.activation,  reduction_factor=self.reduction_factor, log_step=self.log_step )
             self._model = Autoencoder( point_data.shape[1], self.nfeatures, **opts ).to(self.device)
         return self._model
 

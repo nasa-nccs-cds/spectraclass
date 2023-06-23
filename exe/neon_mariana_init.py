@@ -32,6 +32,7 @@ mt().nepoch = nepoch
 mt().focus_nepoch = focus_nepoch
 mt().focus_ratio = focus_ratio
 mt().focus_threshold = focus_threshold
+mt().activation = "relu"
 mt().reduction_factor = reduction_factor
 mt().niter = niter
 
