@@ -59,18 +59,10 @@ Jupyter Lab Startup
     > cd {PREFIX}/spectraclass/notebooks
     > jupyter-lab
 
-Image Index Creation
+ADAPT install notes
 --------------------
+    > mkdir ~/.spectraclass/config/neon
+    > cp /home/tpmaxwel/.spectraclass/config/neon/agb.py ~/.spectraclass/config/neon
 
-For example, with DESIS data:
 
->> gdaltindex -t_srs EPSG:32618 image_index_srs.shp *-SPECTRAL_IMAGE.tif
-
-When actively developing your extension, build Jupyter Lab with the command:
-
-    $ jupyter lab --watch
-
-This takes a minute or so to get started, but then automatically rebuilds JupyterLab when your javascript changes.
-
-Note on first `jupyter lab --watch`, you may need to touch a file to get Jupyter Lab to open.
 
