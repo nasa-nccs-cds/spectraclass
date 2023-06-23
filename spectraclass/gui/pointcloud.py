@@ -4,7 +4,7 @@ from panel.layout import Panel
 from panel.widgets import FloatSlider
 import ipywidgets as ipw
 import panel as pn
-import holoviews as hv
+from spectraclass.gui.control import UserFeedbackManager, ufm
 import numpy as np
 from spectraclass.reduction.embedding import ReductionManager, rm
 import time, math, os, sys
@@ -333,7 +333,6 @@ class PointCloudManager(SCSingletonConfigurable):
         self.init_data(refresh=True)
         self.createPoints()
         self.scene = p3js.Scene( children=[ self.points, self.camera, p3js.AmbientLight(intensity=0.8)  ] )
-    #    self.scene.add( self.get_frame() )
         self.renderer = p3js.Renderer( scene=self.scene, camera=self.camera, controls=[self.orbit_controls], width=800, height=500 )
         self.point_picker = p3js.Picker(controlling=self.points, event='click')
         self.point_picker.observe( partial( self.on_pick, False ), names=['point'])
@@ -343,20 +342,15 @@ class PointCloudManager(SCSingletonConfigurable):
 
     @exception_handled
     def on_pick(self, highlight: bool, event: Dict ):
-        from spectraclass.gui.spatial.map import MapManager, mm
-        from spectraclass.gui.unstructured.table import tbm
+        from spectraclass.gui.spatial.viewer import hvSpectraclassGui, sgui
         point = tuple( event["new"] )
-        ppid = self.voxelizer.get_gid(point)
-        if ppid >= 0:
-            self.pick_point = ppid
-            if mm().initialized():
-                if highlight:   pos = mm().highlight_points( [self.pick_point], [0] )
-                else:           pos = mm().mark_point( self.pick_point, cid=0 )
-                lgm().log( f"  on_pick[highlight={highlight}] pick_point={self.pick_point} pos={pos}")
-            if tbm().active:
-                tbm().mark_point( self.pick_point, 0, point )
+        ufm().show( f"Mark Poiint: {point}" )
+        gid = self.voxelizer.get_gid(point)
+        if gid >= 0:
+            self.pick_point = gid
             self.mark_point( self.pick_point, 0 )
             self.points.geometry = self.getGeometry()
+            sgui().select_point( gid )
 
     def gui(self, **kwargs ) -> Panel:
         if self._gui is None:

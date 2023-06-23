@@ -231,6 +231,11 @@ class hvSpectraclassGui(SCSingletonConfigurable):
             lm().addMarker(marker)
         return markers
 
+    def select_point(self, gid: int ):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        coords = tm().getBlock().gid2coords( gid )
+        self.browsers['bands'].tap_stream.event(**coords)
+
     @exception_handled
     def on_tab_change(self, *events):
         for event in events:
