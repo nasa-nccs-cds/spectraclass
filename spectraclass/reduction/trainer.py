@@ -114,14 +114,14 @@ class ModelTrainer(SCSingletonConfigurable):
 
 
     def load(self, **kwargs ) -> bool:
-        modelId = kwargs.get('id', tm().tileid )
+        modelId = kwargs.get('id', self.modelkey)
         if self.refresh_model:
             lgm().log( "REFRESH MODEL")
             return False
         return self.model.load( modelId )
 
     def save(self, **kwargs):
-        model_id = kwargs.get('id', tm().tileid )
+        model_id = kwargs.get('id', self.modelkey )
         self.model.save( model_id )
 
     def print_layer_stats(self, iL: int, **kwargs ):
