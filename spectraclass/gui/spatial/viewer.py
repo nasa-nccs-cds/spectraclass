@@ -74,9 +74,12 @@ class VariableBrowser:
         self.nIter: int = self.data.shape[0]
         self.player: DiscretePlayer = DiscretePlayer(name='Iteration', options=list(range(self.nIter)), value=self.nIter - 1)
         self.tap_stream = SingleTap( transient=True )
-        self.selection_dmap = hv.DynamicMap( self.select_points, streams=[self.tap_stream] )
+       # self.selection_dmap = hv.DynamicMap( self.select_points, streams=[self.tap_stream] )
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream] )
-        self.image = hv.DynamicMap(self.get_frame, streams=dict(iteration=self.player.param.value, block_selection=tm().block_selection.param.index))
+        self.image = hv.DynamicMap(self.get_frame, streams=dict( iteration=self.player.param.value,
+                                                                 block_selection=tm().block_selection.param.index,
+                                                                 x=self.tap_stream.param.x,
+                                                                 y=self.tap_stream.param.y ) )
         self.iter_marker = hv.DynamicMap( self.get_iter_marker, streams=dict( index=self.player.param.value ) )
         self.graph_data = xa.DataArray([])
         self.curves: List[hv.Curve] = []
@@ -152,20 +155,20 @@ class VariableBrowser:
             self._block_selection = block_selection
 
     @exception_handled
-    def get_frame(self, iteration: int, block_selection: int ) -> hv.Image:
+    def get_frame(self, iteration: int, block_selection: int, x:float, y: float ) -> hv.Image:
         ts = time.time()
+        lgm().log( f"VB: {self.cname}-> get_frame: iteration={iteration} block_selection={block_selection}, x={x}, y={y} ")
         if block_selection >= 0:
-            lgm().log( f"VB: {self.cname}-> get_frame: iteration={iteration} block_selection={block_selection} ")
             self.update_block( block_selection )
+        points = self.select_points( x, y )
         fdata: xa.DataArray = self.data[iteration]
-        xlim, ylim = bounds( fdata )
-        iopts = dict(width=self.width, height=self.height, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False ) #, xlim=xlim, ylim=ylim )
+        iopts = dict(width=self.width, height=self.height, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False )
         t2 = time.time()
         result: hv.Image = fdata.hvplot.image( **iopts )
         lgm().log(f"VB: iteration={iteration}, block={block_selection}, data shape={fdata.shape}, result: {result}")
         tf = time.time()
         lgm().log( f"TT: get_frame dt={tf-ts} t2={t2-ts}")
-        return result
+        return result * points
 
     @exception_handled
     def get_iter_marker(self, index: int ):
