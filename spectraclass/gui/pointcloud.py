@@ -184,7 +184,7 @@ class PointCloudManager(SCSingletonConfigurable):
     def init_data( self, **kwargs ):
         from spectraclass.reduction.embedding import ReductionManager, rm
         from spectraclass.data.base import dm
-        model_data: Optional[xa.DataArray] = dm().getModelData()
+        model_data: xa.DataArray = dm().getModelData()
 
         if (model_data is not None) and (model_data.shape[0] > 1):
             use_umap = model_data.shape[1] > 3
@@ -345,8 +345,8 @@ class PointCloudManager(SCSingletonConfigurable):
     def on_pick(self, highlight: bool, event: Dict ):
         from spectraclass.gui.spatial.viewer import hvSpectraclassGui, sgui
         point = tuple( event["new"] )
-        lgm().log( f"PCM: Mark Point: {point}" )
         gid = self.voxelizer.get_gid(point)
+        lgm().trace( f"PCM: Mark Point[{gid}]: {point}" )
         if gid >= 0:
             self.pick_point = gid
             self.mark_point( self.pick_point, 0 )

@@ -325,10 +325,10 @@ class DataManager(SCSingletonConfigurable):
     def getModelData(self, **kwargs) -> Optional[xa.DataArray]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         raster: bool = kwargs.pop( 'raster', False )
-        norm: bool = kwargs.pop( 'norm', False )
+        norm: bool = kwargs.pop( 'norm', True )
         block = kwargs.get( 'block', tm().getBlock() )
         point_data = block.model_data
-        if norm: point_data = tm().norm( point_data )
+        if norm: point_data = tm().norm( point_data, axis=0 )
         return block.points2raster(  point_data ) if raster else point_data
 
     def valid_bands(self) -> Optional[List]:
