@@ -324,7 +324,7 @@ class PointCloudManager(SCSingletonConfigurable):
 
     def get_frame(self) -> p3js.Mesh:
         size = self.frame_size
-        box = p3js.BoxLineGeometry(size,size,size)
+        box = p3js.BoxLineGeometry() # size,size,size)
         material = p3js.MeshBasicMaterial()
         return p3js.Mesh( box, material)
 
