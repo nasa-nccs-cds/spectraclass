@@ -117,7 +117,7 @@ class PointCloudManager(SCSingletonConfigurable):
     def addMarker(self, marker: Marker ):
         if self.initialized:
             self.clear_transients()
-            lgm().log(f" *** PointCloudManager-> ADD MARKER[{marker.size}], cid = {marker.cid}, #pids={marker.gids.size}")
+            lgm().log(f"PCM: ADD MARKER[{marker.size}], cid = {marker.cid}, #pids={marker.gids.size}")
             for gid in marker.gids:
                 self.mark_point( gid, marker.cid )
             self.update_marker_plot()
@@ -197,7 +197,7 @@ class PointCloudManager(SCSingletonConfigurable):
             self.xyz = self.pnorm(embedding)
             lgm().log( f"PCM: autocorr = {autocorr(self.xyz,(0,1)):.2f} {autocorr(self.xyz,(0,2)):.2f} {autocorr(self.xyz,(1,2)):.2f}")
         else:
-            lgm().log(f"UMAP.init: model_data is empty",print=True)
+            lgm().log(f"PCM: UMAP.init: model_data is empty",print=True)
             ecoords = dict( samples=[], model=np.arange(0,3) )
             attrs = {} if (model_data is None) else model_data.attrs
             self.xyz = xa.DataArray( np.empty([0,3]), dims=['samples','model'], coords=ecoords, attrs=attrs )
@@ -217,7 +217,7 @@ class PointCloudManager(SCSingletonConfigurable):
         std = np.nanstd(  raster.values )
         nan_mask = np.isnan( raster.values )
         nnan = np.count_nonzero( nan_mask )
-        lgm().log( f" **get_color_bounds: mean={ave}, std={std}, #nan={nnan}" )
+        lgm().log( f"PCM: **get_color_bounds: mean={ave}, std={std}, #nan={nnan}" )
         return dict( vmin= ave - std * self.colorstretch, vmax= ave + std * self.colorstretch  )
 
     def getColors( self, **kwargs ):
@@ -233,7 +233,7 @@ class PointCloudManager(SCSingletonConfigurable):
         # tmask: np.ndarray = mm().block.get_threshold_mask(raster=False)
         # if (tmask is not None) and (tmask.shape[0] == cdata.shape[0]):
         #     cdata = cdata[ tmask ]
-        lgm().log( f"getColors: norm cdata shape = {cdata.shape}, dims={cdata.dims}" ) # , crange={[norm.vmin,norm.vmax]}")
+        lgm().log( f"PCM: getColors: norm cdata shape = {cdata.shape}, dims={cdata.dims}" ) # , crange={[norm.vmin,norm.vmax]}")
         mapper = plt.cm.ScalarMappable(  norm = norm, cmap="jet" )
         colors = mapper.to_rgba( cdata.values )[:, :-1] * 255
         if self.pick_point >= 0:
@@ -245,7 +245,7 @@ class PointCloudManager(SCSingletonConfigurable):
     def getGeometry( self, **kwargs ) -> Optional[p3js.BufferGeometry]:
         geometry_data = kwargs.get( 'init_data', self.xyz )
         colors = self.getColors(**kwargs)
-        lgm().log(f" *** getGeometry: xyz shape = {geometry_data.shape}, color shape = {colors.shape}")
+        lgm().log(f"PCM: *** getGeometry: xyz shape = {geometry_data.shape}, color shape = {colors.shape}")
         attrs = dict( position = p3js.BufferAttribute( geometry_data, normalized=False ),
                       color =    p3js.BufferAttribute( list(map(tuple, colors))) )
         return p3js.BufferGeometry( attributes=attrs )
@@ -260,7 +260,7 @@ class PointCloudManager(SCSingletonConfigurable):
         else:
             srange, ssize = [self.xyz.samples.values.min(),self.xyz.samples.values.max()], self.xyz.samples.values.size
             xrange = [ self.xyz.values.min(), self.xyz.values.max() ]
-            lgm().log(f"*** getMarkerGeometry->gids: size = {gids.size}, gid range = {[gids.min(),gids.max()]}; samples: size = {ssize}, range={srange}; data range = {xrange}")
+            lgm().log(f"PCM: getMarkerGeometry->gids: size = {gids.size}, gid range = {[gids.min(),gids.max()]}; samples: size = {ssize}, range={srange}; data range = {xrange}")
             mask = np.isin( self.xyz.samples.values, gids, assume_unique=True )
             sgids = self.xyz.samples.values[mask]
             cids = self.probe_gids if probes else self.marker_gids
@@ -334,6 +334,7 @@ class PointCloudManager(SCSingletonConfigurable):
         self.createPoints()
         self.scene = p3js.Scene( children=[ self.points, self.camera, p3js.AmbientLight(intensity=0.8)  ] )
         self.renderer = p3js.Renderer( scene=self.scene, camera=self.camera, controls=[self.orbit_controls], width=800, height=500 )
+        self.scene.add( self.get_frame() )
         self.point_picker = p3js.Picker(controlling=self.points, event='click')
         self.point_picker.observe( partial( self.on_pick, False ), names=['point'])
         self.renderer.controls = self.renderer.controls + [self.point_picker]
@@ -344,7 +345,7 @@ class PointCloudManager(SCSingletonConfigurable):
     def on_pick(self, highlight: bool, event: Dict ):
         from spectraclass.gui.spatial.viewer import hvSpectraclassGui, sgui
         point = tuple( event["new"] )
-        ufm().show( f"Mark Poiint: {point}" )
+        lgm().log( f"PCM: Mark Point: {point}" )
         gid = self.voxelizer.get_gid(point)
         if gid >= 0:
             self.pick_point = gid
@@ -361,7 +362,7 @@ class PointCloudManager(SCSingletonConfigurable):
         spt = sum(point)
         loc_array: np.ndarray = np.abs( self.point_locator - spt )
         indx = np.argmin( loc_array )[0]
-        lgm().log( f"get_index_from_point[{indx}]: Loc array range=[{loc_array.min()},{loc_array.max()}], spt={loc_array[indx]}, pos={self.xyz[indx]}")
+        lgm().log( f"PCM: get_index_from_point[{indx}]: Loc array range=[{loc_array.min()},{loc_array.max()}], spt={loc_array[indx]}, pos={self.xyz[indx]}")
         return indx
 
     @property
@@ -394,12 +395,12 @@ class PointCloudManager(SCSingletonConfigurable):
                 if self.probe_points is not None:
                     self.probe_points.geometry = self.getMarkerGeometry(probes=True)
             t3 = time.time()
-            lgm().log( f" *** update point cloud data: time = {t3-t2} {t2-t1} {t1-t0} " )
+            lgm().log( f"PCM: update point cloud data: time = {t3-t2} {t2-t1} {t1-t0} " )
             return True
 
     def clear(self):
         if self.initialized:
-            lgm().log(f"  $CLEAR: PCM")
+            lgm().log(f"PCM: CLEAR")
             self.marker_gids = {}
             self.probe_gids = {}
             if self.marker_points is not None:
@@ -411,11 +412,11 @@ class PointCloudManager(SCSingletonConfigurable):
     def color_by_value(self, values: np.ndarray = None, **kwargs):
         if self.initialized:
             if values is not None:
-                lgm().log(f" $$$color_by_value: data shape = {values.shape} ")
+                lgm().log(f"PCM:  $$$color_by_value: data shape = {values.shape} ")
                 self._color_values = ma.masked_invalid(values)
             if self._color_values is not None:
                 colors = self._color_values.filled(-1)
-                lgm().log( f" $$$color_by_value (shape:{colors.shape}) ")
+                lgm().log( f"PCM:  $$$color_by_value (shape:{colors.shape}) ")
                 self.update_plot( cdata=colors, **kwargs)
 
     # def get_color_bounds(self):
