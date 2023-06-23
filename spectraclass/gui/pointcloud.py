@@ -325,7 +325,7 @@ class PointCloudManager(SCSingletonConfigurable):
     def get_frame(self) -> p3js.Mesh:
         size = self.frame_size
         box = p3js.BoxLineGeometry(size,size,size)
-        material = p3js.MeshBasicMaterial( color= 0x555555, transparent=True )
+        material = p3js.MeshBasicMaterial( color="gray", transparent=True )
         return p3js.Mesh( box, material)
 
     @exception_handled
