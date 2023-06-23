@@ -154,6 +154,10 @@ class PointCloudManager(SCSingletonConfigurable):
         if self._xyz is None: self.init_data()
         return self._xyz
 
+    @property
+    def frame_size(self):
+        return self._xyz.values.max()
+
     @xyz.setter
     def xyz(self, data_array: Union[xa.DataArray,np.ndarray] ):
         self._xyz = self._xyz.copy( data=data_array ) if (type(data_array) == np.ndarray) else data_array
@@ -318,11 +322,18 @@ class PointCloudManager(SCSingletonConfigurable):
     #     toks = name.split(".")
     #     if toks[0] == 'point': return
 
+    def get_frame(self) -> p3js.Mesh:
+        size = self.frame_size
+        box = p3js.BoxLineGeometry(size,size,size)
+        material = p3js.MeshBasicMaterial( dict(color= 0x555555) )
+        return p3js.Mesh( box, material)
+
     @exception_handled
     def _get_gui( self ) -> Panel:
         self.init_data(refresh=True)
         self.createPoints()
-        self.scene = p3js.Scene( children=[ self.points, self.camera, p3js.AmbientLight(intensity=0.8)  ] )
+        self.frame = self.get_frame()
+        self.scene = p3js.Scene( children=[ self.points, self.frame, self.camera, p3js.AmbientLight(intensity=0.8)  ] )
         self.renderer = p3js.Renderer( scene=self.scene, camera=self.camera, controls=[self.orbit_controls], width=800, height=500 )
         self.point_picker = p3js.Picker(controlling=self.points, event='click')
         self.point_picker.observe( partial( self.on_pick, False ), names=['point'])
