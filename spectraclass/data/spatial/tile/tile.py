@@ -704,8 +704,8 @@ class Block(DataContainer):
     def getPointData( self, **kwargs ) -> Tuple[ Optional[xa.DataArray], Dict ]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.data.base import DataManager, dm
-        norm = kwargs.get('norm', True)
-        anomaly = kwargs.get( 'anomaly', dm().modal.anomaly )
+        norm: bool = kwargs.get('norm', True)
+        anomaly: str = kwargs.get( 'anomaly', dm().modal.anomaly )
         if self._point_data is None:
             lgm().log(f"BLOCK[{self.dsid()}].getPointData:")
             self._point_data, pmask, rmask =  self.raster2points( self.data )
@@ -722,16 +722,17 @@ class Block(DataContainer):
             self._point_mask = pmask
             self._raster_mask = rmask
         ptdata = self._point_data
-        if anomaly != "none":
+        if anomaly not in ["none","","null"]:
             smean = dm().modal.getSpectralMean(norm=False)
-            if anomaly == "diff":
+            if anomaly.startswith("dif"):
                 ptdata = ptdata.copy( data=ptdata-smean )
             else:
-                fratio: np.ndarray = (ptdata/smean).values.flatten()
-                fratio[ fratio == 0.0 ] = 1.0
-                ratio: np.ndarray = fratio.reshape(ptdata.shape)
-                if   anomaly == "ratio":    ptdata = ptdata.copy( data= ratio-1.0 )
-                elif anomaly == "logratio": ptdata = ptdata.copy( data= np.log( ratio ) )
+                raise Exception( f" Unknown anomaly type: {anomaly}")
+                # fratio: np.ndarray = (ptdata/smean).values.flatten()
+                # fratio[ fratio == 0.0 ] = 1.0
+                # ratio: np.ndarray = fratio.reshape(ptdata.shape)
+                # if   anomaly == "ratio":    ptdata = ptdata.copy( data= ratio-1.0 )
+                # elif anomaly == "logratio": ptdata = ptdata.copy( data= np.log( ratio ) )
         if norm:
             ptdata = tm().norm( ptdata )
         return ( ptdata, self._point_coords )
