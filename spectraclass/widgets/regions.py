@@ -30,18 +30,16 @@ class RegionSelector(SCSingletonConfigurable):
         self._addclks = 0
         self._removeclks = 0
         self.poly = hv.Polygons([])
+        self.selected_regions = hv.Polygons([])
         self.poly_stream = streams.PolyDraw(source=self.poly, drag=False, num_objects=1, show_vertices=True, styles={'fill_color': ['red']})
+        self.poly_edit = streams.PolyEdit(source=self.selected_regions, vertex_style={'color': 'red'})
         self.select_button: Button = Button( name='Select', button_type='primary')
         self.learn_button: Button = Button( name='Learn', button_type='primary')
-        self.undo_button: Button = Button( name='Undo', button_type='warning')
- #       self.indicator = streams.SingleTap(transient=True)
         self.selections = []
- #       self.indication = hv.DynamicMap( self.indicate, streams=[self.indicator])
-        self.selected  = hv.DynamicMap( self.get_selections, streams=dict( addclicks=self.select_button.param.clicks, removeclicks=self.undo_button.param.clicks ) )
-        self.canvas = self.poly.opts( opts.Polygons(fill_alpha=0.3, active_tools=['poly_draw']))
+        self.selected  = hv.DynamicMap( self.get_selections, streams=dict( clicks=self.select_button.param.clicks ) )
+        self.canvas = self.poly.opts( opts.Polygons(fill_alpha=0.3, active_tools=['poly_draw','poly_edit']))
         self.buttonbox = pn.Row( self.select_button, self.learn_button )
         self.markers: Dict[ hv.Polygons, Marker ] = {}
-        self.undo_button.on_click( self.reset )
         self.learn_button.on_click( self.learn_classification )
 
     @exception_handled
@@ -54,23 +52,23 @@ class RegionSelector(SCSingletonConfigurable):
         mt().train()
 
     @exception_handled
-    def get_selections( self, addclicks: int, removeclicks: int ):
+    def get_selections( self, clicks: int ):
       from spectraclass.data.spatial.tile.manager import TileManager, tm
-      if addclicks > self._addclks:
+      if clicks > self._addclks:
         ic, ccolor = lm().selectedColor( True )
         ufm().show( f"Selecting region as class '{lm().selectedLabel}({ic}): color={ccolor}'")
         selection: hv.Polygons = self.poly_stream.element
         print( f"Add poly_stream element: {centers(selection)}-> ic={ic}, color={ccolor}")
         print( f"PolyData: {selection.data}")
         spoly = hv.Polygons( selection.data ).opts( fill_color=ccolor, line_width=1, alpha=0.3, line_color="black" )
+
+      #  self.selected_regions
+
         self.selections.append( spoly )
         marker = tm().get_region_marker( spoly.data[0] )
         self.markers[ spoly ] = marker
 #        app().add_marker(marker)
-      if removeclicks > self._removeclks:
-        removed = self.selections.pop()
-        print(f"Remove selected element: {centers(removed)}")
-      self._addclks, self._removeclks = addclicks, removeclicks
+      self._addclks = clicks
       print(f" *** Current Selections: {[ centers(s) for s in self.selections ]}")
       return hv.Overlay( self.selections )
 
