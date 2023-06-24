@@ -400,7 +400,8 @@ class TileManager(SCSingletonConfigurable):
         if data is not None:
             dave, dmag = np.nanmean(data.values, keepdims=True, axis=axis), np.nanstd(data.values, keepdims=True, axis=axis)
             normed_data = (data.values - dave) / dmag
-            lgm().log( f"PCM: norm, model data{data.dims}{data.shape}: dave{dave.shape}={dave} dmag{dmag.shape}={dmag}")
+            if len(data.dims) == 1: lgm().trace( f"PCM: norm, model data{data.dims}{data.shape}: dave{dave.shape}={dave} dmag{dmag.shape}={dmag}")
+            else:                     lgm().log( f"PCM: norm, model data{data.dims}{data.shape}: dave{dave.shape}={dave} dmag{dmag.shape}={dmag}")
             return data.copy(data=normed_data)
 
 
