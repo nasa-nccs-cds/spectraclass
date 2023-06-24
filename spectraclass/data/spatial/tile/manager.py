@@ -396,12 +396,11 @@ class TileManager(SCSingletonConfigurable):
         nodata_value = raster.attrs.get('data_ignore_value', -9999)
         return raster.where(raster != nodata_value, float('nan') )
 
-    def norm( self, data: Optional[xa.DataArray], axis=None ) -> Optional[xa.DataArray]:
+    def norm( self, context: str, data: Optional[xa.DataArray], axis=None ) -> Optional[xa.DataArray]:
         if data is not None:
             dave, dmag = np.nanmean(data.values, keepdims=True, axis=axis), np.nanstd(data.values, keepdims=True, axis=axis)
             normed_data = (data.values - dave) / dmag
-            if len(data.dims) == 1: lgm().trace( f"PCM: norm, model data{data.dims}{data.shape}: dave{dave.shape}={dave} dmag{dmag.shape}={dmag}")
-            else:                     lgm().log( f"PCM: norm, model data{data.dims}{data.shape}: dave{dave.shape}={dave} dmag{dmag.shape}={dmag}")
+            lgm().log( f"PCM: norm[{context}], model data{data.dims}{data.shape}: dave{dave.shape}={dave} dmag{dmag.shape}={dmag}")
             return data.copy(data=normed_data)
 
 

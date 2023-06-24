@@ -498,12 +498,9 @@ class MapManager(SCSingletonConfigurable):
 
     def getModelData(self, **kwargs ) -> Optional[xa.DataArray]:
         from spectraclass.data.base import dm
-        from spectraclass.data.spatial.tile.manager import tm
         raster: bool = kwargs.pop( 'raster', False )
-        norm: bool = kwargs.pop( 'norm', False )
         if self.block is None: self.setBlock()
-        point_data = dm().getModelData()
-        if norm: point_data = tm().norm( point_data )
+        point_data = dm().getModelData(**kwargs)
         return self.block.points2raster(  point_data ) if raster else point_data
 
     @exception_handled

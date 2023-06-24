@@ -90,7 +90,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def getSpectralMean(self, norm=False ) -> Optional[xa.DataArray]:
         if self._spectral_mean is None:
             self._spectral_mean = self.load_spectral_mean()
-        return tm().norm(self._spectral_mean) if norm else self._spectral_mean
+        return tm().norm("SpectralMean",self._spectral_mean) if norm else self._spectral_mean
 
     def load_spectral_mean(self) -> Optional[xa.DataArray]:
         from spectraclass.data.base import DataManager, dm

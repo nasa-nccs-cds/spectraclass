@@ -734,7 +734,7 @@ class Block(DataContainer):
                 # if   anomaly == "ratio":    ptdata = ptdata.copy( data= ratio-1.0 )
                 # elif anomaly == "logratio": ptdata = ptdata.copy( data= np.log( ratio ) )
         if norm:
-            ptdata = tm().norm( ptdata )
+            ptdata = tm().norm( "block.PointData", ptdata )
         return ( ptdata, self._point_coords )
 
     @property
