@@ -131,25 +131,20 @@ class ModelTrainer(SCSingletonConfigurable):
         print( f" L[{iL}]: Oms{O.shape}=[{abs(O).mean():.4f}, {O.std():.4f}], Wms{W.shape}=[{abs(W).mean():.4f}, {W.std():.4f}]", **kwargs )
 
     def training_step(self, epoch: int, x: Tensor, **kwargs) -> Tuple[float,Tensor,Tensor]:
-        verbose = kwargs.get( 'verbose', False )
-        y_hat: Tensor = self.model.forward(x)
-        loss: Tensor = self.loss(y_hat, x)
+        self.optimizer.zero_grad()
+        x_hat: Tensor = self.model.forward(x)
+        loss: Tensor = self.loss(x_hat, x)
         lval: float = float(loss)
-        if verbose: print(f"Epoch[{epoch}/{self.nepoch}]: device={self.device}, loss={lval} ",end=" ")
-
-        if (abs(lval)<self.loss_threshold) and ( abs(lval-self.previous_loss) < self.loss_threshold ):
-            self.model.init_weights()
-            print( f"Reinit & restart: epoch={epoch}" )
-        else:
-            if verbose:
-                iL = self.model.feature_layer_index
-                self.print_layer_stats( iL )
-
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
+        loss.backward()
+        self.optimizer.step()
         self.previous_loss = lval
-        return lval, x, y_hat
+        return lval, x, x_hat
+
+    # opt.zero_grad()
+    # x_hat = self.forward(x)
+    # loss = self.loss()
+    # loss.backward()
+    # opt.step()
 
     def train(self, **kwargs):
         if not self.load(**kwargs):

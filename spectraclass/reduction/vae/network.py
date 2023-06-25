@@ -150,6 +150,7 @@ class VariationalAutoencoder():
         self.input_dims = input_dims
         self.model_dims = model_dims
         self.reduction_factor = kwargs.get("reduction_factor",2)
+        self.device = kwargs.get('device', 'cpu')
 
         self._stage = ProcessingStage.PreTrain
         self._decoder: Decoder = Decoder( input_dims, model_dims, **kwargs ).to(self.device)
@@ -183,13 +184,16 @@ class VariationalAutoencoder():
         result: Tensor = self.decoder(input)
         return result.detach().numpy()
 
+    def loss(self, x: Tensor, y: Tensor ) -> Tensor:
+        return ((x - y) ** 2).sum() + self._encoder.kl
+
     def train( self, data, epochs=20):
         opt = torch.optim.Adam( self.parameters() )
         for epoch in range(epochs):
             for x, y in data:
                 opt.zero_grad()
                 x_hat = self.forward(x)
-                loss = ((x - x_hat) ** 2).sum() + self.encoder.kl
+                loss = self.loss()
                 loss.backward()
                 opt.step()
 
