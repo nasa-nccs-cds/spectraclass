@@ -46,6 +46,7 @@ class NetworkBase(nn.Module):
         self.input_dims = input_dims
         self.latent_dims = latent_dims
         self.reduction_factor = reduction_factor
+        self._iteration = 0
         self._layer_outputs: Dict[int, List[np.ndarray]] = {}
         self._layer_weights: Dict[int, List[np.ndarray]] = {}
         self.hidden_layers = []
@@ -111,6 +112,7 @@ class VariationalEncoder(NetworkBase):
         self.build()
 
     def build(self):
+        print( "Building Encoder:")
         in_features, iLayer = self.input_dims, 0
         while True:
             out_features = int(round(in_features / self.reduction_factor))
@@ -118,6 +120,7 @@ class VariationalEncoder(NetworkBase):
             linear = nn.Linear(in_features=in_features, out_features=out_features, bias=True)
             self.add_hidden_layer( iLayer, linear, self.activation )
             in_features, iLayer = out_features, iLayer + 1
+        print(f" * Add mu/sigma layers[{iLayer}]: {in_features}->{self.latent_dims}")
         self.mu_layer    = nn.Linear(in_features, self.latent_dims)
         self.sigma_layer = nn.Linear(in_features, self.latent_dims)
 
@@ -132,6 +135,7 @@ class VariationalEncoder(NetworkBase):
 class Decoder(NetworkBase):
 
     def build(self):
+        print( "Building Decoder:")
         in_features, iLayer = self.latent_dims, 0
         while in_features < self.input_dims:
             out_features = min( in_features * self.reduction_factor, self.input_dims )
@@ -153,8 +157,8 @@ class VariationalAutoencoder():
         self.device = kwargs.get('device', 'cpu')
 
         self._stage = ProcessingStage.PreTrain
-        self._decoder: Decoder = Decoder( input_dims, model_dims, **kwargs ).to(self.device)
         self._encoder: VariationalEncoder = VariationalEncoder( input_dims, model_dims, **kwargs ).to(self.device)
+        self._decoder: Decoder = Decoder( input_dims, model_dims, **kwargs ).to(self.device)
 
     def encoder(self, input: Tensor ) -> Tensor:
         return self._encoder( input )
