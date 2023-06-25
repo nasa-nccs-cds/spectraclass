@@ -1,5 +1,5 @@
 from spectraclass.data.base import DataManager
-from spectraclass.reduction.trainer import mt
+from spectraclass.reduction.vae.trainer import mt
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from typing import List, Union, Tuple, Optional, Dict, Callable
 
@@ -7,13 +7,13 @@ dm: DataManager = DataManager.initialize( "AGB", 'neon' )
 tm().reprocess = True
 mt().refresh_model = True
 
-block_size = 150
+block_size = 100
 model_dims = 3
 nepoch = 10
-focus_nepoch = 5
+focus_nepoch = 0    # 5
 focus_ratio = 10
 focus_threshold = 0.1
-reduction_factor = 3
+reduction_factor = 5
 anomaly = "diff"
 niter = 20
 year= 2016

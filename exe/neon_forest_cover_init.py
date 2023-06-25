@@ -1,5 +1,5 @@
 from spectraclass.data.base import DataManager
-from spectraclass.reduction.trainer import mt
+from spectraclass.reduction.vae.trainer import mt
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from typing import List, Union, Tuple, Optional, Dict, Callable
 

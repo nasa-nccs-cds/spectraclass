@@ -1,6 +1,6 @@
 import numpy as np
 import xarray as xa
-from spectraclass.reduction.trainer import mt
+from spectraclass.reduction.vae.trainer import mt
 import numpy.ma as ma
 from pathlib import Path
 from spectraclass.gui.control import ufm

@@ -9,7 +9,7 @@ from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.data.base import DataManager, dm
 from torch import Tensor
 import xarray as xa, numpy as np
-from .network import VariationalAutoencoder
+from .network import VariationalAutoencoder, NetworkBase
 import holoviews as hv, panel as pn
 import hvplot.xarray  # noqa
 
@@ -102,14 +102,18 @@ class ModelTrainer(SCSingletonConfigurable):
     def abort_callback(self, event ):
         self._abort = True
 
+    def network( self, type: str ) -> NetworkBase:
+        return self.model.network(type)
+
     def get_optimizer(self):
         oid = self.optimizer_type
+        parms = self.network('encoder').parameters()
         if oid == "rmsprop":
-            return torch.optim.RMSprop(self.model.parameters(), lr=self.learning_rate )
+            return torch.optim.RMSprop( parms, lr=self.learning_rate )
         elif oid == "adam":
-            return torch.optim.Adam(self.model.parameters(), lr=self.learning_rate )
+            return torch.optim.Adam( parms, lr=self.learning_rate )
         elif oid == "sgd":
-            return torch.optim.SGD(self.model.parameters(), lr=self.learning_rate )
+            return torch.optim.SGD( parms, lr=self.learning_rate )
         else:
             raise Exception(f" Unknown optimizer: {oid}")
 
@@ -139,12 +143,6 @@ class ModelTrainer(SCSingletonConfigurable):
         self.optimizer.step()
         self.previous_loss = lval
         return lval, x, x_hat
-
-    # opt.zero_grad()
-    # x_hat = self.forward(x)
-    # loss = self.loss()
-    # loss.backward()
-    # opt.step()
 
     def train(self, **kwargs):
         if not self.load(**kwargs):

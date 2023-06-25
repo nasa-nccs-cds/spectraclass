@@ -310,7 +310,7 @@ class ModeDataManager(SCSingletonConfigurable):
         return edges[ti + 1]
 
     def autoencoder_reduction(self, train_input: xa.DataArray, **kwargs ) -> Tuple[xa.DataArray,xa.DataArray]:
-        from spectraclass.reduction.trainer import mt
+        from spectraclass.reduction.vae.trainer import mt
         ufm().show("Computing Feature Space...")
         t0 = time.time()
         ispecs: List[np.ndarray] = [train_input.data.max(0), train_input.data.min(0), train_input.data.mean(0), train_input.data.std(0)]

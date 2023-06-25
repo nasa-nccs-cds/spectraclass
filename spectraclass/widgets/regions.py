@@ -48,7 +48,7 @@ class RegionSelector(SCSingletonConfigurable):
 
     @exception_handled
     def learn_classification(self, *args, **kwargs ):
-        from spectraclass.reduction.trainer import mt
+        from spectraclass.reduction.vae.trainer import mt
         mt().train()
 
     @exception_handled

@@ -187,15 +187,9 @@ class VariationalAutoencoder():
     def loss(self, x: Tensor, y: Tensor ) -> Tensor:
         return ((x - y) ** 2).sum() + self._encoder.kl
 
-    def train( self, data, epochs=20):
-        opt = torch.optim.Adam( self.parameters() )
-        for epoch in range(epochs):
-            for x, y in data:
-                opt.zero_grad()
-                x_hat = self.forward(x)
-                loss = self.loss()
-                loss.backward()
-                opt.step()
+    def train( self ):
+        self._encoder.train()
+        self._decoder.train()
 
     def forward(self, x: Tensor) -> Tensor:
         encoded: Tensor = self.encoder(x)

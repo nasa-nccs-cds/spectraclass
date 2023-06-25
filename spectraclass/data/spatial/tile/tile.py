@@ -633,7 +633,7 @@ class Block(DataContainer):
         return self._reduction_input_data
 
     def _get_model_data(self):
-        from spectraclass.reduction.trainer import mt
+        from spectraclass.reduction.vae.trainer import mt
         pdata, pcoords = self.getPointData()
         lgm().log(f"_get_model_data: pcoords = {list(pcoords.keys())}")
         (self._model_data, self._reproduction) = mt().reduce( pdata )

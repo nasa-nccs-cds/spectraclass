@@ -5,7 +5,7 @@ from spectraclass.model.labels import lm
 from spectraclass.gui.spatial.viewer import hvSpectraclassGui, sgui
 from spectraclass.data.base import DataManager
 from spectraclass.data.spatial.tile.manager import TileManager, tm
-from spectraclass.reduction.trainer import mt
+from spectraclass.reduction.vae.trainer import mt
 from typing import List, Union, Tuple, Optional, Dict, Callable
 hv.extension('bokeh')
 
