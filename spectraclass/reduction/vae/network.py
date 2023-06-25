@@ -66,8 +66,8 @@ class NetworkBase(nn.Module):
         if activation is None: activation = self._activation
         act = activation.lower()
         if   act == "relu":         return nn.ReLU()
-        elif act == "lru":          return nn.LeakyReLU( negative_slope=self._actparm )
-        elif act == "celu":         return nn.CELU(self._actparm)
+        elif act == "lru":          return nn.LeakyReLU()
+        elif act == "celu":         return nn.CELU()
         elif act == "sigmoid":      return nn.Sigmoid()
         elif act == "logsigmoid":   return nn.LogSigmoid()
         elif act == "tanh":         return nn.Tanh()
