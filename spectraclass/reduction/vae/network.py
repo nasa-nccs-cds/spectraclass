@@ -103,10 +103,10 @@ class NetworkBase(nn.Module):
 class VariationalEncoder(NetworkBase):
 
     def __init__(self, input_dims: int, latent_dims: int, reduction_factor: int, **kwargs):
-        super(NetworkBase, self).__init__(input_dims,latent_dims, reduction_factor, **kwargs)
+        super(VariationalEncoder, self).__init__(input_dims,latent_dims, reduction_factor, **kwargs)
         self.N = torch.distributions.Normal(0, 1)
-#        self.N.loc = self.N.loc.cuda()  # hack to get sampling on the GPU
-#        self.N.scale = self.N.scale.cuda()
+        self.N.loc = self.N.loc.cuda()  # hack to get sampling on the GPU
+        self.N.scale = self.N.scale.cuda()
         self.kl = 0
         self.build()
 
