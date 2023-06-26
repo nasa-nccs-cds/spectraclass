@@ -103,10 +103,7 @@ class NetworkBase(nn.Module):
         layer.register_forward_pre_hook(partial(self.layer_forward_pre_hook, ilayer))
 
     def apply_hidden(self, x: Tensor ) -> Tensor:
-        print( f"apply_hidden: input shape= {x.shape}")
         for layer in self.hidden_layers:
-            try:    print( f" ---> apply layer[{layer.in_features}->{layer.out_features}], input  shape = {x.shape}, ")
-            except: pass
             x = layer(x)
         return x
 
@@ -132,7 +129,6 @@ class VariationalEncoder(NetworkBase):
         self.sigma_layer = nn.Linear(in_features, self.latent_dims)
 
     def forward(self, x: Tensor):
-        print( f"VariationalEncoder.Forward: x.device = {x.device}, mu_layer.weights={self.mu_layer.weight}")
         x = self.apply_hidden( x )
         mu = self.mu_layer(x)
         sigma = torch.exp(self.sigma_layer(x))
