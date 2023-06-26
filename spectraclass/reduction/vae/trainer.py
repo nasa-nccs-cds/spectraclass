@@ -46,7 +46,7 @@ class ProgressPanel:
 
 class ModelTrainer(SCSingletonConfigurable):
     optimizer_type = tl.Unicode(default_value="adam").tag(config=True, sync=True)
-    learning_rate = tl.Float(0.0001).tag(config=True, sync=True)
+    learning_rate = tl.Float(0.001).tag(config=True, sync=True)
     loss_threshold = tl.Float(1e-6).tag(config=True, sync=True)
     reduction_factor = tl.Int(2).tag(config=True, sync=True)
     init_wts_mag = tl.Float(0.1).tag(config=True, sync=True)

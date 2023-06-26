@@ -9,15 +9,20 @@ mt().refresh_model = True
 
 block_size = 100
 model_dims = 3
+reduction_factor = 5
+
 niter = 20
 nepoch = 10
+learning_rate = 0.01
+activation = "relu"
+
 focus_nepoch = 0    # 5
 focus_ratio = 10
 focus_threshold = 0.1
-reduction_factor = 5
+
 anomaly = "diff"
 year = 2016
-activation = "relu"
+
 version = "beta_pmm"
 roi = "364203.7_4305235.0_365203.7_4306235.0"
 
