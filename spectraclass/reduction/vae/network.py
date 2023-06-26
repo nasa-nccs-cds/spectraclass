@@ -93,6 +93,7 @@ class NetworkBase(nn.Module):
         #              f"out_features={module.out_features}, input_shapes={[tuple(input.size()) for input in inputs]}")
 
     def add_hidden_layer(self, ilayer: int, layer: nn.Linear, activation: str ):
+        self.__setattr__( f"Layer-{ilayer}", layer )
         self.hidden_layers.append( layer )
         torch.nn.init.xavier_uniform_(layer.weight)
         print(f" * Add linear layer[{ilayer}]: {layer.in_features}->{layer.out_features}")
