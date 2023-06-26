@@ -11,10 +11,10 @@ block_size = 100
 model_dims = 3
 reduction_factor = 5
 
-niter = 20
-nepoch = 10
+niter = 30
+nepoch = 5
 learning_rate = 0.01
-activation = "relu"
+activation = "lru"
 
 focus_nepoch = 0    # 5
 focus_ratio = 10
