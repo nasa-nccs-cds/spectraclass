@@ -97,7 +97,7 @@ class NetworkBase(nn.Module):
         self.hidden_layers.append( layer )
         torch.nn.init.xavier_uniform_(layer.weight)
         print(f" * Add linear layer[{ilayer}]: {layer.in_features}->{layer.out_features}")
-        if self.activation != "linear":
+        if activation != "linear":
             self.hidden_layers.append( self._get_activation_function(activation) )
         layer.register_forward_hook(partial(self.layer_forward_hook, ilayer))
         layer.register_forward_pre_hook(partial(self.layer_forward_pre_hook, ilayer))
