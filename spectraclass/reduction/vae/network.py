@@ -42,7 +42,7 @@ class NetworkBase(nn.Module):
 
     def __init__(self, input_dims: int, latent_dims: int, reduction_factor: int, **kwargs):
         super(NetworkBase, self).__init__()
-        self.device = kwargs.get('device','cpu')
+        self.device = kwargs.get('device','cuda:0')
         self._log_step = kwargs.get( 'log_step', 5 )
         self.input_dims = input_dims
         self.latent_dims = latent_dims
@@ -158,7 +158,7 @@ class VariationalAutoencoder:
         self.input_dims = input_dims
         self.model_dims = model_dims
         self.reduction_factor = kwargs.get("reduction_factor",2)
-        self.device = kwargs.get('device', 'cpu')
+        self.device = kwargs.get('device', 'cuda:0')
         print( "Create VariationalAutoencoder")
         self._stage = ProcessingStage.PreTrain
         self._encoder: VariationalEncoder = VariationalEncoder( input_dims, model_dims, **kwargs ).to(self.device)
