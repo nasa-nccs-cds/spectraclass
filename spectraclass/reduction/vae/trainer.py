@@ -153,7 +153,7 @@ class ModelTrainer(SCSingletonConfigurable):
 
     def reduce(self, data: xa.DataArray ) -> Tuple[xa.DataArray,xa.DataArray]:
         input: Tensor = torch.from_numpy(data.values).to(self.device)
-        reproduction: np.ndarray = self.model.forward( input ).detach().numpy()
+        reproduction: np.ndarray = self.model.forward( input ).cpu().detach().numpy()
         reduced: np.ndarray = self.model.get_encoding()
         xreduced = xa.DataArray( reduced, dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(reduced.shape[1])), attrs=data.attrs)
         xreproduction = data.copy( data=reproduction )
