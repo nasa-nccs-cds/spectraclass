@@ -66,7 +66,7 @@ class ModelTrainer(SCSingletonConfigurable):
 
     def __init__(self, **kwargs ):
         super(ModelTrainer, self).__init__()
-        self.device = kwargs.get('device','cpu')
+        self.device = kwargs.get('device','cuda:0')
         self.nfeatures = kwargs.get('nfeatures',3)
         self.previous_loss: float = 1e10
         self._model: VariationalAutoencoder = None
