@@ -74,7 +74,7 @@ class DataContainer:
         if self._data is None:
             self._data = self._get_data()
         sz = size( self._data )
-        lgm().log( f"IA: block data, shape: {shp(self._data)}, dims: {self._data.dims}, size={sz}")
+        lgm().log( f"IA: {self.__class__.__name__} data, shape: {shp(self._data)}, dims: {self._data.dims}, size={sz}")
         return None if (sz==0) else self._data
 
     def _get_data(self) -> xa.DataArray:

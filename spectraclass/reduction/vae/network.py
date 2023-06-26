@@ -99,7 +99,9 @@ class NetworkBase(nn.Module):
         layer.register_forward_pre_hook(partial(self.layer_forward_pre_hook, ilayer))
 
     def apply_hidden(self, x: Tensor ) -> Tensor:
+        print( f"apply_hidden: input shape= {x.shape}")
         for layer in self.hidden_layers:
+            print( f" ---> apply layer[{layer.in_features}->{layer.out_features}], input  shape = {x.shape}, ")
             x = layer(x)
         return x
 
