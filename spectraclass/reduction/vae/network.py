@@ -43,10 +43,12 @@ class NetworkBase(nn.Module):
     def __init__(self, input_dims: int, latent_dims: int, reduction_factor: int, **kwargs):
         super(NetworkBase, self).__init__()
         self.device = kwargs.get('device','cpu')
+        self._log_step = kwargs.get( 'log_step', 5 )
         self.input_dims = input_dims
         self.latent_dims = latent_dims
         self.reduction_factor = reduction_factor
         self._iteration = 0
+        self._stage = ProcessingStage.PreTrain
         self._layer_outputs: Dict[int, List[np.ndarray]] = {}
         self._layer_weights: Dict[int, List[np.ndarray]] = {}
         self.hidden_layers = []
