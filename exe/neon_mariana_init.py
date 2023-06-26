@@ -8,7 +8,7 @@ tm().reprocess = False
 mt().refresh_model = True
 
 block_size = 100
-model_dims = 6
+model_dims = 3
 reduction_factor = 5
 activation = "relu"
 
