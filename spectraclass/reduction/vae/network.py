@@ -172,12 +172,12 @@ class VariationalAutoencoder(nn.Module):
     def training_step_end(self, step_output):
         return step_output
 
-    def loss(self, x: Tensor, x_hat: Tensor ) -> Tensor:
-        recon_loss = F.mse_loss( x_hat, x, reduction="mean" )
+    def loss(self, x: Tensor, x_hat: Tensor ) -> Tuple[Tensor,Tensor]:
+        mse_loss = F.mse_loss( x_hat, x, reduction="mean" )
         kl = torch.distributions.kl_divergence( self.encoder.q, self.encoder.p )
         kl = kl.mean()
         kl *= self.kl_coeff
-        return kl + recon_loss
+        return kl, mse_loss
 
     def forward(self, x: Tensor, detached: bool = False ) -> Tensor:
         self.encoded: Tensor = self.encoder(x)

@@ -132,15 +132,15 @@ class ModelTrainer(SCSingletonConfigurable):
         W: np.ndarray = self.model.get_layer_weights(iL - 1)
         print( f" L[{iL}]: Oms{O.shape}=[{abs(O).mean():.4f}, {O.std():.4f}], Wms{W.shape}=[{abs(W).mean():.4f}, {W.std():.4f}]", **kwargs )
 
-    def training_step(self, epoch: int, x: Tensor, **kwargs) -> Tuple[float,Tensor,Tensor]:
+    def training_step(self, epoch: int, x: Tensor, **kwargs) -> Tuple[float,float,Tensor,Tensor]:
         self.optimizer.zero_grad()
         x_hat: Tensor = self.model.forward(x)
-        loss: Tensor = self.model.loss( x, x_hat )
-        lval: float = float(loss)
+        kl, mse_loss = self.model.loss( x, x_hat )
+        loss: Tensor = kl + mse_loss
         loss.backward()
         self.optimizer.step()
-        self.previous_loss = lval
-        return lval, x, x_hat
+        self.previous_loss =  float(loss)
+        return self.previous_loss, float(mse_loss), x, x_hat
 
     def train(self, **kwargs):
         if not self.load(**kwargs):
@@ -163,8 +163,7 @@ class ModelTrainer(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.data.spatial.tile.tile import Block, Tile
         num_reduce_images = min( dm().modal.num_images, self.reduce_nimages )
-        losses, tloss = [], 0.0
-        y_hat: Tensor = None
+        losses, tloss, mse = [], 0.0, []
         for image_index in range( num_reduce_images ):
             dm().modal.set_current_image(image_index)
             blocks: List[Block] = tm().tile.getBlocks()
@@ -175,37 +174,36 @@ class ModelTrainer(SCSingletonConfigurable):
                 if iB < self.reduce_nblocks:
                     norm_point_data, grid = block.getPointData( norm=True )
                     if norm_point_data.shape[0] > 0:
-                        input_tensor: Tensor = torch.from_numpy(norm_point_data.values)
-                        x = input_tensor.to(self.device)
+                        x: Tensor = torch.from_numpy(norm_point_data.values).to(self.device)
                         final_epoch = initial_epoch + self.nepoch
                         for epoch  in range( initial_epoch, final_epoch ):
-                            tloss, x, y_hat = self.training_step( epoch, x )
+                            tloss, mse_loss, x, y_hat = self.training_step( epoch, x )
                             losses.append( tloss )
-                        lgm().log( f" ** ITER[{iter}]: Processed block{block.block_coords}, norm data shape = {norm_point_data.shape}, losses = {losses[-self.nepoch:]}")
+                            mse.append( mse_loss )
                         initial_epoch = final_epoch
-                        if self.focus_nepoch > 0:
-                            final_epoch = initial_epoch + self.focus_nepoch
-                            for epoch  in range( initial_epoch, final_epoch ):
-                                tloss, x, y_hat = self.focused_training_step( x, y_hat )
-                                losses.append( tloss )
-                            lgm().log( f" ** ITER[{iter}]: Focus-processed  block{block.block_coords}, norm data shape = {norm_point_data.shape}, losses = {losses[-self.focus_nepoch:]}")
-                            initial_epoch = final_epoch
+                        # if self.focus_nepoch > 0:
+                        #     final_epoch = initial_epoch + self.focus_nepoch
+                        #     for epoch  in range( initial_epoch, final_epoch ):
+                        #         tloss, x, y_hat = self.focused_training_step( x, y_hat )
+                        #         losses.append( tloss )
+                        #     lgm().log( f" ** ITER[{iter}]: Focus-processed  block{block.block_coords}, norm data shape = {norm_point_data.shape}, losses = {losses[-self.focus_nepoch:]}")
+                        #     initial_epoch = final_epoch
                     block.initialize()
-        loss_msg = f"loss[{iter}/{self.niter}]: {mean(losses):>7f}"
+        loss_msg = f"loss[{iter}/{self.niter}]: tloss={losses[-1]:>7f}, mse={mse[-1]:>7f}"
         lgm().log( loss_msg, print=True )
         self.progress.update( iter, loss_msg )
         return initial_epoch
 
-    def focused_training_step(self, train_input: Tensor, y_hat: Tensor ) -> Tuple[float,Tensor,Tensor]:
-        x = self.get_focused_traindata( train_input, y_hat )
-        y_hat: Tensor = self.model.forward(x)
-        loss: Tensor = self.loss(y_hat, x)
-        lval: float = float(loss)
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-        self.previous_loss = lval
-        return lval, x, y_hat
+    # def focused_training_step(self, train_input: Tensor, y_hat: Tensor ) -> Tuple[float,Tensor,Tensor]:
+    #     x = self.get_focused_traindata( train_input, y_hat )
+    #     y_hat: Tensor = self.model.forward(x)
+    #     loss: Tensor = self.loss(y_hat, x)
+    #     lval: float = float(loss)
+    #     self.optimizer.zero_grad()
+    #     loss.backward()
+    #     self.optimizer.step()
+    #     self.previous_loss = lval
+    #     return lval, x, y_hat
     #
     #     from spectraclass.data.base import DataManager, dm
     #     from spectraclass.data.spatial.tile.tile import Block, Tile
