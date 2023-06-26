@@ -157,7 +157,7 @@ class Decoder(NetworkBase):
 class VariationalAutoencoder(nn.Module):
 
     def __init__(self, input_dims: int, model_dims: int, **kwargs) -> None:
-        super().__init__(**kwargs)
+        super().__init__()
         self.input_dims = input_dims
         self.model_dims = model_dims
         self.reduction_factor = kwargs.get("reduction_factor",5)

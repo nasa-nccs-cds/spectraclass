@@ -4,7 +4,7 @@ from spectraclass.data.spatial.tile.manager import TileManager, tm
 from typing import List, Union, Tuple, Optional, Dict, Callable
 
 dm: DataManager = DataManager.initialize( "AGB", 'neon' )
-tm().reprocess = True
+tm().reprocess = False
 mt().refresh_model = True
 
 block_size = 100
