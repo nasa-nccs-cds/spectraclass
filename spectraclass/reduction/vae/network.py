@@ -169,7 +169,7 @@ class VariationalAutoencoder(nn.Module):
         return step_output
 
     def loss(self, x: Tensor, y: Tensor ) -> Tensor:
-        return ((x - y) ** 2).sum() + self._encoder.kl
+        return ((x - y) ** 2).sum() + self.encoder.kl
 
     def forward(self, x: Tensor) -> Tensor:
         encoded: Tensor = self.encoder(x)
@@ -190,17 +190,17 @@ class VariationalAutoencoder(nn.Module):
         os.makedirs(models_dir, exist_ok=True)
         try:
             model_path = f"{models_dir}/{name}.encoder.{self.network_type}.pth"
-            torch.save(self._encoder.state_dict(), model_path )
+            torch.save(self.encoder.state_dict(), model_path )
             print(f"Saved encoder to file '{model_path}'" )
             model_path = f"{models_dir}/{name}.decoder.{self.network_type}.pth"
-            torch.save(self._decoder.state_dict(), model_path)
+            torch.save(self.decoder.state_dict(), model_path)
             print(f"Saved decoder to file '{model_path}'")
         except Exception as err:
             print(f"Error saving model {name}: {err}")
 
     def network( self, type: str ) -> NetworkBase:
-        if type == "encoder":   return self._encoder
-        elif type == "decoder": return self._decoder
+        if type == "encoder":   return self.encoder
+        elif type == "decoder": return self.decoder
         else: raise Exception( f"Unlnown nnet type: {type}")
 
     def load_weights(self, type: str, filepath: str ):
