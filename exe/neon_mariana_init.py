@@ -9,11 +9,11 @@ mt().refresh_model = True
 
 block_size = 100
 model_dims = 3
-reduction_factor = 5
+reduction_factor = 3
 
 niter = 30
 nepoch = 5
-learning_rate = 0.1
+learning_rate = 0.01
 activation = "relu"
 
 focus_nepoch = 0    # 5
