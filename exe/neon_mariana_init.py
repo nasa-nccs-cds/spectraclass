@@ -14,7 +14,7 @@ activation = "relu"
 
 niter = 100
 nepoch = 5
-learning_rate = 0.0002
+learning_rate = 0.0001
 
 focus_nepoch = 0    # 5
 focus_ratio = 10
