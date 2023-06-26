@@ -190,7 +190,7 @@ class ModelTrainer(SCSingletonConfigurable):
                             for epoch  in range( initial_epoch, final_epoch ):
                                 tloss, x, y_hat = self.focused_training_step( x, y_hat )
                                 losses.append( tloss )
-                            lgm().log( f" ** ITER[{iter}]: Focus-processed block{block.block_coords}, norm data shape = {norm_point_data.shape}, losses = {losses[-self.focus_nepoch:]}")
+                            lgm().log( f" ** ITER[{iter}]: Focus-processed  block{block.block_coords}, norm data shape = {norm_point_data.shape}, losses = {losses[-self.focus_nepoch:]}")
                             initial_epoch = final_epoch
                     block.initialize()
         loss_msg = f"loss[{iter}/{self.niter}]: {mean(losses):>7f}"
