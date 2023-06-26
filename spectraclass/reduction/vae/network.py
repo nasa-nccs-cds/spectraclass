@@ -144,7 +144,7 @@ class Decoder(NetworkBase):
         while in_features < self.input_dims:
             out_features = min( in_features * self.reduction_factor, self.input_dims )
             linear = nn.Linear( in_features=in_features, out_features=out_features, bias=True )
-            activation = self.activation if (out_features != self.input_dims) else "sigmoid"
+            activation = self.activation if (out_features != self.input_dims) else "linear"
             self.add_hidden_layer(iLayer, linear, activation )
             in_features, iLayer = out_features, iLayer + 1
 
