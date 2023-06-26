@@ -136,7 +136,7 @@ class ModelTrainer(SCSingletonConfigurable):
     def training_step(self, epoch: int, x: Tensor, **kwargs) -> Tuple[float,Tensor,Tensor]:
         self.optimizer.zero_grad()
         x_hat: Tensor = self.model.forward(x)
-        loss: Tensor = self._model.loss( x, x_hat )
+        loss: Tensor = self.model.loss( x, x_hat )
         lval: float = float(loss)
         loss.backward()
         self.optimizer.step()
@@ -154,9 +154,9 @@ class ModelTrainer(SCSingletonConfigurable):
 
     def reduce(self, data: xa.DataArray ) -> Tuple[xa.DataArray,xa.DataArray]:
         input: Tensor = torch.from_numpy(data.values).to(self.device)
-        reduced: Tensor = self.model.encode( input )
-        reproduction: np.ndarray = self.model.decode( reduced ).detach().numpy()
-        xreduced = xa.DataArray( reduced.detach().numpy(), dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(reduced.shape[1])), attrs=data.attrs)
+        reproduction: np.ndarray = self.model.forward( input ).detach().numpy()
+        reduced: np.ndarray = self.model.get_encoding()
+        xreduced = xa.DataArray( reduced, dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(reduced.shape[1])), attrs=data.attrs)
         xreproduction = data.copy( data=reproduction )
         return xreduced, xreproduction
 

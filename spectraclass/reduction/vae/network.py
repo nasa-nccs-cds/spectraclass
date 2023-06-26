@@ -180,9 +180,12 @@ class VariationalAutoencoder(nn.Module):
         return kl + recon_loss
 
     def forward(self, x: Tensor) -> Tensor:
-        encoded: Tensor = self.encoder(x)
-        result = self.decoder(encoded)
+        self.encoded: Tensor = self.encoder(x)
+        result = self.decoder(self.encoded)
         return result
+
+    def get_encoding(self) -> np.ndarray:
+        return self.encoded.detach().numpy()
 
     @property
     def network_type(self) -> str:
