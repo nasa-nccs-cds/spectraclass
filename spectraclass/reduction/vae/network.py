@@ -149,7 +149,7 @@ class Decoder(NetworkBase):
        return self.apply_hidden(z)
 
 
-class VariationalAutoencoder():
+class VariationalAutoencoder:
 
     def __init__(self, input_dims: int, model_dims: int, **kwargs) -> None:
         super().__init__()
@@ -157,7 +157,7 @@ class VariationalAutoencoder():
         self.model_dims = model_dims
         self.reduction_factor = kwargs.get("reduction_factor",2)
         self.device = kwargs.get('device', 'cpu')
-
+        print( "Create VariationalAutoencoder")
         self._stage = ProcessingStage.PreTrain
         self._encoder: VariationalEncoder = VariationalEncoder( input_dims, model_dims, **kwargs ).to(self.device)
         self._decoder: Decoder = Decoder( input_dims, model_dims, **kwargs ).to(self.device)
