@@ -52,7 +52,11 @@ class NetworkBase(nn.Module):
         self._layer_weights: Dict[int, List[np.ndarray]] = {}
         self.hidden_layers = []
         self.activation = kwargs.get( 'activation', 'lru' )
+        self.add_aux_elements(**kwargs)
         self.build()
+
+    def add_aux_elements(self, **kwargs):
+        pass
 
     def get_layer_weights(self, iLayer: int) -> np.ndarray:
         return np.stack(self._layer_weights[iLayer], axis=1)
@@ -107,8 +111,7 @@ class NetworkBase(nn.Module):
 
 class VariationalEncoder(NetworkBase):
 
-    def __init__(self, input_dims: int, latent_dims: int, reduction_factor: int, **kwargs):
-        super(VariationalEncoder, self).__init__(input_dims,latent_dims, reduction_factor, **kwargs)
+    def add_aux_elements(self, **kwargs):
         self.N = torch.distributions.Normal(0, 1)
         self.N.loc = self.N.loc.cuda()  # hack to get sampling on the GPU
         self.N.scale = self.N.scale.cuda()
@@ -154,14 +157,13 @@ class Decoder(NetworkBase):
 class VariationalAutoencoder(nn.Module):
 
     def __init__(self, input_dims: int, model_dims: int, **kwargs) -> None:
-        super(VariationalAutoencoder).__init__()
+        super().__init__(**kwargs)
         self.input_dims = input_dims
         self.model_dims = model_dims
-        self.reduction_factor = kwargs.get("reduction_factor",2)
-        print( "Create VariationalAutoencoder")
+        self.reduction_factor = kwargs.get("reduction_factor",5)
         self._stage = ProcessingStage.PreTrain
-        self.add_module( 'encoder', VariationalEncoder( input_dims, model_dims, **kwargs ) )
-        self.add_module( 'decoder', Decoder( input_dims, model_dims, **kwargs ) )
+        self.encoder = VariationalEncoder( input_dims, model_dims, **kwargs )
+        self.decoder = Decoder( input_dims, model_dims, **kwargs )
 
     def training_step_end(self, step_output):
         return step_output
