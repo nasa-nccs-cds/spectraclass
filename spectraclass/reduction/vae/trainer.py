@@ -66,7 +66,7 @@ class ModelTrainer(SCSingletonConfigurable):
 
     def __init__(self, **kwargs ):
         super(ModelTrainer, self).__init__()
-        self.device = kwargs.get('device','cuda:0')
+        self.device = kwargs.get('device', 'cuda' if torch.cuda.is_available() else 'cpu')
         self.nfeatures = kwargs.get('nfeatures',3)
         self.previous_loss: float = 1e10
         self._model: VariationalAutoencoder = None
@@ -92,8 +92,8 @@ class ModelTrainer(SCSingletonConfigurable):
         if self._model is None:
             block: Block = tm().getBlock()
             point_data, grid = block.getPointData()
-            opts = dict ( wmag=self.init_wts_mag, init_bias=self.init_bias_mag, activation=self.activation,  reduction_factor=self.reduction_factor, log_step=self.log_step )
-            self._model = VariationalAutoencoder( point_data.shape[1], self.nfeatures, **opts )
+            opts = dict ( device = self.device, activation=self.activation,  reduction_factor=self.reduction_factor, log_step=self.log_step )
+            self._model = VariationalAutoencoder( point_data.shape[1], self.nfeatures, **opts ).to( self.device )
         return self._model
 
     def panel(self)-> pn.Row:
@@ -154,8 +154,9 @@ class ModelTrainer(SCSingletonConfigurable):
             self.save(**kwargs)
 
     def reduce(self, data: xa.DataArray ) -> Tuple[xa.DataArray,xa.DataArray]:
-        reduced: Tensor = self.model.encode( data.values, detach=False )
-        reproduction: np.ndarray = self.model.decode( reduced )
+        input: Tensor = torch.from_numpy(data.values).to(self.device)
+        reduced: Tensor = self.model.encode( input )
+        reproduction: np.ndarray = self.model.decode( reduced ).detach().numpy()
         xreduced = xa.DataArray( reduced.detach().numpy(), dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(reduced.shape[1])), attrs=data.attrs)
         xreproduction = data.copy( data=reproduction )
         return xreduced, xreproduction
@@ -266,16 +267,20 @@ class ModelTrainer(SCSingletonConfigurable):
         std_data_sample = std_data if (num_standard_samples >= std_data.shape[0]) else random_sample( std_data, num_standard_samples )
         return torch.cat((anom_data, std_data_sample), 0)
 
+
     def predict(self, data: xa.DataArray, **kwargs) -> xa.DataArray:
         block: Block = tm().getBlock()
         raster = kwargs.get( 'raster', "False")
-        raw_result: xa.DataArray = self.model.predict( data )
-        return block.points2raster( raw_result ) if raster else raw_result
+        input: Tensor = torch.from_numpy(data.values).to( self.device)
+        result: np.ndarray = self.model.predict( input ).detach().numpy()
+        xresult = xa.DataArray(result, dims=['samples', 'y'], coords=dict(samples=data.coords['samples'], y=range(result.shape[1])), attrs=data.attrs)
+        return block.points2raster( xresult ) if raster else xresult
 
     def encode(self, data: xa.DataArray, **kwargs) -> xa.DataArray:
         block: Block = tm().getBlock()
         raster = kwargs.get( 'raster', "False")
-        raw_result: np.ndarray = self.model.encode( data.values )
+        input: Tensor = torch.from_numpy(data.values).to( self.device)
+        raw_result: np.ndarray = self.model.encode( input ).detach().numpy()
         xresult = xa.DataArray(raw_result, dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(raw_result.shape[1])), attrs=data.attrs)
         return block.points2raster( xresult ) if raster else raw_result
 

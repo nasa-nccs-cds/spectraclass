@@ -42,7 +42,6 @@ class NetworkBase(nn.Module):
 
     def __init__(self, input_dims: int, latent_dims: int, reduction_factor: int, **kwargs):
         super(NetworkBase, self).__init__()
-        self.device = kwargs.get('device','cuda:0')
         self._log_step = kwargs.get( 'log_step', 5 )
         self.input_dims = input_dims
         self.latent_dims = latent_dims
@@ -147,57 +146,28 @@ class Decoder(NetworkBase):
             activation = self.activation if (out_features != self.input_dims) else "sigmoid"
             self.add_hidden_layer(iLayer, linear, activation )
             in_features, iLayer = out_features, iLayer + 1
+
     def forward(self, z):
        return self.apply_hidden(z)
 
 
-class VariationalAutoencoder:
+class VariationalAutoencoder(nn.Module):
 
     def __init__(self, input_dims: int, model_dims: int, **kwargs) -> None:
-        super().__init__()
+        super(VariationalAutoencoder).__init__()
         self.input_dims = input_dims
         self.model_dims = model_dims
         self.reduction_factor = kwargs.get("reduction_factor",2)
-        self.device = kwargs.get('device', 'cuda:0')
         print( "Create VariationalAutoencoder")
         self._stage = ProcessingStage.PreTrain
-        self._encoder: VariationalEncoder = VariationalEncoder( input_dims, model_dims, **kwargs ).to(self.device)
-        self._decoder: Decoder = Decoder( input_dims, model_dims, **kwargs ).to(self.device)
-
-    def encoder(self, input: Tensor ) -> Tensor:
-        return self._encoder( input )
-
-    def decoder(self, input: Tensor) ->  Tensor:
-        return self._decoder( input )
-
+        self.add_module( 'encoder', VariationalEncoder( input_dims, model_dims, **kwargs ) )
+        self.add_module( 'decoder', Decoder( input_dims, model_dims, **kwargs ) )
 
     def training_step_end(self, step_output):
         return step_output
 
-    def predict(self, data: xa.DataArray) -> xa.DataArray:
-        input: Tensor = torch.from_numpy(data.values)
-        result: np.ndarray = self.forward(input).detach()
-        return xa.DataArray(result, dims=['samples', 'y'], coords=dict(samples=data.coords['samples'], y=range(result.shape[1])), attrs=data.attrs)
-
-    @exception_handled
-    def encode(self, data: np.ndarray, **kwargs) -> Union[np.ndarray,Tensor]:
-        detach = kwargs.get('detach',False)
-        input: Tensor = torch.from_numpy(data)
-        result: Tensor = self.encoder(input)
-        return result.detach().numpy() if detach else result
-
-    @exception_handled
-    def decode(self, data: Union[np.ndarray,Tensor]) -> np.ndarray:
-        input: Tensor = torch.from_numpy(data) if (type(data) == np.ndarray) else data
-        result: Tensor = self.decoder(input)
-        return result.detach().numpy()
-
     def loss(self, x: Tensor, y: Tensor ) -> Tensor:
         return ((x - y) ** 2).sum() + self._encoder.kl
-
-    def train( self ):
-        self._encoder.train()
-        self._decoder.train()
 
     def forward(self, x: Tensor) -> Tensor:
         encoded: Tensor = self.encoder(x)
