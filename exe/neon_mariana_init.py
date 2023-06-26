@@ -12,9 +12,9 @@ model_dims = 3
 reduction_factor = 5
 activation = "relu"
 
-niter = 30
+niter = 100
 nepoch = 5
-learning_rate = 0.001
+learning_rate = 0.0002
 
 focus_nepoch = 0    # 5
 focus_ratio = 10
