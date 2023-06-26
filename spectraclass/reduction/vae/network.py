@@ -130,7 +130,8 @@ class VariationalEncoder(NetworkBase):
         self.mu_layer    = nn.Linear(in_features, self.latent_dims)
         self.sigma_layer = nn.Linear(in_features, self.latent_dims)
 
-    def forward(self, x):
+    def forward(self, x: Tensor):
+        print( f"VariationalEncoder.Forward: x.device = {x.device}, mu_layer.weights={self.mu_layer.weights}")
         x = self.apply_hidden( x )
         mu = self.mu_layer(x)
         sigma = torch.exp(self.sigma_layer(x))
