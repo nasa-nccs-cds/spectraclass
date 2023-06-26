@@ -1,7 +1,7 @@
 import os
 from typing import Any, Dict, List, Tuple, Type, Optional, Union
 from collections import OrderedDict
-from torch.nn import functional as F
+
 from functools import partial
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import torch, math
@@ -129,17 +129,12 @@ class VariationalEncoder(NetworkBase):
         self.sigma_layer = nn.Linear(in_features, self.latent_dims)
 
     def forward(self, x: Tensor):
-        x: Tensor = self.apply_hidden( x )
-        mu: Tensor = self.mu_layer(x)
-        sigma: Tensor = self.sigma_layer(x)
-        return self.sample( mu, sigma )
-
-    def sample(self, mu: Tensor, sigma: Tensor ):
-        std = torch.exp(sigma / 2)
-        self.p = torch.distributions.Normal(torch.zeros_like(mu), torch.ones_like(std))
-        self.q = torch.distributions.Normal(mu, std)
-        z = self.q.rsample()
-        return  z
+        x = self.apply_hidden( x )
+        mu = self.mu_layer(x)
+        sigma = torch.exp(self.sigma_layer(x))
+        z = mu + sigma * self.N.sample(mu.shape)
+        self.kl = (sigma ** 2 + mu ** 2 - torch.log(sigma) - 1 / 2).sum()
+        return z
 
 class Decoder(NetworkBase):
 
@@ -163,8 +158,7 @@ class VariationalAutoencoder(nn.Module):
         super().__init__()
         self.input_dims = input_dims
         self.model_dims = model_dims
-        self.reduction_factor = kwargs.get( "reduction_factor", 5 )
-        self.kl_coeff = kwargs.get( 'kl_coeff', 0.1 )
+        self.reduction_factor = kwargs.get("reduction_factor",5)
         self._stage = ProcessingStage.PreTrain
         self.encoder = VariationalEncoder( input_dims, model_dims, **kwargs )
         self.decoder = Decoder( input_dims, model_dims, **kwargs )
@@ -172,12 +166,8 @@ class VariationalAutoencoder(nn.Module):
     def training_step_end(self, step_output):
         return step_output
 
-    def loss(self, x: Tensor, x_hat: Tensor ) -> Tensor:
-        recon_loss = F.mse_loss( x_hat, x, reduction="mean" )
-        kl = torch.distributions.kl_divergence( self.encoder.q, self.encoder.p )
-        kl = kl.mean()
-        kl *= self.kl_coeff
-        return kl + recon_loss
+    def loss(self, x: Tensor, y: Tensor ) -> Tensor:
+        return ((x - y) ** 2).sum() + self.encoder.kl
 
     def forward(self, x: Tensor) -> Tensor:
         encoded: Tensor = self.encoder(x)

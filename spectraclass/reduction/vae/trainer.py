@@ -72,7 +72,6 @@ class ModelTrainer(SCSingletonConfigurable):
         self._model: VariationalAutoencoder = None
         self._abort = False
         self._optimizer = None
-        self.loss = torch.nn.MSELoss( **kwargs )
         self._progress = None
 
     @property
@@ -137,7 +136,7 @@ class ModelTrainer(SCSingletonConfigurable):
     def training_step(self, epoch: int, x: Tensor, **kwargs) -> Tuple[float,Tensor,Tensor]:
         self.optimizer.zero_grad()
         x_hat: Tensor = self.model.forward(x)
-        loss: Tensor = self.loss(x_hat, x)
+        loss: Tensor = self._model.loss( x, x_hat )
         lval: float = float(loss)
         loss.backward()
         self.optimizer.step()

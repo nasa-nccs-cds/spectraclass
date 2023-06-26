@@ -13,7 +13,7 @@ reduction_factor = 5
 
 niter = 30
 nepoch = 5
-learning_rate = 0.01
+learning_rate = 1.0e-4
 activation = "relu"
 
 focus_nepoch = 0    # 5
