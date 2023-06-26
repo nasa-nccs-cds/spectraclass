@@ -39,14 +39,6 @@ def scale( x: xa.DataArray, axis = 0 ) -> xa.DataArray:
 def nsamples( trainingsets: List[np.ndarray ]):
     return sum( [ts.shape[0] for ts in trainingsets] )
 
-def get_optimizer( **kwargs ):
-    oid = kwargs.get( 'optimizer','rmsprop').lower()
-    lr = kwargs.get( 'lr', 1e-3 )
-    if   oid == "rmsprop": return tf.keras.optimizers.RMSprop( learning_rate=lr )
-    elif oid == "adam":    return tf.keras.optimizers.Adam(    learning_rate=lr )
-    elif oid == "sgd":     return tf.keras.optimizers.SGD(     learning_rate=lr )
-    else: raise Exception( f" Unknown optimizer: {oid}")
-
 class ModeDataManager(SCSingletonConfigurable):
     from spectraclass.application.controller import SpectraclassController
 
@@ -65,7 +57,6 @@ class ModeDataManager(SCSingletonConfigurable):
     model_dims = tl.Int(16).tag(config=True, sync=True)
     subsample_index = tl.Int(1).tag(config=True, sync=True)
     anomaly = tl.Unicode("none").tag(config=True, sync=True)
-    modelkey = tl.Unicode("0000").tag(config=True, sync=True)
 
     def __init__(self, ):
         super(ModeDataManager,self).__init__()
