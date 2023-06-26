@@ -101,7 +101,8 @@ class NetworkBase(nn.Module):
     def apply_hidden(self, x: Tensor ) -> Tensor:
         print( f"apply_hidden: input shape= {x.shape}")
         for layer in self.hidden_layers:
-            print( f" ---> apply layer[{layer.in_features}->{layer.out_features}], input  shape = {x.shape}, ")
+            try:    print( f" ---> apply layer[{layer.in_features}->{layer.out_features}], input  shape = {x.shape}, ")
+            except: pass
             x = layer(x)
         return x
 
@@ -113,7 +114,6 @@ class VariationalEncoder(NetworkBase):
         self.N.loc = self.N.loc.cuda()  # hack to get sampling on the GPU
         self.N.scale = self.N.scale.cuda()
         self.kl = 0
-        self.build()
 
     def build(self):
         print( "Building Encoder:")
