@@ -209,7 +209,7 @@ class ClusterManager(SCSingletonConfigurable):
         if self.cluster_points is None:
             self.cluster( dm().getModelData() )
         block = tm().getBlock()
-        self._cluster_raster: xa.DataArray = block.points2raster( self.cluster_points ).squeeze()
+        self._cluster_raster: xa.DataArray = block.points2raster( self.cluster_points, name="Cluster" ).squeeze()
         return self._cluster_raster
 
     @property
@@ -367,10 +367,10 @@ class ClusterManager(SCSingletonConfigurable):
  #       mm().plot_cluster_image( self.get_cluster_map() )
 
     @exception_handled
-    def rescale(self, icluster: int, threshold: float ):
+    def rescale(self, icluster: int, value: float ):
         self.clear( reset=False )
-        lgm().log( f"CM: rescale cluster-{icluster}: threshold = {threshold}")
-        self.model.rescale( icluster, threshold )
+        lgm().log( f"CM: rescale cluster-{icluster}: value = {value}")
+        self.model.rescale( icluster, value )
         self._cluster_points = self.model.cluster_data
         if self._cluster_points is not None:
             if icluster == 0:

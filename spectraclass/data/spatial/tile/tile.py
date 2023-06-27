@@ -813,7 +813,7 @@ class Block(DataContainer):
         # except Exception as err:
         #     lgm().log( f" --> pindex2indices Error: {err}, pid = {point_index}, coords = {pi}" )
 
-    def points2raster(self, points_data: xa.DataArray ) -> xa.DataArray:
+    def points2raster(self, points_data: xa.DataArray, **kwargs ) -> xa.DataArray:
         t0 = time.time()
         dims = [points_data.dims[1], self.data.dims[1], self.data.dims[2]]
         coords = [(dims[0], points_data[dims[0]].data), (dims[1], self.data[dims[1]].data), (dims[2], self.data[dims[2]].data)]
@@ -835,7 +835,8 @@ class Block(DataContainer):
         raster_data = rpdata.transpose().reshape([points_data.shape[1], self.data.shape[1], self.data.shape[2]])
         lgm().log( f"points->raster[{self.dsid()}], time= {time.time()-t0:.2f} sec, points: dims={points_data.dims}, shape={points_data.shape}" )
         lgm().log( f"  ---> data: dims={self.data.dims}, shape={self.data.shape}, attrs={points_data.attrs.keys()}" )
-        return xa.DataArray( raster_data, coords, dims, points_data.name, points_data.attrs )
+        rname = kwargs.get( 'name', points_data.name )
+        return xa.DataArray( raster_data, coords, dims, rname, points_data.attrs )
 
     def raster2points(self, base_raster: xa.DataArray) -> Tuple[Optional[xa.DataArray], Optional[np.ndarray],  Optional[np.ndarray]]:  # base_raster dims: [ band, y, x ]
         t0 = time.time()
