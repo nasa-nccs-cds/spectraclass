@@ -36,8 +36,6 @@ class Autoencoder(nn.Module):
         self._activation = kwargs.get('activation', 'relu')
         self._actparm = kwargs.get( 'actparm', 0.01 )
         self._stage = ProcessingStage.PreTrain
-        self._decoder: nn.Sequential = None
-        self._encoder: nn.Sequential = None
         self._l1_strength: np.ndarray = None
         self._l2_strength: np.ndarray = None
         self.init_bias = kwargs.get('init_bias', 0.0 )
@@ -46,20 +44,11 @@ class Autoencoder(nn.Module):
         self._L0 = 0.0
         self._iteration = 0
         self._log_step = kwargs.get( 'log_step', 2 )
+        self.build_ae_model()
 
     @property
     def output_dim(self):
         return self._n_species
-
-    def encoder(self, input: Tensor ) -> Tensor:
-        if self._encoder is None:
-            self.build_ae_model()
-        return self._encoder( input )
-
-    def decoder(self, input: Tensor) ->  Tensor:
-        if self._decoder is None:
-            self.build_ae_model()
-        return self._decoder( input )
 
     def weights_init_uniform_rule(self, m: nn.Module):
         classname = m.__class__.__name__
@@ -79,8 +68,6 @@ class Autoencoder(nn.Module):
     @exception_handled
     def build_ae_model(self, **kwargs):
         lgm().log(f"#AEC: RM BUILD AEC NETWORK: {self.input_dims} -> {self.model_dims}")
-
-#        dargs = dict( kernel_initializer=tf.keras.initializers.RandomNormal(stddev=winit), bias_initializer=tf.keras.initializers.Zeros() )
         in_features, iLayer = self.input_dims, 0
         encoder_modules = OrderedDict()
         while in_features > self.model_dims:
@@ -89,7 +76,7 @@ class Autoencoder(nn.Module):
             activation = None if (out_features == self.model_dims) else self._activation
             self._add_layer( encoder_modules, iLayer, linear, activation )
             in_features, iLayer = out_features, iLayer + 1
-        self._encoder = nn.Sequential(encoder_modules)
+        self.encoder = nn.Sequential( encoder_modules )
         decoder_modules = OrderedDict()
         while in_features < self.input_dims:
             out_features = min( in_features * self.reduction_factor, self.input_dims )
@@ -97,7 +84,7 @@ class Autoencoder(nn.Module):
             activation = None if (out_features==self.input_dims) else self._activation
             self._add_layer( decoder_modules, iLayer, linear, activation )
             in_features, iLayer = out_features, iLayer + 1
-        self._decoder = nn.Sequential(decoder_modules)
+        self.decoder = nn.Sequential(decoder_modules)
         self.init_weights()
 
     def init_weights(self):
@@ -105,7 +92,9 @@ class Autoencoder(nn.Module):
         self._decoder.apply(self.weights_init_xavier)
 
     def _add_layer(self, modules: OrderedDict, ilayer: int, layer: nn.Linear, activation: str):
-        modules[f"layer-{ilayer}"] = layer
+        lname = f"layer-{ilayer}"
+        self.__setattr__( lname, layer )
+        modules[lname] = layer
         print(f" * Add linear layer[{ilayer}]: {layer.in_features}->{layer.out_features}")
         if activation != "linear":
             print(f"   ---> Add activation: {activation}")
@@ -173,28 +162,10 @@ class Autoencoder(nn.Module):
     def training_step_end(self, step_output):
         return step_output
 
-    def train(self, mode: bool = True):
-        self._stage = ProcessingStage.Training if mode else ProcessingStage.Evaluation
-        return nn.Module.train(self, mode)
-
     def predict(self, data: xa.DataArray) -> xa.DataArray:
-        input: Tensor = torch.from_numpy(data.values)
-        result: np.ndarray = self.forward(input).detach()
-        return xa.DataArray(result, dims=['samples', 'y'],
-                            coords=dict(samples=data.coords['samples'], y=range(result.shape[1])), attrs=data.attrs)
-
-    @exception_handled
-    def encode(self, data: np.ndarray, **kwargs) -> Union[np.ndarray,Tensor]:
-        detach = kwargs.get('detach',False)
-        input: Tensor = torch.from_numpy(data)
-        result: Tensor = self.encoder(input)
-        return result.detach().numpy() if detach else result
-
-    @exception_handled
-    def decode(self, data: Union[np.ndarray,Tensor]) -> np.ndarray:
-        input: Tensor = torch.from_numpy(data) if (type(data) == np.ndarray) else data
-        result: Tensor = self.decoder(input)
-        return result.detach().numpy()
+        input: Tensor = torch.from_numpy(data.values).to(self.device)
+        result: np.ndarray = self.forward(input).cpu().detach().numpy()
+        return xa.DataArray(result, dims=['samples', 'y'], coords=dict(samples=data.coords['samples'], y=range(result.shape[1])), attrs=data.attrs)
 
     def forward(self, x: Tensor) -> Tensor:
         encoded: Tensor = self.encoder(x)
@@ -224,10 +195,8 @@ class Autoencoder(nn.Module):
             print(f"Error saving model {name}: {err}")
 
     def network( self, type: str ) -> nn.Sequential:
-        if self._encoder is None:
-            self.build_ae_model()
-        if type == "encoder":   return self._encoder
-        elif type == "decoder": return self._decoder
+        if type == "encoder":   return self.encoder
+        elif type == "decoder": return self.decoder
         else: raise Exception( f"Unlnown nnet type: {type}")
 
     def load_weights(self, type: str, filepath: str ):
