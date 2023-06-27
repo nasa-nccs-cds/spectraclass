@@ -44,7 +44,7 @@ class Autoencoder(nn.Module):
         self.nLayers = 0
         self._L0 = 0.0
         self._iteration = 0
-        self._log_step = kwargs.get( 'log_step', 2 )
+        self._log_step = kwargs.get( 'log_step', 10 )
 
     @property
     def output_dim(self):

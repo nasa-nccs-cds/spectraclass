@@ -308,8 +308,8 @@ class ClusterManager(SCSingletonConfigurable):
 
     def generate_clusters(self):
         from spectraclass.data.base import DataManager, dm
-        ufm().show(f"Creating clusters using {clm().mid}  ")
-        clm().cluster(dm().getModelData())
+        ufm().show(f"Creating clusters using {self.mid}  ")
+        self.cluster(dm().getModelData())
         self.refresh()
         ufm().show(f"Clustering completed")
 
@@ -350,12 +350,13 @@ class ClusterManager(SCSingletonConfigurable):
 
     @exception_handled
     def tune_cluster(self, icluster: int, change: Dict ):
-        from spectraclass.gui.spatial.map import mm
+ #       from spectraclass.gui.spatial.map import mm
         self.rescale( icluster, change['new'] )
-        mm().plot_cluster_image( self.get_cluster_map() )
+ #       mm().plot_cluster_image( self.get_cluster_map() )
 
     def rescale(self, icluster: int, threshold: float ):
         self.clear( reset=False )
+        print( f"rescale cluster-{icluster}: threshold = {threshold}")
         self.model.rescale( icluster, threshold )
         self._cluster_points = self.model.cluster_data
         if self._cluster_points is not None:
