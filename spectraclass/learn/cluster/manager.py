@@ -10,6 +10,7 @@ import xarray as xa
 from functools import partial
 import numpy as np
 from typing import List, Tuple, Dict
+from param.parameterized import Event
 import traitlets as tl
 from spectraclass.data.spatial.tile.tile import Block
 from .base import ClusterBase
@@ -45,10 +46,9 @@ class ClusterMagnitudeWidget:
         self.slider.param.watch( self.update, ['value'], onlychanged=True )
 
     @exception_handled
-    def update(self, event ):
-        lgm().log(f"CM: tstream.event {type(event)}: {event}")
-        if type(event) != tuple:
-            tvalue = event['new']
+    def update(self, event: Event ):
+        if type(event) == Event:
+            tvalue = event.new
             self.tstream.event( tindex=self._index, tvalue=tvalue )
             lgm().log( f"CM: tstream.event {self._index} {tvalue}")
 
