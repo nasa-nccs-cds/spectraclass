@@ -17,6 +17,7 @@ from spectraclass.util.logs import lgm, exception_handled, log_timing
 from spectraclass.model.base import SCSingletonConfigurable
 import colorsys
 from holoviews.streams import Stream, param
+
 Count = Stream.define('Count', index=param.Integer(default=0, doc='Cluster Operation count'))
 
 def arange( data: xa.DataArray, axis=None ) -> Tuple[np.ndarray,np.ndarray]:
@@ -45,10 +46,11 @@ class ClusterMagnitudeWidget:
 
     @exception_handled
     def update(self, event ):
-        lgm().log(f"CM: tstream.event {event}")
-        tvalue = 0.1 #event['new']
-        self.tstream.event( tindex=self._index, tvalue=tvalue )
-        lgm().log( f"CM: tstream.event {self._index} {tvalue}")
+        lgm().log(f"CM: tstream.event {type(event)}: {event}")
+        if type(event) != tuple:
+            tvalue = event['new']
+            self.tstream.event( tindex=self._index, tvalue=tvalue )
+            lgm().log( f"CM: tstream.event {self._index} {tvalue}")
 
     def panel(self):
         return pn.Row(  self.label, self.slider )  # , layout=ipw.Layout( width="550px", height=f"{self.height}px"), overflow="hidden" )
