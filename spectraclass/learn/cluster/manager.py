@@ -44,9 +44,10 @@ class ClusterMagnitudeWidget:
         self.slider.param.watch( self.update, ['value'], onlychanged=True )
 
     @exception_handled
-    def update(self, value ):
-        self.tstream.event( tindex=self._index, tvalue=value )
-        lgm().log( f"CM: tstream.event {self._index} {value}")
+    def update(self, event ):
+        tvalue = event['new']
+        self.tstream.event( tindex=self._index, tvalue=tvalue )
+        lgm().log( f"CM: tstream.event {self._index} {tvalue}")
 
     def panel(self):
         return pn.Row(  self.label, self.slider )  # , layout=ipw.Layout( width="550px", height=f"{self.height}px"), overflow="hidden" )
