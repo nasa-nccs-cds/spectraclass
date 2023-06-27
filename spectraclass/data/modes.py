@@ -85,7 +85,8 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def load_spectral_mean(self) -> Optional[xa.DataArray]:
         from spectraclass.data.base import DataManager, dm
-        file_path = f"{dm().cache_dir}/{self.modelkey}.spectral_mean.nc"
+        from spectraclass.reduction.trainer import mt
+        file_path = f"{dm().cache_dir}/{mt().modelkey}.spectral_mean.nc"
         if os.path.exists( file_path ):
             spectral_mean: xa.DataArray = xa.open_dataarray( file_path )
             return spectral_mean
@@ -102,7 +103,8 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def write_metadata(self, block_data, attrs ):
         from spectraclass.data.base import DataManager, dm
-        file_path = f"{dm().cache_dir}/{self.modelkey}.mdata.txt"
+        from spectraclass.reduction.trainer import mt
+        file_path = f"{dm().cache_dir}/{mt().modelkey}.mdata.txt"
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         try:
             with open(file_path, "w") as mdfile:
@@ -118,7 +120,8 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def loadMetadata(self) -> Optional[Dict]:
         from spectraclass.data.base import DataManager, dm
-        file_path = f"{dm().cache_dir}/{self.modelkey}.mdata.txt"
+        from spectraclass.reduction.trainer import mt
+        file_path = f"{dm().cache_dir}/{mt().modelkey}.mdata.txt"
         mdata = {}
         try:
             with open(file_path, "r") as mdfile:
@@ -227,8 +230,9 @@ class ModeDataManager(SCSingletonConfigurable):
 
     def autoencoder_files(self, **kwargs ) -> List[str]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.reduction.trainer import mt
         from spectraclass.data.base import DataManager, dm
-        key: str = kwargs.get( 'key', self.modelkey )
+        key: str = kwargs.get( 'key', mt().modelkey )
         filter_sig = tm().get_band_filter_signature()
         model_dims: int = kwargs.get('dims', self.model_dims)
         aefiles = [f"{dm().cache_dir}/autoencoder.{model_dims}.{filter_sig}.{key}.{dm().modal.anomaly}", f"{dm().cache_dir}/encoder.{model_dims}.{filter_sig}.{key}"]
