@@ -343,10 +343,10 @@ class ClusterManager(SCSingletonConfigurable):
     @exception_handled
     def tuning_gui(self) -> Panel:
         if not self._tuning_sliders:
-            self.thresh_slider = ClusterMagnitudeWidget( 0, self.thresholdStream, range=[0.0,1.0], value=0.5, step=0.02 )
+            self.thresh_slider = ClusterMagnitudeWidget( 0, self.thresholdStream, range=[0.0,1.0], value=0.0, step=0.02 )
             self._tuning_sliders= [ self.thresh_slider ]
             for icluster in range( 1, self._max_culsters+1 ):
-                cmw = ClusterMagnitudeWidget( icluster, self.thresholdStream )
+                cmw = ClusterMagnitudeWidget( icluster, self.thresholdStream, range=[0.0,2.0], value=1.0, step=0.02 )
                 self._tuning_sliders.append( cmw )
         panels = [ ts.panel() for ts in self._tuning_sliders ]
         return  pn.Column( *panels )
