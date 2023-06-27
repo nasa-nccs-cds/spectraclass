@@ -322,10 +322,11 @@ class SpatialDataManager(ModeDataManager):
     @exception_handled
     def process_spectral_mean(self):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.reduction.trainer import mt
         total_samples = sum( [ v[0] for v in self.spectral_means ]  )
         wmeans = [ (v[0]/total_samples)*v[1] for v in self.spectral_means ]
         spectral_mean = xa.DataArray( np.add.reduce( wmeans ), dims=['band'], coords=dict( band=tm().tile.data.band ) )
-        file_path = f"{dm().cache_dir}/{self.modelkey}.spectral_mean.nc"
+        file_path = f"{dm().cache_dir}/{mt().modelkey}.spectral_mean.nc"
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         try:
             if os.path.isfile(file_path): os.remove(file_path)
