@@ -25,12 +25,15 @@ def arange( data: xa.DataArray, axis=None ) -> Tuple[np.ndarray,np.ndarray]:
 def clm() -> "ClusterManager":
     return ClusterManager.instance()
 
+ThresholdStream = Stream.define( 'ThresholdStream', tindex=0, tvalue=1.0 )
+
 class ClusterMagnitudeWidget:
     height = 26
 
-    def __init__(self, index: int, **kwargs ):
+    def __init__(self, index: int, tstream: Stream, **kwargs ):
       #  cluster_color = f"rgb{ clm().cluster_color(index) }"
         self.init_value = kwargs.get( 'value', 1.0 )
+        self.tstream: ThresholdStream = tstream
         range = kwargs.get( 'range', [0.0,2.0] )
         step = kwargs.get( 'step', 0.05 )
         cname = "Threshold" if index == 0 else f"Cluster-{index}"
@@ -38,12 +41,15 @@ class ClusterMagnitudeWidget:
         self._index = index
         self.slider = FloatSlider( name='', start=range[0], end=range[1], step=step, value=self.init_value ) #self.init_value, description="", min=range[0], max=range[1], step=step )
         self.label.on_click( self.reset )
+        self.slider.param.watch( self.update, ['value'], onlychanged=True )
+
+    @exception_handled
+    def update(self, value ):
+        self.tstream.event( tindex=self._index, tvalue=value )
+        lgm().log( f"CM: tstream.event {self._index} {value}")
 
     def panel(self):
         return pn.Row(  self.label, self.slider )  # , layout=ipw.Layout( width="550px", height=f"{self.height}px"), overflow="hidden" )
-
-    def on_change(self, handler ):
-        self.slider.param.watch( handler, ['value'], onlychanged=True )
 
     def set_color(self, color: str ):
         self.label.apply.opts( color = color )
@@ -63,13 +69,14 @@ class ClusterManager(SCSingletonConfigurable):
         super(ClusterManager, self).__init__(**kwargs)
         self.width = kwargs.pop('width',600)
         self.cmap = kwargs.pop('cmap', 'Category20')
+        self.thresholdStream = ThresholdStream()
         self._max_culsters = 20
         self._ncluster_options = list( range( 2, self._max_culsters ) )
         self._count = Count(index=0)
         self._mid_options = [ "kmeans", "fuzzy cmeans", "bisecting kmeans" ]
         self._cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
-        self._cluster_image = hv.DynamicMap( self.get_cluster_image, streams=[ self._count ] )
+        self._cluster_image = hv.DynamicMap( self.get_cluster_image, streams=[ self._count, self.thresholdStream ] )
         self._marked_colors: Dict[Tuple,Tuple[float,float,float]] = {}
         self._marked_clusters: Dict[Tuple, List] = {}
         self._tuning_sliders: List[ClusterMagnitudeWidget] = []
@@ -111,7 +118,7 @@ class ClusterManager(SCSingletonConfigurable):
         from  .kmeans import KMeansCluster, BisectingKMeans
         nclusters = self._ncluster_selector.value
         self.update_colors( self._max_culsters )
-        lgm().log( f"#CLM: Creating {mid} model with {nclusters} clusters")
+        lgm().log( f"#CM: Creating {mid} model with {nclusters} clusters")
         if mid == "kmeans":
             params = dict(  random_state= self.random_state, batch_size= 256 * cpu_count() )
             return KMeansCluster( nclusters, **params )
@@ -181,7 +188,7 @@ class ClusterManager(SCSingletonConfigurable):
         self.nclusters = self._ncluster_selector.value
         self.clear()
         self.model.n_clusters = self.nclusters
-        lgm().log( f"#CLM: Creating {self.nclusters} clusters from input data shape = {data.shape}")
+        lgm().log( f"#CM: Creating {self.nclusters} clusters from input data shape = {data.shape}")
         self.model.cluster(data)
         self._cluster_points = self.model.cluster_data
 
@@ -189,7 +196,7 @@ class ClusterManager(SCSingletonConfigurable):
     def cluster(self, data: xa.DataArray ):
         self.run_cluster_model( data )
         ccount = self.refresh()
-        lgm().log( f"#CLM: exec cluster, op count={ccount}" )
+        lgm().log( f"#CM: exec cluster, op count={ccount}" )
 
     @exception_handled
     def get_cluster_map( self ) -> xa.DataArray:
@@ -216,7 +223,7 @@ class ClusterManager(SCSingletonConfigurable):
             result = self._cluster_points.values[pid, 0]
             return result
         else:
-            lgm().log( f"#CLM: Can find cluster: gid={gid}, samples: gid-in={gid in self.samples}, size={self.samples.size}, range={[self.samples.min(),self.samples.max()]}")
+            lgm().log( f"#CM: Can find cluster: gid={gid}, samples: gid-in={gid in self.samples}, size={self.samples.size}, range={[self.samples.min(),self.samples.max()]}")
             pickle.dump( self.samples.tolist(), open("/tmp/cluster_gids.pkl","wb") )
             return -1
 
@@ -252,7 +259,7 @@ class ClusterManager(SCSingletonConfigurable):
         self.get_marked_clusters(cid).append( icluster )
         cmap = self.get_cluster_map().values
         marker = Marker("clusters", self.get_points(cid), cid, mask=(cmap == icluster))
-        lgm().log(f"#CLM: mark_cluster[{icluster}]: ckey={ckey} cid={cid}, #pids = {marker.size}")
+        lgm().log(f"#CM: mark_cluster[{icluster}]: ckey={ckey} cid={cid}, #pids = {marker.size}")
         self._cluster_markers[icluster] = marker
         return marker
 
@@ -276,11 +283,12 @@ class ClusterManager(SCSingletonConfigurable):
         return self._cluster_image.opts( width=width, height=height )
 
     @exception_handled
-    def get_cluster_image( self, index: int ) -> hv.Image:
+    def get_cluster_image( self, index: int, tindex: int, tvalue: int ) -> hv.Image:
+        self.rescale( tindex, tvalue )
         raster: xa.DataArray = self.get_cluster_map()
         iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False)
         image =  raster.hvplot.image( **iopts )
-        lgm().log( f"#CLM: create cluster image[{index}], dims={raster.dims}, shape={raster.shape}")
+        lgm().log( f"#CM: create cluster image[{index}], dims={raster.dims}, shape={raster.shape}")
         return image
 
     @exception_handled
@@ -334,13 +342,11 @@ class ClusterManager(SCSingletonConfigurable):
     @exception_handled
     def tuning_gui(self) -> Panel:
         if not self._tuning_sliders:
-            self.thresh_slider = ClusterMagnitudeWidget( 0, range=[0.0,1.0], value=0.5, step=0.02 )
-            self.thresh_slider.on_change( self.tune_cluster )
+            self.thresh_slider = ClusterMagnitudeWidget( 0, self.thresholdStream, range=[0.0,1.0], value=0.5, step=0.02 )
             self._tuning_sliders= [ self.thresh_slider ]
             for icluster in range( 1, self._max_culsters+1 ):
-                cmw = ClusterMagnitudeWidget( icluster )
+                cmw = ClusterMagnitudeWidget( icluster, self.thresholdStream )
                 self._tuning_sliders.append( cmw )
-                cmw.on_change( self.tune_cluster )
         panels = [ ts.panel() for ts in self._tuning_sliders ]
         return  pn.Column( *panels )
 
