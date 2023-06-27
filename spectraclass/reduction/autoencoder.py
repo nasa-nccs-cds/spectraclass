@@ -26,11 +26,11 @@ class ProcessingStage(Enum):
 
 class Autoencoder(nn.Module):
 
-    def __init__(self, input_dims: int, model_dims: int, **kwargs) -> None:
+    def __init__(self, input_dims: int, model_dims: int, reduction_factor: int, **kwargs) -> None:
         super().__init__()
         self.input_dims = input_dims
         self.model_dims = model_dims
-        self.reduction_factor = kwargs.get("reduction_factor",2)
+        self.reduction_factor = reduction_factor
         self._layer_outputs: Dict[int, List[np.ndarray]] = {}
         self._layer_weights: Dict[int, List[np.ndarray]] = {}
         self._activation = kwargs.get('activation', 'relu')

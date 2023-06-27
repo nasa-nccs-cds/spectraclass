@@ -48,7 +48,7 @@ class ModelTrainer(SCSingletonConfigurable):
     optimizer_type = tl.Unicode(default_value="adam").tag(config=True, sync=True)
     learning_rate = tl.Float(0.0001).tag(config=True, sync=True)
     loss_threshold = tl.Float(1e-6).tag(config=True, sync=True)
-    reduction_factor = tl.Int(2).tag(config=True, sync=True)
+    reduction_factor = tl.Int(5).tag(config=True, sync=True)
     init_wts_mag = tl.Float(0.1).tag(config=True, sync=True)
     init_bias_mag = tl.Float(0.1).tag(config=True, sync=True)
     reduce_nblocks = tl.Int(250).tag(config=True, sync=True)
@@ -92,8 +92,8 @@ class ModelTrainer(SCSingletonConfigurable):
         if self._model is None:
             block: Block = tm().getBlock()
             point_data, grid = block.getPointData()
-            opts = dict ( wmag=self.init_wts_mag, init_bias=self.init_bias_mag, activation=self.activation,  reduction_factor=self.reduction_factor, log_step=self.log_step )
-            self._model = Autoencoder( point_data.shape[1], self.nfeatures, **opts ).to(self.device)
+            opts = dict ( activation=self.activation, log_step=self.log_step )
+            self._model = Autoencoder( point_data.shape[1], self.nfeatures, self.reduction_factor, **opts ).to(self.device)
         return self._model
 
     def panel(self)-> pn.Row:
