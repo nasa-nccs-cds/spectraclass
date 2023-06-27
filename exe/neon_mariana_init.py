@@ -7,14 +7,14 @@ dm: DataManager = DataManager.initialize( "AGB", 'neon' )
 tm().reprocess = False
 mt().refresh_model = True
 
-block_size = 100
+block_size = 150
 model_dims = 3
-reduction_factor = 5
+reduction_factor = 2
 activation = "relu"
 
-niter = 10
+niter = 20
 nepoch = 10
-learning_rate = 0.01
+learning_rate = 0.0001
 
 focus_nepoch = 5
 focus_ratio = 10
