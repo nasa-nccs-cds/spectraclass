@@ -45,7 +45,8 @@ class ClusterMagnitudeWidget:
 
     @exception_handled
     def update(self, event ):
-        tvalue = event['new']
+        lgm().log(f"CM: tstream.event {event}")
+        tvalue = 0.1 #event['new']
         self.tstream.event( tindex=self._index, tvalue=tvalue )
         lgm().log( f"CM: tstream.event {self._index} {tvalue}")
 
@@ -285,6 +286,7 @@ class ClusterManager(SCSingletonConfigurable):
 
     @exception_handled
     def get_cluster_image( self, index: int, tindex: int, tvalue: int ) -> hv.Image:
+        lgm().log(f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}")
         self.rescale( tindex, tvalue )
         raster: xa.DataArray = self.get_cluster_map()
         iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False)
@@ -362,6 +364,7 @@ class ClusterManager(SCSingletonConfigurable):
         self.rescale( icluster, change['new'] )
  #       mm().plot_cluster_image( self.get_cluster_map() )
 
+    @exception_handled
     def rescale(self, icluster: int, threshold: float ):
         self.clear( reset=False )
         lgm().log( f"CM: rescale cluster-{icluster}: threshold = {threshold}")
