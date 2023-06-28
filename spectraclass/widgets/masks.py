@@ -24,4 +24,4 @@ class MaskManager(SCSingletonConfigurable):
         print( f" on_block_selection: {event}")
 
     def get_control_panel(self):
-        return pn.Column([self.block_selection])
+        return pn.Column(self.block_selection)
