@@ -5,7 +5,8 @@ from spectraclass.gui.spatial.neon.manager import NEONTileSelector
 from pathlib import Path
 import traitlets as tl
 import panel as pn
-import os, sys
+import os, sys, enum
+
 
 class AvirisDataManager(SpatialDataManager):
     from spectraclass.gui.spatial.application import Spectraclass
@@ -82,11 +83,15 @@ class NEONDataManager(SpatialDataManager):
     def __init__(self):
         super(NEONDataManager, self).__init__()
         self.tile_selector: NEONTileSelector = None
-        self.block_selection_mode =  pn.widgets.RadioButtonGroup( name='Selection Mode', options=['Load Tile', 'Select Tiles'], button_type='primary', value='Load Tile' )
+        self.selection_modes = enum.StrEnum('selection_modes', ['Load Tile', 'Select Tiles'])
+        self.selection_mode: int = 0
+        self.block_selection_mode =  pn.widgets.RadioButtonGroup( name='Selection Mode', options= [ m.name for m in self.selection_modes],
+                                                                  button_type='success', value=self.selection_modes(self.selection_mode).name )
         self.selection_mode_watcher = self.block_selection_mode.param.watch( self.on_block_selection, ['value'], onlychanged=False)
 
     def on_block_selection(self, event ):
-        print( f" on_block_selection: {event}")
+        self.selection_mode =  self.selection_modes[ event["new"] ].value
+        print( f" selection_mode: {self.selection_mode}")
 
     def gui(self):
         if self.tile_selector is None:
