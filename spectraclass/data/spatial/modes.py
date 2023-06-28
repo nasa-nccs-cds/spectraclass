@@ -82,8 +82,8 @@ class NEONDataManager(SpatialDataManager):
     def __init__(self):
         super(NEONDataManager, self).__init__()
         self.tile_selector: NEONTileSelector = None
-        self.block_selection = pn.widgets.Toggle(name='Select Tiles', button_type='primary')
-        self.block_selection_watcher = self.block_selection.param.watch( self.on_block_selection, ['value'], onlychanged=False)
+        self.block_selection_mode =  pn.widgets.RadioButtonGroup( name='Selection Mode', options=['Load Tile', 'Select Tiles'], button_type='primary', value='Load Tile' )
+        self.selection_mode_watcher = self.block_selection_mode.param.watch( self.on_block_selection, ['value'], onlychanged=False)
 
     def on_block_selection(self, event ):
         print( f" on_block_selection: {event}")
@@ -91,7 +91,7 @@ class NEONDataManager(SpatialDataManager):
     def gui(self):
         if self.tile_selector is None:
             self.tile_selector = NEONTileSelector()
-        return pn.Column( self.tile_selector.gui(), self.block_selection )
+        return pn.Column( self.tile_selector.gui(), self.block_selection_mode )
 
     def valid_bands(self):
         if self._valid_bands is None:
