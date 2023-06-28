@@ -371,11 +371,12 @@ class ClusterManager(SCSingletonConfigurable):
         self.clear( reset=False )
         lgm().log( f"CM: rescale cluster-{icluster}: value = {value}")
         self.model.rescale( icluster, value )
-        self._cluster_points = self.model.cluster_data
-        if self._cluster_points is not None:
-            if icluster == 0:
-                for iC in self._cluster_markers.keys(): self.update_cluster( iC )
-            else: self.update_cluster(icluster)
+        self._cluster_points = None
+        # self._cluster_points = self.model.cluster_data
+        # if self._cluster_points is not None:
+        #     if icluster == 0:
+        #         for iC in self._cluster_markers.keys(): self.update_cluster( iC )
+        #     else: self.update_cluster(icluster)
 
     def update_cluster(self, icluster: int ):
         from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
