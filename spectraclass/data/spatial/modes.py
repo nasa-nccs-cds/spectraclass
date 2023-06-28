@@ -4,6 +4,7 @@ from spectraclass.gui.spatial.aviris.manager import AvirisTileSelector
 from spectraclass.gui.spatial.neon.manager import NEONTileSelector
 from pathlib import Path
 import traitlets as tl
+import panel as pn
 import os, sys
 
 class AvirisDataManager(SpatialDataManager):
@@ -81,11 +82,16 @@ class NEONDataManager(SpatialDataManager):
     def __init__(self):
         super(NEONDataManager, self).__init__()
         self.tile_selector: NEONTileSelector = None
+        self.block_selection = pn.widgets.Toggle(name='Select Tiles', button_type='primary')
+        self.block_selection_watcher = self.block_selection.param.watch( self.on_block_selection, ['value'], onlychanged=False)
+
+    def on_block_selection(self, event ):
+        print( f" on_block_selection: {event}")
 
     def gui(self):
         if self.tile_selector is None:
             self.tile_selector = NEONTileSelector()
-        return self.tile_selector.gui()
+        return pn.Column( self.tile_selector.gui(), self.block_selection )
 
     def valid_bands(self):
         if self._valid_bands is None:
