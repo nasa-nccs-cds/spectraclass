@@ -6,6 +6,7 @@ from spectraclass.learn.cluster.manager import clm
 import holoviews as hv
 from spectraclass.data.base import dm
 from panel.layout import Panel
+from spectraclass.widgets.masks import mm, MaskManager
 from spectraclass.widgets.regions import RegionSelector, rs
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.data.spatial.tile.tile import Block
@@ -256,7 +257,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
         data_selection_panel = pn.Tabs(  ("Tile",dm().modal.gui()) ) # , ("Block",dm().modal.gui()) ] )
         manifold_panel = pn.Row( pcm().gui() )
-        analytics_gui = pn.Tabs( ("Cluster", clm().gui()), ("Classify", rs().get_control_panel() ) )
+        analytics_gui = pn.Tabs( ("Cluster", clm().gui()), ("Classify", rs().get_control_panel() ), ("Mask", mm().get_control_panel() ) )
         controls = pn.Accordion( ('Data Selection', data_selection_panel ), ('Analytics',analytics_gui), ('Manifold', manifold_panel ), toggle=True, active=[0] )
         return pn.Column( self.alert, controls )
 
