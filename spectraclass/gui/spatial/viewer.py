@@ -255,6 +255,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
     def get_control_panel(self) -> Panel:
         from spectraclass.learn.cluster.manager import clm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
+        print( f"dm().modal: {type(dm().modal)}")
         data_selection_panel = pn.Tabs(  ("Tile",dm().modal.gui()) ) # , ("Block",dm().modal.gui()) ] )
         manifold_panel = pn.Row( pcm().gui() )
         analytics_gui = pn.Tabs( ("Cluster", clm().gui()), ("Classify", rs().get_control_panel() ), ("Mask", mm().get_control_panel() ) )

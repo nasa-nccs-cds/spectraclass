@@ -17,11 +17,6 @@ class MaskManager(SCSingletonConfigurable):
 
     def __init__(self ):
         super(MaskManager, self).__init__()
-        self.block_selection = pn.widgets.Toggle(name='Select Tiles', button_type='primary')
-        self.block_selection_watcher = self.block_selection.param.watch( self.on_block_selection, ['value'], onlychanged=False)
-
-    def on_block_selection(self, event ):
-        print( f" on_block_selection: {event}")
 
     def get_control_panel(self):
-        return pn.Column(self.block_selection)
+        return pn.Column([])
