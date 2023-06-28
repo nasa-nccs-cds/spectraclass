@@ -289,7 +289,7 @@ class ClusterManager(SCSingletonConfigurable):
     @exception_handled
     def get_cluster_image( self, index: int, tindex: int, tvalue: int ) -> hv.Image:
         lgm().log(f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}")
-        self.rescale( tindex, tvalue )
+#        self.rescale( tindex, tvalue )
         raster: xa.DataArray = self.get_cluster_map()
         iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False)
         image =  raster.hvplot.image( **iopts )
