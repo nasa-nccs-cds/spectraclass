@@ -256,13 +256,15 @@ class DataManager(SCSingletonConfigurable):
         return self._mode_data_manager_.metavars
 
     @exception_handled
-    def gui( self, **kwargs ) -> pn.Tabs():
+    def gui( self, **kwargs ) -> Panel:
         from spectraclass.application.controller import SpectraclassController
         if self._wGui is None:
             SpectraclassController.set_spectraclass_theme()
-            mode_gui = self._mode_data_manager_.gui( **kwargs )
-            self._wGui = mode_gui
+            self._wGui = self._mode_data_manager_.gui( **kwargs )
         return self._wGui
+
+    def preprocess_gui(self, **kwargs):
+        return pn.Column( ufm().gui(), self.gui( **kwargs ) )
 
     def ipw_gui( self ) -> ip.Tab():
         from spectraclass.application.controller import SpectraclassController

@@ -37,12 +37,24 @@ class NEONTileSelector:
         self.bdx, self.bdy = None, None
         self.bx0, self.by1 = None, None
         self.rect0 = None
+        self._select_all = pn.widgets.Button( name='Select All', button_type='primary' )
+        self._select_all.on_click( self.select_all )
+        self._clear_all  = pn.widgets.Button( name='Clear All',  button_type='warning' )
+        self._select_all.on_click(self.clear_all)
+
+    def select_all(self, event ):
+        ufm().show( "SELECT ALL")
+
+    def clear_all(self, event ):
+        ufm().show( "CLEAR ALL")
 
     def get_load_panel(self):
         return pn.Column([])
 
     def get_selection_panel(self):
-        return pn.Column([])
+        control_buttons = pn.Row( self._select_all, self._clear_all )
+        return pn.Column( control_buttons )
+
     @exception_handled
     def select_rec(self, x, y ):
         bindex = self.block_index(x,y)
@@ -63,6 +75,7 @@ class NEONTileSelector:
     def indicate_rec(self, x, y ):
         bindex = self.block_index(x,y)
         rect = self.rects.get( bindex, self.rect0 )
+        ufm().show( f"Selected rect-{bindex}")
         return hv.Rectangles( [rect] ).opts( line_color="yellow", fill_alpha=0.0, line_alpha=1.0, line_width=1 )
 
     def gui(self):
@@ -86,7 +99,11 @@ class NEONTileSelector:
         basemap = spm().get_image_basemap( self.xlim + self.ylim )
         self.rectangles = hv.Rectangles( list(self.rects.values()) ).opts( line_color="cyan", fill_alpha=0.0, line_alpha=1.0 )
         image = basemap * self.rectangles * self.indicated_rec * self.selected_rec
-        return pn.Column( image )
+        if self.selection_mode == BlockSelectMode.LoadTile:
+            return image
+        else:
+            selection_panel = self.get_selection_panel()
+            return pn.Column( image, selection_panel )
 
     @exception_handled
     def block_index(self, x, y ) -> Tuple[int,int]:
