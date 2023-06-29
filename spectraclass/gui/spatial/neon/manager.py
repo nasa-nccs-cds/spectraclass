@@ -23,11 +23,10 @@ class NEONTileSelector:
         self.selection_color = kwargs.get("selection_color", 'black')
         self.slw = kwargs.get("slw", 2)
         self.colorstretch = 2.0
-        self.tap_stream = SingleTap( transient=True )
-        self.double_tap_stream = DoubleTap( transient=True )
-        self.selected_rec = hv.DynamicMap(self.select_rec, streams=[self.double_tap_stream])
-        self.indicated_rec = hv.DynamicMap(self.indicate_rec, streams=[self.tap_stream])
-        self. rectangles: hv.Rectangles = None # ([(0, 0, 1, 1), (2, 3, 4, 6), (0.5, 2, 1.5, 4), (2, 1, 3.5, 2.5)])
+        if self.selection_mode == BlockSelectMode.LoadTile: self.tap_stream = DoubleTap( transient=True )
+        else:                                               self.tap_stream = SingleTap( transient=True )
+        self.selected_rec = hv.DynamicMap(self.select_rec, streams=[self.tap_stream])
+        self.rectangles: hv.Rectangles = None # ([(0, 0, 1, 1), (2, 3, 4, 6), (0.5, 2, 1.5, 4), (2, 1, 3.5, 2.5)])
         self._transformed_block_data = None
         self._selected_block: Tuple[int,int] = (0,0)
         self._band_index = 0
@@ -40,7 +39,7 @@ class NEONTileSelector:
         self._select_all = pn.widgets.Button( name='Select All', button_type='primary' )
         self._select_all.on_click( self.select_all )
         self._clear_all  = pn.widgets.Button( name='Clear All',  button_type='warning' )
-        self._select_all.on_click(self.clear_all)
+        self._clear_all.on_click( self.clear_all )
 
     def select_all(self, event ):
         ufm().show( "SELECT ALL")
@@ -66,9 +65,12 @@ class NEONTileSelector:
         if new_rect != self.rect0:
             lgm().log(f"NTS: NEONTileSelector-> select block {bindex}, new_rect={new_rect}" )
             ufm().show( f"select block {bindex}")
-            tm().setBlock( bindex )
             self.rect0 = new_rect
-        ufm().clear()
+            if self.selection_mode == BlockSelectMode.LoadTile:
+                tm().setBlock( bindex )
+                ufm().clear()
+            else:
+                pass
         return hv.Rectangles( [self.rect0] ).opts( line_color="white", fill_alpha=0.0, line_alpha=1.0, line_width=3 )
 
     @exception_handled
@@ -98,7 +100,7 @@ class NEONTileSelector:
         self.rect0 = self.rects[ tm().block_index ]
         basemap = spm().get_image_basemap( self.xlim + self.ylim )
         self.rectangles = hv.Rectangles( list(self.rects.values()) ).opts( line_color="cyan", fill_alpha=0.0, line_alpha=1.0 )
-        image = basemap * self.rectangles * self.indicated_rec * self.selected_rec
+        image = basemap * self.rectangles * self.selected_rec * self.selected_rec
         if self.selection_mode == BlockSelectMode.LoadTile:
             return image
         else:
