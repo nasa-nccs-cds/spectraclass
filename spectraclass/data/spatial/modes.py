@@ -6,6 +6,13 @@ from pathlib import Path
 import traitlets as tl
 import panel as pn
 import os, sys, enum
+from  enum import StrEnum
+
+enum.StrEnum('selection_modes', ['Load Tile', 'Select Tiles'])
+
+class BlockSelectMode(StrEnum):
+    LOAD = 'Load Tile'
+    SELECT = 'Select Tiles'
 
 
 class AvirisDataManager(SpatialDataManager):
@@ -83,14 +90,13 @@ class NEONDataManager(SpatialDataManager):
     def __init__(self):
         super(NEONDataManager, self).__init__()
         self.tile_selector: NEONTileSelector = None
-        self.selection_modes = enum.StrEnum('selection_modes', ['Load Tile', 'Select Tiles'])
-        self.selection_mode: int = 0
-        self.block_selection_mode =  pn.widgets.RadioButtonGroup( name='Selection Mode', options= [ m.name for m in self.selection_modes],
-                                                                  button_type='success', value=self.selection_modes(self.selection_mode).name )
+        self.selection_mode: BlockSelectMode = BlockSelectMode.LOAD
+        self.block_selection_mode =  pn.widgets.RadioButtonGroup( name='Selection Mode', options= [ m for m in BlockSelectMode],
+                                                                  button_type='success', value=self.selection_mode )
         self.selection_mode_watcher = self.block_selection_mode.param.watch( self.on_block_selection, ['value'], onlychanged=False)
 
     def on_block_selection(self, event ):
-        self.selection_mode =  self.selection_modes[ event["new"] ].value
+        self.selection_mode =  BlockSelectMode(event["new"])
         print( f" selection_mode: {self.selection_mode}")
 
     def gui(self):
