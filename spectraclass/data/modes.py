@@ -488,7 +488,7 @@ class ModeDataManager(SCSingletonConfigurable):
         ufm().clear()
         dm().refresh_all()
 
-    def getSelectionPanel(self) -> pn.Column:
+    def getSelectionPanel(self,**kwargs) -> pn.Column:
         from spectraclass.data.base import DataManager, dm
         self._dataset_prefix, dsets = self.getDatasetList()
         self._dset_selection: Select = Select( options=dsets, description='Datasets:', disabled=False )
@@ -549,8 +549,8 @@ class ModeDataManager(SCSingletonConfigurable):
                                          layout=ip.Layout(width="100%", height="100%"), border='2px solid firebrick')
         return creationPanel
 
-    def gui( self, mode: BlockSelectMode = BlockSelectMode.LoadTile, **kwargs ):
-        return self.getSelectionPanel(mode,**kwargs)
+    def gui( self, **kwargs ):
+        return self.getSelectionPanel(**kwargs)
 
     def getInputFileData( self, vname: str = None, **kwargs ) -> np.ndarray:
         raise NotImplementedError()

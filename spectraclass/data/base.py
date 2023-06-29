@@ -22,6 +22,7 @@ from traitlets.config.loader import load_pyconfig_files
 from .modes import ModeDataManager
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from traitlets.config.loader import Config, PyFileConfigLoader
+from spectraclass.data.modes import BlockSelectMode
 import threading, time, logging, sys
 
 class DataType(Enum):
@@ -254,11 +255,11 @@ class DataManager(SCSingletonConfigurable):
     def table_cols(self) -> List:
         return self._mode_data_manager_.metavars
 
-    def gui( self ) -> pn.Tabs():
+    def gui( self, mode: BlockSelectMode ) -> pn.Tabs():
         from spectraclass.application.controller import SpectraclassController
         if self._wGui is None:
             SpectraclassController.set_spectraclass_theme()
-            mode_gui = self._mode_data_manager_.gui()
+            mode_gui = self._mode_data_manager_.gui(mode)
             self._wGui = pn.Tabs( [ ("blocks",mode_gui) ] ) # , ("images",dm().images_panel()) ] )
         return pn.Column( self._wGui )
 
