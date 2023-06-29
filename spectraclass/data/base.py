@@ -275,7 +275,7 @@ class DataManager(SCSingletonConfigurable):
 
     def images_panel(self) -> Panel:
         title = pn.widgets.StaticText(name='ImagesTitle', value='Images')
-        return pn.Column( [ title, dm().modal.file_selector ] )
+        return pn.Column( title, dm().modal.file_selector )
 
     def on_image_change(self, event: Dict):
         dm().modal.on_image_change( event )

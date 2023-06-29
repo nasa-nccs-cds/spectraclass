@@ -490,7 +490,7 @@ class ModeDataManager(SCSingletonConfigurable):
         if len(dsets) > 0: self._dset_selection.value = dm().dsid()[ len(self._dataset_prefix): ]
         load: Button = Button(description="Load", border='1px solid dimgrey')
         load.on_click( self.selected_dataset )
-        filePanel: pn.Column = pn.Column( [self._dset_selection, load] )
+        filePanel: pn.Column = pn.Column( self._dset_selection, load )
         return filePanel
 
     def getConfigPanel(self):

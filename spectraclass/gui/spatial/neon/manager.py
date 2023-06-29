@@ -93,7 +93,8 @@ class NEONTileSelector:
         self.rect0 = self.rects[ tm().block_index ]
         basemap = spm().get_image_basemap( self.xlim + self.ylim )
         self.rectangles = hv.Rectangles( list(self.rects.values()) ).opts( line_color="cyan", fill_alpha=0.0, line_alpha=1.0 )
-        return basemap * self.rectangles * self.indicated_rec * self.selected_rec
+        image = basemap * self.rectangles * self.indicated_rec * self.selected_rec
+        return pn.Column( image, self.tile_selection_controls )
 
     @exception_handled
     def block_index(self, x, y ) -> Tuple[int,int]:
