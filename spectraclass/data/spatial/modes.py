@@ -88,7 +88,7 @@ class NEONDataManager(SpatialDataManager):
     def gui(self):
         if self.tile_selector is None:
             self.tile_selector = NEONTileSelector()
-        return pn.Column( self.tile_selector.gui(), self.block_selection_mode )
+        return self.tile_selector.gui()
 
     def valid_bands(self):
         if self._valid_bands is None:
