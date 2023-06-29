@@ -142,7 +142,7 @@ class NEONDatasetManager:
         TileManager.block_size = kwargs.get( 'block_size',  250 )
         self.nimages = len( self.dm.modal.image_names )
         self._nbands = None
-        lgm().log( f"AvirisDatasetManager: Found {self.nimages} images "  )
+        lgm().log( f"NEONDatasetManager: Found {self.nimages} images "  )
 
 
     @property
