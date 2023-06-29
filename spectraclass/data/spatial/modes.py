@@ -6,11 +6,7 @@ from pathlib import Path
 import traitlets as tl
 import panel as pn
 import os, sys, enum
-from  enum import StrEnum
 
-class BlockSelectMode(StrEnum):
-    LOAD = 'Load Tile'
-    SELECT = 'Select Tiles'
 
 class AvirisDataManager(SpatialDataManager):
     from spectraclass.gui.spatial.application import Spectraclass
@@ -87,17 +83,7 @@ class NEONDataManager(SpatialDataManager):
     def __init__(self):
         super(NEONDataManager, self).__init__()
         self.tile_selector: NEONTileSelector = None
-        self.tile_selection_controls = pn.Tabs((BlockSelectMode.LOAD, self.get_load_panel()), (BlockSelectMode.SELECT, self.get_selection_panel()))
 
-    @property
-    def selection_mode(self) -> BlockSelectMode:
-        return BlockSelectMode(self.tile_selection_controls.active)
-
-    def get_load_panel(self):
-        return pn.Column([])
-
-    def get_selection_panel(self):
-        return pn.Column([])
 
     def gui(self):
         if self.tile_selector is None:

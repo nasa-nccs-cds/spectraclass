@@ -10,6 +10,11 @@ from spectraclass.data.spatial.satellite import spm
 from typing import List, Union, Tuple, Optional, Dict, Callable
 import panel as pn, holoviews as hv
 import time, math, sys, xarray as xa
+from  enum import Enum
+
+class BlockSelectMode(Enum):
+    LOAD = 'Load Tile'
+    SELECT = 'Select Tiles'
 
 class NEONTileSelector:
 
@@ -34,9 +39,20 @@ class NEONTileSelector:
         self.bdx, self.bdy = None, None
         self.bx0, self.by1 = None, None
         self.rect0 = None
+        self.tile_selection_controls = pn.Tabs((BlockSelectMode.LOAD, self.get_load_panel()), (BlockSelectMode.SELECT, self.get_selection_panel()))
 
+    @property
+    def selection_mode(self) -> BlockSelectMode:
+        return BlockSelectMode(self.tile_selection_controls.active)
+
+    def get_load_panel(self):
+        return pn.Column([])
+
+    def get_selection_panel(self):
+        return pn.Column([])
     @exception_handled
     def select_rec(self, x, y ):
+        print( self.selection_mode )
         bindex = self.block_index(x,y)
         try:
             new_rect = self.rects[bindex]
