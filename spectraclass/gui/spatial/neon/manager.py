@@ -66,6 +66,7 @@ class NEONTileSelector:
         return hv.Rectangles( [rect] ).opts( line_color="yellow", fill_alpha=0.0, line_alpha=1.0, line_width=1 )
 
     def gui(self):
+        lgm().trace( "NEONTileSelector.gui")
         blocks: List[Block] = tm().tile.getBlocks()
         for block in blocks:
             (bxlim, bylim) = block.get_extent( spm().projection )
@@ -86,7 +87,7 @@ class NEONTileSelector:
         basemap = spm().get_image_basemap( self.xlim + self.ylim )
         self.rectangles = hv.Rectangles( list(self.rects.values()) ).opts( line_color="cyan", fill_alpha=0.0, line_alpha=1.0 )
         image = basemap * self.rectangles * self.indicated_rec * self.selected_rec
-        return pn.Column( image, self.tile_selection_controls )
+        return pn.Column( image )
 
     @exception_handled
     def block_index(self, x, y ) -> Tuple[int,int]:
