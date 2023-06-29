@@ -8,12 +8,9 @@ import panel as pn
 import os, sys, enum
 from  enum import StrEnum
 
-enum.StrEnum('selection_modes', ['Load Tile', 'Select Tiles'])
-
 class BlockSelectMode(StrEnum):
     LOAD = 'Load Tile'
     SELECT = 'Select Tiles'
-
 
 class AvirisDataManager(SpatialDataManager):
     from spectraclass.gui.spatial.application import Spectraclass
@@ -90,14 +87,17 @@ class NEONDataManager(SpatialDataManager):
     def __init__(self):
         super(NEONDataManager, self).__init__()
         self.tile_selector: NEONTileSelector = None
-        self.selection_mode: BlockSelectMode = BlockSelectMode.LOAD
-        self.block_selection_mode =  pn.widgets.RadioButtonGroup( name='Selection Mode', options= [ m for m in BlockSelectMode],
-                                                                  button_type='success', value=self.selection_mode )
-        self.selection_mode_watcher = self.block_selection_mode.param.watch( self.on_block_selection, ['value'], onlychanged=False)
+        self.tile_selection_controls = pn.Tabs((BlockSelectMode.LOAD, self.get_load_panel()), (BlockSelectMode.SELECT, self.get_selection_panel()))
 
-    def on_block_selection(self, event ):
-        self.selection_mode =  BlockSelectMode(event["new"])
-        print( f" selection_mode: {self.selection_mode}")
+    @property
+    def selection_mode(self) -> BlockSelectMode:
+        return BlockSelectMode(self.tile_selection_controls.active)
+
+    def get_load_panel(self):
+        return pn.Column([])
+
+    def get_selection_panel(self):
+        return pn.Column([])
 
     def gui(self):
         if self.tile_selector is None:
