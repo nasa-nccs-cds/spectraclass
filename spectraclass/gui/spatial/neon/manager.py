@@ -13,8 +13,8 @@ import time, math, sys, xarray as xa
 from  enum import Enum
 
 class BlockSelectMode(Enum):
-    LOAD = 'Load Tile'
-    SELECT = 'Select Tiles'
+    LoadTile = 0
+    SelectTile = 1
 
 class NEONTileSelector:
 
@@ -39,7 +39,7 @@ class NEONTileSelector:
         self.bdx, self.bdy = None, None
         self.bx0, self.by1 = None, None
         self.rect0 = None
-        self.tile_selection_controls = pn.Tabs((BlockSelectMode.LOAD, self.get_load_panel()), (BlockSelectMode.SELECT, self.get_selection_panel()))
+        self.tile_selection_controls = pn.Tabs((BlockSelectMode.LoadTile.name, self.get_load_panel()), (BlockSelectMode.SelectTile.name, self.get_selection_panel()))
 
     @property
     def selection_mode(self) -> BlockSelectMode:
