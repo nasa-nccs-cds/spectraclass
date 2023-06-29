@@ -255,13 +255,14 @@ class DataManager(SCSingletonConfigurable):
     def table_cols(self) -> List:
         return self._mode_data_manager_.metavars
 
-    def gui( self, mode: BlockSelectMode ) -> pn.Tabs():
+    @exception_handled
+    def gui( self, **kwargs ) -> pn.Tabs():
         from spectraclass.application.controller import SpectraclassController
         if self._wGui is None:
             SpectraclassController.set_spectraclass_theme()
-            mode_gui = self._mode_data_manager_.gui(mode)
-            self._wGui = pn.Tabs( [ ("blocks",mode_gui) ] ) # , ("images",dm().images_panel()) ] )
-        return pn.Column( self._wGui )
+            mode_gui = self._mode_data_manager_.gui( **kwargs )
+            self._wGui = mode_gui
+        return self._wGui
 
     def ipw_gui( self ) -> ip.Tab():
         from spectraclass.application.controller import SpectraclassController

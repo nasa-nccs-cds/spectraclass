@@ -16,8 +16,8 @@ from spectraclass.data.modes import BlockSelectMode
 class NEONTileSelector:
 
     @log_timing
-    def __init__(self, mode: BlockSelectMode, **kwargs):
-        self.selection_mode: BlockSelectMode = mode
+    def __init__(self, **kwargs):
+        self.selection_mode: BlockSelectMode = kwargs.get('mode',BlockSelectMode.LoadTile)
         self.init_band = kwargs.get( "init_band", 160 )
         self.grid_color = kwargs.get("grid_color", 'white')
         self.selection_color = kwargs.get("selection_color", 'black')
@@ -66,7 +66,6 @@ class NEONTileSelector:
         return hv.Rectangles( [rect] ).opts( line_color="yellow", fill_alpha=0.0, line_alpha=1.0, line_width=1 )
 
     def gui(self):
-        lgm().trace( "NEONTileSelector.gui")
         blocks: List[Block] = tm().tile.getBlocks()
         for block in blocks:
             (bxlim, bylim) = block.get_extent( spm().projection )
