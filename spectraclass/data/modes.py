@@ -15,6 +15,7 @@ import time, numpy as np
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from typing import List, Optional, Dict, Tuple
 import os, glob, shutil
+from enum  import  Enum
 
 def invert( X: np.ndarray ) -> np.ndarray:
     return X.max() - X
@@ -46,6 +47,10 @@ def get_optimizer( **kwargs ):
     elif oid == "adam":    return tf.keras.optimizers.Adam(    learning_rate=lr )
     elif oid == "sgd":     return tf.keras.optimizers.SGD(     learning_rate=lr )
     else: raise Exception( f" Unknown optimizer: {oid}")
+
+class BlockSelectMode(Enum):
+    LoadTile = 0
+    SelectTile = 1
 
 class ModeDataManager(SCSingletonConfigurable):
     from spectraclass.application.controller import SpectraclassController
@@ -544,8 +549,8 @@ class ModeDataManager(SCSingletonConfigurable):
                                          layout=ip.Layout(width="100%", height="100%"), border='2px solid firebrick')
         return creationPanel
 
-    def gui( self, **kwargs ):
-        return self.getSelectionPanel()
+    def gui( self, mode: BlockSelectMode = BlockSelectMode.LoadTile, **kwargs ):
+        return self.getSelectionPanel(mode,**kwargs)
 
     def getInputFileData( self, vname: str = None, **kwargs ) -> np.ndarray:
         raise NotImplementedError()

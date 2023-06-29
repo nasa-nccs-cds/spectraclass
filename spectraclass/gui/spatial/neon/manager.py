@@ -12,9 +12,6 @@ import panel as pn, holoviews as hv
 import time, math, sys, xarray as xa
 from  enum import Enum
 
-class BlockSelectMode(Enum):
-    LoadTile = 0
-    SelectTile = 1
 
 class NEONTileSelector:
 
