@@ -27,6 +27,7 @@ class NEONTileSelector:
         else:                                               self.tap_stream = SingleTap( transient=True )
         self.selected_rec = hv.DynamicMap(self.select_rec, streams=[self.tap_stream])
         self.rectangles: hv.Rectangles = None # ([(0, 0, 1, 1), (2, 3, 4, 6), (0.5, 2, 1.5, 4), (2, 1, 3.5, 2.5)])
+        self.selected_rectangles: List[Tuple] = []
         self._transformed_block_data = None
         self._selected_block: Tuple[int,int] = (0,0)
         self._band_index = 0
@@ -56,7 +57,7 @@ class NEONTileSelector:
 
     @exception_handled
     def select_rec(self, x, y ):
-        bindex = self.block_index(x,y)
+        bindex, rects = self.block_index(x,y), []
         try:
             new_rect = self.rects[bindex]
         except KeyError as err:
@@ -69,9 +70,11 @@ class NEONTileSelector:
             if self.selection_mode == BlockSelectMode.LoadTile:
                 tm().setBlock( bindex )
                 ufm().clear()
+                rects = [self.rect0]
             else:
-                pass
-        return hv.Rectangles( [self.rect0] ).opts( line_color="white", fill_alpha=0.0, line_alpha=1.0, line_width=3 )
+                self.selected_rectangles.append( self.rect0 )
+                rects = self.selected_rectangles
+        return hv.Rectangles( rects ).opts( line_color="white", fill_alpha=0.2, line_alpha=1.0, line_width=3 )
 
     @exception_handled
     def indicate_rec(self, x, y ):
