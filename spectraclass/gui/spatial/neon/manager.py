@@ -8,9 +8,12 @@ from spectraclass.model.labels import LabelsManager, lm
 import param
 from spectraclass.data.spatial.satellite import spm
 from typing import List, Union, Tuple, Optional, Dict, Callable
-import panel as pn, holoviews as hv
+import panel as pn
 import time, math, sys, xarray as xa
 from spectraclass.data.modes import BlockSelectMode
+import holoviews as hv
+from holoviews import opts
+from holoviews import streams
 
 
 class NEONTileSelector:
@@ -23,6 +26,8 @@ class NEONTileSelector:
         self.selection_color = kwargs.get("selection_color", 'black')
         self.slw = kwargs.get("slw", 2)
         self.colorstretch = 2.0
+        self.selection_boxes = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.5 )
+        self.box_selection = streams.BoxEdit(source=self.selection_boxes, num_objects=1, styles={ 'fill_color': ['red'], 'fill_alpha': 0.2 })
         if self.selection_mode == BlockSelectMode.LoadTile: self.tap_stream = DoubleTap( transient=True )
         else:                                               self.tap_stream = SingleTap( transient=True )
         self.selected_rec = hv.DynamicMap(self.select_rec, streams=[self.tap_stream])
@@ -103,7 +108,7 @@ class NEONTileSelector:
         self.rect0 = self.rects[ tm().block_index ]
         basemap = spm().get_image_basemap( self.xlim + self.ylim )
         self.rectangles = hv.Rectangles( list(self.rects.values()) ).opts( line_color="cyan", fill_alpha=0.0, line_alpha=1.0 )
-        image = basemap * self.rectangles * self.selected_rec * self.selected_rec
+        image = basemap * self.rectangles * self.selected_rec * self.selection_boxes
         if self.selection_mode == BlockSelectMode.LoadTile:
             return image
         else:
