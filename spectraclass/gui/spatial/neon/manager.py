@@ -51,10 +51,14 @@ class NEONTileSelector:
         self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning' )
         self._clear_region.on_click( self.clear_region )
 
-    def select_all(self, event ):
-        self.selected_rectangles = list(self.rect_grid.values())
+    def update(self):
         self.selected_rec.event(x=None, y=None)
-        ufm().show( "SELECT ALL")
+
+    def select_all(self, event ):
+        ufm().show("SELECT ALL")
+        self.selected_rectangles = list(self.rect_grid.values())
+        self.update()
+
 
     def select_region(self, event ):
         ufm().show( "SELECT REGION")
@@ -62,7 +66,7 @@ class NEONTileSelector:
     def clear_all(self, event ):
         ufm().show( "CLEAR ALL")
         self.selected_rectangles = []
-        self.selected_rec.event( x=None, y=None )
+        self.update()
 
     def clear_region(self, event ):
         ufm().show( "CLEAR REGION")
