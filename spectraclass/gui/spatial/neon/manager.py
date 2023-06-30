@@ -42,13 +42,13 @@ class NEONTileSelector:
         self.bdx, self.bdy = None, None
         self.bx0, self.by1 = None, None
         self.rect0 = None
-        self._select_all = pn.widgets.Button( name='Select All', button_type='primary' )
+        self._select_all = pn.widgets.Button( name='Select All', button_type='primary' ).opts( width=150 )
         self._select_all.on_click( self.select_all )
-        self._select_region = pn.widgets.Button( name='Select Region', button_type='primary' )
+        self._select_region = pn.widgets.Button( name='Select Region', button_type='primary' ).opts( width=150 )
         self._select_region.on_click( self.select_region )
-        self._clear_all  = pn.widgets.Button( name='Clear All',  button_type='warning' )
+        self._clear_all  = pn.widgets.Button( name='Clear All',  button_type='warning' ).opts( width=150 )
         self._clear_all.on_click( self.clear_all )
-        self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning' )
+        self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning' ).opts( width=150 )
         self._clear_region.on_click( self.clear_region )
 
     def update(self):
@@ -56,7 +56,7 @@ class NEONTileSelector:
 
     def select_all(self, event ):
         ufm().show("SELECT ALL")
-        self.selected_rectangles = list(self.rect_grid.values())
+        self.selected_rectangles = list(self.rect_grid.keys())
         self.update()
 
 
@@ -78,35 +78,25 @@ class NEONTileSelector:
         control_buttons = pn.Row( self._select_all, self._select_region, self._clear_all, self._clear_region )
         return pn.Column( control_buttons )
 
-    @exception_handled
-    def select_rec(self, x, y ):
-        rects = self.selected_rectangles
-        if x is not None:
-            bindex = self.block_index(x, y)
-            try:
-                new_rect = self.rect_grid[bindex]
-            except KeyError as err:
-                lgm().log( f"Error accessing block, bindex={bindex}, rect keys={list(self.rect_grid.keys())}")
-                raise err
-            if new_rect != self.rect0:
-                lgm().log(f"NTS: NEONTileSelector-> select block {bindex}, new_rect={new_rect}" )
-                ufm().show( f"select block {bindex}")
-                self.rect0 = new_rect
-                if self.selection_mode == BlockSelectMode.LoadTile:
-                    tm().setBlock( bindex )
-                    ufm().clear()
-                    rects = [self.rect0]
-                else:
-                    self.selected_rectangles.append( self.rect0 )
-                    rects = self.selected_rectangles
-        return hv.Rectangles( rects ).opts( line_color="white", fill_alpha=0.2, line_alpha=1.0, line_width=3 )
+    @property
+    def selected_rectangle_bounds(self):
+        return [self.rect_grid[bindex] for bindex in self.selected_rectangles]
 
     @exception_handled
-    def indicate_rec(self, x, y ):
-        bindex = self.block_index(x,y)
-        rect = self.rect_grid.get(bindex, self.rect0)
-        ufm().show( f"Selected rect-{bindex}")
-        return hv.Rectangles( [rect] ).opts( line_color="yellow", fill_alpha=0.0, line_alpha=1.0, line_width=1 )
+    def select_rec(self, x, y ):
+        if x is not None:
+            bindex = self.block_index(x, y)
+            ufm().show( f"select block {bindex}")
+            if self.selection_mode == BlockSelectMode.LoadTile:
+                if bindex != self.rect0:
+                    self.rect0 = bindex
+                    tm().setBlock( bindex )
+                    self.selected_rectangles = [ bindex ]
+                    ufm().clear()
+            else:
+                if bindex in self.selected_rectangles:  self.selected_rectangles.remove( bindex )
+                else:                                   self.selected_rectangles.append( bindex )
+        return hv.Rectangles( self.selected_rectangle_bounds ).opts( line_color="white", fill_alpha=0.2, line_alpha=1.0, line_width=3 )
 
     def gui(self):
         blocks: List[Block] = tm().tile.getBlocks()
@@ -125,7 +115,7 @@ class NEONTileSelector:
             r = (bxlim[0],bylim[0],bxlim[1],bylim[1])
             self.rect_grid[ block.block_coords] =  r
         lgm().log( f"TS: nblocks={len(blocks)}, nindices={len(self.rect_grid)}, indices={list(self.rect_grid.keys())}")
-        self.rect0 = self.rect_grid[ tm().block_index]
+        self.rect0 = tm().block_index
         basemap = spm().get_image_basemap( self.xlim + self.ylim )
         self.rectangles = hv.Rectangles(list(self.rect_grid.values())).opts(line_color="cyan", fill_alpha=0.0, line_alpha=1.0)
         image = basemap * self.rectangles * self.selected_rec * self.selection_boxes
