@@ -69,7 +69,7 @@ class NEONTileSelector:
         return pn.Column([])
 
     def get_selection_panel(self):
-        control_buttons = pn.Row( self._select_all, self._select_region, self._clear_all )
+        control_buttons = pn.Row( self._select_all, self._select_region, self._clear_all, self._clear_region )
         return pn.Column( control_buttons )
 
     @exception_handled
