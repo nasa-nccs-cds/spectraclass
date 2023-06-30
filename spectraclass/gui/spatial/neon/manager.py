@@ -37,7 +37,7 @@ class NEONTileSelector:
         self._selected_block: Tuple[int,int] = (0,0)
         self._band_index = 0
         self._select_rec = None
-        self.rects: Dict[Tuple,Tuple] = {}
+        self.rect_grid: Dict[Tuple,Tuple] = {}
         self.xlim, self.ylim = (sys.float_info.max, -sys.float_info.max), (sys.float_info.max, -sys.float_info.max)
         self.bdx, self.bdy = None, None
         self.bx0, self.by1 = None, None
@@ -52,6 +52,7 @@ class NEONTileSelector:
         self._clear_region.on_click( self.clear_region )
 
     def select_all(self, event ):
+        self.selected_rectangles = list(self.rect_grid.values())
         ufm().show( "SELECT ALL")
 
     def select_region(self, event ):
@@ -78,9 +79,9 @@ class NEONTileSelector:
         if x is not None:
             bindex = self.block_index(x, y)
             try:
-                new_rect = self.rects[bindex]
+                new_rect = self.rect_grid[bindex]
             except KeyError as err:
-                lgm().log( f"Error accessing block, bindex={bindex}, rect keys={list(self.rects.keys())}")
+                lgm().log( f"Error accessing block, bindex={bindex}, rect keys={list(self.rect_grid.keys())}")
                 raise err
             if new_rect != self.rect0:
                 lgm().log(f"NTS: NEONTileSelector-> select block {bindex}, new_rect={new_rect}" )
@@ -98,7 +99,7 @@ class NEONTileSelector:
     @exception_handled
     def indicate_rec(self, x, y ):
         bindex = self.block_index(x,y)
-        rect = self.rects.get( bindex, self.rect0 )
+        rect = self.rect_grid.get(bindex, self.rect0)
         ufm().show( f"Selected rect-{bindex}")
         return hv.Rectangles( [rect] ).opts( line_color="yellow", fill_alpha=0.0, line_alpha=1.0, line_width=1 )
 
@@ -117,11 +118,11 @@ class NEONTileSelector:
         for block in blocks:
             (bxlim, bylim) = block.get_extent( spm().projection )
             r = (bxlim[0],bylim[0],bxlim[1],bylim[1])
-            self.rects[ block.block_coords ] =  r
-        lgm().log( f"TS: nblocks={len(blocks)}, nindices={len(self.rects)}, indices={list(self.rects.keys())}")
-        self.rect0 = self.rects[ tm().block_index ]
+            self.rect_grid[ block.block_coords] =  r
+        lgm().log( f"TS: nblocks={len(blocks)}, nindices={len(self.rect_grid)}, indices={list(self.rect_grid.keys())}")
+        self.rect0 = self.rect_grid[ tm().block_index]
         basemap = spm().get_image_basemap( self.xlim + self.ylim )
-        self.rectangles = hv.Rectangles( list(self.rects.values()) ).opts( line_color="cyan", fill_alpha=0.0, line_alpha=1.0 )
+        self.rectangles = hv.Rectangles(list(self.rect_grid.values())).opts(line_color="cyan", fill_alpha=0.0, line_alpha=1.0)
         image = basemap * self.rectangles * self.selected_rec * self.selection_boxes
         if self.selection_mode == BlockSelectMode.LoadTile:
             return image
