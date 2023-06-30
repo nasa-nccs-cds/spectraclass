@@ -84,26 +84,23 @@ class NEONTileSelector:
 
     @exception_handled
     def select_rec(self, x, y ):
-        bindex, rects = self.block_index(x, y), []
-        try:
-            new_rect = self.rects[bindex]
-        except KeyError as err:
-            lgm().log(f"Error accessing block, bindex={bindex}, rect keys={list(self.rects.keys())}")
-            raise err
-
-        if new_rect != self.rect0:
-            lgm().log(f"NTS: NEONTileSelector-> select block {bindex}, new_rect={new_rect}")
-            ufm().show(f"select block {bindex}")
-            self.rect0 = new_rect
-
-        if self.selection_mode == BlockSelectMode.LoadTile:
-            tm().setBlock(bindex)
-            ufm().clear()
-            rects = [self.rect0]
-        else:
-            self.selected_rectangles.append(self.rect0)
-            rects = self.selected_rectangles
-        return hv.Rectangles(rects).opts(line_color="white", fill_alpha=0.2, line_alpha=1.0, line_width=3)
+        if x is not None:
+            bindex = self.block_index(x, y)
+            if self.selection_mode == BlockSelectMode.LoadTile:
+                if bindex != self.rect0:
+                    ufm().show(f"select block {bindex}")
+                    self.rect0 = bindex
+                    tm().setBlock( bindex )
+                    self.selected_rectangles = [ bindex ]
+                    ufm().clear()
+            else:
+                if bindex in self.selected_rectangles:
+                    ufm().show(f"clear block {bindex}")
+                    self.selected_rectangles.remove( bindex )
+                else:
+                    ufm().show(f"select block {bindex}")
+                    self.selected_rectangles.append( bindex )
+        return hv.Rectangles( self.selected_rectangle_bounds ).opts( line_color="white", fill_alpha=0.2, line_alpha=1.0, line_width=3 )
 
     def gui(self):
         blocks: List[Block] = tm().tile.getBlocks()
