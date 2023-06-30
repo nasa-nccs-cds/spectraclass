@@ -26,7 +26,7 @@ class NEONTileSelector:
         self.selection_color = kwargs.get("selection_color", 'black')
         self.slw = kwargs.get("slw", 2)
         self.colorstretch = 2.0
-        self.selection_boxes = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.5, line_alpha=1.0, line_color="white", fill_color="white" )
+        self.selection_boxes: hv.Rectangles = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.5, line_alpha=1.0, line_color="white", fill_color="white" )
         self.box_selection = streams.BoxEdit(source=self.selection_boxes, num_objects=1, styles={ 'fill_color': ['red'], 'fill_alpha': 0.2, 'line_color': "white" })
         if self.selection_mode == BlockSelectMode.LoadTile: self.tap_stream = DoubleTap( transient=True )
         else:                                               self.tap_stream = SingleTap( transient=True )
@@ -44,41 +44,55 @@ class NEONTileSelector:
         self.rect0 = None
         self._select_all = pn.widgets.Button( name='Select All', button_type='primary' )
         self._select_all.on_click( self.select_all )
+        self._select_region = pn.widgets.Button( name='Select Region', button_type='primary' )
+        self._select_region.on_click( self.select_region )
         self._clear_all  = pn.widgets.Button( name='Clear All',  button_type='warning' )
         self._clear_all.on_click( self.clear_all )
+        self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning' )
+        self._clear_region.on_click( self.clear_region )
 
     def select_all(self, event ):
         ufm().show( "SELECT ALL")
 
+    def select_region(self, event ):
+        ufm().show( "SELECT REGION")
+
     def clear_all(self, event ):
         ufm().show( "CLEAR ALL")
+        self.selected_rectangles = []
+        self.selected_rec.event( x=None, y=None )
+
+    def clear_region(self, event ):
+        ufm().show( "CLEAR REGION")
 
     def get_load_panel(self):
         return pn.Column([])
 
     def get_selection_panel(self):
-        control_buttons = pn.Row( self._select_all, self._clear_all )
+        control_buttons = pn.Row( self._select_all, self._select_region, self._clear_all )
         return pn.Column( control_buttons )
 
     @exception_handled
     def select_rec(self, x, y ):
-        bindex, rects = self.block_index(x,y), []
-        try:
-            new_rect = self.rects[bindex]
-        except KeyError as err:
-            lgm().log( f"Error accessing block, bindex={bindex}, rect keys={list(self.rects.keys())}")
-            raise err
-        if new_rect != self.rect0:
-            lgm().log(f"NTS: NEONTileSelector-> select block {bindex}, new_rect={new_rect}" )
-            ufm().show( f"select block {bindex}")
-            self.rect0 = new_rect
-            if self.selection_mode == BlockSelectMode.LoadTile:
-                tm().setBlock( bindex )
-                ufm().clear()
-                rects = [self.rect0]
-            else:
-                self.selected_rectangles.append( self.rect0 )
-                rects = self.selected_rectangles
+        rects = []
+        if x is not None:
+            bindex = self.block_index(x, y)
+            try:
+                new_rect = self.rects[bindex]
+            except KeyError as err:
+                lgm().log( f"Error accessing block, bindex={bindex}, rect keys={list(self.rects.keys())}")
+                raise err
+            if new_rect != self.rect0:
+                lgm().log(f"NTS: NEONTileSelector-> select block {bindex}, new_rect={new_rect}" )
+                ufm().show( f"select block {bindex}")
+                self.rect0 = new_rect
+                if self.selection_mode == BlockSelectMode.LoadTile:
+                    tm().setBlock( bindex )
+                    ufm().clear()
+                    rects = [self.rect0]
+                else:
+                    self.selected_rectangles.append( self.rect0 )
+                    rects = self.selected_rectangles
         return hv.Rectangles( rects ).opts( line_color="white", fill_alpha=0.2, line_alpha=1.0, line_width=3 )
 
     @exception_handled
