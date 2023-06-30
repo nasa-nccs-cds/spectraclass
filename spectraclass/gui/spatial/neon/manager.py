@@ -86,9 +86,9 @@ class NEONTileSelector:
     def select_rec(self, x, y ):
         bindex, rects = self.block_index(x,y), []
         try:
-            new_rect = self.rects[bindex]
+            new_rect = self.rect_grid[bindex]
         except KeyError as err:
-            lgm().log( f"Error accessing block, bindex={bindex}, rect keys={list(self.rects.keys())}")
+            lgm().log( f"Error accessing block, bindex={bindex}, rect keys={list(self.rect_grid.keys())}")
             raise err
         if new_rect != self.rect0:
             lgm().log(f"NTS: NEONTileSelector-> select block {bindex}, new_rect={new_rect}" )
@@ -106,7 +106,7 @@ class NEONTileSelector:
     @exception_handled
     def indicate_rec(self, x, y ):
         bindex = self.block_index(x,y)
-        rect = self.rects.get( bindex, self.rect0 )
+        rect = self.rect_grid.get( bindex, self.rect0 )
         ufm().show( f"Selected rect-{bindex}")
         return hv.Rectangles( [rect] ).opts( line_color="yellow", fill_alpha=0.0, line_alpha=1.0, line_width=1 )
 
