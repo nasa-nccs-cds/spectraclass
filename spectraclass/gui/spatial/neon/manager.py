@@ -61,8 +61,7 @@ class NEONTileSelector:
 
 
     def select_region(self, event ):
-        rx, ry = ( self.selection_boxes.range(idim) for idim in (0,1) )
-        ufm().show( f"SELECT REGION, ranges = {rx} {ry}")
+        ufm().show( f"SELECT REGION, data = {self.selection_boxes.data}")
 
     def clear_all(self, event ):
         ufm().show( "CLEAR ALL")
