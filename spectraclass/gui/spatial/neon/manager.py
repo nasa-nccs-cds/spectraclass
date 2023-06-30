@@ -26,7 +26,7 @@ class NEONTileSelector:
         self.selection_color = kwargs.get("selection_color", 'black')
         self.slw = kwargs.get("slw", 2)
         self.colorstretch = 2.0
-        self.selection_boxes: hv.Rectangles = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.5, line_alpha=1.0, line_color="white", fill_color="white" )
+        self.selection_boxes: hv.Rectangles = hv.Rectangles([])
         self.box_selection = streams.BoxEdit(source=self.selection_boxes, num_objects=1, styles={ 'fill_color': ['red'], 'fill_alpha': 0.2, 'line_color': "white" })
         if self.selection_mode == BlockSelectMode.LoadTile: self.tap_stream = DoubleTap( transient=True )
         else:                                               self.tap_stream = SingleTap( transient=True )
@@ -122,12 +122,14 @@ class NEONTileSelector:
         self.rect0 = tm().block_index
         basemap = spm().get_image_basemap( self.xlim + self.ylim )
         self.rectangles = hv.Rectangles(list(self.rect_grid.values())).opts(line_color="cyan", fill_alpha=0.0, line_alpha=1.0)
-        image = basemap * self.rectangles * self.selected_rec * self.selection_boxes
+        image = basemap * self.rectangles * self.selected_rec
         if self.selection_mode == BlockSelectMode.LoadTile:
             return image
         else:
+            region_selection = self.selection_boxes.opts(
+                opts.Rectangles(active_tools=['box_edit'], fill_alpha=0.5, line_alpha=1.0, line_color="white", fill_color="white"))
             selection_panel = self.get_selection_panel()
-            return pn.Column( image, selection_panel )
+            return pn.Column( image * region_selection, selection_panel )
 
     @exception_handled
     def block_index(self, x, y ) -> Tuple[int,int]:
