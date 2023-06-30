@@ -26,8 +26,8 @@ class NEONTileSelector:
         self.selection_color = kwargs.get("selection_color", 'black')
         self.slw = kwargs.get("slw", 2)
         self.colorstretch = 2.0
-        self.selection_boxes = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.5 )
-        self.box_selection = streams.BoxEdit(source=self.selection_boxes, num_objects=1, styles={ 'fill_color': ['red'], 'fill_alpha': 0.2 })
+        self.selection_boxes: hv.Rectangles = hv.Rectangles([])
+        self.box_selection = streams.BoxEdit(source=self.selection_boxes, num_objects=1, styles={ 'fill_color': ['red'], 'fill_alpha': 0.2, 'line_color': "white" })
         if self.selection_mode == BlockSelectMode.LoadTile: self.tap_stream = DoubleTap( transient=True )
         else:                                               self.tap_stream = SingleTap( transient=True )
         self.selected_rec = hv.DynamicMap(self.select_rec, streams=[self.tap_stream])
@@ -37,28 +37,50 @@ class NEONTileSelector:
         self._selected_block: Tuple[int,int] = (0,0)
         self._band_index = 0
         self._select_rec = None
-        self.rects: Dict[Tuple,Tuple] = {}
+        self.rect_grid: Dict[Tuple,Tuple] = {}
         self.xlim, self.ylim = (sys.float_info.max, -sys.float_info.max), (sys.float_info.max, -sys.float_info.max)
         self.bdx, self.bdy = None, None
         self.bx0, self.by1 = None, None
         self.rect0 = None
-        self._select_all = pn.widgets.Button( name='Select All', button_type='primary' )
+        self._select_all = pn.widgets.Button( name='Select All', button_type='primary', width=150 )
         self._select_all.on_click( self.select_all )
-        self._clear_all  = pn.widgets.Button( name='Clear All',  button_type='warning' )
+        self._select_region = pn.widgets.Button( name='Select Region', button_type='primary', width=150 )
+        self._select_region.on_click( self.select_region )
+        self._clear_all  = pn.widgets.Button( name='Clear All',  button_type='warning', width=150 )
         self._clear_all.on_click( self.clear_all )
+        self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning', width=150 )
+        self._clear_region.on_click( self.clear_region )
+
+    def update(self):
+        self.selected_rec.event(x=None, y=None)
 
     def select_all(self, event ):
-        ufm().show( "SELECT ALL")
+        ufm().show("SELECT ALL")
+        self.selected_rectangles = list(self.rect_grid.keys())
+        self.update()
+
+
+    def select_region(self, event ):
+        ufm().show( f"SELECT REGION, data = {self.selection_boxes.data}")
 
     def clear_all(self, event ):
         ufm().show( "CLEAR ALL")
+        self.selected_rectangles = []
+        self.update()
+
+    def clear_region(self, event ):
+        ufm().show( "CLEAR REGION")
 
     def get_load_panel(self):
         return pn.Column([])
 
     def get_selection_panel(self):
-        control_buttons = pn.Row( self._select_all, self._clear_all )
+        control_buttons = pn.Row( self._select_all, self._select_region, self._clear_all, self._clear_region )
         return pn.Column( control_buttons )
+
+    @property
+    def selected_rectangle_bounds(self):
+        return [self.rect_grid[bindex] for bindex in self.selected_rectangles]
 
     @exception_handled
     def select_rec(self, x, y ):
@@ -103,11 +125,11 @@ class NEONTileSelector:
         for block in blocks:
             (bxlim, bylim) = block.get_extent( spm().projection )
             r = (bxlim[0],bylim[0],bxlim[1],bylim[1])
-            self.rects[ block.block_coords ] =  r
-        lgm().log( f"TS: nblocks={len(blocks)}, nindices={len(self.rects)}, indices={list(self.rects.keys())}")
-        self.rect0 = self.rects[ tm().block_index ]
+            self.rect_grid[ block.block_coords ] =  r
+        lgm().log( f"TS: nblocks={len(blocks)}, nindices={len(self.rect_grid)}, indices={list(self.rect_grid.keys())}")
+        self.rect0 = self.rect_grid[ tm().block_index ]
         basemap = spm().get_image_basemap( self.xlim + self.ylim )
-        self.rectangles = hv.Rectangles( list(self.rects.values()) ).opts( line_color="cyan", fill_alpha=0.0, line_alpha=1.0 )
+        self.rectangles = hv.Rectangles( list(self.rect_grid.values()) ).opts( line_color="cyan", fill_alpha=0.0, line_alpha=1.0 )
         image = basemap * self.rectangles * self.selected_rec * self.selection_boxes
         if self.selection_mode == BlockSelectMode.LoadTile:
             return image
