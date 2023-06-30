@@ -53,6 +53,7 @@ class NEONTileSelector:
 
     def select_all(self, event ):
         self.selected_rectangles = list(self.rect_grid.values())
+        self.selected_rec.event(x=None, y=None)
         ufm().show( "SELECT ALL")
 
     def select_region(self, event ):
@@ -75,7 +76,7 @@ class NEONTileSelector:
 
     @exception_handled
     def select_rec(self, x, y ):
-        rects = []
+        rects = self.selected_rectangles
         if x is not None:
             bindex = self.block_index(x, y)
             try:
