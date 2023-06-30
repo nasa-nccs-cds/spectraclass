@@ -61,7 +61,8 @@ class NEONTileSelector:
 
 
     def select_region(self, event ):
-        ufm().show( "SELECT REGION")
+        rx, ry = ( self.selection_boxes.range(idim) for idim in (0,1) )
+        ufm().show( f"SELECT REGION, ranges = {rx} {ry}")
 
     def clear_all(self, event ):
         ufm().show( "CLEAR ALL")
@@ -86,16 +87,20 @@ class NEONTileSelector:
     def select_rec(self, x, y ):
         if x is not None:
             bindex = self.block_index(x, y)
-            ufm().show( f"select block {bindex}")
             if self.selection_mode == BlockSelectMode.LoadTile:
                 if bindex != self.rect0:
+                    ufm().show(f"select block {bindex}")
                     self.rect0 = bindex
                     tm().setBlock( bindex )
                     self.selected_rectangles = [ bindex ]
                     ufm().clear()
             else:
-                if bindex in self.selected_rectangles:  self.selected_rectangles.remove( bindex )
-                else:                                   self.selected_rectangles.append( bindex )
+                if bindex in self.selected_rectangles:
+                    ufm().show(f"clear block {bindex}")
+                    self.selected_rectangles.remove( bindex )
+                else:
+                    ufm().show(f"select block {bindex}")
+                    self.selected_rectangles.append( bindex )
         return hv.Rectangles( self.selected_rectangle_bounds ).opts( line_color="white", fill_alpha=0.2, line_alpha=1.0, line_width=3 )
 
     def gui(self):
