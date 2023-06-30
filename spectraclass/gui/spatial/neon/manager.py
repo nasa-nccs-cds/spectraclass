@@ -42,13 +42,13 @@ class NEONTileSelector:
         self.bdx, self.bdy = None, None
         self.bx0, self.by1 = None, None
         self.rect0 = None
-        self._select_all = pn.widgets.Button( name='Select All', button_type='primary' ).opts( width=150 )
+        self._select_all = pn.widgets.Button( name='Select All', button_type='primary', width=150 )
         self._select_all.on_click( self.select_all )
-        self._select_region = pn.widgets.Button( name='Select Region', button_type='primary' ).opts( width=150 )
+        self._select_region = pn.widgets.Button( name='Select Region', button_type='primary', width=150 )
         self._select_region.on_click( self.select_region )
-        self._clear_all  = pn.widgets.Button( name='Clear All',  button_type='warning' ).opts( width=150 )
+        self._clear_all  = pn.widgets.Button( name='Clear All',  button_type='warning', width=150 )
         self._clear_all.on_click( self.clear_all )
-        self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning' ).opts( width=150 )
+        self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning', width=150 )
         self._clear_region.on_click( self.clear_region )
 
     def update(self):
