@@ -27,7 +27,7 @@ class NEONTileSelector:
         self.slw = kwargs.get("slw", 2)
         self.colorstretch = 2.0
         self.selection_boxes = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.5 )
-        self.box_selection = streams.BoxEdit(source=self.selection_boxes, num_objects=1, styles={ 'fill_color': ['red'], 'fill_alpha': 0.2, 'line_color': "white" })
+        self.box_selection = streams.BoxEdit(source=self.selection_boxes, num_objects=1 )
         if self.selection_mode == BlockSelectMode.LoadTile: self.tap_stream = DoubleTap( transient=True )
         else:                                               self.tap_stream = SingleTap( transient=True )
         self.selected_rec = hv.DynamicMap(self.select_rec, streams=[self.tap_stream])
@@ -84,7 +84,7 @@ class NEONTileSelector:
 
     @exception_handled
     def select_rec(self, x, y ):
-        bindex, rect_grid = self.block_index(x,y), []
+        bindex, new_selected_rects = self.block_index(x,y), []
         try:
             new_rect = self.rect_grid[bindex]
         except KeyError as err:
@@ -94,21 +94,15 @@ class NEONTileSelector:
             lgm().log(f"NTS: NEONTileSelector-> select block {bindex}, new_rect={new_rect}" )
             ufm().show( f"select block {bindex}")
             self.rect0 = new_rect
+
             if self.selection_mode == BlockSelectMode.LoadTile:
-                tm().setBlock( bindex )
+                tm().setBlock(bindex)
                 ufm().clear()
-                rect_grid = [self.rect0]
+                new_selected_rects = [self.rect0]
             else:
                 self.selected_rectangles.append( self.rect0 )
-                rect_grid = self.selected_rectangles
-        return hv.Rectangles( rect_grid ).opts( line_color="white", fill_alpha=0.2, line_alpha=1.0, line_width=3 )
-
-    @exception_handled
-    def indicate_rec(self, x, y ):
-        bindex = self.block_index(x,y)
-        rect = self.rect_grid.get( bindex, self.rect0 )
-        ufm().show( f"Selected rect-{bindex}")
-        return hv.Rectangles( [rect] ).opts( line_color="yellow", fill_alpha=0.0, line_alpha=1.0, line_width=1 )
+                new_selected_rects = self.selected_rectangles
+        return hv.Rectangles( new_selected_rects ).opts( line_color="white", fill_alpha=0.2, line_alpha=1.0, line_width=3 )
 
     def gui(self):
         blocks: List[Block] = tm().tile.getBlocks()
