@@ -15,6 +15,7 @@ import holoviews as hv
 from holoviews import opts
 from holoviews import streams
 
+
 class NEONTileSelector:
 
     @log_timing
@@ -41,7 +42,7 @@ class NEONTileSelector:
         self.bdx, self.bdy = None, None
         self.bx0, self.by1 = None, None
         self.rect0 = None
-        self._select_all = pn.widgets.Button( name='Select All', button_type='primary', width=150  )
+        self._select_all = pn.widgets.Button( name='Select All', button_type='primary', width=150 )
         self._select_all.on_click( self.select_all )
         self._select_region = pn.widgets.Button( name='Select Region', button_type='primary', width=150 )
         self._select_region.on_click( self.select_region )
@@ -57,6 +58,7 @@ class NEONTileSelector:
         ufm().show("SELECT ALL")
         self.selected_rectangles = list(self.rect_grid.keys())
         self.update()
+
 
     def select_region(self, event ):
         ufm().show( f"SELECT REGION, data = {self.selection_boxes.data}")
@@ -75,6 +77,10 @@ class NEONTileSelector:
     def get_selection_panel(self):
         control_buttons = pn.Row( self._select_all, self._select_region, self._clear_all, self._clear_region )
         return pn.Column( control_buttons )
+
+    @property
+    def selected_rectangle_bounds(self):
+        return [self.rect_grid[bindex] for bindex in self.selected_rectangles]
 
     @exception_handled
     def select_rec(self, x, y ):
