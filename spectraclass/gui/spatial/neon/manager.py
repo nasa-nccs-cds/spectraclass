@@ -44,20 +44,38 @@ class NEONTileSelector:
         self.rect0 = None
         self._select_all = pn.widgets.Button( name='Select All', button_type='primary' )
         self._select_all.on_click( self.select_all )
-        self._clear_all  = pn.widgets.Button( name='Clear All',  button_type='warning' )
+        self._select_region = pn.widgets.Button( name='Select Region', button_type='primary', width=150 )
+        self._select_region.on_click( self.select_region )
+        self._clear_all  = pn.widgets.Button( name='Clear All',  button_type='warning', width=150 )
         self._clear_all.on_click( self.clear_all )
+        self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning', width=150 )
+        self._clear_region.on_click( self.clear_region )
+
+    def update(self):
+        self.selected_rec.event(x=None, y=None)
 
     def select_all(self, event ):
-        ufm().show( "SELECT ALL")
+        ufm().show("SELECT ALL")
+        self.selected_rectangles = list(self.rects.keys())
+        self.update()
+
+
+    def select_region(self, event ):
+        ufm().show( f"SELECT REGION, data = {self.selection_boxes.data}")
 
     def clear_all(self, event ):
         ufm().show( "CLEAR ALL")
+        self.selected_rectangles = []
+        self.update()
+
+    def clear_region(self, event ):
+        ufm().show( "CLEAR REGION")
 
     def get_load_panel(self):
         return pn.Column([])
 
     def get_selection_panel(self):
-        control_buttons = pn.Row( self._select_all, self._clear_all )
+        control_buttons = pn.Row( self._select_all, self._select_region, self._clear_all, self._clear_region )
         return pn.Column( control_buttons )
 
     @exception_handled
