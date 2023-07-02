@@ -27,7 +27,7 @@ class NEONTileSelector:
         self.slw = kwargs.get("slw", 2)
         self.colorstretch = 2.0
         self.selection_boxes = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.5 )
-        self.box_selection = streams.BoxEdit(source=self.selection_boxes, num_objects=1 )
+        self.box_selection = streams.BoxEdit(source=self.selection_boxes, num_objects=1, dynamic=True )
         if self.selection_mode == BlockSelectMode.LoadTile: self.tap_stream = DoubleTap( transient=True )
         else:                                               self.tap_stream = SingleTap( transient=True )
         self.selected_rec = hv.DynamicMap(self.select_rec, streams=[self.tap_stream])
@@ -60,7 +60,8 @@ class NEONTileSelector:
 
 
     def select_region(self, event ):
-        ufm().show( f"SELECT REGION, data = {self.selection_boxes.data}")
+        ufm().show( f"SELECT REGION, data = {self.box_selection.data}")
+
 
     def clear_all(self, event ):
         ufm().show( "CLEAR ALL")
@@ -106,7 +107,7 @@ class NEONTileSelector:
                 ufm().show(f"clear block {bindex}")
                 self.selected_rectangles.pop( bindex )
 
-        return hv.Rectangles( self.selected_rectangles.values() ).opts( line_color="white", fill_alpha=0.2, line_alpha=1.0, line_width=3 )
+        return hv.Rectangles( self.selected_rectangles.values() ).opts( line_color="white", fill_alpha=0.5, line_alpha=1.0, line_width=1 )
 
     def gui(self):
         blocks: List[Block] = tm().tile.getBlocks()
