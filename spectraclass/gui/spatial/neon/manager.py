@@ -50,13 +50,16 @@ class NEONTileSelector:
         self.save_button.on_click( self.save_selection )
 
 
+    @exception_handled
     def save_selection(self, event):
+        from spectraclass.data.base import DataManager, dm
         sname = self.selection_name.value
         if sname:
             rect_indices = np.array(list(self.selected_rectangles.keys()))
-            ufm().show(f"Save selection: {sname}, shape={rect_indices.shape}")
             pdata = pd.DataFrame( rect_indices, columns=['x','y'] )
-            pdata.to_csv( os.path.expanduser("~/save_selection.csv") )
+            save_file = f"{dm().cache_dir}/masks/block_selection/{dm().dsid()}.{sname}.csv"
+            ufm().show(f"Save selection: {sname}, shape={rect_indices.shape}, file='{save_file}'")
+            pdata.to_csv( save_file )
 
 
     def load_selection(self, event):
