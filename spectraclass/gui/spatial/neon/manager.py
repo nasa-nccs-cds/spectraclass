@@ -14,6 +14,7 @@ from typing import List, Union, Tuple, Optional, Dict, Callable
 import panel as pn
 import time, math, sys, xarray as xa
 from spectraclass.data.modes import BlockSelectMode
+from spectraclass.data.base import DataManager, dm
 import holoviews as hv
 from holoviews import opts
 from holoviews import streams
@@ -24,8 +25,9 @@ class NEONTileSelector:
     @log_timing
     def __init__(self, **kwargs):
         self.selection_mode: BlockSelectMode = kwargs.get('mode',BlockSelectMode.LoadTile)
-        self.selection_boxes = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.75 )
+        self.selection_boxes: hv.Rectangles = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.75 )
         self.box_selection = streams.BoxEdit( source=self.selection_boxes, num_objects=1 )
+        self.region_selection: hv.Rectangles = self.selection_boxes.opts( opts.Rectangles(active_tools=['box_edit'], fill_alpha=0.75, line_alpha=1.0, line_color="yellow", fill_color="white"))
         if self.selection_mode == BlockSelectMode.LoadTile: self.tap_stream = DoubleTap( transient=True )
         else:                                               self.tap_stream = SingleTap( transient=True )
         self.selected_rec = hv.DynamicMap(self.select_rec, streams=[self.tap_stream])
@@ -48,18 +50,16 @@ class NEONTileSelector:
         self.load_button.on_click( self.load_selection )
         self.save_button = pn.widgets.Button( name='Save Selection',  button_type='success', width=150 )
         self.save_button.on_click( self.save_selection )
-
+        self.save_dir = f"{dm().cache_dir}/masks/block_selection"
+        os.makedirs(self.save_dir, exist_ok=True)
 
     @exception_handled
     def save_selection(self, event):
-        from spectraclass.data.base import DataManager, dm
         sname = self.selection_name.value
         if sname:
             rect_indices = np.array(list(self.selected_rectangles.keys()))
             pdata = pd.DataFrame( rect_indices, columns=['x','y'] )
-            save_dir = f"{dm().cache_dir}/masks/block_selection"
-            os.makedirs( save_dir, exist_ok=True )
-            save_file = f"{save_dir}/{dm().dsid()}.{sname}.csv"
+            save_file = f"{self.save_dir}/{tm().tileid()}.{sname}.csv"
             ufm().show(f"Save selection: {sname}, shape={rect_indices.shape}, file='{save_file}'")
             try:
                 pdata.to_csv( save_file )
@@ -69,7 +69,16 @@ class NEONTileSelector:
     def load_selection(self, event):
         sname = self.selection_name.value
         if sname:
-            ufm().show(f"Load selection: {sname}")
+            save_file = f"{self.save_dir}/{tm().tileid()}.{sname}.csv"
+            ufm().show(f"Load selection: {sname}, file='{save_file}'")
+            try:
+                pdata: pd.DataFrame =pd.read_csv( save_file )
+                for index, row in pdata.iterrows():
+                    bid = (row['x'],row['y'])
+                    self.selected_rectangles[bid] = self.rect_grid[bid]
+                self.update()
+            except Exception as err:
+                ufm().show(f"Error loading file: {err}")
 
     def get_save_panel(self) -> Panel:
         buttons = pn.Row( self.load_button, self.save_button  )
@@ -85,6 +94,7 @@ class NEONTileSelector:
         return blocks
 
     def update(self):
+        print( self.region_selection.data )
         self.selected_rec.event(x=None, y=None)
 
     def select_all(self, event ):
@@ -95,12 +105,10 @@ class NEONTileSelector:
     def select_region(self, event ):
         for bid in self.get_blocks_in_region( self.box_selection.data ):
             self.selected_rectangles[bid] = self.rect_grid[bid]
-        self.box_selection.reset()
         self.update()
 
     def clear_all(self, event ):
         self.selected_rectangles = {}
-        self.box_selection.reset()
         self.update()
 
     def clear_region(self, event ):
@@ -166,10 +174,8 @@ class NEONTileSelector:
         if self.selection_mode == BlockSelectMode.LoadTile:
             return image
         else:
-            region_selection = self.selection_boxes.opts(
-                opts.Rectangles(active_tools=['box_edit'], fill_alpha=0.5, line_alpha=1.0, line_color="white", fill_color="white"))
             selection_panel = self.get_selection_panel()
-            return pn.Column( image * region_selection, selection_panel )
+            return pn.Column( image * self.region_selection, selection_panel )
 
     @exception_handled
     def block_index(self, x, y ) -> Tuple[int,int]:
