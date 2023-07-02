@@ -109,7 +109,7 @@ class NEONTileSelector:
                 self.selected_rectangles.pop( bindex )
                 self.rect0 = None
 
-        return hv.Rectangles( self.selected_rectangles ).opts( line_color="white", fill_alpha=0.2, line_alpha=1.0, line_width=3 )
+        return hv.Rectangles( self.selected_rectangles.values() ).opts( line_color="white", fill_alpha=0.2, line_alpha=1.0, line_width=3 )
 
     def gui(self):
         blocks: List[Block] = tm().tile.getBlocks()
