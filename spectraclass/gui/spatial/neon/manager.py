@@ -41,7 +41,6 @@ class NEONTileSelector:
         self.xlim, self.ylim = (sys.float_info.max, -sys.float_info.max), (sys.float_info.max, -sys.float_info.max)
         self.bdx, self.bdy = None, None
         self.bx0, self.by1 = None, None
-        self.rect0 = None
         self._select_all = pn.widgets.Button( name='Select All', button_type='primary', width=150 )
         self._select_all.on_click( self.select_all )
         self._select_region = pn.widgets.Button( name='Select Region', button_type='primary', width=150 )
@@ -80,7 +79,7 @@ class NEONTileSelector:
 
     @property
     def selected_rectangle_bounds(self):
-        return [self.rect_grid[bindex] for bindex in self.selected_rectangles]
+        return [ self.rect_grid[bindex] for bindex in self.selected_rectangles.keys() ]
 
     @exception_handled
     def select_rec(self, x, y ):
@@ -93,9 +92,8 @@ class NEONTileSelector:
                 raise err
 
             lgm().log(f"NTS: NEONTileSelector-> select block {bindex}, new_rect={new_rect}" )
-            if bindex != self.rect0:
+            if bindex not in self.selected_rectangles:
                 ufm().show( f"select block {bindex}")
-                self.rect0 = bindex
 
                 if self.selection_mode == BlockSelectMode.LoadTile:
                     tm().setBlock(bindex)
@@ -107,7 +105,6 @@ class NEONTileSelector:
             elif self.selection_mode == BlockSelectMode.SelectTile:
                 ufm().show(f"clear block {bindex}")
                 self.selected_rectangles.pop( bindex )
-                self.rect0 = None
 
         return hv.Rectangles( self.selected_rectangles.values() ).opts( line_color="white", fill_alpha=0.2, line_alpha=1.0, line_width=3 )
 
