@@ -57,10 +57,14 @@ class NEONTileSelector:
         if sname:
             rect_indices = np.array(list(self.selected_rectangles.keys()))
             pdata = pd.DataFrame( rect_indices, columns=['x','y'] )
-            save_file = f"{dm().cache_dir}/masks/block_selection/{dm().dsid()}.{sname}.csv"
+            save_dir = f"{dm().cache_dir}/masks/block_selection"
+            os.makedirs( save_dir, exist_ok=True )
+            save_file = f"{save_dir}/{dm().dsid()}.{sname}.csv"
             ufm().show(f"Save selection: {sname}, shape={rect_indices.shape}, file='{save_file}'")
-            pdata.to_csv( save_file )
-
+            try:
+                pdata.to_csv( save_file )
+            except Exception as err:
+                ufm().show(f"Error saving file: {err}")
 
     def load_selection(self, event):
         sname = self.selection_name.value
