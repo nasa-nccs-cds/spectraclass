@@ -59,7 +59,7 @@ class NEONTileSelector:
         if sname:
             rect_indices = np.array(list(self.selected_rectangles.keys()))
             pdata = pd.DataFrame( rect_indices, columns=['x','y'] )
-            save_file = f"{self.save_dir}/{tm().tileid()}.{sname}.csv"
+            save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
             ufm().show(f"Save selection: {sname}, shape={rect_indices.shape}, file='{save_file}'")
             try:
                 pdata.to_csv( save_file )
@@ -69,7 +69,7 @@ class NEONTileSelector:
     def load_selection(self, event):
         sname = self.selection_name.value
         if sname:
-            save_file = f"{self.save_dir}/{tm().tileid()}.{sname}.csv"
+            save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
             ufm().show(f"Load selection: {sname}, file='{save_file}'")
             try:
                 pdata: pd.DataFrame =pd.read_csv( save_file )
