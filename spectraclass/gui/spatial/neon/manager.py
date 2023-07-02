@@ -23,11 +23,11 @@ class NEONTileSelector:
     def __init__(self, **kwargs):
         self.selection_mode: BlockSelectMode = kwargs.get('mode',BlockSelectMode.LoadTile)
         self.init_band = kwargs.get( "init_band", 160 )
-        self.grid_color = kwargs.get("grid_color", 'white')
+ #       self.grid_color = kwargs.get("grid_color", 'white')
         self.selection_color = kwargs.get("selection_color", 'black')
         self.slw = kwargs.get("slw", 2)
         self.colorstretch = 2.0
-        self.selection_boxes = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.5 )
+        self.selection_boxes = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.6 )
         self.box_selection = streams.BoxEdit( source=self.selection_boxes, num_objects=1 )
         if self.selection_mode == BlockSelectMode.LoadTile: self.tap_stream = DoubleTap( transient=True )
         else:                                               self.tap_stream = SingleTap( transient=True )
@@ -52,9 +52,15 @@ class NEONTileSelector:
         self._clear_region.on_click( self.clear_region )
         self.selection_name = pn.widgets.TextInput(name='Selection Name', placeholder='Give this selection a name...')
         self.save_button = pn.widgets.Button( name='Save Selection',  button_type='primary', width=150 )
+        self.save_button.on_click( self.save_selection )
+
+    def save_selection(self):
+        sname = self.selection_name.value
+        if sname:
+            ufm().show(f"Save selection: {sname}")
 
     def get_save_panel(self) -> Panel:
-        return pn.Row( self.selection_name, self.save_button )
+        return pn.Column( self.selection_name, self.save_button )
 
     def get_blocks_in_region(self, bounds: Dict ) -> List[Tuple]:
         blocks = []
