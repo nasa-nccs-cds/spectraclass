@@ -56,25 +56,23 @@ class NEONTileSelector:
         for bid, (x0,y0,x1,y1) in self.rect_grid.items():
             if (bx0 < x1) and (bx1 > x0) and (by0 < y1) and (by1 > y0):
                 blocks.append(bid)
+        ufm().show( f"get_blocks_in_region: {blocks}" )
         return blocks
 
     def update(self):
         self.selected_rec.event(x=None, y=None)
 
     def select_all(self, event ):
-        ufm().show("SELECT ALL")
         self.selected_rectangles = self.rect_grid.copy()
         self.update()
 
 
     def select_region(self, event ):
-        ufm().show( f"SELECT REGION, data = {self.box_selection.data}")
         for bid in self.get_blocks_in_region( self.box_selection.data ):
             self.selected_rectangles[bid] = self.rect_grid[bid]
         self.update()
 
     def clear_all(self, event ):
-        ufm().show( "CLEAR ALL")
         self.selected_rectangles = {}
         self.update()
 
@@ -89,10 +87,6 @@ class NEONTileSelector:
     def get_selection_panel(self):
         control_buttons = pn.Row( self._select_all, self._select_region, self._clear_all, self._clear_region )
         return pn.Column( control_buttons )
-
-    @property
-    def selected_rectangle_bounds(self):
-        return [ self.rect_grid[bindex] for bindex in self.selected_rectangles.keys() ]
 
     @exception_handled
     def select_rec(self, x, y ):
