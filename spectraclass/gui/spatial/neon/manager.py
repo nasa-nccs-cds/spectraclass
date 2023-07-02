@@ -49,14 +49,15 @@ class NEONTileSelector:
         self._clear_all.on_click( self.clear_all )
         self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning', width=150 )
         self._clear_region.on_click( self.clear_region )
+        self.selection_name = pn.widgets.TextInput(name='Selection Name', placeholder='Give this selection a name...')
 
     def get_blocks_in_region(self, bounds: Dict ) -> List[Tuple]:
         blocks = []
         [bx0,by0,bx1,by1] = [ bounds[k] for k in ('x0','y0','x1','y1') ]
         for bid, (x0,y0,x1,y1) in self.rect_grid.items():
+            ufm().show(f"get_blocks_in_region: {x0} <-> {bx0}")
             if (bx0 < x1) and (bx1 > x0) and (by0 < y1) and (by1 > y0):
                 blocks.append(bid)
-        ufm().show( f"get_blocks_in_region: {blocks}" )
         return blocks
 
     def update(self):
