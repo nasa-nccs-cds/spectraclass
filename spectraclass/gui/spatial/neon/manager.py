@@ -26,6 +26,7 @@ class NEONTileSelector:
         self.selection_mode: BlockSelectMode = kwargs.get('mode',BlockSelectMode.LoadTile)
         self.selection_boxes = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.75 )
         self.box_selection = streams.BoxEdit( source=self.selection_boxes, num_objects=1 )
+        self.box_selection.transient = True
         if self.selection_mode == BlockSelectMode.LoadTile: self.tap_stream = DoubleTap( transient=True )
         else:                                               self.tap_stream = SingleTap( transient=True )
         self.selected_rec = hv.DynamicMap(self.select_rec, streams=[self.tap_stream])
