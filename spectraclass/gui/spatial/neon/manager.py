@@ -69,7 +69,8 @@ class NEONTileSelector:
             ufm().show(f"Load selection: {sname}")
 
     def get_save_panel(self) -> Panel:
-        return pn.Column( self.selection_name, self.save_button )
+        buttons = pn.Row( self.load_button, self.save_button  )
+        return pn.Column( self.selection_name, buttons )
 
     def get_blocks_in_region(self, bounds: Dict ) -> List[Tuple]:
         blocks = []
