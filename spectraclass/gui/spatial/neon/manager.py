@@ -84,12 +84,13 @@ class NEONTileSelector:
 
     @exception_handled
     def select_rec(self, x, y ):
-        bindex, new_selected_rects = self.block_index(x,y), []
+        bindex =self.block_index(x,y)
         try:
             new_rect = self.rect_grid[bindex]
         except KeyError as err:
             lgm().log( f"Error accessing block, bindex={bindex}, rect keys={list(self.rect_grid.keys())}")
             raise err
+
         if new_rect != self.rect0:
             lgm().log(f"NTS: NEONTileSelector-> select block {bindex}, new_rect={new_rect}" )
             ufm().show( f"select block {bindex}")
@@ -98,11 +99,15 @@ class NEONTileSelector:
             if self.selection_mode == BlockSelectMode.LoadTile:
                 tm().setBlock(bindex)
                 ufm().clear()
-                new_selected_rects = [self.rect0]
+                self.selected_rectangles = [self.rect0]
             else:
                 self.selected_rectangles.append(self.rect0)
-                new_selected_rects = self.selected_rectangles
-        return hv.Rectangles( new_selected_rects ).opts( line_color="white", fill_alpha=0.2, line_alpha=1.0, line_width=3 )
+
+        elif self.selection_mode == BlockSelectMode.SelectTile:
+            self.selected_rectangles.remove(self.rect0)
+            self.rect0 = None
+
+        return hv.Rectangles( self.selected_rectangles ).opts( line_color="white", fill_alpha=0.2, line_alpha=1.0, line_width=3 )
 
     def gui(self):
         blocks: List[Block] = tm().tile.getBlocks()
@@ -131,7 +136,7 @@ class NEONTileSelector:
             region_selection = self.selection_boxes.opts(
                 opts.Rectangles(active_tools=['box_edit'], fill_alpha=0.5, line_alpha=1.0, line_color="white", fill_color="white"))
             selection_panel = self.get_selection_panel()
-            return pn.Column( image * region_selection, selection_panel )
+            return pn.Column( region_selection, selection_panel ) # image *
 
     @exception_handled
     def block_index(self, x, y ) -> Tuple[int,int]:
