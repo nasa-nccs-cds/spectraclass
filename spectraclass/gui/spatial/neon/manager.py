@@ -32,7 +32,7 @@ class NEONTileSelector:
         else:                                               self.tap_stream = SingleTap( transient=True )
         self.selected_rec = hv.DynamicMap(self.select_rec, streams=[self.tap_stream])
         self.rectangles: hv.Rectangles = None # ([(0, 0, 1, 1), (2, 3, 4, 6), (0.5, 2, 1.5, 4), (2, 1, 3.5, 2.5)])
-        self.selected_rectangles: List[Tuple] = []
+        self.selected_rectangles: Dict[Tuple,Tuple] = {}
         self._transformed_block_data = None
         self._selected_block: Tuple[int,int] = (0,0)
         self._band_index = 0
@@ -56,7 +56,7 @@ class NEONTileSelector:
 
     def select_all(self, event ):
         ufm().show("SELECT ALL")
-        self.selected_rectangles = list(self.rect_grid.keys())
+        self.selected_rectangles = self.rect_grid.copy()
         self.update()
 
 
@@ -65,7 +65,7 @@ class NEONTileSelector:
 
     def clear_all(self, event ):
         ufm().show( "CLEAR ALL")
-        self.selected_rectangles = []
+        self.selected_rectangles = {}
         self.update()
 
     def clear_region(self, event ):
@@ -92,20 +92,21 @@ class NEONTileSelector:
                 lgm().log( f"Error accessing block, bindex={bindex}, rect keys={list(self.rect_grid.keys())}")
                 raise err
 
-            if new_rect != self.rect0:
-                lgm().log(f"NTS: NEONTileSelector-> select block {bindex}, new_rect={new_rect}" )
+            lgm().log(f"NTS: NEONTileSelector-> select block {bindex}, new_rect={new_rect}" )
+            if bindex != self.rect0:
                 ufm().show( f"select block {bindex}")
-                self.rect0 = new_rect
+                self.rect0 = bindex
 
                 if self.selection_mode == BlockSelectMode.LoadTile:
                     tm().setBlock(bindex)
                     ufm().clear()
-                    self.selected_rectangles = [self.rect0]
+                    self.selected_rectangles = { bindex: new_rect }
                 else:
-                    self.selected_rectangles.append(self.rect0)
+                    self.selected_rectangles[bindex] = new_rect
 
             elif self.selection_mode == BlockSelectMode.SelectTile:
-                self.selected_rectangles.remove(self.rect0)
+                ufm().show(f"clear block {bindex}")
+                self.selected_rectangles.pop( bindex )
                 self.rect0 = None
 
         return hv.Rectangles( self.selected_rectangles ).opts( line_color="white", fill_alpha=0.2, line_alpha=1.0, line_width=3 )
