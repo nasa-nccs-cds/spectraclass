@@ -1,3 +1,5 @@
+import os.path
+
 from spectraclass.gui.control import UserFeedbackManager, ufm
 import numpy as np
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
@@ -6,7 +8,7 @@ from spectraclass.data.spatial.tile.tile import Block
 from panel.layout.base import Panel
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.model.labels import LabelsManager, lm
-import param
+import pandas as pd
 from spectraclass.data.spatial.satellite import spm
 from typing import List, Union, Tuple, Optional, Dict, Callable
 import panel as pn
@@ -42,18 +44,22 @@ class NEONTileSelector:
         self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning', width=150 )
         self._clear_region.on_click( self.clear_region )
         self.selection_name = pn.widgets.TextInput(name='Selection Name', placeholder='Give this selection a name...')
-        self.load_button = pn.widgets.Button( name='Load Selection',  button_type='default', width=150 )
+        self.load_button = pn.widgets.Button( name='Load Selection',  button_type='success', width=150 )
         self.load_button.on_click( self.load_selection )
-        self.save_button = pn.widgets.Button( name='Save Selection',  button_type='default', width=150 )
+        self.save_button = pn.widgets.Button( name='Save Selection',  button_type='success', width=150 )
         self.save_button.on_click( self.save_selection )
 
 
-    def save_selection(self):
+    def save_selection(self, event):
         sname = self.selection_name.value
         if sname:
-            ufm().show(f"Save selection: {sname}")
+            rect_indices = np.array(list(self.selected_rectangles.keys()))
+            ufm().show(f"Save selection: {sname}, shape={rect_indices.shape}")
+            pdata = pd.DataFrame( rect_indices, columns=['x','y'] )
+            pdata.to_csv( os.path.expanduser("~/save_selection.csv") )
 
-    def load_selection(self):
+
+    def load_selection(self, event):
         sname = self.selection_name.value
         if sname:
             ufm().show(f"Load selection: {sname}")
