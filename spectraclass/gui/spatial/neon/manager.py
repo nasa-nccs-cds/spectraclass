@@ -22,22 +22,13 @@ class NEONTileSelector:
     @log_timing
     def __init__(self, **kwargs):
         self.selection_mode: BlockSelectMode = kwargs.get('mode',BlockSelectMode.LoadTile)
-        self.init_band = kwargs.get( "init_band", 160 )
- #       self.grid_color = kwargs.get("grid_color", 'white')
-        self.selection_color = kwargs.get("selection_color", 'black')
-        self.slw = kwargs.get("slw", 2)
-        self.colorstretch = 2.0
-        self.selection_boxes = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.6 )
+        self.selection_boxes = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.75 )
         self.box_selection = streams.BoxEdit( source=self.selection_boxes, num_objects=1 )
         if self.selection_mode == BlockSelectMode.LoadTile: self.tap_stream = DoubleTap( transient=True )
         else:                                               self.tap_stream = SingleTap( transient=True )
         self.selected_rec = hv.DynamicMap(self.select_rec, streams=[self.tap_stream])
         self.rectangles: hv.Rectangles = None # ([(0, 0, 1, 1), (2, 3, 4, 6), (0.5, 2, 1.5, 4), (2, 1, 3.5, 2.5)])
         self.selected_rectangles: Dict[Tuple,Tuple] = {}
-        self._transformed_block_data = None
-        self._selected_block: Tuple[int,int] = (0,0)
-        self._band_index = 0
-        self._select_rec = None
         self.rect_grid: Dict[Tuple,Tuple] = {}
         self.xlim, self.ylim = (sys.float_info.max, -sys.float_info.max), (sys.float_info.max, -sys.float_info.max)
         self.bdx, self.bdy = None, None
@@ -51,13 +42,21 @@ class NEONTileSelector:
         self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning', width=150 )
         self._clear_region.on_click( self.clear_region )
         self.selection_name = pn.widgets.TextInput(name='Selection Name', placeholder='Give this selection a name...')
-        self.save_button = pn.widgets.Button( name='Save Selection',  button_type='primary', width=150 )
+        self.load_button = pn.widgets.Button( name='Load Selection',  button_type='default', width=150 )
+        self.load_button.on_click( self.load_selection )
+        self.save_button = pn.widgets.Button( name='Save Selection',  button_type='default', width=150 )
         self.save_button.on_click( self.save_selection )
+
 
     def save_selection(self):
         sname = self.selection_name.value
         if sname:
             ufm().show(f"Save selection: {sname}")
+
+    def load_selection(self):
+        sname = self.selection_name.value
+        if sname:
+            ufm().show(f"Load selection: {sname}")
 
     def get_save_panel(self) -> Panel:
         return pn.Column( self.selection_name, self.save_button )
