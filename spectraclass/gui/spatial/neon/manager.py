@@ -50,6 +50,14 @@ class NEONTileSelector:
         self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning', width=150 )
         self._clear_region.on_click( self.clear_region )
 
+    def get_blocks_in_region(self, bounds: Dict ) -> List[Tuple]:
+        blocks = []
+        [bx0,by0,bx1,by1] = [ bounds[k] for k in ('x0','y0','x1','y1') ]
+        for bid, (x0,y0,x1,y1) in self.rect_grid.items():
+            if (bx0 < x1) and (bx1 > x0) and (by0 < y1) and (by1 > y0):
+                blocks.append(bid)
+        return blocks
+
     def update(self):
         self.selected_rec.event(x=None, y=None)
 
@@ -61,7 +69,9 @@ class NEONTileSelector:
 
     def select_region(self, event ):
         ufm().show( f"SELECT REGION, data = {self.box_selection.data}")
-
+        for bid in self.get_blocks_in_region( self.box_selection.data ):
+            self.selected_rectangles[bid] = self.rect_grid[bid]
+        self.update()
 
     def clear_all(self, event ):
         ufm().show( "CLEAR ALL")
@@ -69,7 +79,9 @@ class NEONTileSelector:
         self.update()
 
     def clear_region(self, event ):
-        ufm().show( "CLEAR REGION")
+        for bid in self.get_blocks_in_region( self.box_selection.data ):
+            self.selected_rectangles.pop( bid, None )
+        self.update()
 
     def get_load_panel(self):
         return pn.Column([])
