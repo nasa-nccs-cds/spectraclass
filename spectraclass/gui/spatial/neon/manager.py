@@ -128,7 +128,7 @@ class NEONTileSelector:
 
     @exception_handled
     def select_rec(self, x, y ):
-        self.box_selection.data = {}
+ #       self.box_selection.data = {}    # Data can't be modified.
         if x is not None:
             bindex =self.block_index(x,y)
             try:
