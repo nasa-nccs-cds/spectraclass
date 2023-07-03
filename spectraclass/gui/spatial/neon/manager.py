@@ -73,6 +73,7 @@ class NEONTileSelector:
             ufm().show(f"Load selection: {sname}, file='{save_file}'")
             try:
                 pdata: pd.DataFrame =pd.read_csv( save_file )
+                self.selected_rectangles = {}
                 for index, row in pdata.iterrows():
                     bid = (row['x'],row['y'])
                     self.selected_rectangles[bid] = self.rect_grid[bid]
@@ -94,7 +95,6 @@ class NEONTileSelector:
         return blocks
 
     def update(self):
-        print( self.region_selection.data )
         self.selected_rec.event(x=None, y=None)
 
     def select_all(self, event ):
@@ -106,6 +106,9 @@ class NEONTileSelector:
         for bid in self.get_blocks_in_region( self.box_selection.data ):
             self.selected_rectangles[bid] = self.rect_grid[bid]
         self.update()
+        print( "=========>>>>> select_region: <<<<<=========>>>>> ")
+        print( f"box_selection: {self.box_selection.data}" )
+        print( f"selection_boxes: {self.selection_boxes.data}" )
 
     def clear_all(self, event ):
         self.selected_rectangles = {}
@@ -148,7 +151,7 @@ class NEONTileSelector:
                 ufm().show(f"clear block {bindex}")
                 self.selected_rectangles.pop( bindex )
 
-        return hv.Rectangles( self.selected_rectangles.values() ).opts( line_color="white", fill_alpha=0.5, line_alpha=1.0, line_width=1 )
+        return hv.Rectangles( self.selected_rectangles.values() ).opts( line_color="white", fill_alpha=0.75, line_alpha=1.0, line_width=2 )
 
     def gui(self):
         blocks: List[Block] = tm().tile.getBlocks()
