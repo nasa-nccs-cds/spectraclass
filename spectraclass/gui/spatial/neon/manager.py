@@ -27,8 +27,8 @@ class BlockSelectionLoader(param.Parameterized):
 
     def __init__(self):
         super(BlockSelectionLoader, self).__init__()
-        self.selection_name = pn.widgets.TextInput(name='Selection Name', placeholder='Give this selection a name...')
-        self.selection_name.link( self, value='selection_name' )
+        self.selection_name_input = pn.widgets.TextInput(name='Selection Name', placeholder='Give this selection a name...')
+        self.selection_name_input.link( self, value='selection_name' )
         self.load_button = pn.widgets.Button( name='Load Selection',  button_type='success', width=150 )
         self.load_button.on_click( self.load_selection )
         self.save_button = pn.widgets.Button( name='Save Selection',  button_type='success', width=150 )
@@ -63,6 +63,7 @@ class BlockSelectionLoader(param.Parameterized):
                 self.update()
             except Exception as err:
                 ufm().show(f"Error loading file: {err}")
+
     def get_selection_load_panel(self, event):
         block_selection_files = glob.glob(f"{self.save_dir}/{tm().tileid}.*.csv")
         file_selector = pn.widgets.Select( name='Tile Mask', options=block_selection_files, value=block_selection_files[0] )
@@ -71,7 +72,7 @@ class BlockSelectionLoader(param.Parameterized):
 
     def get_save_panel(self) -> Panel:
         buttons = pn.Row( self.load_button, self.save_button  )
-        return pn.Column( self.selection_name, buttons )
+        return pn.Column( self.selection_name_input, buttons )
 
 class NEONTileSelector(SCSingletonConfigurable):
 
