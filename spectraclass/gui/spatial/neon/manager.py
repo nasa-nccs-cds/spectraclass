@@ -152,7 +152,7 @@ class NEONTileSelector:
                 ufm().show(f"clear block {bindex}")
                 self.selected_rectangles.pop( bindex )
 
-        return hv.Rectangles( self.selected_rectangles.values() ).opts( line_color="white", fill_alpha=0.75, line_alpha=1.0, line_width=2 )
+        return hv.Rectangles( self.selected_rectangles.values() ).opts( line_color="white", fill_alpha=0.6, line_alpha=1.0, line_width=2 )
 
     def gui(self):
         blocks: List[Block] = tm().tile.getBlocks()
