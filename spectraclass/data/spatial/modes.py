@@ -1,13 +1,12 @@
 from .manager import SpatialDataManager
 from typing import List, Union, Tuple, Optional, Dict, Callable
 from spectraclass.gui.spatial.aviris.manager import AvirisTileSelector
-from spectraclass.gui.spatial.neon.manager import NEONTileSelector
+from spectraclass.gui.spatial.neon.manager import NEONTileSelector, nts
 from spectraclass.data.modes import BlockSelectMode
 from pathlib import Path
 import traitlets as tl
 import panel as pn
 import os, sys, enum
-
 
 class AvirisDataManager(SpatialDataManager):
     from spectraclass.gui.spatial.application import Spectraclass
@@ -88,7 +87,7 @@ class NEONDataManager(SpatialDataManager):
 
     def gui(self, **kwargs ):
         if self.tile_selector is None:
-            self.tile_selector = NEONTileSelector(**kwargs)
+            self.tile_selector = nts(**kwargs)
         return self.tile_selector.gui()
 
     def valid_bands(self):

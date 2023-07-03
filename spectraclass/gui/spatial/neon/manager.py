@@ -1,7 +1,7 @@
 import os.path
 
 from spectraclass.gui.control import UserFeedbackManager, ufm
-import numpy as np
+import param, numpy as np
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from holoviews.streams import SingleTap, DoubleTap
 from spectraclass.data.spatial.tile.tile import Block
@@ -11,19 +11,73 @@ from spectraclass.model.labels import LabelsManager, lm
 import pandas as pd
 from spectraclass.data.spatial.satellite import spm
 from typing import List, Union, Tuple, Optional, Dict, Callable
-import panel as pn
+import panel as pn, glob
 import time, math, sys, xarray as xa
 from spectraclass.data.modes import BlockSelectMode
 from spectraclass.data.base import DataManager, dm
+from spectraclass.model.base import SCSingletonConfigurable
 import holoviews as hv
 from holoviews import opts
 from holoviews import streams
 
+def nts(**kwargs): return NEONTileSelector.instance(**kwargs)
 
-class NEONTileSelector:
+class BlockSelectionLoader(param.Parameterized):
+    selection_name = param.String(default="", doc="Name of saved block selection")
+
+    def __init__(self):
+        super(BlockSelectionLoader, self).__init__()
+        self.selection_name = pn.widgets.TextInput(name='Selection Name', placeholder='Give this selection a name...')
+        self.selection_name.link( self, value='selection_name' )
+        self.load_button = pn.widgets.Button( name='Load Selection',  button_type='success', width=150 )
+        self.load_button.on_click( self.load_selection )
+        self.save_button = pn.widgets.Button( name='Save Selection',  button_type='success', width=150 )
+        self.save_button.on_click( self.save_selection )
+        self.save_dir = f"{dm().cache_dir}/masks/block_selection"
+        os.makedirs(self.save_dir, exist_ok=True)
+
+    @exception_handled
+    def save_selection(self, event):
+        sname = self.selection_name
+        if sname:
+            rect_indices = np.array(list(self.selected_rectangles.keys()))
+            pdata = pd.DataFrame( rect_indices, columns=['x','y'] )
+            save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
+            ufm().show(f"Save selection: {sname}, shape={rect_indices.shape}, file='{save_file}'")
+            try:
+                pdata.to_csv( save_file )
+            except Exception as err:
+                ufm().show(f"Error saving file: {err}")
+
+    def load_selection(self, event):
+        sname = self.selection_name
+        if sname:
+            save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
+            ufm().show(f"Load selection: {sname}, file='{save_file}'")
+            try:
+                pdata: pd.DataFrame =pd.read_csv( save_file )
+                self.selected_rectangles = {}
+                for index, row in pdata.iterrows():
+                    bid = (row['x'],row['y'])
+                    self.selected_rectangles[bid] = self.rect_grid[bid]
+                self.update()
+            except Exception as err:
+                ufm().show(f"Error loading file: {err}")
+    def get_selection_load_panel(self, event):
+        block_selection_files = glob.glob(f"{self.save_dir}/{tm().tileid}.*.csv")
+        file_selector = pn.widgets.Select( name='Tile Mask', options=block_selection_files, value=block_selection_files[0] )
+        file_selector.link( self, value='selection_name' )
+        return pn.Row( file_selector, self.load_button )
+
+    def get_save_panel(self) -> Panel:
+        buttons = pn.Row( self.load_button, self.save_button  )
+        return pn.Column( self.selection_name, buttons )
+
+class NEONTileSelector(SCSingletonConfigurable):
 
     @log_timing
     def __init__(self, **kwargs):
+        super(NEONTileSelector, self).__init__()
         self.selection_mode: BlockSelectMode = kwargs.get('mode',BlockSelectMode.LoadTile)
         self.selection_boxes: hv.Rectangles = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.75 )
         self.box_selection = streams.BoxEdit( source=self.selection_boxes, num_objects=1 )
@@ -45,45 +99,7 @@ class NEONTileSelector:
         self._clear_all.on_click( self.clear_all )
         self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning', width=150 )
         self._clear_region.on_click( self.clear_region )
-        self.selection_name = pn.widgets.TextInput(name='Selection Name', placeholder='Give this selection a name...')
-        self.load_button = pn.widgets.Button( name='Load Selection',  button_type='success', width=150 )
-        self.load_button.on_click( self.load_selection )
-        self.save_button = pn.widgets.Button( name='Save Selection',  button_type='success', width=150 )
-        self.save_button.on_click( self.save_selection )
-        self.save_dir = f"{dm().cache_dir}/masks/block_selection"
-        os.makedirs(self.save_dir, exist_ok=True)
-
-    @exception_handled
-    def save_selection(self, event):
-        sname = self.selection_name.value
-        if sname:
-            rect_indices = np.array(list(self.selected_rectangles.keys()))
-            pdata = pd.DataFrame( rect_indices, columns=['x','y'] )
-            save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
-            ufm().show(f"Save selection: {sname}, shape={rect_indices.shape}, file='{save_file}'")
-            try:
-                pdata.to_csv( save_file )
-            except Exception as err:
-                ufm().show(f"Error saving file: {err}")
-
-    def load_selection(self, event):
-        sname = self.selection_name.value
-        if sname:
-            save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
-            ufm().show(f"Load selection: {sname}, file='{save_file}'")
-            try:
-                pdata: pd.DataFrame =pd.read_csv( save_file )
-                self.selected_rectangles = {}
-                for index, row in pdata.iterrows():
-                    bid = (row['x'],row['y'])
-                    self.selected_rectangles[bid] = self.rect_grid[bid]
-                self.update()
-            except Exception as err:
-                ufm().show(f"Error loading file: {err}")
-
-    def get_save_panel(self) -> Panel:
-        buttons = pn.Row( self.load_button, self.save_button  )
-        return pn.Column( self.selection_name, buttons )
+        self.blockSelectionLoader = BlockSelectionLoader()
 
     def get_blocks_in_region(self, bounds: Dict ) -> List[Tuple]:
         blocks = []
@@ -124,7 +140,7 @@ class NEONTileSelector:
 
     def get_selection_panel(self):
         control_buttons = pn.Row( self._select_all, self._select_region, self._clear_all, self._clear_region )
-        return pn.Column( control_buttons, self.get_save_panel() )
+        return pn.Column( control_buttons, self.blockSelectionLoader.get_save_panel() )
 
     @exception_handled
     def select_rec(self, x, y ):
