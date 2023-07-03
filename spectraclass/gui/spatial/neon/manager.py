@@ -78,6 +78,7 @@ class NEONTileSelector(SCSingletonConfigurable):
     @log_timing
     def __init__(self, **kwargs):
         super(NEONTileSelector, self).__init__()
+        self.blockSelectionLoader = BlockSelectionLoader()
         self.selection_mode: BlockSelectMode = kwargs.get('mode',BlockSelectMode.LoadTile)
         self.selection_boxes: hv.Rectangles = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.75 )
         self.box_selection = streams.BoxEdit( source=self.selection_boxes, num_objects=1 )
@@ -99,7 +100,8 @@ class NEONTileSelector(SCSingletonConfigurable):
         self._clear_all.on_click( self.clear_all )
         self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning', width=150 )
         self._clear_region.on_click( self.clear_region )
-        self.blockSelectionLoader = BlockSelectionLoader()
+
+
 
     def get_blocks_in_region(self, bounds: Dict ) -> List[Tuple]:
         blocks = []
@@ -136,7 +138,8 @@ class NEONTileSelector(SCSingletonConfigurable):
         self.update()
 
     def get_load_panel(self):
-        return pn.Column([])
+        load_panel = self.blockSelectionLoader.get_selection_load_panel()
+        return pn.Column(load_panel)
 
     def get_selection_panel(self):
         control_buttons = pn.Row( self._select_all, self._select_region, self._clear_all, self._clear_region )
