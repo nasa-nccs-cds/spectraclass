@@ -128,7 +128,7 @@ class BlockSelection(param.Parameterized):
     def clear_marker(self):
         for k in self._selected_rectangles.keys():
             if self._selected_rectangles[k][4] == self.marker_color:
-                self._selected_rectangles[k][:4] + (self.unmarked_color,)
+                self._selected_rectangles[k] = self._selected_rectangles[k][:4] + (self.unmarked_color,)
 
     @exception_handled
     def select_block( self, bid: Tuple, update=True ):
