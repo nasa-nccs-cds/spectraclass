@@ -46,6 +46,14 @@ class BlockSelection(param.Parameterized):
             r = (bxlim[0], bylim[0], bxlim[1], bylim[1])
             self.rect_grid[block.block_coords] = r
 
+    def get_blocks_in_region(self, bounds: Dict ) -> List[Tuple]:
+        blocks = []
+        [bx0,by0,bx1,by1] = [ bounds[k][0] for k in ('x0','y0','x1','y1') ]
+        for bid, (x0,y0,x1,y1) in self.rect_grid.items():
+            if (bx0 < x1) and (bx1 > x0) and (by0 < y1) and (by1 > y0):
+                blocks.append(bid)
+        return blocks
+
     def add_grid_rect(self, bid: Tuple , rect: Tuple ):
         self.rect_grid[bid] = rect
 
@@ -58,8 +66,13 @@ class BlockSelection(param.Parameterized):
     def clear_all(self):
         self._selected_rectangles = {}
 
+    @exception_handled
     def select_block( self, bid: Tuple ):
         self._selected_rectangles[bid] = self.rect_grid[bid]
+
+    @property
+    def selected_bids(self) -> List[Tuple]:
+        return list(self._selected_rectangles.keys())
 
     def block_selected(self, bid: Tuple) -> bool:
         return (bid in self._selected_rectangles)
@@ -136,15 +149,6 @@ class NEONTileSelector(SCSingletonConfigurable):
         self._clear_region.on_click( self.clear_region )
         self.blockSelection = BlockSelection()
 
-    def get_blocks_in_region(self, bounds: Dict ) -> List[Tuple]:
-        blocks = []
-        [bx0,by0,bx1,by1] = [ bounds[k][0] for k in ('x0','y0','x1','y1') ]
-        for bid, (x0,y0,x1,y1) in self.rect_grid.items():
-            ufm().show(f"get_blocks_in_region: {x0} <-> {bx0}")
-            if (bx0 < x1) and (bx1 > x0) and (by0 < y1) and (by1 > y0):
-                blocks.append(bid)
-        return blocks
-
     def update(self):
         self.selected_rec.event(x=None, y=None)
 
@@ -152,9 +156,8 @@ class NEONTileSelector(SCSingletonConfigurable):
         self.blockSelection.select_all()
         self.update()
 
-
     def select_region(self, event ):
-        for bid in self.get_blocks_in_region( self.box_selection.data ):
+        for bid in self.blockSelection.get_blocks_in_region( self.box_selection.data ):
             self.blockSelection.select_block(bid)
         self.update()
         print( "=========>>>>> select_region: <<<<<=========>>>>> ")
@@ -166,7 +169,7 @@ class NEONTileSelector(SCSingletonConfigurable):
         self.update()
 
     def clear_region(self, event ):
-        for bid in self.get_blocks_in_region( self.box_selection.data ):
+        for bid in self.blockSelection.get_blocks_in_region( self.box_selection.data ):
             self.blockSelection.clear_block(bid)
         self.update()
 
