@@ -37,8 +37,16 @@ class BlockSelection(param.Parameterized):
         self.save_button = pn.widgets.Button( name='Save Selection',  button_type='success', width=150 )
         self.save_button.on_click( self.save_selection )
         self.save_dir = f"{dm().cache_dir}/masks/block_selection"
+        self.dynamic_selection = None
         os.makedirs(self.save_dir, exist_ok=True)
         self.fill_rect_grid()
+
+    def get_dynamic_selection(self, streams ) -> hv.DynamicMap:
+        self.dynamic_selection = hv.DynamicMap(self.blockSelection.select_rec, streams=[self.tap_stream])
+        return self.dynamic_selection
+
+    def update(self):
+        self.dynamic_selection.event(x=None, y=None)
 
     @property
     def region_bounds(self):
@@ -109,13 +117,27 @@ class BlockSelection(param.Parameterized):
 
     def select_all(self):
         self._selected_rectangles = self.rect_grid.copy()
+        self.update()
 
     def clear_all(self):
         self._selected_rectangles = {}
+        self.update()
 
     @exception_handled
-    def select_block( self, bid: Tuple ):
+    def select_block( self, bid: Tuple, update=True ):
         self._selected_rectangles[bid] = self.rect_grid[bid]
+        if update: self.update()
+
+    def select_region(self, bounds: Dict  ):
+        ufm().show("Select Region")
+        for bid in self.get_blocks_in_region( bounds ):
+            self.select_block(bid,False)
+        self.update()
+
+    def clear_region(self, bounds: Dict  ):
+        ufm().show("Clear Region")
+        for bid in self.get_blocks_in_region( bounds ):
+            self.clear_block(bid,False)
 
     @property
     def selected_bids(self) -> List[Tuple]:
@@ -124,8 +146,9 @@ class BlockSelection(param.Parameterized):
     def block_selected(self, bid: Tuple) -> bool:
         return (bid in self._selected_rectangles)
 
-    def clear_block( self, bid: Tuple ):
+    def clear_block( self, bid: Tuple, update=True ):
         self._selected_rectangles.pop(bid, None)
+        if update: self.update()
 
     @property
     def selected_rectangles(self) -> List[Tuple]:
@@ -184,7 +207,7 @@ class NEONTileSelector(SCSingletonConfigurable):
         self.blockSelection = BlockSelection( self.selection_mode )
         if self.selection_mode == BlockSelectMode.LoadTile: self.tap_stream = DoubleTap( transient=True )
         else:                                               self.tap_stream = SingleTap( transient=True )
-        self.selected_rec = hv.DynamicMap(self.blockSelection.select_rec, streams=[self.tap_stream])
+        self.selected_rec = self.blockSelection.get_dynamic_selection( [self.tap_stream] )
         self.rectangles: hv.Rectangles = None # ([(0, 0, 1, 1), (2, 3, 4, 6), (0.5, 2, 1.5, 4), (2, 1, 3.5, 2.5)])
         self._select_all = pn.widgets.Button( name='Select All', button_type='primary', width=150 )
         self._select_all.on_click( self.select_all )
@@ -195,33 +218,22 @@ class NEONTileSelector(SCSingletonConfigurable):
         self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning', width=150 )
         self._clear_region.on_click( self.clear_region )
 
-    def update(self):
-        self.selected_rec.event(x=None, y=None)
 
     def select_all(self, event ):
         ufm().show( "Select All")
         self.blockSelection.select_all()
-        self.update()
 
     def select_region(self, event ):
         ufm().show("Select Region")
-        for bid in self.blockSelection.get_blocks_in_region( self.box_selection.data ):
-            self.blockSelection.select_block(bid)
-        self.update()
-        print( "=========>>>>> select_region: <<<<<=========>>>>> ")
-        print( f"box_selection: {self.box_selection.data}" )
-        print( f"selected_bids: {self.blockSelection.selected_bids}" )
+        self.blockSelection.select_region( self.box_selection.data )
 
     def clear_all(self, event ):
         ufm().show("Clear All")
         self.blockSelection.clear_all()
-        self.update()
 
     def clear_region(self, event ):
         ufm().show("Clear Region")
-        for bid in self.blockSelection.get_blocks_in_region( self.box_selection.data ):
-            self.blockSelection.clear_block(bid)
-        self.update()
+        self.blockSelection.clear_region(self.box_selection.data)
 
     def get_load_panel(self):
         load_panel = self.blockSelection.get_selection_load_panel()
@@ -255,14 +267,6 @@ class NEONTileSelector(SCSingletonConfigurable):
     def image_name(self) -> str:
         from spectraclass.data.base import DataManager, dm
         return dm().modal.get_image_name( self.image_index )
-
-    def get_color_bounds( self, raster: xa.DataArray ):
-        ave = np.nanmean( raster.values )
-        std = np.nanstd(  raster.values )
-        nan_mask = np.isnan( raster.values )
-        nnan = np.count_nonzero( nan_mask )
-        lgm().log( f" **get_color_bounds: mean={ave}, std={std}, #nan={nnan}" )
-        return dict( vmin= ave - std * self.colorstretch, vmax= ave + std * self.colorstretch  )
 
 class NEONDatasetManager:
 
