@@ -138,6 +138,7 @@ class BlockSelection(param.Parameterized):
         ufm().show("Clear Region")
         for bid in self.get_blocks_in_region( bounds ):
             self.clear_block(bid,False)
+        self.update()
 
     @property
     def selected_bids(self) -> List[Tuple]:
@@ -167,19 +168,18 @@ class BlockSelection(param.Parameterized):
             except Exception as err:
                 ufm().show(f"Error saving file: {err}")
 
+    @exception_handled
     def load_selection(self, event):
         sname = self.selection_name
         if sname:
             save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
             ufm().show(f"Load selection: {sname}, file='{save_file}'")
-            try:
-                pdata: pd.DataFrame = pd.read_csv( save_file )
-                self._selected_rectangles = {}
-                for index, row in pdata.iterrows():
-                    bid = (row['x'],row['y'])
-                    self._selected_rectangles[bid] = self.rect_grid[bid]
-            except Exception as err:
-                ufm().show(f"Error loading file: {err}")
+            pdata: pd.DataFrame = pd.read_csv( save_file )
+            self._selected_rectangles = {}
+            for index, row in pdata.iterrows():
+                bid = (row['x'],row['y'])
+                self._selected_rectangles[bid] = self.rect_grid[bid]
+            self.update()
 
     def get_selection_load_panel(self, event=None ):
         block_selection_names = [ f.split(".")[-2] for f in os.listdir(self.save_dir) ]
