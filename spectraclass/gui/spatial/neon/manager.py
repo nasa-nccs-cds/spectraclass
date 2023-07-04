@@ -153,22 +153,26 @@ class NEONTileSelector(SCSingletonConfigurable):
         self.selected_rec.event(x=None, y=None)
 
     def select_all(self, event ):
+        ufm().show( "Select All")
         self.blockSelection.select_all()
         self.update()
 
     def select_region(self, event ):
+        ufm().show("Select Region")
         for bid in self.blockSelection.get_blocks_in_region( self.box_selection.data ):
             self.blockSelection.select_block(bid)
         self.update()
         print( "=========>>>>> select_region: <<<<<=========>>>>> ")
         print( f"box_selection: {self.box_selection.data}" )
-        print( f"selection_boxes: {self.selection_boxes.data}" )
+        print( f"selected_bids: {self.blockSelection.selected_bids}" )
 
     def clear_all(self, event ):
+        ufm().show("Clear All")
         self.blockSelection.clear_all()
         self.update()
 
     def clear_region(self, event ):
+        ufm().show("Clear Region")
         for bid in self.blockSelection.get_blocks_in_region( self.box_selection.data ):
             self.blockSelection.clear_block(bid)
         self.update()
@@ -177,11 +181,13 @@ class NEONTileSelector(SCSingletonConfigurable):
         load_panel = self.blockSelection.get_selection_load_panel()
         return pn.Column(load_panel)
 
-    def get_selection_panel(self):
+    def get_control_panel(self):
         select_buttons = pn.Row( self._select_all, self._select_region )
         clear_buttons = pn.Row( self._clear_all, self._clear_region)
         selection_panel = pn.Column( select_buttons, clear_buttons )
-        return pn.Column( selection_panel, self.blockSelection.get_save_panel())
+        save_panel = self.blockSelection.get_save_panel()
+        control_panels = pn.Tabs( ("select",selection_panel), ("cache",save_panel) )
+        return control_panels
 
     @exception_handled
     def select_rec(self, x, y ):
@@ -227,7 +233,7 @@ class NEONTileSelector(SCSingletonConfigurable):
         if self.selection_mode == BlockSelectMode.LoadTile:
             return image
         else:
-            selection_panel = self.get_selection_panel()
+            selection_panel = self.get_control_panel()
             return pn.Row( image * self.region_selection, selection_panel )
 
     @exception_handled
