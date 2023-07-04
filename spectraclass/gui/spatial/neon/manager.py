@@ -116,7 +116,7 @@ class BlockSelection(param.Parameterized):
         return hv.Rectangles(list(self.rect_grid.values())).opts(line_color="cyan", fill_alpha=0.0, line_alpha=1.0)
 
     def select_all(self):
-        self._selected_rectangles = { k: v + (0,) for k,v in self.rect_grid.items() }
+        self._selected_rectangles = { k: v + ('white',) for k,v in self.rect_grid.items() }
         self.update()
 
     def clear_all(self):
@@ -125,9 +125,10 @@ class BlockSelection(param.Parameterized):
 
     @exception_handled
     def select_block( self, bid: Tuple, update=True ):
+        color = 'red' if update else 'white'
         for k in self._selected_rectangles.keys():
             if self._selected_rectangles[k][4] == 1:
-                self._selected_rectangles[k][:4] + (0,)
+                self._selected_rectangles[k][:4] + (color,)
         self._selected_rectangles[bid] = self.rect_grid[bid] + (1,)
         if update: self.update()
 
