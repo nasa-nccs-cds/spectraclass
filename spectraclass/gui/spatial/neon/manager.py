@@ -65,8 +65,8 @@ class BlockSelectionLoader(param.Parameterized):
                 ufm().show(f"Error loading file: {err}")
 
     def get_selection_load_panel(self, event=None ):
-        block_selection_files = glob.glob(f"{self.save_dir}/{tm().tileid}.*.csv")
-        file_selector = pn.widgets.Select( name='Tile Mask', options=block_selection_files, value=block_selection_files[0] )
+        block_selection_names = [ f.split(".")[-2] for f in os.listdir(self.save_dir) ]
+        file_selector = pn.widgets.Select( name='Tile Mask', options=block_selection_names, value=block_selection_names[0] )
         file_selector.link( self, value='selection_name' )
         return pn.Row( file_selector, self.load_button )
 
