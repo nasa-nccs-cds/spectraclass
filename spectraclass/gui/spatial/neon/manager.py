@@ -118,9 +118,13 @@ class BlockSelection(param.Parameterized):
         file_selector.link( self, value='selection_name' )
         return pn.Row( file_selector, self.load_button )
 
-    def get_save_panel(self) -> Panel:
-        buttons = pn.Row( self.load_button, self.save_button  )
-        return pn.Column( self.selection_name_input, buttons )
+    def get_selection_save_panel(self, event=None ):
+        return pn.Row(self.selection_name_input, self.save_button)
+
+    def get_cache_panel(self) -> Panel:
+        load_panel = self.get_selection_load_panel()
+        save_panel = self.get_selection_save_panel()
+        return  pn.Tabs( ("load",load_panel), ("save",save_panel) )
 
 class NEONTileSelector(SCSingletonConfigurable):
 
@@ -185,8 +189,8 @@ class NEONTileSelector(SCSingletonConfigurable):
         select_buttons = pn.Row( self._select_all, self._select_region )
         clear_buttons = pn.Row( self._clear_all, self._clear_region)
         selection_panel = pn.Column( select_buttons, clear_buttons )
-        save_panel = self.blockSelection.get_save_panel()
-        control_panels = pn.Tabs( ("select",selection_panel), ("cache",save_panel) )
+        cache_panel = self.blockSelection.get_cache_panel()
+        control_panels = pn.Tabs( ("select",selection_panel), ("cache",cache_panel) )
         return control_panels
 
     @exception_handled
