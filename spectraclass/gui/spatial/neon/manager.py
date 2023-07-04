@@ -22,19 +22,33 @@ from holoviews import streams
 
 def nts(**kwargs): return NEONTileSelector.instance(**kwargs)
 
-class BlockSelectionLoader(param.Parameterized):
+class BlockSelection(param.Parameterized):
     selection_name = param.String(default="", doc="Name of saved block selection")
 
-    def __init__(self):
-        super(BlockSelectionLoader, self).__init__()
+    def __init__(self, rect_grid: Dict[Tuple,Tuple] ):
+        super(BlockSelection, self).__init__()
+        self.selected_rectangles: Dict[Tuple,Tuple] = {}
         self.selection_name_input = pn.widgets.TextInput(name='Selection Name', placeholder='Give this selection a name...')
         self.selection_name_input.link( self, value='selection_name' )
+        self.rect_grid: Dict[Tuple,Tuple] = rect_grid
         self.load_button = pn.widgets.Button( name='Load Selection',  button_type='success', width=150 )
         self.load_button.on_click( self.load_selection )
         self.save_button = pn.widgets.Button( name='Save Selection',  button_type='success', width=150 )
         self.save_button.on_click( self.save_selection )
         self.save_dir = f"{dm().cache_dir}/masks/block_selection"
         os.makedirs(self.save_dir, exist_ok=True)
+
+    def select_all(self):
+        self.selected_rectangles = self.rect_grid.copy()
+
+    def clear_all(self):
+        self.selected_rectangles = {}
+
+    def select_block( self, bid: Tuple ):
+        self.selected_rectangles[bid] = self.rect_grid[bid]
+
+    def clear_block( self, bid: Tuple ):
+        self.selected_rectangles.pop(bid,None)
 
     @exception_handled
     def save_selection(self, event):
@@ -55,7 +69,7 @@ class BlockSelectionLoader(param.Parameterized):
             save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
             ufm().show(f"Load selection: {sname}, file='{save_file}'")
             try:
-                pdata: pd.DataFrame =pd.read_csv( save_file )
+                pdata: pd.DataFrame = pd.read_csv( save_file )
                 self.selected_rectangles = {}
                 for index, row in pdata.iterrows():
                     bid = (row['x'],row['y'])
@@ -79,7 +93,6 @@ class NEONTileSelector(SCSingletonConfigurable):
     @log_timing
     def __init__(self, **kwargs):
         super(NEONTileSelector, self).__init__()
-        self.blockSelectionLoader = BlockSelectionLoader()
         self.selection_mode: BlockSelectMode = kwargs.get('mode',BlockSelectMode.LoadTile)
         self.selection_boxes: hv.Rectangles = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.75 )
         self.box_selection = streams.BoxEdit( source=self.selection_boxes, num_objects=1 )
@@ -88,7 +101,6 @@ class NEONTileSelector(SCSingletonConfigurable):
         else:                                               self.tap_stream = SingleTap( transient=True )
         self.selected_rec = hv.DynamicMap(self.select_rec, streams=[self.tap_stream])
         self.rectangles: hv.Rectangles = None # ([(0, 0, 1, 1), (2, 3, 4, 6), (0.5, 2, 1.5, 4), (2, 1, 3.5, 2.5)])
-        self.selected_rectangles: Dict[Tuple,Tuple] = {}
         self.rect_grid: Dict[Tuple,Tuple] = {}
         self.xlim, self.ylim = (sys.float_info.max, -sys.float_info.max), (sys.float_info.max, -sys.float_info.max)
         self.bdx, self.bdy = None, None
@@ -101,8 +113,7 @@ class NEONTileSelector(SCSingletonConfigurable):
         self._clear_all.on_click( self.clear_all )
         self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning', width=150 )
         self._clear_region.on_click( self.clear_region )
-
-
+        self.blockSelection: BlockSelection = None
 
     def get_blocks_in_region(self, bounds: Dict ) -> List[Tuple]:
         blocks = []
@@ -117,34 +128,34 @@ class NEONTileSelector(SCSingletonConfigurable):
         self.selected_rec.event(x=None, y=None)
 
     def select_all(self, event ):
-        self.selected_rectangles = self.rect_grid.copy()
+        self.blockSelection.select_all()
         self.update()
 
 
     def select_region(self, event ):
         for bid in self.get_blocks_in_region( self.box_selection.data ):
-            self.selected_rectangles[bid] = self.rect_grid[bid]
+            self.blockSelection.select_block(bid)
         self.update()
         print( "=========>>>>> select_region: <<<<<=========>>>>> ")
         print( f"box_selection: {self.box_selection.data}" )
         print( f"selection_boxes: {self.selection_boxes.data}" )
 
     def clear_all(self, event ):
-        self.selected_rectangles = {}
+        self.blockSelection.clear_all()
         self.update()
 
     def clear_region(self, event ):
         for bid in self.get_blocks_in_region( self.box_selection.data ):
-            self.selected_rectangles.pop( bid, None )
+            self.blockSelection.clear_block(bid)
         self.update()
 
     def get_load_panel(self):
-        load_panel = self.blockSelectionLoader.get_selection_load_panel()
+        load_panel = self.blockSelection.get_selection_load_panel()
         return pn.Column(load_panel)
 
     def get_selection_panel(self):
         control_buttons = pn.Row( self._select_all, self._select_region, self._clear_all, self._clear_region )
-        return pn.Column( control_buttons, self.blockSelectionLoader.get_save_panel() )
+        return pn.Column(control_buttons, self.blockSelection.get_save_panel())
 
     @exception_handled
     def select_rec(self, x, y ):
@@ -192,6 +203,7 @@ class NEONTileSelector(SCSingletonConfigurable):
             self.rect_grid[ block.block_coords] =  r
         lgm().log( f"TS: nblocks={len(blocks)}, nindices={len(self.rect_grid)}, indices={list(self.rect_grid.keys())}")
         self.rect0 = tm().block_index
+        self.blockSelection = BlockSelection(self.rect_grid)
         basemap = spm().get_image_basemap( self.xlim + self.ylim )
         self.rectangles = hv.Rectangles(list(self.rect_grid.values())).opts(line_color="cyan", fill_alpha=0.0, line_alpha=1.0)
         image = basemap * self.rectangles * self.selected_rec
