@@ -40,6 +40,10 @@ class BlockSelection(param.Parameterized):
         os.makedirs(self.save_dir, exist_ok=True)
         self.fill_rect_grid()
 
+    @property
+    def region_bounds(self):
+        return self.xlim + self.ylim
+
     @exception_handled
     def block_index(self, x, y ) -> Tuple[int,int]:
         if x is None: (x,y) = tm().block_index
@@ -71,7 +75,19 @@ class BlockSelection(param.Parameterized):
         return hv.Rectangles(self.selected_rectangles).opts(line_color="white", fill_alpha=0.6, line_alpha=1.0, line_width=2)
 
     def fill_rect_grid(self):
+        self.xlim, self.ylim = (sys.float_info.max, -sys.float_info.max), (sys.float_info.max, -sys.float_info.max)
+        self.bdx, self.bdy = None, None
+        self.bx0, self.by1 = None, None
         blocks: List[Block] = tm().tile.getBlocks()
+        for block in blocks:
+            (bxlim, bylim) = block.get_extent( spm().projection )
+            self.xlim = ( min(bxlim[0],self.xlim[0]), max(bxlim[1],self.xlim[1]) )
+            self.ylim = ( min(bylim[0],self.ylim[0]), max(bylim[1],self.ylim[1]) )
+            dx, dy = (bxlim[1]-bxlim[0]), (bylim[1]-bylim[0])
+            lgm().log( f"TS: BLOCK{block.block_coords}: dx={dx:.1f}, dy={dy:.1f}")
+            if self.bdx is None:
+                self.bdx, self.bdy = dx, dy
+        self.bx0, self.by1 = self.xlim[0], self.ylim[1]
         for block in blocks:
             (bxlim, bylim) = block.get_extent(spm().projection)
             r = (bxlim[0], bylim[0], bxlim[1], bylim[1])
@@ -170,9 +186,6 @@ class NEONTileSelector(SCSingletonConfigurable):
         else:                                               self.tap_stream = SingleTap( transient=True )
         self.selected_rec = hv.DynamicMap(self.blockSelection.select_rec, streams=[self.tap_stream])
         self.rectangles: hv.Rectangles = None # ([(0, 0, 1, 1), (2, 3, 4, 6), (0.5, 2, 1.5, 4), (2, 1, 3.5, 2.5)])
-        self.xlim, self.ylim = (sys.float_info.max, -sys.float_info.max), (sys.float_info.max, -sys.float_info.max)
-        self.bdx, self.bdy = None, None
-        self.bx0, self.by1 = None, None
         self._select_all = pn.widgets.Button( name='Select All', button_type='primary', width=150 )
         self._select_all.on_click( self.select_all )
         self._select_region = pn.widgets.Button( name='Select Region', button_type='primary', width=150 )
@@ -223,19 +236,8 @@ class NEONTileSelector(SCSingletonConfigurable):
         return control_panels
 
     def gui(self):
-        blocks: List[Block] = tm().tile.getBlocks()
-        for block in blocks:
-            (bxlim, bylim) = block.get_extent( spm().projection )
-            self.xlim = ( min(bxlim[0],self.xlim[0]), max(bxlim[1],self.xlim[1]) )
-            self.ylim = ( min(bylim[0],self.ylim[0]), max(bylim[1],self.ylim[1]) )
-            dx, dy = (bxlim[1]-bxlim[0]), (bylim[1]-bylim[0])
-            lgm().log( f"TS: BLOCK{block.block_coords}: dx={dx:.1f}, dy={dy:.1f}")
-            if self.bdx is None:
-                self.bdx, self.bdy = dx, dy
-        self.bx0, self.by1 = self.xlim[0], self.ylim[1]
-        lgm().log(f"TS:  x0={self.bx0:.1f}, y0={self.by1:.1f}, dx={self.bdx:.1f}, dy={self.bdy:.1f}")
         self.rect0 = tm().block_index
-        basemap = spm().get_image_basemap( self.xlim + self.ylim )
+        basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
         self.rectangles = self.blockSelection.grid_widget()
         image = basemap * self.rectangles * self.selected_rec
         if self.selection_mode == BlockSelectMode.LoadTile:
