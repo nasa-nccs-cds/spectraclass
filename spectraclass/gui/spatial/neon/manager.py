@@ -28,6 +28,8 @@ class BlockSelection(param.Parameterized):
     def __init__(self, selection_mode: BlockSelectMode ):
         super(BlockSelection, self).__init__()
         self.selection_mode = selection_mode
+        self.marker_color = "red"
+        self.unmarked_color = "white"
         self._selected_rectangles: Dict[Tuple,Tuple] = {}
         self.selection_name_input = pn.widgets.TextInput(name='Selection Name', placeholder='Give this selection a name...')
         self.selection_name_input.link( self, value='selection_name' )
@@ -76,7 +78,7 @@ class BlockSelection(param.Parameterized):
 
                 self.select_block(bindex)
 
-            elif self.selection_mode == BlockSelectMode.SelectTile:
+            else:
                 ufm().show(f"clear block {bindex}")
                 self.clear_block(bindex)
 
@@ -116,20 +118,23 @@ class BlockSelection(param.Parameterized):
         return hv.Rectangles(list(self.rect_grid.values())).opts(line_color="cyan", fill_alpha=0.0, line_alpha=1.0)
 
     def select_all(self):
-        self._selected_rectangles = { k: v + ('white',) for k,v in self.rect_grid.items() }
+        self._selected_rectangles = { k: v + (self.unmarked_color,) for k,v in self.rect_grid.items() }
         self.update()
 
     def clear_all(self):
         self._selected_rectangles = {}
         self.update()
 
+    def clear_marker(self):
+        for k in self._selected_rectangles.keys():
+            if self._selected_rectangles[k][4] == self.marker_color:
+                self._selected_rectangles[k][:4] + (self.unmarked_color,)
+
     @exception_handled
     def select_block( self, bid: Tuple, update=True ):
-        color = 'red' if update else 'white'
-        for k in self._selected_rectangles.keys():
-            if self._selected_rectangles[k][4] == 1:
-                self._selected_rectangles[k][:4] + (color,)
-        self._selected_rectangles[bid] = self.rect_grid[bid] + (1,)
+        color = self.marker_color if update else self.unmarked_color
+        self.clear_marker()
+        self._selected_rectangles[bid] = self.rect_grid[bid] + (color,)
         if update: self.update()
 
     def select_region(self, bounds: Dict  ):
@@ -182,7 +187,7 @@ class BlockSelection(param.Parameterized):
             self._selected_rectangles = {}
             for index, row in pdata.iterrows():
                 bid = (row['x'],row['y'])
-                self._selected_rectangles[bid] = self.rect_grid[bid]
+                self._selected_rectangles[bid] = self.rect_grid[bid] + (self.unmarked_color,)
             self.update()
 
     def get_selection_load_panel(self, event=None ):
