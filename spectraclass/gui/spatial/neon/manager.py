@@ -80,7 +80,7 @@ class BlockSelection(param.Parameterized):
                 ufm().show(f"clear block {bindex}")
                 self.clear_block(bindex)
 
-        return hv.Rectangles(self.selected_rectangles).opts(line_color="white", fill_alpha=0.6, line_alpha=1.0, line_width=2)
+        return hv.Rectangles(self.selected_rectangles, vdims = 'value').opts(color='value', fill_alpha=0.6, line_alpha=1.0, line_width=2)
 
     def fill_rect_grid(self):
         self.xlim, self.ylim = (sys.float_info.max, -sys.float_info.max), (sys.float_info.max, -sys.float_info.max)
@@ -116,7 +116,7 @@ class BlockSelection(param.Parameterized):
         return hv.Rectangles(list(self.rect_grid.values())).opts(line_color="cyan", fill_alpha=0.0, line_alpha=1.0)
 
     def select_all(self):
-        self._selected_rectangles = self.rect_grid.copy()
+        self._selected_rectangles = { k: v + (0,) for k,v in self.rect_grid.items() }
         self.update()
 
     def clear_all(self):
@@ -125,7 +125,10 @@ class BlockSelection(param.Parameterized):
 
     @exception_handled
     def select_block( self, bid: Tuple, update=True ):
-        self._selected_rectangles[bid] = self.rect_grid[bid]
+        for k in self._selected_rectangles.keys():
+            if self._selected_rectangles[k][4] == 1:
+                self._selected_rectangles[k][:4] + (0,)
+        self._selected_rectangles[bid] = self.rect_grid[bid] + (1,)
         if update: self.update()
 
     def select_region(self, bounds: Dict  ):
@@ -201,14 +204,13 @@ class NEONTileSelector(SCSingletonConfigurable):
     def __init__(self, **kwargs):
         super(NEONTileSelector, self).__init__()
         self.selection_mode: BlockSelectMode = kwargs.get('mode',BlockSelectMode.LoadTile)
-        self.selection_boxes: hv.Rectangles = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.75 )
-        self.box_selection = streams.BoxEdit( source=self.selection_boxes, num_objects=1 )
-        self.region_selection: hv.Rectangles = self.selection_boxes.opts( opts.Rectangles(active_tools=['box_edit'], fill_alpha=0.75, line_alpha=1.0, line_color="yellow", fill_color="white"))
+        self.region_selection: hv.Rectangles = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.75, color="white" )
+        self.box_selection = streams.BoxEdit( source=self.region_selection, num_objects=1 )
         self.blockSelection = BlockSelection( self.selection_mode )
         if self.selection_mode == BlockSelectMode.LoadTile: self.tap_stream = DoubleTap( transient=True )
         else:                                               self.tap_stream = SingleTap( transient=True )
         self.selected_rec = self.blockSelection.get_dynamic_selection( [self.tap_stream] )
-        self.rectangles: hv.Rectangles = None # ([(0, 0, 1, 1), (2, 3, 4, 6), (0.5, 2, 1.5, 4), (2, 1, 3.5, 2.5)])
+        self.rect_grid: hv.Rectangles = None
         self._select_all = pn.widgets.Button( name='Select All', button_type='primary', width=150 )
         self._select_all.on_click( self.select_all )
         self._select_region = pn.widgets.Button( name='Select Region', button_type='primary', width=150 )
@@ -253,8 +255,8 @@ class NEONTileSelector(SCSingletonConfigurable):
     def gui(self):
         self.rect0 = tm().block_index
         basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
-        self.rectangles = self.blockSelection.grid_widget()
-        image = basemap * self.rectangles * self.selected_rec
+        self.rect_grid = self.blockSelection.grid_widget()
+        image = basemap * self.rect_grid * self.selected_rec
         if self.selection_mode == BlockSelectMode.LoadTile:
             return image
         else:
