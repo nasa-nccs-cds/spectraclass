@@ -42,7 +42,7 @@ class BlockSelection(param.Parameterized):
         self.fill_rect_grid()
 
     def get_dynamic_selection(self, streams ) -> hv.DynamicMap:
-        self.dynamic_selection = hv.DynamicMap(self.blockSelection.select_rec, streams=[self.tap_stream])
+        self.dynamic_selection = hv.DynamicMap( self.select_rec, streams=streams )
         return self.dynamic_selection
 
     def update(self):
