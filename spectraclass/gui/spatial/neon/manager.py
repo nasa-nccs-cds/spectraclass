@@ -38,6 +38,7 @@ class BlockSelection(param.Parameterized):
         self.load_button.on_click( self.load_selection )
         self.save_button = pn.widgets.Button( name='Save Selection',  button_type='success', width=150 )
         self.save_button.on_click( self.save_selection )
+        self.click_select_mode = pn.widgets.RadioButtonGroup( name='Click-Select Mode', options=['Unselect', 'Mark'], value="Unselect", button_type='success')
         self.save_dir = f"{dm().cache_dir}/masks/block_selection"
         self.dynamic_selection = None
         os.makedirs(self.save_dir, exist_ok=True)
@@ -79,8 +80,11 @@ class BlockSelection(param.Parameterized):
                 self.select_block(bindex)
 
             else:
-                ufm().show(f"clear block {bindex}")
-                self.clear_block(bindex)
+                if self.click_select_mode.value == 'Unselect':
+                    ufm().show(f"clear block {bindex}")
+                    self.clear_block(bindex)
+                else:
+                    self.select_block(bindex)
 
         return hv.Rectangles(self.selected_rectangles, vdims = 'value').opts(color='value', fill_alpha=0.6, line_alpha=1.0, line_width=2)
 
@@ -250,7 +254,7 @@ class NEONTileSelector(SCSingletonConfigurable):
     def get_control_panel(self):
         select_buttons = pn.Row( self._select_all, self._select_region )
         clear_buttons = pn.Row( self._clear_all, self._clear_region)
-        selection_panel = pn.Column( select_buttons, clear_buttons )
+        selection_panel = pn.Column( select_buttons, clear_buttons, self.blockSelection.click_select_mode )
         cache_panel = self.blockSelection.get_cache_panel()
         control_panels = pn.Tabs( ("select",selection_panel), ("cache",cache_panel) )
         return control_panels
