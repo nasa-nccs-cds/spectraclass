@@ -302,11 +302,14 @@ class ClusterManager(SCSingletonConfigurable):
 
     @exception_handled
     def gui(self) -> Panel:
+        from spectraclass.model.labels import LabelsManager, lm
         selectors = [ self._model_selector,self._ncluster_selector ]
         selection_gui = pn.Row( *selectors )
         actions_panel = pn.Row( *self.action_buttons() )
-        controls = pn.Column( selection_gui, actions_panel )
-        return pn.Tabs( ("controls",controls), ("tuning",self.tuning_gui()) )
+        selection_controls = pn.WidgetBox( "Clustering", selection_gui, actions_panel )
+        labeling_controls = pn.WidgetBox( "Labeling", lm().class_selector )
+        controls_panel = pn.Column( selection_controls, labeling_controls )
+        return pn.Tabs( ("controls",controls_panel), ("tuning",self.tuning_gui()) )
 
     def action_buttons(self):
         buttons = []
@@ -434,7 +437,7 @@ class ClusterSelector:
                 if icluster >= 0:
                     marker: Marker = clm().mark_cluster(gid, cid, icluster)
                     app().add_marker( marker )
-                    mm().plot_cluster_image( clm().get_cluster_map() )
+      #              mm().plot_cluster_image( clm().get_cluster_map() )
 #                    labels_image: xa.DataArray = lm().get_label_map()
 #                    mm().plot_markers_image()
 #                    lm().addAction( "cluster", "application", cid=cid )

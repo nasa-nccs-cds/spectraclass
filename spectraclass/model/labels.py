@@ -78,7 +78,6 @@ def lm() -> "LabelsManager":
 
 class LabelsManager(SCSingletonConfigurable):
 
-
     def __init__(self):
         super(LabelsManager, self).__init__()
         self._colors: List[str] = None
