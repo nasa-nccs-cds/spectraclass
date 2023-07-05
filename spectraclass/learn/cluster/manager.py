@@ -321,10 +321,12 @@ class ClusterManager(SCSingletonConfigurable):
 
     def generate_clusters(self):
         from spectraclass.data.base import DataManager, dm
-        ufm().show(f"Creating clusters using {self.mid}  ")
-        self.cluster(dm().getModelData())
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        block: Block = tm().getBlock()
+        mdata: xa.DataArray = dm().getModelData( block=block )
+        ufm().show(f"Creating clusters using {self.mid} for block {block.block_coords}")
+        self.cluster( mdata )
         self.refresh()
-        ufm().show(f"Clustering completed")
 
     def create_embedding(self, ndim: int = 3):
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
