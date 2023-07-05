@@ -291,7 +291,8 @@ class ClusterManager(SCSingletonConfigurable):
 
     @exception_handled
     def get_cluster_image( self, index: int, tindex: int, tvalue: int, x=None, y=None ) -> hv.Image:
-        ufm().show( f"get_cluster_image:  x={x}, y={y}"  )
+        from spectraclass.model.labels import LabelsManager, lm
+        ufm().show( f"get_cluster_image:  x={x}, y={y}, label = {lm().selectedLabel} ({lm().selectedColor(True)})"  )
         lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}" )
 #        self.rescale( tindex, tvalue )
         raster: xa.DataArray = self.get_cluster_map()
