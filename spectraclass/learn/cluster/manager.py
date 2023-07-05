@@ -6,6 +6,7 @@ from panel.widgets import Button, Select, FloatSlider
 from joblib import cpu_count
 from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.gui.control import UserFeedbackManager, ufm
+from holoviews.streams import SingleTap, DoubleTap
 import xarray as xa
 from functools import partial
 import numpy as np
@@ -74,13 +75,14 @@ class ClusterManager(SCSingletonConfigurable):
         self.width = kwargs.pop('width',600)
         self.cmap = kwargs.pop('cmap', 'Category20')
         self.thresholdStream = ThresholdStream()
+        self.double_tap_stream = DoubleTap(transient=True)
         self._max_culsters = 20
         self._ncluster_options = list( range( 2, self._max_culsters ) )
         self._count = Count(index=0)
         self._mid_options = [ "kmeans", "fuzzy cmeans", "bisecting kmeans" ]
         self._cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
-        self._cluster_image = hv.DynamicMap( self.get_cluster_image, streams=[ self._count, self.thresholdStream ] )
+        self._cluster_image = hv.DynamicMap( self.get_cluster_image, streams=[ self._count, self.double_tap_stream, self.thresholdStream ] )    # thresholdStream
         self._marked_colors: Dict[Tuple,Tuple[float,float,float]] = {}
         self._marked_clusters: Dict[Tuple, List] = {}
         self._tuning_sliders: List[ClusterMagnitudeWidget] = []
@@ -288,8 +290,9 @@ class ClusterManager(SCSingletonConfigurable):
         return self._cluster_image.opts( width=width, height=height )
 
     @exception_handled
-    def get_cluster_image( self, index: int, tindex: int, tvalue: int ) -> hv.Image:
-        lgm().log(f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}")
+    def get_cluster_image( self, index: int, tindex: int, tvalue: int, x=None, y=None ) -> hv.Image:
+        ufm().show( f"get_cluster_image:  x={x}, y={y}"  )
+        lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}" )
 #        self.rescale( tindex, tvalue )
         raster: xa.DataArray = self.get_cluster_map()
         iopts = dict( width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, title=raster.attrs['title'] )
@@ -307,7 +310,7 @@ class ClusterManager(SCSingletonConfigurable):
 
     def action_buttons(self):
         buttons = []
-        for task in [ "cluster", "embed" ]:
+        for task in [ "cluster" ]:  #, "embed" ]:
             button = Button( name=task, button_type='primary' ) # .opts(color=cluster_color) name='Click me', button_type='primary'
             button.on_click( partial( self.on_action, task ) )
             buttons.append( button )
@@ -399,11 +402,8 @@ class ClusterManager(SCSingletonConfigurable):
 class ClusterSelector:
     LEFT_BUTTON = 1
 
-    def __init__(self, ax ):
-        self.ax = ax
+    def __init__(self):
         self.enabled = False
-        self.canvas = ax.figure.canvas
-        self.canvas.mpl_connect('button_press_event', self.on_button_press)
 
     @property
     def block(self) -> Block:
@@ -419,7 +419,6 @@ class ClusterSelector:
 
     @exception_handled
     def on_button_press(self, event ):
-        from spectraclass.gui.spatial.map import mm
         from spectraclass.gui.spatial.widgets.markers import Marker
         from spectraclass.application.controller import app
         from spectraclass.model.labels import lm
