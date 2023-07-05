@@ -261,8 +261,8 @@ class NEONTileSelector(SCSingletonConfigurable):
         selection_mode = pn.WidgetBox("## Click-select Mode", self.blockSelection.click_select_mode )
         selection_panel = pn.Column( buttonbox, selection_mode )
         cache_panel = self.blockSelection.get_cache_panel()
-        control_panels = pn.Tabs( ("select",selection_panel), ("cache",cache_panel) )
-        return control_panels
+        block_panels = pn.Tabs( ("select",selection_panel), ("cache",cache_panel) )
+        return pn.Tabs(("block mask", block_panels), ( "cluster mask", clm().gui()) )
 
     def get_cluster_panel(self):
         return clm().panel()
