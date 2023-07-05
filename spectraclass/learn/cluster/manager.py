@@ -206,10 +206,11 @@ class ClusterManager(SCSingletonConfigurable):
     def get_cluster_map( self ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import tm
         from spectraclass.data.base import DataManager, dm
-        if self.cluster_points is None:
-            self.cluster( dm().getModelData() )
         block = tm().getBlock()
+        if self.cluster_points is None:
+            self.cluster( dm().getModelData(block=block) )
         self._cluster_raster: xa.DataArray = block.points2raster( self.cluster_points, name="Cluster" ).squeeze()
+        self._cluster_raster.attrs['title'] = f"Block = {block.block_coords}"
         return self._cluster_raster
 
     @property
@@ -291,7 +292,7 @@ class ClusterManager(SCSingletonConfigurable):
         lgm().log(f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}")
 #        self.rescale( tindex, tvalue )
         raster: xa.DataArray = self.get_cluster_map()
-        iopts = dict(width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False)
+        iopts = dict( width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, title=raster.attrs['title'] )
         image =  raster.hvplot.image( **iopts )
         lgm().log( f"#CM: create cluster image[{index}], dims={raster.dims}, shape={raster.shape}")
         return image
