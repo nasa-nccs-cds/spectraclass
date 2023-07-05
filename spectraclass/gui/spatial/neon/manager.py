@@ -7,7 +7,7 @@ from holoviews.streams import SingleTap, DoubleTap
 from spectraclass.data.spatial.tile.tile import Block
 from panel.layout.base import Panel
 from spectraclass.data.spatial.tile.manager import TileManager, tm
-from spectraclass.model.labels import LabelsManager, lm
+from spectraclass.learn.cluster.manager import clm
 import pandas as pd
 from spectraclass.data.spatial.satellite import spm
 from typing import List, Union, Tuple, Optional, Dict, Callable
@@ -84,6 +84,7 @@ class BlockSelection(param.Parameterized):
                     ufm().show(f"clear block {bindex}")
                     self.clear_block(bindex)
                 else:
+                    ufm().show(f"mark block {bindex}")
                     self.select_block(bindex)
 
         return hv.Rectangles(self.selected_rectangles, vdims = 'value').opts(color='value', fill_alpha=0.6, line_alpha=1.0, line_width=2)
@@ -139,7 +140,9 @@ class BlockSelection(param.Parameterized):
         color = self.marker_color if update else self.unmarked_color
         self.clear_marker()
         self._selected_rectangles[bid] = self.rect_grid[bid] + (color,)
-        if update: self.update()
+        if update:
+            tm().block_index = bid
+            self.update()
 
     def select_region(self, bounds: Dict  ):
         ufm().show("Select Region")
@@ -254,13 +257,15 @@ class NEONTileSelector(SCSingletonConfigurable):
     def get_control_panel(self):
         select_buttons = pn.Row( self._select_all, self._select_region )
         clear_buttons = pn.Row( self._clear_all, self._clear_region)
-        selection_panel = pn.Column( select_buttons, clear_buttons, self.blockSelection.click_select_mode )
+        buttonbox = pn.WidgetBox( "## Selection Controls", select_buttons, clear_buttons )
+        selection_mode = pn.WidgetBox("## Click-select Mode", self.blockSelection.click_select_mode )
+        selection_panel = pn.Column( buttonbox, selection_mode )
         cache_panel = self.blockSelection.get_cache_panel()
         control_panels = pn.Tabs( ("select",selection_panel), ("cache",cache_panel) )
         return control_panels
 
     def get_cluster_panel(self):
-        return pn.Column([])
+        return clm().panel()
 
     def gui(self):
         self.rect0 = tm().block_index
