@@ -26,6 +26,11 @@ Count = Stream.define('Count', index=param.Integer(default=0, doc='Cluster Opera
 def arange( data: xa.DataArray, axis=None ) -> Tuple[np.ndarray,np.ndarray]:
     return ( np.nanmin(data.values,axis=axis), np.nanmax(data.values,axis=axis) )
 
+def bounds( raster: xa.DataArray ) -> Tuple[Tuple,Tuple]:
+    xc, yc = raster.coords['x'].to_numpy(), raster.coords['y'].to_numpy()
+    dx, dy = xc[1]-xc[0], yc[1]-yc[0]
+    return ( xc[0]-dx, xc[-1]+dx), ( yc[0]-dy, yc[-1]+dy)
+
 def cindx( v: float ) -> int:
     return math.floor( v*255.99 )
 
@@ -319,9 +324,11 @@ class ClusterManager(SCSingletonConfigurable):
         lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}, cmap={self.cmap[:5]}" )
 #        self.rescale( tindex, tvalue )
         raster: xa.DataArray = self.get_cluster_map()
-        iopts = dict( width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, title=raster.attrs['title'] )
+        iopts = dict( width=self.width, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, title=raster.attrs['title'] )
         image =  raster.hvplot.image( **iopts )
-        return image
+#        xlim, ylim = bounds( raster )
+ #       image =  hv.Image( raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" ).opts(cmap=self.cmap)
+        return image.opts( cmap=self.cmap )
 
     @exception_handled
     def gui(self) -> Panel:
