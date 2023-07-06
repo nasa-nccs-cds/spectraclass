@@ -273,12 +273,13 @@ class ClusterManager(SCSingletonConfigurable):
         ckey = ( tm().image_index, tm().block_coords, icluster )
         class_color = lm().get_rgb_color(cid)
         self._marked_colors[ ckey ] = class_color
-        self.cmap[ icluster ] = rgb_to_hex( *class_color )
+        cluster_color = rgb_to_hex( *class_color )
+        self.cmap[ icluster ] = cluster_color
         self._tuning_sliders[ icluster ].set_color( lm().current_color )
         self.get_marked_clusters(cid).append( icluster )
         cmap = self.get_cluster_map().values
         marker = Marker("clusters", self.get_points(cid), cid, mask=(cmap == icluster))
-        lgm().log(f"#CM: mark_cluster[{icluster}]: ckey={ckey} cid={cid}, #pids = {marker.size}")
+        lgm().log(f"#CM: mark_cluster[{icluster}]: ckey={ckey} cid={cid}, #pids = {marker.size}, cluster_color={cluster_color}")
         self._cluster_markers[icluster] = marker
         return marker
 
@@ -314,12 +315,11 @@ class ClusterManager(SCSingletonConfigurable):
             ufm().show(f"get_cluster_image:  x={x}, y={y}, label='{lm().selectedLabel}'{cid}), icluster={icluster}")
         else:
             ufm().show(f"get_cluster_image")
-        lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}" )
+        lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}, cmap={self.cmap}" )
 #        self.rescale( tindex, tvalue )
         raster: xa.DataArray = self.get_cluster_map()
         iopts = dict( width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, title=raster.attrs['title'] )
         image =  raster.hvplot.image( **iopts )
-        lgm().log( f"#CM: create cluster image[{index}], dims={raster.dims}, shape={raster.shape}")
         return image
 
     @exception_handled
