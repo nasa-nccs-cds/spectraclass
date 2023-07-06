@@ -321,7 +321,7 @@ class ClusterManager(SCSingletonConfigurable):
             ufm().show(f"get_cluster_image:  x={x}, y={y}, label='{lm().selectedLabel}'{cid}), icluster={icluster}")
         else: ufm().show(f"get_cluster_image")
 
-        lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}, cmap={self.cmap[:5]}" )
+
 #        self.rescale( tindex, tvalue )
         raster: xa.DataArray = self.get_cluster_map()
         iopts = dict( width=self.width, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, title=raster.attrs['title'] )
@@ -329,7 +329,9 @@ class ClusterManager(SCSingletonConfigurable):
 #        xlim, ylim = bounds( raster )
  #       image =  hv.Image( raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" ).opts(cmap=self.cmap)
         cmaps = ['gray','PiYG','flag','Set1']
-        return image.opts( cmap=cmaps[index%4] )  # self.cmap
+        cmap=cmaps[index % 4]
+        lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}, cmap={cmap}" ) # {self.cmap[:5]}" )
+        return image.opts( cmap=cmap)  # self.cmap
 
     @exception_handled
     def gui(self) -> Panel:
