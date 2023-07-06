@@ -258,7 +258,7 @@ class NEONTileSelector(SCSingletonConfigurable):
         select_buttons = pn.Row( self._select_all, self._select_region )
         clear_buttons = pn.Row( self._clear_all, self._clear_region)
         buttonbox = pn.WidgetBox( "## Selection Controls", select_buttons, clear_buttons )
-        selection_mode = pn.WidgetBox("## Click-select Mode", self.blockSelection.click_select_mode )
+        selection_mode = pn.WidgetBox("### Click-select Mode", self.blockSelection.click_select_mode )
         selection_panel = pn.Column( buttonbox, selection_mode )
         cache_panel = self.blockSelection.get_cache_panel()
         block_panels = pn.Tabs( ("select",selection_panel), ("cache",cache_panel) )
