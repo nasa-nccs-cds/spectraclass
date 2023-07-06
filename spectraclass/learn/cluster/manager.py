@@ -311,27 +311,27 @@ class ClusterManager(SCSingletonConfigurable):
     def get_cluster_image( self, index: int, tindex: int, tvalue: int, x=None, y=None ) -> hv.Image:
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        cid, icluster = lm().current_cid, -1
 
         if x is not None:
             block: Block = tm().getBlock()
             gid, ix, iy = block.coords2gid(y,x)
-            cid = lm().current_cid
+
             icluster = clm().get_cluster(gid)
             self.mark_cluster( cid, icluster )
-            ufm().show(f"get_cluster_image:  x={x}, y={y}, label='{lm().selectedLabel}'{cid}), icluster={icluster}")
-        else: ufm().show(f"get_cluster_image")
 
 
 #        self.rescale( tindex, tvalue )
         raster: xa.DataArray = self.get_cluster_map()
         iopts = dict( width=self.width, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, title=raster.attrs['title'] )
-        image =  raster.hvplot.image( **iopts )
-#        xlim, ylim = bounds( raster )
- #       image =  hv.Image( raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" ).opts(cmap=self.cmap)
+      #  image =  raster.hvplot.image( **iopts )
+        xlim, ylim = bounds( raster )
+        image =  hv.Image( raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" )
         cmaps = ['gray','PiYG','flag','Set1']
         cmap=cmaps[index % 4]
         lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}, cmap={cmap}" ) # {self.cmap[:5]}" )
-        return image.opts( cmap=cmap)  # self.cmap
+        ufm().show(f"get_cluster_image[{index}]:  x={x}, y={y}, label='{lm().selectedLabel}'{cid}), icluster={icluster}, cmap={cmap}")
+        return image.opts( cmap=cmap )  # self.cmap
 
     @exception_handled
     def gui(self) -> Panel:
