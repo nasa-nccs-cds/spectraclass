@@ -1,4 +1,5 @@
-import pickle
+import pickle, math
+from random import random
 import panel as pn
 from panel.layout import Panel
 import holoviews as hv
@@ -24,6 +25,15 @@ Count = Stream.define('Count', index=param.Integer(default=0, doc='Cluster Opera
 
 def arange( data: xa.DataArray, axis=None ) -> Tuple[np.ndarray,np.ndarray]:
     return ( np.nanmin(data.values,axis=axis), np.nanmax(data.values,axis=axis) )
+
+def cindx( v: float ) -> int:
+    return math.floor( v*255.99 )
+
+def rgb_to_hex( r, g, b ) -> str:
+    return f'#{cindx(r):02x}{cindx(g):02x}{cindx(b):02x}'
+
+def random_hex_color() -> str:
+    return rgb_to_hex( random(), random(), random() )
 
 def clm() -> "ClusterManager":
     return ClusterManager.instance()
@@ -73,10 +83,10 @@ class ClusterManager(SCSingletonConfigurable):
     def __init__(self, **kwargs ):
         super(ClusterManager, self).__init__(**kwargs)
         self.width = kwargs.pop('width',600)
-        self.cmap = kwargs.pop('cmap', 'Category20')
         self.thresholdStream = ThresholdStream()
         self.double_tap_stream = DoubleTap(transient=True)
         self._max_culsters = 20
+        self.cmap = [ random_hex_color() for i in range( 0, self._max_culsters ) ]
         self._ncluster_options = list( range( 2, self._max_culsters ) )
         self._count = Count(index=0)
         self._mid_options = [ "kmeans", "fuzzy cmeans", "bisecting kmeans" ]
@@ -261,7 +271,9 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.model.labels import lm
         from spectraclass.data.spatial.tile.manager import tm
         ckey = ( tm().image_index, tm().block_coords, icluster )
-        self._marked_colors[ ckey ] = lm().get_rgb_color(cid)
+        class_color = lm().get_rgb_color(cid)
+        self._marked_colors[ ckey ] = class_color
+        self.cmap[ icluster ] = rgb_to_hex( *class_color )
         self._tuning_sliders[ icluster ].set_color( lm().current_color )
         self.get_marked_clusters(cid).append( icluster )
         cmap = self.get_cluster_map().values
