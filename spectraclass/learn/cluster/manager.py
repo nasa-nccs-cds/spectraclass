@@ -266,7 +266,7 @@ class ClusterManager(SCSingletonConfigurable):
     def cluster_points(self) -> xa.DataArray:
         return self._cluster_points
 
-    @log_timing
+    @exception_handled
     def mark_cluster( self, cid: int, icluster: int ) -> Marker:
         from spectraclass.model.labels import lm
         from spectraclass.data.spatial.tile.manager import tm
@@ -306,6 +306,7 @@ class ClusterManager(SCSingletonConfigurable):
     def get_cluster_image( self, index: int, tindex: int, tvalue: int, x=None, y=None ) -> hv.Image:
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+
         if x is not None:
             block: Block = tm().getBlock()
             gid, ix, iy = block.coords2gid(y,x)
@@ -313,9 +314,9 @@ class ClusterManager(SCSingletonConfigurable):
             icluster = clm().get_cluster(gid)
             self.mark_cluster( cid, icluster )
             ufm().show(f"get_cluster_image:  x={x}, y={y}, label='{lm().selectedLabel}'{cid}), icluster={icluster}")
-        else:
-            ufm().show(f"get_cluster_image")
-        lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}, cmap={self.cmap}" )
+        else: ufm().show(f"get_cluster_image")
+
+        lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}, cmap={self.cmap[:5]}" )
 #        self.rescale( tindex, tvalue )
         raster: xa.DataArray = self.get_cluster_map()
         iopts = dict( width=self.width, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, title=raster.attrs['title'] )
@@ -328,8 +329,8 @@ class ClusterManager(SCSingletonConfigurable):
         selectors = [ self._model_selector,self._ncluster_selector ]
         selection_gui = pn.Row( *selectors )
         actions_panel = pn.Row( *self.action_buttons() )
-        selection_controls = pn.WidgetBox( "## Clustering", selection_gui, actions_panel )
-        labeling_controls = pn.WidgetBox( "## Labeling", lm().class_selector )
+        selection_controls = pn.WidgetBox( "### Clustering", selection_gui, actions_panel )
+        labeling_controls = pn.WidgetBox( "### Labeling", lm().class_selector )
         controls_panel = pn.Column( selection_controls, labeling_controls )
         return pn.Tabs( ("controls",controls_panel), ("tuning",self.tuning_gui()) )
 
