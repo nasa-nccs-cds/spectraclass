@@ -328,7 +328,8 @@ class ClusterManager(SCSingletonConfigurable):
         image =  raster.hvplot.image( **iopts )
 #        xlim, ylim = bounds( raster )
  #       image =  hv.Image( raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" ).opts(cmap=self.cmap)
-        return image.opts( cmap=self.cmap )
+        cmaps = ['gray','PiYG','flag','Set1']
+        return image.opts( cmap=cmaps[index%4] )  # self.cmap
 
     @exception_handled
     def gui(self) -> Panel:
