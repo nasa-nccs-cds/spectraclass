@@ -88,6 +88,7 @@ class ClusterManager(SCSingletonConfigurable):
     def __init__(self, **kwargs ):
         super(ClusterManager, self).__init__(**kwargs)
         self.width = kwargs.pop('width',600)
+        self._cluster_markers: Dict[ Tuple, Marker ] = {}
         self.thresholdStream = ThresholdStream()
         self.double_tap_stream = DoubleTap(transient=True)
         self._max_culsters = 20
@@ -103,7 +104,6 @@ class ClusterManager(SCSingletonConfigurable):
         self._tuning_sliders: List[ClusterMagnitudeWidget] = []
         self.thresh_slider = None
         self._cluster_points: xa.DataArray = None
-        self._cluster_markers: Dict[ Tuple, Marker ] = {}
         self._models: Dict[str,ClusterBase] = {}
         self._model_selector = pn.widgets.Select(name='Methods', options=self.mids, value=self.modelid )
         self._model_watcher = self._model_selector.param.watch( self.on_parameter_change, ['value'], onlychanged=True )
@@ -309,7 +309,7 @@ class ClusterManager(SCSingletonConfigurable):
             numclusters.append(nclusters)
             classes.append(marker.cid)
         table = hv.Table({'Cluster': clusters, 'Block': blocks, '#Clusters': numclusters, 'Class': classes} )
-        return table
+        return table.opts( selectable=True, editable=False )
 
         # nodata_value = -2
         # template = self.block.data[0].squeeze(drop=True)
