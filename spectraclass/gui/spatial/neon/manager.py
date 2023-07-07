@@ -262,7 +262,7 @@ class NEONTileSelector(SCSingletonConfigurable):
         selection_panel = pn.Column( buttonbox, selection_mode )
         cache_panel = self.blockSelection.get_cache_panel()
         block_panels = pn.Tabs( ("select",selection_panel), ("cache",cache_panel) )
-        return pn.Tabs(("block mask", block_panels), ( "cluster mask", clm().gui()), ( "learning", pn.Column([])) )
+        return pn.Tabs( ("block mask", block_panels), ( "cluster mask", clm().gui()) ) # , ( "learning", pn.Column([])) )
 
     def get_cluster_panel(self):
         return clm().panel()
@@ -276,11 +276,14 @@ class NEONTileSelector(SCSingletonConfigurable):
             return image
         else:
             selection_panel = self.get_control_panel()
+            print("3")
             if self.selection_mode == BlockSelectMode.SelectTile:
                 return pn.Row( image * self.region_selection, selection_panel )
             else:
                 cluster_panel = self.get_cluster_panel()
+                print("4")
                 viz_panels = pn.Tabs( ("select", image * self.region_selection), ("cluster", cluster_panel))
+                print("5")
                 return pn.Row( viz_panels, selection_panel )
 
     @property

@@ -99,9 +99,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
         self._cluster_image = hv.DynamicMap( self.get_cluster_image, streams=[ self._count, self.double_tap_stream, self.thresholdStream ] )    # thresholdStream
-        print("1")
         self._marker_table = hv.DynamicMap( self.get_marker_table(), streams=[ self.double_tap_stream ] )
-        print("10")
         self._marked_colors: Dict[Tuple,Tuple[float,float,float]] = {}
         self._marked_clusters: Dict[Tuple, List] = {}
         self._tuning_sliders: List[ClusterMagnitudeWidget] = []
@@ -306,7 +304,6 @@ class ClusterManager(SCSingletonConfigurable):
 
     @exception_handled
     def get_marker_table(self, x=None, y=None ) -> hv.Table:
-        print("2")
         clusters, blockx, blocky, numclusters, classes = [],[],[],[],[]
         for (image_index,block_coords,icluster,nclusters), marker in self._cluster_markers.items():
             clusters.append( icluster )
@@ -314,14 +311,12 @@ class ClusterManager(SCSingletonConfigurable):
             blocky.append( block_coords[1] )
             numclusters.append( nclusters )
             classes.append( marker.cid )
-        print("3")
         df = pd.DataFrame( {  'Cluster':    np.array(clusters),
                               'Block-c0':   np.array(blockx),
                               'Block-c1':   np.array(blocky),
                               '#Clusters':  np.array(numclusters),
                               'Class':      np.array(classes)  }  )
-        print("4")
-        return hv.Table(df) # .options( selectable=True, editable=False )
+        return hv.Table(df).options( selectable=True, editable=False )
 
         # nodata_value = -2
         # template = self.block.data[0].squeeze(drop=True)
@@ -376,10 +371,10 @@ class ClusterManager(SCSingletonConfigurable):
         selection_gui = pn.Row( *selectors )
         actions_panel = pn.Row( *self.action_buttons() )
         selection_controls = pn.WidgetBox( "### Clustering", selection_gui, actions_panel )
-        print("0")
         labeling_controls = pn.WidgetBox( "### Labeling", lm().class_selector, pn.Column( self._marker_table ) )
-        print("11")
+        print("1")
         controls_panel = pn.Column( selection_controls, labeling_controls )
+        print("2")
         return pn.Tabs( ("controls",controls_panel), ("tuning",self.tuning_gui()) )
 
     def action_buttons(self):
