@@ -102,7 +102,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._tuning_sliders: List[ClusterMagnitudeWidget] = []
         self.thresh_slider = None
         self._cluster_points: xa.DataArray = None
-        self._cluster_markers: Dict[int, Marker] = {}
+        self._cluster_markers: Dict[ Tuple, Marker ] = {}
         self._models: Dict[str,ClusterBase] = {}
         self._model_selector = pn.widgets.Select(name='Methods', options=self.mids, value=self.modelid )
         self._model_watcher = self._model_selector.param.watch( self.on_parameter_change, ['value'], onlychanged=True )
@@ -192,7 +192,7 @@ class ClusterManager(SCSingletonConfigurable):
 
     def get_icluster( self, ckey: Tuple ) -> int:
         from spectraclass.data.spatial.tile.manager import tm
-        ( tindex, bindex, icluster ) = ckey
+        ( tindex, bindex, icluster, nclusters ) = ckey
         return icluster if ( (tindex==tm().image_index) and (bindex==tm().block_coords) )  else -1
 
     def cluster_color(self, index: int, updated = True ) -> Tuple[int,int,int]:
@@ -286,7 +286,7 @@ class ClusterManager(SCSingletonConfigurable):
     def mark_cluster( self, cid: int, icluster: int ) -> Marker:
         from spectraclass.model.labels import lm
         from spectraclass.data.spatial.tile.manager import tm
-        ckey = ( tm().image_index, tm().block_coords, icluster )
+        ckey = ( tm().image_index, tm().block_coords, icluster, self.nclusters )
         class_color = lm().get_rgb_color(cid)
         self._marked_colors[ ckey ] = class_color
         self._cluster_colors[icluster] = class_color
@@ -296,9 +296,18 @@ class ClusterManager(SCSingletonConfigurable):
         self.get_marked_clusters(cid).append( icluster )
         cmask = self.get_cluster_map().values
         marker = Marker("clusters", self.get_points(cid), cid, mask=(cmask == icluster))
-        lgm().log(f"#CM: mark_cluster[{icluster}]: ckey={ckey} cid={cid}, #pids = {marker.size}, cluster_color={cluster_color}")
-        self._cluster_markers[icluster] = marker
+        lgm().log(f"#CM: mark_cluster[{icluster}]: ckey={ckey} cid={cid}, #pids = {marker.size}")
+        self._cluster_markers[ ckey ] = marker
         return marker
+
+    def marker_table(self):
+        clusters, blocks, numclusters, classes = [],[],[],[]
+        for (image_index,block_coords,icluster,nclusters), marker in self._cluster_markers.items():
+            clusters.append( icluster )
+            blocks.append( block_coords )
+            numclusters.append(nclusters)
+            classes.append(marker.cid)
+        table = hv.Table({'Cluster': clusters, 'Block': blocks, '#Clusters': numclusters, 'Class': classes} )
 
         # nodata_value = -2
         # template = self.block.data[0].squeeze(drop=True)
@@ -432,19 +441,19 @@ class ClusterManager(SCSingletonConfigurable):
         #         for iC in self._cluster_markers.keys(): self.update_cluster( iC )
         #     else: self.update_cluster(icluster)
 
-    def update_cluster(self, icluster: int ):
-        from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
-        from spectraclass.gui.pointcloud import PointCloudManager, pcm
-        lgm().log(f"#IA: update_cluster: marked-cids = {list(self._cluster_markers.keys())}")
-        marker: Marker = self._cluster_markers.get(icluster,None)
-        if marker is not None:
-            gpm().remove_marker( marker )
-            pcm().deleteMarkers(marker.gids.tolist())
-            pids = self.get_cluster_pids( icluster )
-            marker.set_gids(pids)
-            gpm().plot_graph(marker)
-            pcm().addMarker( marker )
-            lgm().log( f"#IA: update_cluster, npids={len(pids)}, cluster points shape = {self._cluster_points.shape}")
+    # def update_cluster(self, icluster: int ):
+    #     from spectraclass.gui.lineplots.manager import GraphPlotManager, gpm
+    #     from spectraclass.gui.pointcloud import PointCloudManager, pcm
+    #     lgm().log(f"#IA: update_cluster: marked-cids = {list(self._cluster_markers.keys())}")
+    #     marker: Marker = self._cluster_markers.get(icluster,None)
+    #     if marker is not None:
+    #         gpm().remove_marker( marker )
+    #         pcm().deleteMarkers(marker.gids.tolist())
+    #         pids = self.get_cluster_pids( icluster )
+    #         marker.set_gids(pids)
+    #         gpm().plot_graph(marker)
+    #         pcm().addMarker( marker )
+    #         lgm().log( f"#IA: update_cluster, npids={len(pids)}, cluster points shape = {self._cluster_points.shape}")
 
 
 class ClusterSelector:
