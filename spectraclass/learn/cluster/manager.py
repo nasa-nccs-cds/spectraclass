@@ -278,8 +278,6 @@ class ClusterManager(SCSingletonConfigurable):
     def cluster_points(self) -> xa.DataArray:
         return self._cluster_points
 
-
-
     @exception_handled
     def mark_cluster( self, cid: int, icluster: int ) -> Marker:
         from spectraclass.model.labels import lm
