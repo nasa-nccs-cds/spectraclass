@@ -110,9 +110,12 @@ class ClusterManager(SCSingletonConfigurable):
         self._ncluster_watcher = self._ncluster_selector.param.watch(self.on_parameter_change, ['value'], onlychanged=True )
         self.refresh_colormap()
 
+    def update_cmap(self):
+        self.cmap = tuple([float_to_hex(*self._cluster_colors[ic]) for ic in range(self._cluster_colors.shape[0])])
+
     def refresh_colormap(self):
         self.update_colors( self.nclusters )
-        self.cmap = tuple( [float_to_hex(*self._cluster_colors[ic]) for ic in range(self._cluster_colors.shape[0])] )
+        self.update_cmap()
         print( self.cmap )
         lgm().log( f"#CM: palette = {self.cmap}")
         #      self.cmap = [random_hex_color() for i in range(0, self._max_culsters)]
@@ -287,7 +290,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._marked_colors[ ckey ] = class_color
         cluster_color = float_to_hex( *class_color )
         self._cluster_colors[icluster] = cluster_color
-        self.cmap = tuple( [float_to_hex(*self._cluster_colors[ic]) for ic in range(self._cluster_colors.shape[0])] )
+        self.update_cmap()
      #   self._tuning_sliders[ icluster ].set_color( lm().current_color )
         self.get_marked_clusters(cid).append( icluster )
         cmask = self.get_cluster_map().values
