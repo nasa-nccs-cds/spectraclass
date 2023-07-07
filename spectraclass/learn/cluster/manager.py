@@ -111,7 +111,7 @@ class ClusterManager(SCSingletonConfigurable):
         self.refresh_colormap()
 
     def refresh_colormap(self):
-        self.cmap = [random_hex_color() for i in range(0, self._max_culsters)]
+        self.cmap = ["#ffffff"] + [random_hex_color() for i in range(0, self._max_culsters)]
 
     def refresh(self) -> int:
         ccount = self._count.index + 1
