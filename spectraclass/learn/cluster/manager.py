@@ -316,17 +316,14 @@ class ClusterManager(SCSingletonConfigurable):
         if x is not None:
             block: Block = tm().getBlock()
             gid, ix, iy = block.coords2gid(y,x)
-
             icluster = clm().get_cluster(gid)
             self.mark_cluster( cid, icluster )
-
-
 #        self.rescale( tindex, tvalue )
         raster: xa.DataArray = self.get_cluster_map()
         iopts = dict( width=self.width, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, title=raster.attrs['title'] )
-      #  image =  raster.hvplot.image( **iopts )
-        xlim, ylim = bounds( raster )
-        image =  hv.Image( raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" )
+        image =  raster.hvplot.image( **iopts )
+  #      xlim, ylim = bounds( raster )
+  #      image =  hv.Image( raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" )
   #      cmaps = ['gray','PiYG','flag','Set1']
   #      cmap=cmaps[index % 4]
         lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}, cmap={self.cmap[:5]}" )
