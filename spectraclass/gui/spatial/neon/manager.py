@@ -276,14 +276,11 @@ class NEONTileSelector(SCSingletonConfigurable):
             return image
         else:
             selection_panel = self.get_control_panel()
-            print("3")
             if self.selection_mode == BlockSelectMode.SelectTile:
                 return pn.Row( image * self.region_selection, selection_panel )
             else:
                 cluster_panel = self.get_cluster_panel()
-                print("4")
                 viz_panels = pn.Tabs( ("select", image * self.region_selection), ("cluster", cluster_panel))
-                print("5")
                 return pn.Row( viz_panels, selection_panel )
 
     @property

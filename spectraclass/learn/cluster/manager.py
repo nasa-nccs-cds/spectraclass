@@ -372,9 +372,7 @@ class ClusterManager(SCSingletonConfigurable):
         actions_panel = pn.Row( *self.action_buttons() )
         selection_controls = pn.WidgetBox( "### Clustering", selection_gui, actions_panel )
         labeling_controls = pn.WidgetBox( "### Labeling", lm().class_selector, pn.Column( self._marker_table ) )
-        print("1")
         controls_panel = pn.Column( selection_controls, labeling_controls )
-        print("2")
         return pn.Tabs( ("controls",controls_panel), ("tuning",self.tuning_gui()) )
 
     def action_buttons(self):
