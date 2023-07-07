@@ -91,7 +91,6 @@ class ClusterManager(SCSingletonConfigurable):
         self.thresholdStream = ThresholdStream()
         self.double_tap_stream = DoubleTap(transient=True)
         self._max_culsters = 20
-        self.cmap = [ random_hex_color() for i in range( 0, self._max_culsters ) ]
         self._ncluster_options = list( range( 2, self._max_culsters ) )
         self._count = Count(index=0)
         self._mid_options = [ "kmeans", "fuzzy cmeans", "bisecting kmeans" ]
@@ -109,6 +108,10 @@ class ClusterManager(SCSingletonConfigurable):
         self._model_watcher = self._model_selector.param.watch( self.on_parameter_change, ['value'], onlychanged=True )
         self._ncluster_selector = pn.widgets.Select(name='#Clusters', options=self._ncluster_options, value=self.nclusters )
         self._ncluster_watcher = self._ncluster_selector.param.watch(self.on_parameter_change, ['value'], onlychanged=True )
+        self.refresh_colormap()
+
+    def refresh_colormap(self):
+        self.cmap = [random_hex_color() for i in range(0, self._max_culsters)]
 
     def refresh(self) -> int:
         ccount = self._count.index + 1
@@ -319,10 +322,13 @@ class ClusterManager(SCSingletonConfigurable):
             icluster = clm().get_cluster(gid)
             lgm().log(f"#CM: coords2gid:  ix={ix}], iy={iy}, gid={gid}, icluster={icluster}, cid={cid}")
             self.mark_cluster( cid, icluster )
-    #    self.rescale( tindex, tvalue )
-        raster: xa.DataArray = self.get_cluster_map()
-        iopts = dict( width=self.width, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, title=raster.attrs['title'] )
-        image =  raster.hvplot.image( **iopts )
+        else:
+    #       self.rescale( tindex, tvalue )
+            self.get_cluster_map()
+            self.refresh_colormap()
+        title = self._cluster_raster.attrs['title']
+        iopts = dict( width=self.width, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, title=title )
+        image =  self._cluster_raster.hvplot.image( **iopts )
   #      xlim, ylim = bounds( raster )
   #      image =  hv.Image( raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" )
   #      cmaps = ['gray','PiYG','flag','Set1']
