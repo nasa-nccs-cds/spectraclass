@@ -318,7 +318,7 @@ class ClusterManager(SCSingletonConfigurable):
             gid, ix, iy = block.coords2gid(y,x)
             icluster = clm().get_cluster(gid)
             self.mark_cluster( cid, icluster )
-#        self.rescale( tindex, tvalue )
+    #    self.rescale( tindex, tvalue )
         raster: xa.DataArray = self.get_cluster_map()
         iopts = dict( width=self.width, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, title=raster.attrs['title'] )
         image =  raster.hvplot.image( **iopts )
