@@ -112,7 +112,7 @@ class ClusterManager(SCSingletonConfigurable):
 
     def refresh_colormap(self):
         self.update_colors( self.nclusters )
-        self.cmap = ( float_to_hex(*self._cluster_colors[ic]) for ic in range(self._cluster_colors.shape[0]) )
+        self.cmap = tuple( [float_to_hex(*self._cluster_colors[ic]) for ic in range(self._cluster_colors.shape[0])] )
         print( self.cmap )
         lgm().log( f"#CM: palette = {self.cmap}")
         #      self.cmap = [random_hex_color() for i in range(0, self._max_culsters)]
