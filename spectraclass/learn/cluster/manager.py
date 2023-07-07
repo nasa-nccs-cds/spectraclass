@@ -331,7 +331,7 @@ class ClusterManager(SCSingletonConfigurable):
             self.get_cluster_map()
             self.refresh_colormap()
         title = self._cluster_raster.attrs['title']
-        iopts = dict( width=self.width, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, title=title )
+        iopts = dict( width=self.width, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=True, title=title )
         image =  self._cluster_raster.hvplot.image( **iopts )
   #      xlim, ylim = bounds( raster )
   #      image =  hv.Image( raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" )
