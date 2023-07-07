@@ -97,6 +97,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
         self._cluster_image = hv.DynamicMap( self.get_cluster_image, streams=[ self._count, self.double_tap_stream, self.thresholdStream ] )    # thresholdStream
+        self._marker_table = hv.DynamicMap( self.get_marker_table(), streams=[ self.double_tap_stream ] )
         self._marked_colors: Dict[Tuple,Tuple[float,float,float]] = {}
         self._marked_clusters: Dict[Tuple, List] = {}
         self._tuning_sliders: List[ClusterMagnitudeWidget] = []
@@ -300,7 +301,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._cluster_markers[ ckey ] = marker
         return marker
 
-    def marker_table(self):
+    def get_marker_table(self, x=None, y=None ) -> hv.Table:
         clusters, blocks, numclusters, classes = [],[],[],[]
         for (image_index,block_coords,icluster,nclusters), marker in self._cluster_markers.items():
             clusters.append( icluster )
@@ -308,6 +309,7 @@ class ClusterManager(SCSingletonConfigurable):
             numclusters.append(nclusters)
             classes.append(marker.cid)
         table = hv.Table({'Cluster': clusters, 'Block': blocks, '#Clusters': numclusters, 'Class': classes} )
+        return table
 
         # nodata_value = -2
         # template = self.block.data[0].squeeze(drop=True)
@@ -362,7 +364,7 @@ class ClusterManager(SCSingletonConfigurable):
         selection_gui = pn.Row( *selectors )
         actions_panel = pn.Row( *self.action_buttons() )
         selection_controls = pn.WidgetBox( "### Clustering", selection_gui, actions_panel )
-        labeling_controls = pn.WidgetBox( "### Labeling", lm().class_selector )
+        labeling_controls = pn.WidgetBox( "### Labeling", lm().class_selector, self._marker_table )
         controls_panel = pn.Column( selection_controls, labeling_controls )
         return pn.Tabs( ("controls",controls_panel), ("tuning",self.tuning_gui()) )
 
