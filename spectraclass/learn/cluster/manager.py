@@ -99,7 +99,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
         self._cluster_image = hv.DynamicMap( self.get_cluster_image, streams=[ self._count, self.double_tap_stream, self.thresholdStream ] )    # thresholdStream
-        self._marker_table = hv.DynamicMap( self.get_marker_table(), streams=[ self.double_tap_stream ] )
+#        self._marker_table = hv.DynamicMap( self.get_marker_table(), streams=[ self.double_tap_stream ] )
         self._marked_colors: Dict[Tuple,Tuple[float,float,float]] = {}
         self._marked_clusters: Dict[Tuple, List] = {}
         self._tuning_sliders: List[ClusterMagnitudeWidget] = []
@@ -362,7 +362,7 @@ class ClusterManager(SCSingletonConfigurable):
   #      cmap=cmaps[index % 4]
         lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}, cmap={self.cmap[:8]}" )
         ufm().show(f"clusters:  x={x}, y={y}, label='{lm().selectedLabel}'{cid}), ic={icluster}, cmap={self.cmap[:8]}")
-        return image # .opts( cmap=self.cmap )
+        return image.opts( cmap=self.cmap )
 
     @exception_handled
     def gui(self) -> Panel:
@@ -371,7 +371,7 @@ class ClusterManager(SCSingletonConfigurable):
         selection_gui = pn.Row( *selectors )
         actions_panel = pn.Row( *self.action_buttons() )
         selection_controls = pn.WidgetBox( "### Clustering", selection_gui, actions_panel )
-        labeling_controls = pn.WidgetBox( "### Labeling", lm().class_selector, pn.Column( self._marker_table ) )
+        labeling_controls = pn.WidgetBox( "### Labeling", lm().class_selector ) # , pn.Column( self._marker_table ) )
         controls_panel = pn.Column( selection_controls, labeling_controls )
         return pn.Tabs( ("controls",controls_panel), ("tuning",self.tuning_gui()) )
 
