@@ -304,13 +304,14 @@ class ClusterManager(SCSingletonConfigurable):
 
     @exception_handled
     def get_marker_table(self, x=None, y=None ) -> hv.Table:
+        from spectraclass.model.labels import LabelsManager, lm
         clusters, blockx, blocky, numclusters, classes = [],[],[],[],[]
         for (image_index,block_coords,icluster,nclusters), marker in self._cluster_markers.items():
             clusters.append( icluster )
             blockx.append( block_coords[0] )
             blocky.append( block_coords[1] )
             numclusters.append( nclusters )
-            classes.append( marker.cid )
+            classes.append( lm().labels[marker.cid] )
         df = pd.DataFrame( {  'Cluster':    np.array(clusters),
                               'Block-c0':   np.array(blockx),
                               'Block-c1':   np.array(blocky),
