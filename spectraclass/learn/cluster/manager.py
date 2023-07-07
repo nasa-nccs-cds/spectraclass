@@ -2,6 +2,7 @@ import pickle, math
 from random import random
 import panel as pn
 from panel.layout import Panel
+import pandas as pd
 import holoviews as hv
 from panel.widgets import Button, Select, FloatSlider
 from joblib import cpu_count
@@ -310,9 +311,12 @@ class ClusterManager(SCSingletonConfigurable):
             blocky.append( block_coords[1] )
             numclusters.append( nclusters )
             classes.append( marker.cid )
-        table = hv.Table(  (np.array(clusters),np.array(blockx),np.array(blocky),np.array(numclusters),np.array(classes)),
-                             'Cluster','Block-c0','Block-c1','#Clusters','Class' )
-        return table.opts( selectable=True, editable=False )
+        df = pd.DataFrame( {  'Cluster':    np.array(clusters),
+                              'Block-c0':   np.array(blockx),
+                              'Block-c1':   np.array(blocky),
+                              '#Clusters':  np.array(numclusters),
+                              'Class':      np.array(classes)  }  )
+        return hv.Table(df).options( selectable=True, editable=False )
 
         # nodata_value = -2
         # template = self.block.data[0].squeeze(drop=True)
