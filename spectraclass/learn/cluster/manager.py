@@ -333,8 +333,8 @@ class ClusterManager(SCSingletonConfigurable):
   #      image =  hv.Image( raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" )
   #      cmaps = ['gray','PiYG','flag','Set1']
   #      cmap=cmaps[index % 4]
-        lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}, cmap={self.cmap[:5]}" )
-        ufm().show(f"clusters:  x={x}, y={y}, label='{lm().selectedLabel}'{cid}), ic={icluster}, cmap={self.cmap[:5]}")
+        lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}, cmap={self.cmap[:8]}" )
+        ufm().show(f"clusters:  x={x}, y={y}, label='{lm().selectedLabel}'{cid}), ic={icluster}, cmap={self.cmap[:8]}")
         return image.opts( cmap=self.cmap )
 
     @exception_handled
