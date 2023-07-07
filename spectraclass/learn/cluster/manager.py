@@ -286,7 +286,9 @@ class ClusterManager(SCSingletonConfigurable):
         class_color = lm().get_rgb_color(cid)
         self._marked_colors[ ckey ] = class_color
         cluster_color = rgb_to_hex( *class_color )
-        self.cmap[ icluster ] = cluster_color
+        lcmap = list( self.cmap )
+        lcmap[ icluster ] = cluster_color
+        self.cmap[icluster] = tuple(lcmap)
      #   self._tuning_sliders[ icluster ].set_color( lm().current_color )
         self.get_marked_clusters(cid).append( icluster )
         cmap = self.get_cluster_map().values
