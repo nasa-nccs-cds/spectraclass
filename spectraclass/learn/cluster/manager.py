@@ -111,7 +111,11 @@ class ClusterManager(SCSingletonConfigurable):
         self.refresh_colormap()
 
     def refresh_colormap(self):
-        self.cmap = ["#ffffff"] + [random_hex_color() for i in range(0, self._max_culsters)]
+        from bokeh.palettes import tol, d3
+        self.cmap = tol['HighContrast'][self._max_culsters]   # d3['Category20b'][self._max_culsters]
+        print( self.cmap )
+        lgm().log( f"#CM: palette = {self.cmap}")
+        #      self.cmap = [random_hex_color() for i in range(0, self._max_culsters)]
 
     def refresh(self) -> int:
         ccount = self._count.index + 1
