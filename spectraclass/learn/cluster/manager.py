@@ -327,11 +327,11 @@ class ClusterManager(SCSingletonConfigurable):
       #  image =  raster.hvplot.image( **iopts )
         xlim, ylim = bounds( raster )
         image =  hv.Image( raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" )
-        cmaps = ['gray','PiYG','flag','Set1']
-        cmap=cmaps[index % 4]
-        lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}, cmap={cmap}" ) # {self.cmap[:5]}" )
-        ufm().show(f"get_cluster_image[{index}]:  x={x}, y={y}, label='{lm().selectedLabel}'{cid}), icluster={icluster}, cmap={cmap}")
-        return image.opts( cmap=cmap )  # self.cmap
+  #      cmaps = ['gray','PiYG','flag','Set1']
+  #      cmap=cmaps[index % 4]
+        lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}, cmap={self.cmap[:5]}" )
+        ufm().show(f"clusters:  x={x}, y={y}, label='{lm().selectedLabel}'{cid}), ic={icluster}, cmap={self.cmap[:5]}")
+        return image.opts( cmap=self.cmap )
 
     @exception_handled
     def gui(self) -> Panel:
