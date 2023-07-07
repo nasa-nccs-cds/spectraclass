@@ -111,7 +111,7 @@ class ClusterManager(SCSingletonConfigurable):
         self.refresh_colormap()
 
     def refresh_colormap(self):
-        from bokeh.palettes import tol, d3
+        from bokeh.palettes import d3
         self.cmap = d3['Category20b'][self._max_culsters]
         print( self.cmap )
         lgm().log( f"#CM: palette = {self.cmap}")
