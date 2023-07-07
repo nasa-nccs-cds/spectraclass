@@ -316,7 +316,7 @@ class ClusterManager(SCSingletonConfigurable):
                               'Block-c1':   np.array(blocky),
                               '#Clusters':  np.array(numclusters),
                               'Class':      np.array(classes)  }  )
-        return hv.Table(df).options( selectable=True, editable=False )
+        return hv.Table(df) # .options( selectable=True, editable=False )
 
         # nodata_value = -2
         # template = self.block.data[0].squeeze(drop=True)
