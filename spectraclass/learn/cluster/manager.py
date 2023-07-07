@@ -303,16 +303,15 @@ class ClusterManager(SCSingletonConfigurable):
 
     @exception_handled
     def get_marker_table(self, x=None, y=None ) -> hv.Table:
-        clusters, blocks, numclusters, classes = [],[],[],[]
+        clusters, blockx, blocky, numclusters, classes = [],[],[],[],[]
         for (image_index,block_coords,icluster,nclusters), marker in self._cluster_markers.items():
             clusters.append( icluster )
-            blocks.append( block_coords )
-            numclusters.append(nclusters)
+            blockx.append( block_coords[0] )
+            blocky.append( block_coords[1] )
+            numclusters.append( nclusters )
             classes.append( marker.cid )
-        table = hv.Table(  {  'Cluster':    np.array(clusters),
-                              'Block':      np.array(blocks),
-                              '#Clusters':  np.array(numclusters),
-                              'Class':      np.array(classes) } )
+        table = hv.Table(  (np.array(clusters),np.array(blockx),np.array(blocky),np.array(numclusters),np.array(classes)),
+                             'Cluster','Block-c0','Block-c1','#Clusters','Class' )
         return table.opts( selectable=True, editable=False )
 
         # nodata_value = -2
