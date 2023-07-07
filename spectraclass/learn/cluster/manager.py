@@ -289,11 +289,11 @@ class ClusterManager(SCSingletonConfigurable):
         self._marked_colors[ ckey ] = class_color
         cluster_color = float_to_hex( *class_color )
         self._cluster_colors[icluster] = cluster_color
-        self.cmap = ( float_to_hex(*self._cluster_colors[ic]) for ic in range(self._cluster_colors.shape[0]) )
+        self.cmap = tuple( [float_to_hex(*self._cluster_colors[ic]) for ic in range(self._cluster_colors.shape[0])] )
      #   self._tuning_sliders[ icluster ].set_color( lm().current_color )
         self.get_marked_clusters(cid).append( icluster )
-        cmap = self.get_cluster_map().values
-        marker = Marker("clusters", self.get_points(cid), cid, mask=(cmap == icluster))
+        cmask = self.get_cluster_map().values
+        marker = Marker("clusters", self.get_points(cid), cid, mask=(cmask == icluster))
         lgm().log(f"#CM: mark_cluster[{icluster}]: ckey={ckey} cid={cid}, #pids = {marker.size}, cluster_color={cluster_color}")
         self._cluster_markers[icluster] = marker
         return marker
