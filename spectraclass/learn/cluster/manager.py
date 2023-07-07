@@ -34,11 +34,11 @@ def bounds( raster: xa.DataArray ) -> Tuple[Tuple,Tuple]:
 def cindx( v: float ) -> int:
     return math.floor( v*255.99 )
 
-def rgb_to_hex( r, g, b ) -> str:
+def float_to_hex( r, g, b ) -> str:
     return f'#{cindx(r):02x}{cindx(g):02x}{cindx(b):02x}'
 
 def random_hex_color() -> str:
-    return rgb_to_hex( random(), random(), random() )
+    return float_to_hex( random(), random(), random() )
 
 def clm() -> "ClusterManager":
     return ClusterManager.instance()
@@ -111,8 +111,8 @@ class ClusterManager(SCSingletonConfigurable):
         self.refresh_colormap()
 
     def refresh_colormap(self):
-        from bokeh.palettes import d3
-        self.cmap = d3['Category20b'][self.nclusters]
+        self.update_colors( self.nclusters )
+        self.cmap = ( float_to_hex(*self._cluster_colors[ic]) for ic in range(self._cluster_colors.shape[0]) )
         print( self.cmap )
         lgm().log( f"#CM: palette = {self.cmap}")
         #      self.cmap = [random_hex_color() for i in range(0, self._max_culsters)]
@@ -278,6 +278,8 @@ class ClusterManager(SCSingletonConfigurable):
     def cluster_points(self) -> xa.DataArray:
         return self._cluster_points
 
+
+
     @exception_handled
     def mark_cluster( self, cid: int, icluster: int ) -> Marker:
         from spectraclass.model.labels import lm
@@ -285,10 +287,9 @@ class ClusterManager(SCSingletonConfigurable):
         ckey = ( tm().image_index, tm().block_coords, icluster )
         class_color = lm().get_rgb_color(cid)
         self._marked_colors[ ckey ] = class_color
-        cluster_color = rgb_to_hex( *class_color )
-        lcmap = list( self.cmap )
-        lcmap[ icluster ] = cluster_color
-        self.cmap[icluster] = tuple(lcmap)
+        cluster_color = float_to_hex( *class_color )
+        self._cluster_colors[icluster] = cluster_color
+        self.cmap = ( float_to_hex(*self._cluster_colors[ic]) for ic in range(self._cluster_colors.shape[0]) )
      #   self._tuning_sliders[ icluster ].set_color( lm().current_color )
         self.get_marked_clusters(cid).append( icluster )
         cmap = self.get_cluster_map().values
