@@ -316,6 +316,16 @@ class ClusterManager(SCSingletonConfigurable):
         self._cluster_markers[ ckey ] = marker
         return marker
 
+    def get_training_set(self):
+        from spectraclass.model.labels import lm
+        print( "get_training_set:" )
+        from spectraclass.data.spatial.tile.manager import tm
+        for (image_index, block_coords, icluster, nclusters), marker in self._cluster_markers.items():
+            block = tm().getBlock( bindex=block_coords )
+            model_data = block.getModelData( raster=False )
+            print( f" ** block {block_coords}: model_data shape={model_data.shape} dims={model_data.dims}, icluster={icluster}, cid={marker.cid}, gids={marker.gids[:10]}")
+
+
     @exception_handled
     def get_marker_table(self, x=None, y=None ) -> hv.Table:
         from spectraclass.model.labels import LabelsManager, lm
