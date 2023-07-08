@@ -344,7 +344,7 @@ class ClusterManager(SCSingletonConfigurable):
                               'Block-c1':   np.array(blocky),
                               '#Clusters':  np.array(numclusters),
                               'Class':      np.array(classes)  }  )
-        self._marker_table_widget = hv.Table(df) # .options( selectable=True, editable=False )
+        self._marker_table_widget = hv.Table(df).options( selectable=True, editable=False )
         self._marker_table_selection = hv.streams.Selection1D(source=self._marker_table_widget)
         return self._marker_table_widget
 
