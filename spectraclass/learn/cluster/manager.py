@@ -327,6 +327,7 @@ class ClusterManager(SCSingletonConfigurable):
                 self._marked_colors = {}
                 self.update_colors( self.nclusters )
             elif self._marker_clear_mode == ClearMode.SELECTION:
+                self._marker_table_selection.event()
                 rows = self._marker_table_selection.contents
                 ufm().show( f"Clear selected markers: {rows}" )
 #                self._cluster_markers = {}
