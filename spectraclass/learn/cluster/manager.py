@@ -20,9 +20,15 @@ from .base import ClusterBase
 from spectraclass.util.logs import lgm, exception_handled, log_timing
 from spectraclass.model.base import SCSingletonConfigurable
 import colorsys
+from enum import Enum
 from holoviews.streams import Stream, param
 
 Count = Stream.define('Count', index=param.Integer(default=0, doc='Cluster Operation count'))
+
+class ClearMode(Enum):
+    NONE = 1
+    SELECTION = 2
+    ALL = 3
 
 def arange( data: xa.DataArray, axis=None ) -> Tuple[np.ndarray,np.ndarray]:
     return ( np.nanmin(data.values,axis=axis), np.nanmax(data.values,axis=axis) )
@@ -93,6 +99,7 @@ class ClusterManager(SCSingletonConfigurable):
         self.thresholdStream = ThresholdStream()
         self.double_tap_stream = DoubleTap(transient=True)
         self._max_culsters = 20
+        self._marker_clear_mode: ClearMode = ClearMode.NONE
         self._ncluster_options = list( range( 2, self._max_culsters ) )
         self._count = Count(index=0)
         self._mid_options = [ "kmeans", "fuzzy cmeans", "bisecting kmeans" ]
@@ -311,6 +318,9 @@ class ClusterManager(SCSingletonConfigurable):
     def get_marker_table(self, x=None, y=None ) -> hv.Table:
         from spectraclass.model.labels import LabelsManager, lm
         clusters, blockx, blocky, numclusters, classes = [],[],[],[],[]
+        if x is None and self._marker_clear_mode == ClearMode.ALL:
+            self._marker_clear_mode = ClearMode.NONE
+            self._cluster_markers = {}
         for (image_index,block_coords,icluster,nclusters), marker in self._cluster_markers.items():
             clusters.append( icluster )
             blockx.append( block_coords[0] )
@@ -368,7 +378,7 @@ class ClusterManager(SCSingletonConfigurable):
   #      cmap=cmaps[index % 4]
         lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}, cmap={self.cmap[:8]}" )
         ufm().show(f"clusters:  x={x}, y={y}, label='{lm().selectedLabel}'{cid}), ic={icluster}, cmap={self.cmap[:8]}")
-        return image.opts( cmap=self.cmap )
+        return image.opts(cmap=self.cmap)
 
     @exception_handled
     def gui(self) -> Panel:
@@ -378,9 +388,19 @@ class ClusterManager(SCSingletonConfigurable):
         actions_panel = pn.Row( *self.action_buttons() )
         selection_controls = pn.WidgetBox( "### Clustering", selection_gui, actions_panel )
         labeling_controls = pn.WidgetBox( "### Labeling", lm().class_selector )
-        markers_table = pn.WidgetBox( "### Labeled Clusters", self._marker_table )
+        markers_table = self.get_marker_mangement_panel()
         controls_panel = pn.Column( selection_controls, labeling_controls, markers_table )
         return pn.Tabs( ("controls",controls_panel), ("tuning",self.tuning_gui()) )
+
+    def get_marker_mangement_panel(self):
+        clear_selection = Button(name="clear selection", button_type='primary')
+        clear_all =       Button(name="clear all",       button_type='primary')
+        clear_all.on_click( self.clear_all_markers )
+        return pn.WidgetBox("### Labeled Clusters", self._marker_table, pn.Row(clear_selection, clear_all) )
+
+    def clear_all_markers( self, event ):
+        self._marker_clear_mode = ClearMode.ALL
+        self._marker_table.event()
 
     def action_buttons(self):
         buttons = []
