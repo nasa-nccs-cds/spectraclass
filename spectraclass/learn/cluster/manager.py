@@ -319,6 +319,7 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, lm
         clusters, blockx, blocky, numclusters, classes = [],[],[],[],[]
         if x is None and self._marker_clear_mode == ClearMode.ALL:
+            ufm().show( "Clear all markers" )
             self._marker_clear_mode = ClearMode.NONE
             self._cluster_markers = {}
         for (image_index,block_coords,icluster,nclusters), marker in self._cluster_markers.items():
@@ -400,7 +401,7 @@ class ClusterManager(SCSingletonConfigurable):
 
     def clear_all_markers( self, event ):
         self._marker_clear_mode = ClearMode.ALL
-        self._marker_table.event()
+        self._marker_table.event(x=None,y=None)
 
     def action_buttons(self):
         buttons = []
