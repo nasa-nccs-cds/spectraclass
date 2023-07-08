@@ -409,13 +409,14 @@ class ClusterManager(SCSingletonConfigurable):
     def get_marker_mangement_panel(self):
         clear_selection = Button(name="clear selection", button_type='primary')
         clear_all =       Button(name="clear all",       button_type='primary')
-        clear_all.on_click( self.clear_all_markers )
+        clear_all.on_click( partial(self.clear_markers, ClearMode.ALL) )
+        clear_selection.on_click( partial(self.clear_markers, ClearMode.SELECTION) )
         return pn.WidgetBox("### Labeled Clusters", self._marker_table, pn.Row(clear_selection, clear_all) )
 
     @exception_handled
-    def clear_all_markers( self, event ):
-        lgm().log( "clear_all_markers" )
-        self._marker_clear_mode = ClearMode.ALL
+    def clear_markers( self, mode: ClearMode, event ):
+        lgm().log( f"clear_markers: {mode.name}" )
+        self._marker_clear_mode = mode
         self._marker_table.event(x=None,y=None)
 
     def action_buttons(self):
