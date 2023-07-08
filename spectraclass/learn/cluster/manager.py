@@ -136,12 +136,17 @@ class ClusterManager(SCSingletonConfigurable):
         self._models[ mid ] = clusterer
 
     def update_colors(self, ncolors: int):
+        from spectraclass.data.spatial.tile.manager import tm
+        iindx, bcoords = tm().image_index, tm().block_coords
         hsv = np.full( [ncolors,3], 1.0 )
         hsv[:,0] = np.linspace( 0.0, 1.0, ncolors+1 )[:ncolors]
         hsv[:, 1] = np.full( [ncolors], 0.4 )
-        self._cluster_colors = np.full( [ncolors+1,3], 1.0 )
-        for iC in range( ncolors ):
+        self._cluster_colors = np.full([ncolors+1,3], 1.0 )
+        for iC in range(ncolors):
             self._cluster_colors[iC+1,:] = colorsys.hsv_to_rgb( *hsv[iC].tolist() )
+        for (image_index, block_coords, icluster, nclusters), class_color in  self._marked_colors.items():
+            if (image_index == iindx) and (block_coords == bcoords) and (nclusters == self.nclusters):
+                self._cluster_colors[icluster] = class_color
 
     @property
     def mids(self) -> List[str]:
