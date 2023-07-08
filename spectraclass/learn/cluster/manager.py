@@ -399,7 +399,9 @@ class ClusterManager(SCSingletonConfigurable):
         clear_all.on_click( self.clear_all_markers )
         return pn.WidgetBox("### Labeled Clusters", self._marker_table, pn.Row(clear_selection, clear_all) )
 
+    @exception_handled
     def clear_all_markers( self, event ):
+        lgm().log( "clear_all_markers" )
         self._marker_clear_mode = ClearMode.ALL
         self._marker_table.event(x=None,y=None)
 
