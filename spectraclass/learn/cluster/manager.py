@@ -106,6 +106,8 @@ class ClusterManager(SCSingletonConfigurable):
         self._cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
         self._cluster_image = hv.DynamicMap( self.get_cluster_image, streams=[ self._count, self.double_tap_stream, self.thresholdStream ] )    # thresholdStream
+        self._marker_table_widget: hv.Table = None
+        self._marker_table_selection: hv.streams.Selection1D = None
         self._marker_table = hv.DynamicMap( self.get_marker_table, streams=[ self.double_tap_stream ] )
         self._marked_colors: Dict[Tuple,Tuple[float,float,float]] = {}
         self._marked_clusters: Dict[Tuple, List] = {}
@@ -318,10 +320,19 @@ class ClusterManager(SCSingletonConfigurable):
     def get_marker_table(self, x=None, y=None ) -> hv.Table:
         from spectraclass.model.labels import LabelsManager, lm
         clusters, blockx, blocky, numclusters, classes = [],[],[],[],[]
-        if x is None and self._marker_clear_mode == ClearMode.ALL:
-            ufm().show( "Clear all markers" )
+        if x is None:
+            if self._marker_clear_mode == ClearMode.ALL:
+                ufm().show( "Clear all markers" )
+                self._cluster_markers = {}
+                self._marked_colors = {}
+                self.update_colors( self.nclusters )
+            elif self._marker_clear_mode == ClearMode.SELECTION:
+                rows = self._marker_table_selection.contents
+                ufm().show( f"Clear selected markers: {rows}" )
+#                self._cluster_markers = {}
+#                self._marked_colors = {}
+#                self.update_colors( self.nclusters )
             self._marker_clear_mode = ClearMode.NONE
-            self._cluster_markers = {}
         for (image_index,block_coords,icluster,nclusters), marker in self._cluster_markers.items():
             clusters.append( icluster )
             blockx.append( block_coords[0] )
@@ -333,7 +344,9 @@ class ClusterManager(SCSingletonConfigurable):
                               'Block-c1':   np.array(blocky),
                               '#Clusters':  np.array(numclusters),
                               'Class':      np.array(classes)  }  )
-        return hv.Table(df) # .options( selectable=True, editable=False )
+        self._marker_table_widget = hv.Table(df) # .options( selectable=True, editable=False )
+        self._marker_table_selection = hv.streams.Selection1D(source=self._marker_table_widget)
+        return self._marker_table_widget
 
         # nodata_value = -2
         # template = self.block.data[0].squeeze(drop=True)
