@@ -332,7 +332,7 @@ class ClusterManager(SCSingletonConfigurable):
                    f"icluster={icluster}, cid={marker.cid}, #gids={marker.size}, mask size={np.count_nonzero(mask_array)}", flush=True )
             xchunks.append( xchunk )
             ychunks.append( ychunk )
-        x, y = np.stack( xchunks, axis=0 ), np.stack( ychunks, axis=0 )
+        x, y = np.concatenate( xchunks, axis=0 ), np.concatenate( ychunks, axis=0 )
         print(f" ** training set generated: x shape={x.shape}, y shape={y.shape}" )
         return x,y
 
