@@ -512,9 +512,9 @@ class LabelsManager(SCSingletonConfigurable):
         unlabeled_color = kwargs.get( 'unlabeled_color', "white" )
         unlabeled_index = kwargs.get( 'unlabeled_index', 9999 )
         load_existing = kwargs.get('load',False)
-        labels.update( { unlabeled_index: ('Unlabeled', unlabeled_color ) } )
         for ( label, color ) in labels.values():
             if color.lower() == unlabeled_color: raise Exception( f"{unlabeled_color} is a reserved color")
+        labels.update( { unlabeled_index: ('Unlabeled', unlabeled_color ) } )
         for index, (label,color) in labels.items():
             self._colors.append( color )
             self._labels.append( label )
