@@ -316,7 +316,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._cluster_markers[ ckey ] = marker
         return marker
 
-    def get_training_set(self):
+    def generate_training_set( self, event ):
         from spectraclass.model.labels import lm
         print( "get_training_set:" )
         from spectraclass.data.spatial.tile.manager import tm
@@ -324,7 +324,6 @@ class ClusterManager(SCSingletonConfigurable):
             block = tm().getBlock( bindex=block_coords )
             model_data = block.getModelData( raster=False )
             print( f" ** block {block_coords}: model_data shape={model_data.shape} dims={model_data.dims}, icluster={icluster}, cid={marker.cid}, gids={marker.gids[:10]}")
-
 
     @exception_handled
     def get_marker_table(self, x=None, y=None ) -> hv.Table:
@@ -404,6 +403,12 @@ class ClusterManager(SCSingletonConfigurable):
         lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}, cmap={self.cmap[:8]}" )
         ufm().show(f"clusters:  x={x}, y={y}, label='{lm().selectedLabel}'{cid}), ic={icluster}, cmap={self.cmap[:8]}")
         return image.opts(cmap=self.cmap)
+
+    def get_learning_panel(self):
+        generate_button = Button( name='Generate', button_type='primary')
+        generate_button.on_click( self.generate_training_set )
+        learning_controls = pn.WidgetBox("### Training Set", generate_button )
+        return pn.Column( learning_controls )
 
     @exception_handled
     def gui(self) -> Panel:
