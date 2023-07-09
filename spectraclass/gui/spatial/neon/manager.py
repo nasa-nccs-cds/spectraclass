@@ -139,7 +139,11 @@ class BlockSelection(param.Parameterized):
     def select_block( self, bid: Tuple, update=True ):
         color = self.marker_color if update else self.unmarked_color
         self.clear_marker()
-        self._selected_rectangles[bid] = self.rect_grid[bid] + (color,)
+        try:
+            self._selected_rectangles[bid] = self.rect_grid[bid] + (color,)
+        except KeyError as err:
+            lgm().log( f" KeyError in select_block, bid={bid}, rect keys={list(self.rect_grid.keys())}")
+            raise err
         if update:
             tm().block_index = bid
             self.update()

@@ -74,7 +74,6 @@ class DataContainer:
         if self._data is None:
             self._data = self._get_data()
         sz = size( self._data )
-        lgm().log( f"IA: block data, shape: {shp(self._data)}, dims: {self._data.dims}, size={sz}")
         return None if (sz==0) else self._data
 
     def _get_data(self) -> xa.DataArray:
@@ -556,6 +555,7 @@ class Block(DataContainer):
         block_raster.attrs['dsid'] = self.dsid()
         block_raster.attrs['file_name'] = self.file_name
         block_raster.name = self.file_name
+        lgm().log( f"IA: block data, shape: {block_raster.shape}, dims: {block_raster.dims}")
         return block_raster
 
     @property
