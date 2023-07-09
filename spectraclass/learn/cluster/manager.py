@@ -323,7 +323,7 @@ class ClusterManager(SCSingletonConfigurable):
             block = tm().getBlock( bindex=block_coords )
             model_data = block.getModelData( raster=False )
             mask_array = np.zeros(model_data.shape[0], dtype=bool)
-            mask_array[ marker.gids ] = True
+            mask_array[ marker.gids ] =  True
             train_data = model_data[ mask_array ]
             print( f" ** block {block_coords}, shape={model_data.shape}: train data shape={train_data.shape}, dims={train_data.dims}, "
                    f"icluster={icluster}, cid={marker.cid}, #gids={marker.size}, mask size={np.count_nonzero(mask_array)}")
