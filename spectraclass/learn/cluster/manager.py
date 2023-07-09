@@ -316,6 +316,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._cluster_markers[ ckey ] = marker
         return marker
 
+    @exception_handled
     def generate_training_set( self, event ) -> Tuple[np.ndarray,np.ndarray]:
         print( "get_training_set:" )
         from spectraclass.data.spatial.tile.manager import tm
@@ -328,7 +329,7 @@ class ClusterManager(SCSingletonConfigurable):
             xchunk: np.array = model_data[mask_array]
             ychunk: np.array = np.full( [marker.size], marker.cid, np.int )
             print( f" ** block {block_coords}, shape={model_data.shape}:  x shape={xchunk.shape}, y shape={ychunk.shape}, "
-                   f"icluster={icluster}, cid={marker.cid}, #gids={marker.size}, mask size={np.count_nonzero(mask_array)}")
+                   f"icluster={icluster}, cid={marker.cid}, #gids={marker.size}, mask size={np.count_nonzero(mask_array)}", flush=True )
             xchunks.append( xchunk )
             ychunks.append( ychunk )
         x, y = np.stack( xchunks ), np.stack( ychunks )
