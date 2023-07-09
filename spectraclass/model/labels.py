@@ -127,8 +127,8 @@ class LabelsManager(SCSingletonConfigurable):
     def get_rgb_color( self, cid: int, probe: bool = False ) -> Tuple[float,float,float]:
         from matplotlib import colors
         idx = self._indices.index( cid )
-        color = self.un
-        return (1.0,1.0,1.0) if probe else colors.to_rgb( self._colors[ idx ] )
+        color = self.unlabeled_color if probe else self._colors[ idx ]
+        return colors.to_rgb( color )
 
     def get_rgb_colors(self, cids: List[int], probe: bool = False ) -> np.ndarray:
         cdata = np.array( [ self.get_rgb_color(cid,probe) for cid in cids ] ) * 255.0
