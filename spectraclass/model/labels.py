@@ -80,8 +80,9 @@ class LabelsManager(SCSingletonConfigurable):
 
     def __init__(self):
         super(LabelsManager, self).__init__()
-        self._colors: List[str] = None
-        self._labels: List[str] = None
+        self._colors: List[str] = []
+        self._labels: List[str] = []
+        self._indices: List[int] = []
         self._markers: List[Marker] = []
         self._labels_data: xa.DataArray = None
         self._flow: ActivationFlow = None
@@ -110,11 +111,13 @@ class LabelsManager(SCSingletonConfigurable):
 
     @property
     def current_cid(self) -> int:
-        return self._labels.index( self.current_class )
+        idx = self._labels.index( self.current_class )
+        return self._indices[idx]
 
     @property
     def current_color(self) -> str:
-        return self._colors[ self.current_cid]
+        idx = self._labels.index(self.current_class)
+        return self._colors[ idx ]
 
     def get_rgb_color( self, cid: int, probe: bool = False ) -> Tuple[float,float,float]:
         from matplotlib import colors
@@ -505,16 +508,18 @@ class LabelsManager(SCSingletonConfigurable):
         values = range(len(self._colors))
         return list(zip(values, self._labels, self._colors))
 
-    def setLabels(self, labels: List[Tuple[str, str]], **kwargs):
-        unlabeled_color = kwargs.get( 'unlabeled', "white" )
+    def setLabels(self, labels: Dict[int,Tuple[str, str]], **kwargs):
+        unlabeled_color = kwargs.get( 'unlabeled_color', "white" )
+        unlabeled_index = kwargs.get( 'unlabeled_index', 9999 )
         load_existing = kwargs.get('load',False)
-        selected = kwargs.get('selected',0)
-        label_list = [ ('Unlabeled', unlabeled_color ) ] + labels
-        for ( label, color ) in labels:
+        labels.update( { unlabeled_index: ('Unlabeled', unlabeled_color ) } )
+        for ( label, color ) in labels.values():
             if color.lower() == unlabeled_color: raise Exception( f"{unlabeled_color} is a reserved color")
-        self._colors = [ item[1] for item in label_list ]
-        self._labels = [ item[0] for item in label_list ]
-        self.class_selector = pn.widgets.RadioButtonGroup(name='Class Selection', value=self._labels[selected], options=self._labels)
+        for index, (label,color) in labels.items():
+            self._colors.append( color )
+            self._labels.append( label )
+            self._indices.append( index )
+        self.class_selector = pn.widgets.RadioButtonGroup(name='Class Selection', value=self._labels[unlabeled_index], options=self._labels)
         if load_existing:
             self.loadLabelData( load_existing )
 

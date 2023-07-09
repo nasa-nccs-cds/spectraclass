@@ -56,6 +56,8 @@ class ModelTrainer(SCSingletonConfigurable):
     reduce_nblocks = tl.Int(250).tag(config=True, sync=True)
     reduce_nimages = tl.Int(100).tag(config=True, sync=True)
     model_dims = tl.Int(3).tag(config=True, sync=True)
+    nclasses = tl.Int(2).tag(config=True, sync=True)
+    layer_sizes = tl.List( default_value=[64, 32, 8] ).tag(config=True, sync=True)
     modelkey = tl.Unicode(default_value="").tag(config=True, sync=True)
     nepoch = tl.Int(5).tag(config=True, sync=True)
     focus_nepoch = tl.Int(5).tag(config=True, sync=True)
@@ -68,8 +70,6 @@ class ModelTrainer(SCSingletonConfigurable):
     def __init__(self, **kwargs ):
         super(ModelTrainer, self).__init__()
         self.device = kwargs.get('device','cpu')
-        self.layer_sizes = [64,32]
-        self.nclasses = 5
         self.previous_loss: float = 1e10
         self._model: MLP = None
         self._abort = False
@@ -176,9 +176,9 @@ class ModelTrainer(SCSingletonConfigurable):
 
     def train(self, **kwargs):
         if not self.load(**kwargs):
+            (train_data, labels_data) = kwargs.get( 'training_set', self.get_training_set(**kwargs) )
             self.model.train()
             t0, initial_epoch = time.time(), 0
-            (train_data, labels_data) = self.get_training_set(**kwargs)
             for iter in range(self.niter):
                 initial_epoch = self.training_iteration(iter, initial_epoch, train_data, labels_data, **kwargs)
             lgm().log( f"Trained autoencoder in {(time.time()-t0)/60:.3f} min", print=True )

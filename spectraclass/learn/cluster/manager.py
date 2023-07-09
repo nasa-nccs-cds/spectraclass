@@ -119,6 +119,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._model_watcher = self._model_selector.param.watch( self.on_parameter_change, ['value'], onlychanged=True )
         self._ncluster_selector = pn.widgets.Select(name='#Clusters', options=self._ncluster_options, value=self.nclusters )
         self._ncluster_watcher = self._ncluster_selector.param.watch(self.on_parameter_change, ['value'], onlychanged=True )
+        self._current_training_set: Tuple[np.ndarray, np.ndarray] = None
         self.refresh_colormap()
 
     @exception_handled
@@ -317,8 +318,15 @@ class ClusterManager(SCSingletonConfigurable):
         return marker
 
     @exception_handled
-    def generate_training_set( self, event ) -> Tuple[np.ndarray,np.ndarray]:
-        print( "get_training_set:" )
+    def learn_mask( self, event ):
+        from spectraclass.learn.pytorch.trainer import mt
+        mt().model_dims = self._current_training_set[0].shape[1]
+        mt().nclasses = 2
+        mt().layer_sizes = [ 64, 32, 8 ]
+        mt().train( training_set=self._current_training_set )
+
+    @exception_handled
+    def generate_training_set( self, event ):
         from spectraclass.data.spatial.tile.manager import tm
         xchunks, ychunks = [], []
         for (image_index, block_coords, icluster, nclusters), marker in self._cluster_markers.items():
@@ -328,13 +336,11 @@ class ClusterManager(SCSingletonConfigurable):
             mask_array[ marker.gids ] = True
             xchunk: np.array = model_data[mask_array]
             ychunk: np.array = np.full( [marker.size], marker.cid, np.int )
-            print( f" ** block {block_coords}, shape={model_data.shape}:  x shape={xchunk.shape}, y shape={ychunk.shape}, "
-                   f"icluster={icluster}, cid={marker.cid}, #gids={marker.size}, mask size={np.count_nonzero(mask_array)}", flush=True )
             xchunks.append( xchunk )
             ychunks.append( ychunk )
         x, y = np.concatenate( xchunks, axis=0 ), np.concatenate( ychunks, axis=0 )
-        print(f" ** training set generated: x shape={x.shape}, y shape={y.shape}" )
-        return x,y
+        ufm().show(f"Training set generated: x shape={x.shape}, y shape={y.shape}, y: {y[:10]}" )
+        self._current_training_set = ( x,y )
 
     @exception_handled
     def get_marker_table(self, x=None, y=None ) -> hv.Table:
@@ -416,10 +422,15 @@ class ClusterManager(SCSingletonConfigurable):
         return image.opts(cmap=self.cmap)
 
     def get_learning_panel(self):
-        generate_button = Button( name='Generate', button_type='primary')
-        generate_button.on_click( self.generate_training_set )
-        learning_controls = pn.WidgetBox("### Training Set", generate_button )
-        return pn.Column( learning_controls )
+        ts_generate_button = Button( name='Generate Training Set', button_type='primary')
+        ts_generate_button.on_click( self.generate_training_set )
+        training_set_controls = pn.WidgetBox("### Training Set", ts_generate_button )
+
+        learn_button = Button( name='Learn Mask', button_type='primary')
+        learn_button.on_click( self.learn_mask )
+        learning_controls = pn.WidgetBox("### Learning", learn_button )
+
+        return pn.Column( training_set_controls, learning_controls )
 
     @exception_handled
     def gui(self) -> Panel:
