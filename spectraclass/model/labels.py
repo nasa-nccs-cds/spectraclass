@@ -514,12 +514,13 @@ class LabelsManager(SCSingletonConfigurable):
         load_existing = kwargs.get('load',False)
         for ( label, color ) in labels.values():
             if color.lower() == unlabeled_color: raise Exception( f"{unlabeled_color} is a reserved color")
-        labels.update( { unlabeled_index: ('Unlabeled', unlabeled_color ) } )
-        for index, (label,color) in labels.items():
+        label_selections = { unlabeled_index: ('Unlabeled', unlabeled_color ) }
+        label_selections.update( labels )
+        for index, (label,color) in label_selections.items():
             self._colors.append( color )
             self._labels.append( label )
             self._indices.append( index )
-        self.class_selector = pn.widgets.RadioButtonGroup(name='Class Selection', value=self._labels[unlabeled_index], options=self._labels)
+        self.class_selector = pn.widgets.RadioButtonGroup(name='Class Selection', value=self._labels[0], options=self._labels)
         if load_existing:
             self.loadLabelData( load_existing )
 
