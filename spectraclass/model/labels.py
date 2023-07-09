@@ -17,6 +17,7 @@ MIDDLE_BUTTON = 2
 LEFT_BUTTON = 1
 
 def c2rgb( color: Union[str,List] ) -> Tuple[float,float,float]:
+    from matplotlib import colors
     if isinstance(color, str):  return colors.to_rgb(color)
     else:                       return color[:3]
 
@@ -96,6 +97,8 @@ class LabelsManager(SCSingletonConfigurable):
 #        self.wSelectedClass: ipw.HBox = None
 #        self.get_rgb_colors = np.vectorize(self.get_rgb_color)
         self._buttons = []
+        self.unlabeled_color =  "white"
+        self.unlabeled_index =  9999
 
     def set_classification( self, classification: np.ndarray ):
         crange = [ classification.min(), classification.max() ]
@@ -110,18 +113,22 @@ class LabelsManager(SCSingletonConfigurable):
         return self.class_selector.value
 
     @property
+    def _idx(self) -> int:
+        return self._labels.index( self.current_class )
+
+    @property
     def current_cid(self) -> int:
-        idx = self._labels.index( self.current_class )
-        return self._indices[idx]
+        return self._indices[ self._idx ]
 
     @property
     def current_color(self) -> str:
-        idx = self._labels.index(self.current_class)
-        return self._colors[ idx ]
+        return self._colors[  self._idx  ]
 
     def get_rgb_color( self, cid: int, probe: bool = False ) -> Tuple[float,float,float]:
         from matplotlib import colors
-        return (1.0,1.0,1.0) if probe else colors.to_rgb( self._colors[ cid ] )
+        idx = self._indices.index( cid )
+        color = self.un
+        return (1.0,1.0,1.0) if probe else colors.to_rgb( self._colors[ idx ] )
 
     def get_rgb_colors(self, cids: List[int], probe: bool = False ) -> np.ndarray:
         cdata = np.array( [ self.get_rgb_color(cid,probe) for cid in cids ] ) * 255.0
@@ -481,11 +488,11 @@ class LabelsManager(SCSingletonConfigurable):
 
     @property
     def selectedLabel(self):
-        return self._labels[ self.current_cid ]
+        return self._labels[ self._idx ]
 
     def selectedColor(self, mark: bool ) -> Tuple[int,str]:
-        icolor = self.current_cid if mark else 0
-        return icolor, self._colors[ icolor ]
+        icolor =  self._idx if mark else self.unlabeled_index
+        return self._indices[icolor], self._colors[ icolor ]
 
     @property
     def colors(self)-> List[str]:
@@ -509,12 +516,12 @@ class LabelsManager(SCSingletonConfigurable):
         return list(zip(values, self._labels, self._colors))
 
     def setLabels(self, labels: Dict[int,Tuple[str, str]], **kwargs):
-        unlabeled_color = kwargs.get( 'unlabeled_color', "white" )
-        unlabeled_index = kwargs.get( 'unlabeled_index', 9999 )
+        self.unlabeled_color = kwargs.get( 'unlabeled_color', "white" )
+        self.unlabeled_index = kwargs.get( 'unlabeled_index', 9999 )
         load_existing = kwargs.get('load',False)
         for ( label, color ) in labels.values():
-            if color.lower() == unlabeled_color: raise Exception( f"{unlabeled_color} is a reserved color")
-        label_selections = { unlabeled_index: ('Unlabeled', unlabeled_color ) }
+            if color.lower() == self.unlabeled_color: raise Exception( f"{self.unlabeled_color} is a reserved color")
+        label_selections = { self.unlabeled_index: ('Unlabeled', self.unlabeled_color ) }
         label_selections.update( labels )
         for index, (label,color) in label_selections.items():
             self._colors.append( color )
