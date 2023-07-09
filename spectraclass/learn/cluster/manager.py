@@ -327,7 +327,7 @@ class ClusterManager(SCSingletonConfigurable):
             mask_array[ marker.gids ] = True
             xchunk: np.array = model_data[mask_array]
             ychunk: np.array = np.full( [marker.size], marker.cid, np.int )
-            print( f" ** block {block_coords}, shape={model_data.shape}: x shape={xchunk.shape}, y shape={ychunk.shape}, "
+            print( f" ** block {block_coords}, shape={model_data.shape}:  x shape={xchunk.shape}, y shape={ychunk.shape}, "
                    f"icluster={icluster}, cid={marker.cid}, #gids={marker.size}, mask size={np.count_nonzero(mask_array)}")
             xchunks.append( xchunk )
             ychunks.append( ychunk )
