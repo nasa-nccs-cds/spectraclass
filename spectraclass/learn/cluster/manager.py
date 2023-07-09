@@ -316,17 +316,24 @@ class ClusterManager(SCSingletonConfigurable):
         self._cluster_markers[ ckey ] = marker
         return marker
 
-    def generate_training_set( self, event ):
+    def generate_training_set( self, event ) -> Tuple[np.ndarray,np.ndarray]:
         print( "get_training_set:" )
         from spectraclass.data.spatial.tile.manager import tm
+        xchunks, ychunks = [], []
         for (image_index, block_coords, icluster, nclusters), marker in self._cluster_markers.items():
             block = tm().getBlock( bindex=block_coords )
-            model_data = block.getModelData( raster=False )
-            mask_array = np.zeros(model_data.shape[0], dtype=bool)
-            mask_array[ marker.gids ] =  True
-            train_data = model_data[ mask_array ]
-            print( f" ** block {block_coords}, shape={model_data.shape}: train data shape={train_data.shape}, dims={train_data.dims}, "
+            model_data: np.array = block.getModelData( raster=False ).values
+            mask_array: np.array = np.zeros(model_data.shape[0], dtype=bool)
+            mask_array[ marker.gids ] = True
+            xchunk: np.array = model_data[mask_array]
+            ychunk: np.array = np.full( [marker.size], marker.cid, np.int )
+            print( f" ** block {block_coords}, shape={model_data.shape}: x shape={xchunk.shape}, y shape={ychunk.shape}, "
                    f"icluster={icluster}, cid={marker.cid}, #gids={marker.size}, mask size={np.count_nonzero(mask_array)}")
+            xchunks.append( xchunk )
+            ychunks.append( ychunk )
+        x, y = np.stack( xchunks ), np.stack( ychunks )
+        print(f" ** training set generated: x shape={x.shape}, y shape={y.shape}" )
+        return x,y
 
     @exception_handled
     def get_marker_table(self, x=None, y=None ) -> hv.Table:
