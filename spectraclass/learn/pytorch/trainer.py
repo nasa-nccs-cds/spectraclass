@@ -47,13 +47,14 @@ class ProgressPanel:
         self._progress.value = iteration
         self._losses.append( losses )
         self._log.object = message
-        loss_data = dict( x=np.arange(len(self._losses)), y=np.array(self._losses) )
-        self._loss_plot.event( loss_data=loss_data )
+        iterations = np.arange(len(self._losses))
+        losses = np.array(self._losses)
+        self._loss_plot.event( iter=iterations, loss=losses )
 
     @exception_handled
-    def plot_losses(self, loss_data: Dict = None ):
-        ldata = loss_data if loss_data else dict( x=np.array([]), y=np.array([]) )
-        return hv.Curve(ldata).opts(width=500, height=250, line_width=1, line_color="black", ylim=(0,5.0), xlim=(0,self.niter))
+    def plot_losses(self, iter: np.ndarray = np.array([]), loss: np.ndarray = np.array([]) ):
+        loss_table: hv.Table = hv.Table((iter, loss), 'Iteration', 'Loss')
+        return hv.Curve(loss_table).opts(width=500, height=250, line_width=1, line_color="black", ylim=(0,5.0), xlim=(0,self.niter))
 
     def panel(self) -> pn.WidgetBox:
         progress = pn.Row( self._progress, self._log, self._abort )
