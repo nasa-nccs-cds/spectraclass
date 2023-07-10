@@ -100,6 +100,10 @@ class LabelsManager(SCSingletonConfigurable):
         self.unlabeled_color =  "white"
         self.unlabeled_index =  9999
 
+    def get_label( self, cid: int ) -> str:
+        idx = self._indices.index( cid )
+        return self.labels[idx]
+
     def set_classification( self, classification: np.ndarray ):
         crange = [ classification.min(), classification.max() ]
         lgm().log( f"set_classification: shape={classification.shape}, range={crange}" )

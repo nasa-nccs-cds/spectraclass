@@ -323,6 +323,7 @@ class ClusterManager(SCSingletonConfigurable):
         mt().model_dims = self._current_training_set[0].shape[1]
         mt().nclasses = 2
         mt().layer_sizes = [ 64, 32, 8 ]
+        mt().nepoch = 100
         if self._current_training_set is None:
             ufm().show( "Error: Must first generate training set.")
         else:
@@ -368,7 +369,7 @@ class ClusterManager(SCSingletonConfigurable):
             blockx.append( block_coords[0] )
             blocky.append( block_coords[1] )
             numclusters.append( nclusters )
-            classes.append( lm().labels[marker.cid] )
+            classes.append( lm().get_label(marker.cid) )
         df = pd.DataFrame( {  'Cluster':    np.array(clusters),
                               'Block-c0':   np.array(blockx),
                               'Block-c1':   np.array(blocky),
