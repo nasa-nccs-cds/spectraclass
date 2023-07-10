@@ -1,6 +1,7 @@
 from typing import List, Union, Tuple, Optional, Dict, Type, Callable
 import torch, time
 import traitlets as tl
+import param
 from spectraclass.gui.control import ufm
 from torch.nn.functional import one_hot
 from statistics import mean
@@ -31,29 +32,31 @@ def random_sample( tensor: Tensor, nsamples: int, axis=0 ) -> Tensor:
 def anomaly( train_data: Tensor, reproduced_data: Tensor ) -> Tensor:
     return torch.sum( torch.abs(train_data - reproduced_data), 1 )
 
-class ProgressPanel:
+class ProgressPanel(param.Parameterized):
+    loss = param.Array( default=[], doc="Loss values")
 
-    def __init__(self, niter: int, abort_callback: Callable ):
+    def __init__(self, niter: int, abort_callback: Callable, **kwargs ):
+        param.Parameterized.__init__( self, **kwargs )
         self.niter = niter
         self._progress = pn.indicators.Progress(name='Iterations', value=0, width=200, max=niter )
         self._log = pn.pane.Markdown("Iteration: 0")
         self._losses = []
         self._abort = pn.widgets.Button(name='Abort', button_type='primary', width=100 )
         self._abort.on_click( abort_callback )
-        self._loss_plot = hv.DynamicMap( self.plot_losses )
+        self._loss_plot = hv.DynamicMap( self.plot_losses, streams=dict(loss=self.param.loss) )
 
     @exception_handled
     def update(self, iteration: int, message: str, losses: List[float] ):
         self._progress.value = iteration
         self._losses.append( losses )
         self._log.object = message
-        iterations = np.arange(len(self._losses))
-        losses = np.array(self._losses)
-        self._loss_plot.event( iter=iterations, loss=losses )
+        self.loss=np.array(self._losses)
 
     @exception_handled
-    def plot_losses(self, iter: np.ndarray = np.array([]), loss: np.ndarray = np.array([]) ):
-        loss_table: hv.Table = hv.Table((iter, loss), 'Iteration', 'Loss')
+    def plot_losses(self, loss: np.ndarray = np.array([]) ):
+        iterations: np.ndarray = np.arange(loss.size)
+        lgm().log( f"Plot Losses: {loss.size} values, loss range= {[loss.min(),loss.max()]}")
+        loss_table: hv.Table = hv.Table((iterations, loss), 'Iteration', 'Loss')
         return hv.Curve(loss_table).opts(width=500, height=250, line_width=1, line_color="black", ylim=(0,5.0), xlim=(0,self.niter))
 
     def panel(self) -> pn.WidgetBox:
