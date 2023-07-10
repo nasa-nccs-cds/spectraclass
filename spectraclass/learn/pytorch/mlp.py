@@ -161,12 +161,13 @@ class MLP(nn.Module):
         return dm().cache_dir
 
     def save(self, name: str):
+        from spectraclass.gui.control import UserFeedbackManager, ufm
         models_dir = f"{self.results_dir}/{self.name}"
         os.makedirs(models_dir, exist_ok=True)
         try:
             model_path = f"{models_dir}/{name}.{self.network_type}.pth"
             torch.save(self._network.state_dict(), model_path)
-            print(f"Saved network to file '{model_path}'" )
+            ufm().show(f"Saved network to file '{model_path}'" )
         except Exception as err:
             print(f"Error saving model {name}: {err}")
 

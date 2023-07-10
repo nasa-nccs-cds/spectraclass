@@ -426,13 +426,14 @@ class ClusterManager(SCSingletonConfigurable):
         return image.opts(cmap=self.cmap)
 
     def get_learning_panel(self):
+        from spectraclass.learn.pytorch.trainer import mpt
         ts_generate_button = Button( name='Generate Training Set', button_type='primary')
         ts_generate_button.on_click( self.generate_training_set )
         training_set_controls = pn.WidgetBox("### Training Set", ts_generate_button )
 
         learn_button = Button( name='Learn Mask', button_type='primary')
         learn_button.on_click( self.learn_mask )
-        learning_controls = pn.WidgetBox("### Learning", learn_button )
+        learning_controls = pn.WidgetBox("### Learning", learn_button, mpt().panel() )
 
         return pn.Column( training_set_controls, learning_controls )
 

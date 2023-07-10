@@ -181,7 +181,7 @@ class BlockSelection(param.Parameterized):
         rect_indices = np.array(list(self._selected_rectangles.keys()))
         pdata = pd.DataFrame( rect_indices, columns=['x','y'] )
         save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
-        ufm().show(f"Save block selection: {sname}, file='{save_file}'")
+        lgm().log(f"Save block selection: {sname}, file='{save_file}'")
         try:
             pdata.to_csv( save_file )
         except Exception as err:

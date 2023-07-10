@@ -106,7 +106,6 @@ class ModelTrainer(SCSingletonConfigurable):
     def abort_callback(self, event ):
         self._abort = True
 
-
     def get_training_set(self, **kwargs ) -> Tuple[np.ndarray,np.ndarray]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.model.labels import LabelsManager, Action, lm
@@ -185,7 +184,7 @@ class ModelTrainer(SCSingletonConfigurable):
         t0, initial_epoch = time.time(), 0
         for iter in range(self.niter):
             initial_epoch = self.training_iteration(iter, initial_epoch, train_data, labels_data, **kwargs)
-        lgm().log( f"Trained network in {(time.time()-t0)/60:.3f} min", print=True )
+        lgm().log( f"Trained network in {(time.time()-t0)/60:.3f} min" )
         self.save(**kwargs)
 
     def reduce(self, data: xa.DataArray ) -> Tuple[xa.DataArray,xa.DataArray]:
@@ -204,7 +203,7 @@ class ModelTrainer(SCSingletonConfigurable):
             losses.append( tloss )
         lgm().log( f" ** ITER[{iter}]: norm data shape = {train_data.shape}, losses = {losses[-self.nepoch:]}")
         loss_msg = f"loss[{iter}/{self.niter}]: {mean(losses):>7f}"
-        lgm().log( loss_msg, print=True )
+        lgm().log( loss_msg )
         self.progress.update( iter, loss_msg )
         return final_epoch
 
