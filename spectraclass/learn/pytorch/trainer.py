@@ -34,18 +34,28 @@ def anomaly( train_data: Tensor, reproduced_data: Tensor ) -> Tensor:
 class ProgressPanel:
 
     def __init__(self, niter: int, abort_callback: Callable ):
-        self._progress = pn.indicators.Progress(name='Iterations', value=0, width=400, max=niter )
+        self._progress = pn.indicators.Progress(name='Iterations', value=0, max=niter ).opts( width=200 )
         self._log = pn.pane.Markdown("Iteration: 0")
-        self._abort = pn.widgets.Button(name='Abort', button_type='primary')
+        self._losses = []
+        self._abort = pn.widgets.Button(name='Abort', button_type='primary').opts( width=100 )
         self._abort.on_click( abort_callback )
+        self._loss_plot = hv.DynamicMap( self.plot_losses )
 
     @exception_handled
-    def update(self, iteration: int, message: str ):
+    def update(self, iteration: int, message: str, losses: List[float] ):
         self._progress.value = iteration
+        self._losses.append( losses )
         self._log.object = message
+        loss_data = dict( x=np.range(len(self._losses)), y=np.array(self._losses) )
+        self._loss_plot.event( loss_data=loss_data )
 
-    def panel(self) -> pn.Row:
-        return pn.Row( pn.pane.Markdown("Learning Progress:"), self._progress, self._log, self._abort )
+    @exception_handled
+    def plot_losses(self, loss_data: Dict = None ):
+        return hv.Curve( loss_data if loss_data else dict(x=np.array([]),y=np.array([])) )
+
+    def panel(self) -> pn.WidgetBox:
+        progress = pn.Row( self._progress, self._log, self._abort )
+        return pn.WidgetBox( "Learning Progress", progress, self._loss_plot )
 
 class ModelTrainer(SCSingletonConfigurable):
     optimizer_type = tl.Unicode(default_value="adam").tag(config=True, sync=True)
@@ -204,7 +214,7 @@ class ModelTrainer(SCSingletonConfigurable):
         lgm().log( f" ** ITER[{iter}]: norm data shape = {train_data.shape}, losses = {losses[-self.nepoch:]}")
         loss_msg = f"loss[{iter}/{self.niter}]: {mean(losses):>7f}"
         lgm().log( loss_msg )
-        self.progress.update( iter, loss_msg )
+        self.progress.update( iter, loss_msg, losses )
         return final_epoch
 
     #
