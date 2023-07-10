@@ -177,16 +177,15 @@ class BlockSelection(param.Parameterized):
 
     @exception_handled
     def save_selection(self, *args ):
-        sname = self.selection_name
-        if sname:
-            rect_indices = np.array(list(self._selected_rectangles.keys()))
-            pdata = pd.DataFrame( rect_indices, columns=['x','y'] )
-            save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
-            ufm().show(f"Save block selection: {sname}, file='{save_file}'")
-            try:
-                pdata.to_csv( save_file )
-            except Exception as err:
-                ufm().show(f"Error saving file: {err}")
+        sname = self.selection_name if self.selection_name else "block_selection"
+        rect_indices = np.array(list(self._selected_rectangles.keys()))
+        pdata = pd.DataFrame( rect_indices, columns=['x','y'] )
+        save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
+        ufm().show(f"Save block selection: {sname}, file='{save_file}'")
+        try:
+            pdata.to_csv( save_file )
+        except Exception as err:
+            ufm().show(f"Error saving file: {err}")
 
     @exception_handled
     def load_selection(self, event):
