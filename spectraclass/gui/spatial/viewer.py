@@ -220,9 +220,9 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         return self
 
     def learning_test( self, rpolys: List[Dict[str,Union[np.ndarray,int]]], **kwargs ):
-        from spectraclass.learn.pytorch.trainer import mt
+        from spectraclass.learn.pytorch.trainer import mpt
         self.add_test_markers( rpolys, **kwargs )
-        mt().train()
+        mpt().train()
 
     def add_test_markers(self, rpolys: List[Dict[str,Union[np.ndarray,int]]], **kwargs ) -> List[Marker]:
         markers = []

@@ -26,9 +26,10 @@ class ProcessingStage(Enum):
 
 class MLP(nn.Module):
 
-    def __init__(self, input_dims: int, nclasses: int, layer_sizes: List[int], **kwargs) -> None:
+    def __init__(self, name: str, input_dims: int, nclasses: int, layer_sizes: List[int], **kwargs) -> None:
         super().__init__()
         self.input_dims = input_dims
+        self.name = name
         self.nclasses = nclasses
         self._layer_sizes = layer_sizes
         self._layer_outputs: Dict[int, List[np.ndarray]] = {}
@@ -160,7 +161,7 @@ class MLP(nn.Module):
         return dm().cache_dir
 
     def save(self, name: str):
-        models_dir = f"{self.results_dir}/models"
+        models_dir = f"{self.results_dir}/{self.name}"
         os.makedirs(models_dir, exist_ok=True)
         try:
             model_path = f"{models_dir}/{name}.{self.network_type}.pth"

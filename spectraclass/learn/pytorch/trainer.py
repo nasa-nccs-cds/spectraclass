@@ -21,7 +21,7 @@ def crange( data: xa.DataArray, idim:int ) -> str:
     c: np.ndarray = data.coords[sdim].values
     return f"[{c.min():.2f}, {c.max():.2f}]"
 
-def mt() -> "ModelTrainer":
+def mpt() -> "ModelTrainer":
     return ModelTrainer.instance()
 
 def random_sample( tensor: Tensor, nsamples: int, axis=0 ) -> Tensor:
@@ -63,7 +63,7 @@ class ModelTrainer(SCSingletonConfigurable):
     focus_nepoch = tl.Int(5).tag(config=True, sync=True)
     focus_ratio = tl.Float(10.0).tag(config=True, sync=True)
     focus_threshold = tl.Float(0.1).tag(config=True, sync=True)
-    niter = tl.Int(25).tag(config=True, sync=True)
+    niter = tl.Int(100).tag(config=True, sync=True)
     log_step = tl.Int(10).tag(config=True, sync=True)
     refresh_model = tl.Bool(False).tag(config=True, sync=True)
 
@@ -97,7 +97,7 @@ class ModelTrainer(SCSingletonConfigurable):
     def model(self):
         if self._model is None:
             opts = dict ( wmag=self.init_wts_mag, init_bias=self.init_bias_mag, log_step=self.log_step )
-            self._model = MLP( self.model_dims, self.nclasses, self.layer_sizes, **opts ).to(self.device)
+            self._model = MLP( "masks", self.model_dims, self.nclasses, self.layer_sizes, **opts ).to(self.device)
         return self._model
 
     def panel(self)-> pn.Row:
