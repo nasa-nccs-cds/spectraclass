@@ -67,12 +67,13 @@ class MLP(nn.Module):
         lgm().log(f"#MPL: BUILD NETWORK: {self.input_dims} -> {self.nclasses}")
         in_features, iLayer = self.input_dims, 0
         self._network = nn.Sequential()
+        activation = self._get_activation_function()
         for iL, layer_size in enumerate(self._layer_sizes):
             linear = nn.Linear(in_features=in_features, out_features=layer_size, bias=True)
             linear.register_forward_hook(partial(self.layer_forward_hook, iL))
             linear.register_forward_pre_hook(partial(self.layer_forward_pre_hook, iL))
             self._network.append( linear )
-            self._network.append( self._activation )
+            self._network.append( activation )
             in_features, iLayer = layer_size, iLayer + 1
         linear = nn.Linear(in_features=in_features, out_features=self.nclasses, bias=True)
         self._network.append( linear )

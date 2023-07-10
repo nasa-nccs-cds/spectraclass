@@ -34,6 +34,7 @@ def anomaly( train_data: Tensor, reproduced_data: Tensor ) -> Tensor:
 class ProgressPanel:
 
     def __init__(self, niter: int, abort_callback: Callable ):
+        self.niter = niter
         self._progress = pn.indicators.Progress(name='Iterations', value=0, width=200, max=niter )
         self._log = pn.pane.Markdown("Iteration: 0")
         self._losses = []
@@ -52,7 +53,7 @@ class ProgressPanel:
     @exception_handled
     def plot_losses(self, loss_data: Dict = None ):
         ldata = loss_data if loss_data else dict( x=np.array([]), y=np.array([]) )
-        return hv.Curve( ldata ).opts( width=500, height=250, line_width=1, line_color="black" )
+        return hv.Curve(ldata).opts(width=500, height=250, line_width=1, line_color="black", ylim=(0,5.0), xlim=(0,self.niter))
 
     def panel(self) -> pn.WidgetBox:
         progress = pn.Row( self._progress, self._log, self._abort )
