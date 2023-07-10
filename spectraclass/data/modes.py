@@ -435,6 +435,9 @@ class ModeDataManager(SCSingletonConfigurable):
     def register(self):
         pass
 
+    def save_block_selection(self):
+        pass
+
     def valid_bands(self) -> Optional[List]:
         return self._valid_bands
 

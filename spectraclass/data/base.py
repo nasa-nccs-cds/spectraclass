@@ -261,7 +261,6 @@ class DataManager(SCSingletonConfigurable):
         if self._wGui is None:
             SpectraclassController.set_spectraclass_theme()
             self._wGui = self._mode_data_manager_.gui( **kwargs )
-            print ("6")
         return self._wGui
 
     def preprocess_gui(self, **kwargs):

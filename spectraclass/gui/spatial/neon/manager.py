@@ -176,13 +176,13 @@ class BlockSelection(param.Parameterized):
         return list(self._selected_rectangles.values())
 
     @exception_handled
-    def save_selection(self, event):
+    def save_selection(self, *args ):
         sname = self.selection_name
         if sname:
             rect_indices = np.array(list(self._selected_rectangles.keys()))
             pdata = pd.DataFrame( rect_indices, columns=['x','y'] )
             save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
-            ufm().show(f"Save selection: {sname}, shape={rect_indices.shape}, file='{save_file}'")
+            ufm().show(f"Save block selection: {sname}, file='{save_file}'")
             try:
                 pdata.to_csv( save_file )
             except Exception as err:
@@ -237,6 +237,8 @@ class NEONTileSelector(SCSingletonConfigurable):
         self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning', width=150 )
         self._clear_region.on_click( self.clear_region )
 
+    def save_block_selection(self):
+        self.blockSelection.save_selection()
 
     def select_all(self, event ):
         ufm().show( "Select All")

@@ -320,12 +320,14 @@ class ClusterManager(SCSingletonConfigurable):
     @exception_handled
     def learn_mask( self, event ):
         from spectraclass.learn.pytorch.trainer import mpt
+        from spectraclass.data.base import dm
         mpt().model_dims = self._current_training_set[0].shape[1]
         mpt().nclasses = 2
         if self._current_training_set is None:
             ufm().show( "Error: Must first generate training set.")
         else:
             mpt().train( training_set=self._current_training_set )
+            dm().modal.save_block_selection()
 
     @exception_handled
     def generate_training_set( self, event ):

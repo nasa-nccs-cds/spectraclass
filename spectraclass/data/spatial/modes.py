@@ -84,11 +84,13 @@ class NEONDataManager(SpatialDataManager):
         super(NEONDataManager, self).__init__()
         self.tile_selector: NEONTileSelector = None
 
-
     def gui(self, **kwargs ):
         if self.tile_selector is None:
             self.tile_selector = nts(**kwargs)
         return self.tile_selector.gui()
+
+    def save_block_selection(self):
+        self.tile_selector.save_block_selection()
 
     def valid_bands(self):
         if self._valid_bands is None:
