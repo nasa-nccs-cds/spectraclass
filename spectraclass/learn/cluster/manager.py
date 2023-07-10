@@ -323,7 +323,10 @@ class ClusterManager(SCSingletonConfigurable):
         mt().model_dims = self._current_training_set[0].shape[1]
         mt().nclasses = 2
         mt().layer_sizes = [ 64, 32, 8 ]
-        mt().train( training_set=self._current_training_set )
+        if self._current_training_set is None:
+            ufm().show( "Error: Must first generate training set.")
+        else:
+            mt().train( training_set=self._current_training_set )
 
     @exception_handled
     def generate_training_set( self, event ):
