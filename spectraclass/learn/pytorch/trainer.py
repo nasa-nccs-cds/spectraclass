@@ -175,14 +175,18 @@ class ModelTrainer(SCSingletonConfigurable):
         return lval, x, y_hat
 
     def train(self, **kwargs):
-        if not self.load(**kwargs):
-            (train_data, labels_data) = kwargs.get( 'training_set', self.get_training_set(**kwargs) )
-            self.model.train()
-            t0, initial_epoch = time.time(), 0
-            for iter in range(self.niter):
-                initial_epoch = self.training_iteration(iter, initial_epoch, train_data, labels_data, **kwargs)
-            lgm().log( f"Trained autoencoder in {(time.time()-t0)/60:.3f} min", print=True )
-            self.save(**kwargs)
+        training_set = kwargs.pop( 'training_set', None )
+        if training_set is None:
+            if self.load(**kwargs): return
+            (train_data, labels_data) = self.get_training_set(**kwargs)
+        else:
+            (train_data, labels_data) = training_set
+        self.model.train()
+        t0, initial_epoch = time.time(), 0
+        for iter in range(self.niter):
+            initial_epoch = self.training_iteration(iter, initial_epoch, train_data, labels_data, **kwargs)
+        lgm().log( f"Trained network in {(time.time()-t0)/60:.3f} min", print=True )
+        self.save(**kwargs)
 
     def reduce(self, data: xa.DataArray ) -> Tuple[xa.DataArray,xa.DataArray]:
         reduced: Tensor = self.model.encode( data.values, detach=False )
