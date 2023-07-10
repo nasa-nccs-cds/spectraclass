@@ -34,10 +34,10 @@ def anomaly( train_data: Tensor, reproduced_data: Tensor ) -> Tensor:
 class ProgressPanel:
 
     def __init__(self, niter: int, abort_callback: Callable ):
-        self._progress = pn.indicators.Progress(name='Iterations', value=0, max=niter ).opts( width=200 )
+        self._progress = pn.indicators.Progress(name='Iterations', value=0, width=200, max=niter )
         self._log = pn.pane.Markdown("Iteration: 0")
         self._losses = []
-        self._abort = pn.widgets.Button(name='Abort', button_type='primary').opts( width=100 )
+        self._abort = pn.widgets.Button(name='Abort', button_type='primary', width=100 )
         self._abort.on_click( abort_callback )
         self._loss_plot = hv.DynamicMap( self.plot_losses )
 
