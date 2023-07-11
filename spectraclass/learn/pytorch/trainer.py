@@ -33,7 +33,7 @@ def anomaly( train_data: Tensor, reproduced_data: Tensor ) -> Tensor:
     return torch.sum( torch.abs(train_data - reproduced_data), 1 )
 
 class ProgressPanel(param.Parameterized):
-    loss = param.Array( default=[], doc="Loss values")
+    loss = param.List( default=[], doc="Loss values")
 
     def __init__(self, niter: int, abort_callback: Callable, **kwargs ):
         param.Parameterized.__init__( self, **kwargs )
@@ -50,14 +50,15 @@ class ProgressPanel(param.Parameterized):
         self._progress.value = iteration
         self._losses.append( losses )
         self._log.object = message
-        self.loss=np.array(self._losses)
+        self.loss=self._losses
 
     @exception_handled
-    def plot_losses(self, loss: np.ndarray = np.array([]) ):
-        iterations: np.ndarray = np.arange(loss.size)
-        lgm().log( f"Plot Losses: {loss.size} values, loss range= {[loss.min(),loss.max()]}")
-        loss_table: hv.Table = hv.Table((iterations, loss), 'Iteration', 'Loss')
-        return hv.Curve(loss_table).opts(width=500, height=250, line_width=1, line_color="black", ylim=(0,5.0), xlim=(0,self.niter))
+    def plot_losses(self, loss_series: List[float] = None ):
+        if loss_series is None: loss_series = []
+        iterations: np.ndarray = np.arange( len(loss_series) )
+        lgm().log( f"Plot Losses: {len(loss_series)} values, loss range= {[min(loss_series),max(loss_series)]}")
+        loss_table: hv.Table = hv.Table( (iterations, np.array(loss_series)), 'Iteration', 'Loss' )
+        return hv.Curve(loss_table).opts(width=500, height=250, ylim=(0,5.0), xlim=(0,self.niter))  #  line_width=1, line_color="black",
 
     def panel(self) -> pn.WidgetBox:
         progress = pn.Row( self._progress, self._log, self._abort )
