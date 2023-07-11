@@ -55,6 +55,7 @@ class DataManager(SCSingletonConfigurable):
     _mode_data_managers_: Dict = {}
     refresh_data = tl.Bool(False).tag(config=True, sync=True)
     preprocess = tl.Bool(False).tag(config=True, sync=True)
+    analysis_data_source = tl.Unicode("model").tag(config=True, sync=True)
 
     def __init__(self):
         self.config_files = []
