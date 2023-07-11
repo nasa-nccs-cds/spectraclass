@@ -50,6 +50,7 @@ class ProgressPanel(param.Parameterized):
         self._progress.value = iteration
         self._losses.extend( losses )
         self._log.object = message
+        lgm().log( f"UPDATE: iteration={iteration}, message={message}, loss={losses[-1]}")
         self.loss = self._losses
 
     @exception_handled
