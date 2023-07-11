@@ -438,7 +438,7 @@ class ClusterManager(SCSingletonConfigurable):
             block: Block = tm().getBlock()
             gid, ix, iy = block.coords2gid(y,x)
             icluster = clm().get_cluster(gid)
-            lgm().log(f"#CM: coords2gid:  ix={ix}], iy={iy}, gid={gid}, icluster={icluster}, cid={cid}")
+            lgm().log(f"#CM: coords2gid:  ix={ix}], iy={iy}, gid={gid}, icluster={icluster},  cid={cid}")
             self.mark_cluster( cid, icluster )
         else:
     #       self.rescale( tindex, tvalue )
