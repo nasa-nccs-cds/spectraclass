@@ -89,7 +89,7 @@ class AvirisTileSelector:
 
     @log_timing
     def on_image_change( self, event: Dict ):
-        ufm().show( f" ** Loading image {self.image_name}" )
+        ufm().show( f"Loading image.. {self.image_name}" )
         self.clear_block_cache()
         self.update_image()
 
@@ -284,7 +284,7 @@ class AvirisDatasetManager:
 
     @log_timing
     def on_image_change( self, event: Dict ):
-        ufm().show( f" *** Loading image {self.image_name}" )
+        ufm().show( f"Loading image... {self.image_name}" )
         self.clear_block_cache()
         self.update_image()
 
@@ -370,7 +370,7 @@ class AvirisDatasetManager:
             self.base.setup_plot( "Subtile overlay", ( ext[0], ext[1] ), ( ext[2], ext[3] ), slider=False )
             self.overlay_plot = band_data.plot.imshow(ax=self.base.gax, alpha=1.0, zorder=2.0, cmap='jet', norm=norm, add_colorbar=False)
         else:
-            ufm().show(f"#Loading block {self._selected_block}" )
+            ufm().show(f"Loading block> {self._selected_block}" )
             lgm().log( f"EXT: select_block[{self._selected_block}]--> Set bounds: {( ext[0], ext[1] )}  {( ext[2], ext[3] )}")
             self.base.gax.set_xbound( ext[0], ext[1] )
             self.base.gax.set_ybound( ext[2], ext[3] )

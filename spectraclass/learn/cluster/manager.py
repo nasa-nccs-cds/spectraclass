@@ -369,7 +369,7 @@ class ClusterManager(SCSingletonConfigurable):
             mask_array[ marker.gids ] = True
             xchunk: np.array = input_data[mask_array]
             ychunk: np.array = np.full( [marker.size], marker.cid, np.int )
-            ufm().show(f"#CM: Add training chunk, input_data shape={input_data.shape}, xchunk shape={xchunk.shape}, ychunk shape={ychunk.shape}, #gids={marker.gids.size}")
+            lgm().log(f"#CM: Add training chunk, input_data shape={input_data.shape}, xchunk shape={xchunk.shape}, ychunk shape={ychunk.shape}, #gids={marker.gids.size}")
             xchunks.append( xchunk )
             ychunks.append( ychunk )
         x, y = np.concatenate( xchunks, axis=0 ), np.concatenate( ychunks, axis=0 )
@@ -459,13 +459,10 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.learn.pytorch.trainer import mpt
         ts_generate_button = Button( name='Generate Training Set', button_type='primary')
         ts_generate_button.on_click( partial( self.generate_training_set, data_source ) )
-        training_set_controls = pn.WidgetBox("### Training Set", ts_generate_button )
-
         learn_button = Button( name='Learn Mask', button_type='primary')
         learn_button.on_click( self.learn_mask )
-        learning_controls = pn.WidgetBox("### Learning", learn_button, mpt().panel() )
-
-        return pn.Column( training_set_controls, learning_controls )
+        buttonbox = pn.Row( ts_generate_button, learn_button )
+        return pn.WidgetBox("### Learning", buttonbox, mpt().panel() )
 
     @exception_handled
     def gui(self) -> Panel:

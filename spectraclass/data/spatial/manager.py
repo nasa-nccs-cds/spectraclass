@@ -234,7 +234,7 @@ class SpatialDataManager(ModeDataManager):
         else:
             ea1, ea2 = np.empty(shape=[0], dtype=np.float32), np.empty(shape=[0, 0], dtype=np.float32)
             coord_data = {}
-            ufm().show( f" *** Processing Block{block.block_coords}" )
+            ufm().show( f"Processing Block{block.block_coords}..." )
             raw_data: Optional[xa.DataArray] = block.data
             result_dataset: Optional[xa.Dataset] = None
             if raw_data is not None:
@@ -245,7 +245,7 @@ class SpatialDataManager(ModeDataManager):
                     blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
 
                 if blocks_point_data.size == 0:
-                    ufm().show(f" *** NO DATA in BLOCK {block.block_coords} *** ")
+                    ufm().show(f"NO DATA in BLOCK {block.block_coords} *** ")
                     return None
                 smean = np.nanmean( block.raw_point_data.values, axis=0 )
                 ptcount = np.count_nonzero( ~np.isnan(block.raw_point_data) )
