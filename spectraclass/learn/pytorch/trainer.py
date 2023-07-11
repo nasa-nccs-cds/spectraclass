@@ -43,7 +43,7 @@ class ProgressPanel(param.Parameterized):
         self._losses = []
         self._abort = pn.widgets.Button(name='Abort', button_type='primary', width=100 )
         self._abort.on_click( abort_callback )
-        self._loss_plot = hv.DynamicMap( self.plot_losses, streams=dict(loss=self.param.loss) )
+        self._loss_plot = hv.DynamicMap( self.plot_losses, streams=dict(losses=self.param.loss) )
 
     @exception_handled
     def update(self, iteration: int, message: str, losses: List[float] ):
@@ -53,8 +53,8 @@ class ProgressPanel(param.Parameterized):
         self.loss=self._losses
 
     @exception_handled
-    def plot_losses(self, loss_series: List[float] = None ):
-        if loss_series is None: loss_series = []
+    def plot_losses(self, losses: List[float] = None ):
+        loss_series = None if (losses is None) else losses
         iterations: np.ndarray = np.arange( len(loss_series) )
         lgm().log( f"Plot Losses: {len(loss_series)} values, loss range= {[min(loss_series),max(loss_series)]}")
         loss_table: hv.Table = hv.Table( (iterations, np.array(loss_series)), 'Iteration', 'Loss' )
