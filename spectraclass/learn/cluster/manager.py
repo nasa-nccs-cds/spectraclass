@@ -307,7 +307,6 @@ class ClusterManager(SCSingletonConfigurable):
         class_color = lm().get_rgb_color(cid)
         self._marked_colors[ ckey ] = class_color
         self._cluster_colors[icluster] = class_color
-        print( f"Set cluster[{icluster}] color = {class_color}")
         self.update_cmap()
      #   self._tuning_sliders[ icluster ].set_color( lm().current_color )
         self.get_marked_clusters(cid).append( icluster )
@@ -344,10 +343,11 @@ class ClusterManager(SCSingletonConfigurable):
             mask_array[ marker.gids ] = True
             xchunk: np.array = input_data[mask_array]
             ychunk: np.array = np.full( [marker.size], marker.cid, np.int )
+            ufm().show(f"#CM: Add training chunk, input_data shape={input_data.shape}, xchunk shape={xchunk.shape}, ychunk shape={ychunk.shape}, #gids={marker.gids.size}")
             xchunks.append( xchunk )
             ychunks.append( ychunk )
         x, y = np.concatenate( xchunks, axis=0 ), np.concatenate( ychunks, axis=0 )
-        ufm().show(f"Training set generated: x shape={x.shape}, y shape={y.shape}, y range: {(y.min(),y.max())}" )
+        ufm().show(f"#CM: Training set generated: x shape={x.shape}, y shape={y.shape}, y range: {(y.min(),y.max())}" )
         self._current_training_set = ( x,y )
 
     @exception_handled
