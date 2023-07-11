@@ -260,10 +260,10 @@ class ClusterManager(SCSingletonConfigurable):
         ccount = self.refresh()
         lgm().log( f"#CM: exec cluster, op count={ccount}" )
 
-    def get_input_data( self ) -> xa.DataArray:
+    def get_input_data( self, **kwargs ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import tm
         from spectraclass.data.base import DataManager, dm
-        block = tm().getBlock()
+        block = kwargs.get( 'block', tm().getBlock() )
         if self.data_source == "model":
             data = dm().getModelData(block=block)
         elif self.data_source == "spectral":
@@ -276,10 +276,10 @@ class ClusterManager(SCSingletonConfigurable):
 
     @exception_handled
     def get_cluster_map( self ) -> xa.DataArray:
-
+        from spectraclass.data.spatial.tile.manager import tm
         block = tm().getBlock()
         if self.cluster_points is None:
-            self.cluster( dm().getModelData(block=block) )
+            self.cluster( self.get_input_data() )
         self._cluster_raster: xa.DataArray = block.points2raster( self.cluster_points, name="Cluster" ).squeeze()
         self._cluster_raster.attrs['title'] = f"Block = {block.block_coords}"
         return self._cluster_raster
