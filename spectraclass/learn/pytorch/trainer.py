@@ -50,7 +50,7 @@ class ProgressPanel(param.Parameterized):
         self._progress.value = iteration
         self._losses.extend( losses )
         self._log.object = message
-        self.loss=self._losses
+        self.loss = self._losses
 
     @exception_handled
     def plot_losses(self, losses: List[float] = None ):
@@ -70,14 +70,11 @@ class ModelTrainer(SCSingletonConfigurable):
     loss_threshold = tl.Float(1e-6).tag(config=True, sync=True)
     init_wts_mag = tl.Float(0.1).tag(config=True, sync=True)
     init_bias_mag = tl.Float(0.1).tag(config=True, sync=True)
-    reduce_nblocks = tl.Int(250).tag(config=True, sync=True)
-    reduce_nimages = tl.Int(100).tag(config=True, sync=True)
-    model_dims = tl.Int(3).tag(config=True, sync=True)
     nclasses = tl.Int(2).tag(config=True, sync=True)
     layer_sizes = tl.List( default_value=[64, 32, 8] ).tag(config=True, sync=True)
     modelkey = tl.Unicode(default_value="").tag(config=True, sync=True)
-    nepoch = tl.Int(5).tag(config=True, sync=True)
-    focus_nepoch = tl.Int(5).tag(config=True, sync=True)
+    nepoch = tl.Int(1).tag(config=True, sync=True)
+    focus_nepoch = tl.Int(0).tag(config=True, sync=True)
     focus_ratio = tl.Float(10.0).tag(config=True, sync=True)
     focus_threshold = tl.Float(0.1).tag(config=True, sync=True)
     niter = tl.Int(100).tag(config=True, sync=True)
@@ -93,6 +90,7 @@ class ModelTrainer(SCSingletonConfigurable):
         self._optimizer = None
         self.loss = CrossEntropyLoss( **kwargs )
         self._progress = None
+        self.train_losses = None
 
     def set_network_size(self, layer_sizes: List[int], nclasses: int):
         self.layer_sizes = layer_sizes
@@ -114,10 +112,12 @@ class ModelTrainer(SCSingletonConfigurable):
     def model(self):
         if self._model is None:
             opts = dict ( wmag=self.init_wts_mag, init_bias=self.init_bias_mag, log_step=self.log_step )
-            self._model = MLP( "masks", self.model_dims, self.nclasses, self.layer_sizes, **opts ).to(self.device)
+            ptdata, coords = tm().getBlock().getPointData()
+            lgm().log( f"MODEL: input dims={ptdata.shape[0]}, layer_sizes={self.layer_sizes}" )
+            self._model = MLP( "masks", ptdata.shape[0], self.nclasses, self.layer_sizes, **opts ).to(self.device)
         return self._model
 
-    def panel(self)-> pn.Row:
+    def panel(self)-> pn.WidgetBox:
         return self.progress.panel()
 
     def abort_callback(self, event ):
@@ -130,7 +130,7 @@ class ModelTrainer(SCSingletonConfigurable):
         training_data, training_labels = None, None
         for ( (tindex, block_coords, cid), gids ) in label_data.items():
             block = tm().getBlock( tindex=tindex, block_coords=block_coords )
-            input_data = block.model_data
+            input_data, coords = block.getPointData()
             training_mask: np.ndarray = np.isin( input_data.samples.values, gids )
             tdata: np.ndarray = input_data.values[ training_mask ]
             tlabels: np.ndarray = np.full([gids.size], cid)
@@ -191,6 +191,7 @@ class ModelTrainer(SCSingletonConfigurable):
         return lval, x, y_hat
 
     def train(self, **kwargs):
+        self.train_losses = []
         training_set = kwargs.pop( 'training_set', None )
         if training_set is None:
             if self.load(**kwargs): return
@@ -212,16 +213,15 @@ class ModelTrainer(SCSingletonConfigurable):
         return xreduced, xreproduction
 
     def training_iteration(self, iter: int, initial_epoch: int, train_data: np.ndarray, labels_data: np.ndarray, **kwargs):
-        losses, tloss = [], 0.0
         [x, y] = [torch.from_numpy(tdata).to(self.device) for tdata in [train_data,labels_data]]
         final_epoch = initial_epoch + self.nepoch
         for epoch  in range( initial_epoch, final_epoch ):
             tloss, x, y_hat = self.training_epoch(epoch, x, y)
-            losses.append( tloss )
-        lgm().log( f" ** ITER[{iter}]: norm data shape = {train_data.shape}, losses = {losses[-self.nepoch:]}")
-        loss_msg = f"loss[{iter}/{self.niter}]: {mean(losses):>7f}"
+            self.train_losses.append( tloss )
+        lgm().log( f" ** ITER[{iter}]: norm data shape = {train_data.shape}, loss = {self.train_losses[-1]}")
+        loss_msg = f"loss[{iter}/{self.niter}]: {self.train_losses[-1]:>7f}"
         lgm().log( loss_msg )
-        self.progress.update( iter, loss_msg, losses )
+        self.progress.update( iter, loss_msg, self.train_losses )
         return final_epoch
 
     #
