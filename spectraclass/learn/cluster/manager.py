@@ -98,7 +98,7 @@ class ClusterManager(SCSingletonConfigurable):
         self.width = kwargs.pop('width',600)
         self._cluster_markers: Dict[ Tuple, Marker ] = {}
         self.thresholdStream = ThresholdStream()
-        self.double_tap_stream = DoubleTap(transient=True)
+        self.double_tap_stream = DoubleTap()
         self._max_culsters = 20
         self._marker_clear_mode: ClearMode = ClearMode.NONE
         self._ncluster_options = list( range( 2, self._max_culsters ) )
@@ -126,12 +126,14 @@ class ClusterManager(SCSingletonConfigurable):
     @property
     def cluster_image(self) -> hv.DynamicMap:
         if self._cluster_image is None:
+            lgm().log( "#CM: Create cluster_image DynamicMap")
             self._cluster_image = hv.DynamicMap( self.get_cluster_image, streams=[ self._count, self.double_tap_stream, self.thresholdStream ] )
         return self._cluster_image
 
     @property
     def marker_table(self) -> hv.DynamicMap:
         if self._marker_table is None:
+            lgm().log("#CM: Create marker_table DynamicMap")
             self._marker_table = hv.DynamicMap( self.get_marker_table, streams=[ self.double_tap_stream ] )
         return self._marker_table
 
@@ -437,7 +439,7 @@ class ClusterManager(SCSingletonConfigurable):
         if x is not None:
             block: Block = tm().getBlock()
             gid, ix, iy = block.coords2gid(y,x)
-            icluster = clm().get_cluster(gid)
+            icluster = self.get_cluster(gid)
             lgm().log(f"#CM: coords2gid:  ix={ix}], iy={iy}, gid={gid}, icluster={icluster},  cid={cid}")
             self.mark_cluster( cid, icluster )
         else:
