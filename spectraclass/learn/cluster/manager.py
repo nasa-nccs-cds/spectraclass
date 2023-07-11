@@ -258,7 +258,7 @@ class ClusterManager(SCSingletonConfigurable):
     def cluster(self, data: xa.DataArray ):
         self.run_cluster_model( data )
         ccount = self.refresh()
-        lgm().log( f"#CM: exec cluster, op count={ccount}" )
+        lgm().log( f"#CM: exec cluster, op-count={ccount}" )
 
     def get_input_data( self, **kwargs ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import tm
