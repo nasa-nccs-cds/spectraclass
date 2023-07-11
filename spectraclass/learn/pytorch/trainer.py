@@ -56,7 +56,7 @@ class ProgressPanel(param.Parameterized):
     def plot_losses(self, losses: List[float] = None ):
         loss_series = None if (losses is None) else losses
         iterations: np.ndarray = np.arange( len(loss_series) )
-        lgm().log( f"Plot Losses: {len(loss_series)} values, loss range= {[min(loss_series),max(loss_series)]}")
+        lgm().log( f"Plot Losses: {len(loss_series)} values, loss range= {[min(loss_series,default=0.0),max(loss_series,default=0.0)]}")
         loss_table: hv.Table = hv.Table( (iterations, np.array(loss_series)), 'Iteration', 'Loss' )
         return hv.Curve(loss_table).opts(width=500, height=250, ylim=(0,5.0), xlim=(0,self.niter))  #  line_width=1, line_color="black",
 
