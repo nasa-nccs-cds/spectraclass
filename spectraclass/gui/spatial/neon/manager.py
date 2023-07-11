@@ -200,7 +200,7 @@ class BlockSelection(param.Parameterized):
                 self._selected_rectangles[bid] = self.rect_grid[bid] + (self.unmarked_color,)
             self.update()
 
-    def get_selection_load_panel(self, event=None ):
+    def get_selection_load_panel(self, mode: BlockSelectMode=BlockSelectMode.CreateMask ):
         block_selection_names = [ f.split(".")[-2] for f in os.listdir(self.save_dir) ]
         file_selector = pn.widgets.Select( name='Tile Mask', options=block_selection_names, value=block_selection_names[0] )
         file_selector.link( self, value='selection_name' )
@@ -209,10 +209,11 @@ class BlockSelection(param.Parameterized):
     def get_selection_save_panel(self, event=None ):
         return pn.Row(self.selection_name_input, self.save_button)
 
-    def get_cache_panel(self) -> Panel:
-        load_panel = self.get_selection_load_panel()
-        save_panel = self.get_selection_save_panel()
-        return  pn.Tabs( ("load",load_panel), ("save",save_panel) )
+    def get_cache_panel(self, mode: BlockSelectMode) -> Panel:
+        tabs = [ ("load", self.get_selection_load_panel(mode)) ]
+        if mode == BlockSelectMode.CreateMask:
+            tabs.append( ("save", self.get_selection_save_panel()) )
+        return  pn.Tabs( *tabs )
 
 class NEONTileSelector(SCSingletonConfigurable):
 
@@ -256,7 +257,7 @@ class NEONTileSelector(SCSingletonConfigurable):
         self.blockSelection.clear_region(self.box_selection.data)
 
     def get_load_panel(self):
-        load_panel = self.blockSelection.get_selection_load_panel()
+        load_panel = self.blockSelection.get_selection_load_panel(self.selection_mode)
         return pn.Column(load_panel)
 
     def get_control_panel(self):
@@ -265,9 +266,12 @@ class NEONTileSelector(SCSingletonConfigurable):
         buttonbox = pn.WidgetBox( "### Selection Controls", select_buttons, clear_buttons )
         selection_mode = pn.WidgetBox("### Click-select Mode", self.blockSelection.click_select_mode )
         selection_panel = pn.Column( buttonbox, selection_mode )
-        cache_panel = self.blockSelection.get_cache_panel()
+        cache_panel = self.blockSelection.get_cache_panel(self.selection_mode)
         block_panels = pn.Tabs( ("select",selection_panel), ("cache",cache_panel) )
         return pn.Tabs( ("block mask", block_panels), ( "cluster mask", clm().gui()), ( "learning", clm().get_learning_panel("points")) )
+
+    def get_block_selection_gui(self):
+        return self.blockSelection.get_cache_panel(self.selection_mode)
 
     def get_cluster_panel(self):
         return clm().panel()
@@ -283,10 +287,12 @@ class NEONTileSelector(SCSingletonConfigurable):
             selection_panel = self.get_control_panel()
             if self.selection_mode == BlockSelectMode.SelectTile:
                 return pn.Row( image * self.region_selection, selection_panel )
-            else:
+            elif self.selection_mode == BlockSelectMode.CreateMask:
                 cluster_panel = self.get_cluster_panel()
                 viz_panels = pn.Tabs( ("select", image * self.region_selection), ("cluster", cluster_panel))
                 return pn.Row( viz_panels, selection_panel )
+            elif self.selection_mode == BlockSelectMode.LoadMask:
+                return self.get_block_selection_gui()
 
     @property
     def image_index(self) -> int:

@@ -39,10 +39,10 @@ class ProgressPanel(param.Parameterized):
     def __init__(self, niter: int, abort_callback: Callable, **kwargs ):
         param.Parameterized.__init__( self, **kwargs )
         self.niter = niter
-        self._progress = pn.indicators.Progress(name='Iterations', value=0, width=200, max=niter )
+        self._progress = pn.indicators.Progress( name='Iterations', value=0, width=200, max=niter )
         self._log = pn.pane.Markdown("Iteration: 0")
         self._losses = []
-        self._abort = pn.widgets.Button(name='Abort', button_type='primary', width=100 )
+        self._abort = pn.widgets.Button( name='Abort', button_type='primary', width=100 )
         self._abort.on_click( abort_callback )
         self.loss_stream: Stream = Loss( loss=0.0 )
         self._loss_plot = hv.DynamicMap( self.plot_losses, streams=[ self.loss_stream ] )

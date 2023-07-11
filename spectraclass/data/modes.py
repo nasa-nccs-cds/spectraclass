@@ -52,6 +52,7 @@ class BlockSelectMode(Enum):
     LoadTile = 0
     SelectTile = 1
     CreateMask = 2
+    LoadMask = 3
 
 class ModeDataManager(SCSingletonConfigurable):
     from spectraclass.application.controller import SpectraclassController
