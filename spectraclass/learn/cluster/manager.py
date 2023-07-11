@@ -330,15 +330,19 @@ class ClusterManager(SCSingletonConfigurable):
             dm().modal.save_block_selection()
 
     @exception_handled
-    def generate_training_set( self, event ):
+    def generate_training_set( self, source: str, event ):
         from spectraclass.data.spatial.tile.manager import tm
         xchunks, ychunks = [], []
         for (image_index, block_coords, icluster, nclusters), marker in self._cluster_markers.items():
             block = tm().getBlock( bindex=block_coords )
-            model_data: np.array = block.getModelData( raster=False ).values
-            mask_array: np.array = np.zeros(model_data.shape[0], dtype=bool)
+            if source == "model":
+                input_data: np.array = block.getModelData( raster=False ).values
+            else:
+                ptdata, coords = block.getPointData()
+                input_data: np.array = ptdata.values
+            mask_array: np.array = np.zeros(input_data.shape[0], dtype=bool)
             mask_array[ marker.gids ] = True
-            xchunk: np.array = model_data[mask_array]
+            xchunk: np.array = input_data[mask_array]
             ychunk: np.array = np.full( [marker.size], marker.cid, np.int )
             xchunks.append( xchunk )
             ychunks.append( ychunk )
@@ -425,10 +429,10 @@ class ClusterManager(SCSingletonConfigurable):
         ufm().show(f"clusters:  x={x}, y={y}, label='{lm().selectedLabel}'{cid}), ic={icluster}, cmap={self.cmap[:8]}")
         return image.opts(cmap=self.cmap)
 
-    def get_learning_panel(self):
+    def get_learning_panel(self, data_source: str ):
         from spectraclass.learn.pytorch.trainer import mpt
         ts_generate_button = Button( name='Generate Training Set', button_type='primary')
-        ts_generate_button.on_click( self.generate_training_set )
+        ts_generate_button.on_click( partial( self.generate_training_set, data_source ) )
         training_set_controls = pn.WidgetBox("### Training Set", ts_generate_button )
 
         learn_button = Button( name='Learn Mask', button_type='primary')
