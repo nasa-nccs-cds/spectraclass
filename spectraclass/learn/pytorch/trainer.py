@@ -31,7 +31,7 @@ def random_sample( tensor: Tensor, nsamples: int, axis=0 ) -> Tensor:
 def anomaly( train_data: Tensor, reproduced_data: Tensor ) -> Tensor:
     return torch.sum( torch.abs(train_data - reproduced_data), 1 )
 
-# Loss = Stream.define('Loss', loss=0.0)
+Loss = Stream.define( 'Loss', loss=0.0 )
 
 class ProgressPanel(param.Parameterized):
     loss = param.List( default=[], doc="Loss values")
@@ -44,22 +44,22 @@ class ProgressPanel(param.Parameterized):
         self._losses = []
         self._abort = pn.widgets.Button(name='Abort', button_type='primary', width=100 )
         self._abort.on_click( abort_callback )
-        self._loss_plot = hv.DynamicMap( self.plot_losses, streams=dict(losses=self.param.loss) )
+        self.loss_stream: Stream = Loss( loss=0.0 )
+        self._loss_plot = hv.DynamicMap( self.plot_losses, streams=[ self.loss_stream ] )
 
     @exception_handled
-    def update(self, iteration: int, message: str, losses: List[float] ):
+    def update(self, iteration: int, message: str, loss: float ):
         self._progress.value = iteration
-        self._losses.extend( losses )
         self._log.object = message
-        lgm().log( f"UPDATE: iteration={iteration}, message={message}, loss={losses[-1]}")
-        self.loss = self._losses
+        lgm().log( f"UPDATE: iteration={iteration}, message={message}, loss={loss}")
+        self.loss_stream.event( loss=loss )
 
     @exception_handled
-    def plot_losses(self, losses: List[float] = None ):
-        loss_series = None if (losses is None) else losses
-        iterations: np.ndarray = np.arange( len(loss_series) )
-        lgm().log( f"Plot Losses: {len(loss_series)} values, loss range= {[min(loss_series,default=0.0),max(loss_series,default=0.0)]}")
-        loss_table: hv.Table = hv.Table( (iterations, np.array(loss_series)), 'Iteration', 'Loss' )
+    def plot_losses(self, loss: float = 0.0 ):
+        self._losses.append(loss)
+        iterations: np.ndarray = np.arange( len(self._losses) )
+        lgm().log( f"Plot Losses: {len(self._losses)} values")
+        loss_table: hv.Table = hv.Table( (iterations, np.array(self._losses) ), 'Iteration', 'Loss' )
         return hv.Curve(loss_table).opts(width=500, height=250, ylim=(0,5.0), xlim=(0,self.niter))  #  line_width=1, line_color="black",
 
     def panel(self) -> pn.WidgetBox:
@@ -217,13 +217,13 @@ class ModelTrainer(SCSingletonConfigurable):
     def training_iteration(self, iter: int, initial_epoch: int, train_data: np.ndarray, labels_data: np.ndarray, **kwargs):
         [x, y] = [torch.from_numpy(tdata).to(self.device) for tdata in [train_data,labels_data]]
         final_epoch = initial_epoch + self.nepoch
+        tloss = 0.0
         for epoch  in range( initial_epoch, final_epoch ):
             tloss, x, y_hat = self.training_epoch(epoch, x, y)
-            self.train_losses.append( tloss )
-        lgm().log( f" ** ITER[{iter}]: norm data shape = {train_data.shape}, loss = {self.train_losses[-1]}")
-        loss_msg = f"loss[{iter}/{self.niter}]: {self.train_losses[-1]:>7f}"
+        lgm().log( f" ** ITER[{iter}]: norm data shape = {train_data.shape}, loss = {tloss}")
+        loss_msg = f"loss[{iter}/{self.niter}]: {tloss:>7f}"
         lgm().log( loss_msg )
-        self.progress.update( iter, loss_msg, self.train_losses )
+        self.progress.update( iter, loss_msg, tloss )
         return final_epoch
 
     #

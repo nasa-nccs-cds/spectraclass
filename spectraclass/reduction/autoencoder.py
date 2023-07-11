@@ -77,7 +77,7 @@ class Autoencoder(nn.Module):
 
     @exception_handled
     def build_ae_model(self, **kwargs):
-        lgm().log(f"#AEC: RM BUILD AEC NETWORK: {self.input_dims} -> {self.model_dims}")
+        lgm().trace(f"#AEC: RM BUILD AEC NETWORK: {self.input_dims} -> {self.model_dims}")
         reduction_factor = 2
 #        dargs = dict( kernel_initializer=tf.keras.initializers.RandomNormal(stddev=winit), bias_initializer=tf.keras.initializers.Zeros() )
         in_features, iLayer = self.input_dims, 0
@@ -105,9 +105,9 @@ class Autoencoder(nn.Module):
 
     def _add_layer(self, modules: OrderedDict, ilayer: int, layer: nn.Linear, activation: str):
         modules[f"layer-{ilayer}"] = layer
-        print(f" * Add linear layer[{ilayer}]: {layer.in_features}->{layer.out_features}")
+        lgm().log(f" * Add linear layer[{ilayer}]: {layer.in_features}->{layer.out_features}")
         if activation != "linear":
-            print(f"   ---> Add activation: {activation}")
+            lgm().log(f"   ---> Add activation: {activation}")
             modules[f"activation-{ilayer}"] = self._get_activation_function(activation)
         layer.register_forward_hook(partial(self.layer_forward_hook, ilayer))
         layer.register_forward_pre_hook(partial(self.layer_forward_pre_hook, ilayer))

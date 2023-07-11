@@ -347,7 +347,7 @@ class ClusterManager(SCSingletonConfigurable):
             xchunks.append( xchunk )
             ychunks.append( ychunk )
         x, y = np.concatenate( xchunks, axis=0 ), np.concatenate( ychunks, axis=0 )
-        ufm().show(f"#CM: Training set generated: x shape={x.shape}, y shape={y.shape}, y range: {(y.min(),y.max())}" )
+        ufm().show(f"Training set generated: x shape={x.shape}, y shape={y.shape}, y range: {(y.min(),y.max())}" )
         self._current_training_set = ( x,y )
 
     @exception_handled
