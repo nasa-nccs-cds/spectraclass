@@ -1,9 +1,8 @@
 from typing import List, Union, Tuple, Optional, Dict, Type, Callable
 import torch, time
 import traitlets as tl
-import param
 from spectraclass.gui.control import ufm
-from torch.nn.functional import one_hot
+from holoviews.streams import Stream, param
 from statistics import mean
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
@@ -31,6 +30,8 @@ def random_sample( tensor: Tensor, nsamples: int, axis=0 ) -> Tensor:
 
 def anomaly( train_data: Tensor, reproduced_data: Tensor ) -> Tensor:
     return torch.sum( torch.abs(train_data - reproduced_data), 1 )
+
+# Loss = Stream.define('Loss', loss=0.0)
 
 class ProgressPanel(param.Parameterized):
     loss = param.List( default=[], doc="Loss values")
