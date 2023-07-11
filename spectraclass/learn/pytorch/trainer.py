@@ -60,7 +60,7 @@ class ProgressPanel(param.Parameterized):
         iterations: np.ndarray = np.arange( len(self._losses) )
         lgm().log( f"Plot Losses: {len(self._losses)} values")
         loss_table: hv.Table = hv.Table( (iterations, np.array(self._losses) ), 'Iteration', 'Loss' )
-        return hv.Curve(loss_table).opts(width=500, height=250, ylim=(0,5.0), xlim=(0,self.niter))  #  line_width=1, line_color="black",
+        return hv.Curve(loss_table).opts(width=500, height=250, ylim=(0,1.0), xlim=(0,self.niter))  #  line_width=1, line_color="black",
 
     def panel(self) -> pn.WidgetBox:
         progress = pn.Row( self._progress, self._log, self._abort )

@@ -91,6 +91,7 @@ class ClusterManager(SCSingletonConfigurable):
     modelid = tl.Unicode("kmeans").tag(config=True, sync=True)
     nclusters = tl.Int(5).tag(config=True, sync=True)
     random_state = tl.Int(0).tag(config=True, sync=True)
+    data_source = tl.Unicode("model").tag(config=True, sync=True)
 
     def __init__(self, **kwargs ):
         super(ClusterManager, self).__init__(**kwargs)
@@ -105,10 +106,10 @@ class ClusterManager(SCSingletonConfigurable):
         self._mid_options = [ "kmeans", "fuzzy cmeans", "bisecting kmeans" ]
         self._cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
-        self._cluster_image = hv.DynamicMap( self.get_cluster_image, streams=[ self._count, self.double_tap_stream, self.thresholdStream ] )    # thresholdStream
+        self._cluster_image = None
         self._marker_table_widget: hv.Table = None
         self._marker_table_selection: hv.streams.Selection1D = None
-        self._marker_table = hv.DynamicMap( self.get_marker_table, streams=[ self.double_tap_stream ] )
+        self._marker_table = None
         self._marked_colors: Dict[Tuple,Tuple[float,float,float]] = {}
         self._marked_clusters: Dict[Tuple, List] = {}
         self._tuning_sliders: List[ClusterMagnitudeWidget] = []
@@ -121,6 +122,18 @@ class ClusterManager(SCSingletonConfigurable):
         self._ncluster_watcher = self._ncluster_selector.param.watch(self.on_parameter_change, ['value'], onlychanged=True )
         self._current_training_set: Tuple[np.ndarray, np.ndarray] = None
         self.refresh_colormap()
+
+    @property
+    def cluster_image(self) -> hv.DynamicMap:
+        if self._cluster_image is None:
+            self._cluster_image = hv.DynamicMap( self.get_cluster_image, streams=[ self._count, self.double_tap_stream, self.thresholdStream ] )
+        return self._cluster_image
+
+    @property
+    def marker_table(self) -> hv.DynamicMap:
+        if self._marker_table is None:
+            self._marker_table = hv.DynamicMap( self.get_marker_table, streams=[ self.double_tap_stream ] )
+        return self._marker_table
 
     @exception_handled
     def update_cmap(self):
@@ -247,10 +260,23 @@ class ClusterManager(SCSingletonConfigurable):
         ccount = self.refresh()
         lgm().log( f"#CM: exec cluster, op count={ccount}" )
 
-    @exception_handled
-    def get_cluster_map( self ) -> xa.DataArray:
+    def get_input_data( self ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import tm
         from spectraclass.data.base import DataManager, dm
+        block = tm().getBlock()
+        if self.data_source == "model":
+            data = dm().getModelData(block=block)
+        elif self.data_source == "spectral":
+            data, coords = block.getPointData()
+        else:
+            raise Exception( f"Unknown data source: {self.data_source}")
+        data.attrs['block'] = block.block_coords
+        return data
+
+
+    @exception_handled
+    def get_cluster_map( self ) -> xa.DataArray:
+
         block = tm().getBlock()
         if self.cluster_points is None:
             self.cluster( dm().getModelData(block=block) )
@@ -400,7 +426,7 @@ class ClusterManager(SCSingletonConfigurable):
     def panel(self, **kwargs ) -> hv.DynamicMap:
         width = kwargs.get('width', 600)
         height = kwargs.get('height', 500)
-        return self._cluster_image.opts( width=width, height=height )
+        return self.cluster_image.opts( width=width, height=height )
 
     @exception_handled
     def get_cluster_image( self, index: int, tindex: int, tvalue: int, x=None, y=None ) -> hv.Image:
@@ -458,13 +484,13 @@ class ClusterManager(SCSingletonConfigurable):
         clear_all =       Button(name="clear all",       button_type='primary')
         clear_all.on_click( partial(self.clear_markers, ClearMode.ALL) )
         clear_selection.on_click( partial(self.clear_markers, ClearMode.SELECTION) )
-        return pn.WidgetBox("### Labeled Clusters", self._marker_table, pn.Row(clear_selection, clear_all) )
+        return pn.WidgetBox("### Labeled Clusters", self.marker_table, pn.Row(clear_selection, clear_all) )
 
     @exception_handled
     def clear_markers( self, mode: ClearMode, event ):
         lgm().log( f"clear_markers: {mode.name}" )
         self._marker_clear_mode = mode
-        self._marker_table.event(x=None,y=None)
+        self.marker_table.event(x=None,y=None)
 
     def action_buttons(self):
         buttons = []
@@ -482,11 +508,8 @@ class ClusterManager(SCSingletonConfigurable):
             self.generate_clusters()
 
     def generate_clusters(self):
-        from spectraclass.data.base import DataManager, dm
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        block: Block = tm().getBlock()
-        mdata: xa.DataArray = dm().getModelData( block=block )
-        ufm().show(f"Creating clusters using {self.mid} for block {block.block_coords}")
+        mdata: xa.DataArray = self.get_input_data()
+        ufm().show(f"Creating clusters using {self.mid} for block {mdata.attrs['block']}, input shape={mdata.shape}")
         self.cluster( mdata )
 
     def create_embedding(self, ndim: int = 3):
