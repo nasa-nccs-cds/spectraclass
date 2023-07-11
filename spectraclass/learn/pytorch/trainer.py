@@ -48,7 +48,7 @@ class ProgressPanel(param.Parameterized):
     @exception_handled
     def update(self, iteration: int, message: str, losses: List[float] ):
         self._progress.value = iteration
-        self._losses.append( losses )
+        self._losses.extend( losses )
         self._log.object = message
         self.loss=self._losses
 
