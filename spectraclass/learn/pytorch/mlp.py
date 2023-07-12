@@ -161,9 +161,9 @@ class MLP(nn.Module):
         from spectraclass.data.base import DataManager, dm
         return dm().cache_dir
 
-    def save(self, name: str):
+    def save(self, name: str, **kwargs ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
-        models_dir = f"{self.results_dir}/{self.name}"
+        models_dir = kwargs.get( 'dir', f"{self.results_dir}/{self.name}" )
         os.makedirs(models_dir, exist_ok=True)
         try:
             model_path = f"{models_dir}/{name}.{self.network_type}.pth"

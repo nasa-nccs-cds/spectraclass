@@ -216,9 +216,11 @@ class BlockSelection(param.Parameterized):
         return pn.Row(self.selection_name_input, self.save_button)
 
     def get_cache_panel(self, mode: BlockSelectMode) -> Panel:
-        tabs = [ ("load", self.get_selection_load_panel(mode)) ]
+        tabs = [ ("blocks", self.get_selection_load_panel(mode)) ]
         if mode == BlockSelectMode.CreateMask:
             tabs.append( ("save", self.get_selection_save_panel()) )
+        elif mode == BlockSelectMode.LoadMask:
+            tabs.append( ("clusters", clm().get_load_panel()) )
         return  pn.Tabs( *tabs )
 
 class NEONTileSelector(SCSingletonConfigurable):

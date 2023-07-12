@@ -354,6 +354,10 @@ class ClusterManager(SCSingletonConfigurable):
             mpt().train( training_set=self._current_training_set )
             dm().modal.save_block_selection()
 
+    def apply_mask(self):
+        from spectraclass.learn.pytorch.trainer import mpt
+        mask: xa.DataArray = mpt().predict( raster=True )
+
     @exception_handled
     def generate_training_set( self, source: str, event ):
         from spectraclass.data.spatial.tile.manager import tm
@@ -461,6 +465,8 @@ class ClusterManager(SCSingletonConfigurable):
         ts_generate_button.on_click( partial( self.generate_training_set, data_source ) )
         learn_button = Button( name='Learn Mask', button_type='primary')
         learn_button.on_click( self.learn_mask )
+        apply_button = Button( name='Apply Mask', button_type='primary')
+        apply_button.on_click( self.apply_mask )
         buttonbox = pn.Row( ts_generate_button, learn_button )
         return pn.WidgetBox("### Learning", buttonbox, mpt().panel() )
 
@@ -475,6 +481,10 @@ class ClusterManager(SCSingletonConfigurable):
         markers_table = self.get_marker_mangement_panel()
         controls_panel = pn.Column( selection_controls, labeling_controls, markers_table )
         return pn.Tabs( ("controls",controls_panel), ("tuning",self.tuning_gui()) )
+
+    @exception_handled
+    def get_load_panel(self):
+        pass
 
     def get_marker_mangement_panel(self):
         clear_selection = Button(name="clear selection", button_type='primary')

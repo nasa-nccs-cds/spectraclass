@@ -93,6 +93,7 @@ class ModelTrainer(SCSingletonConfigurable):
         self.loss = CrossEntropyLoss( **kwargs )
         self._progress = None
         self.train_losses = None
+        self.mask_save_panel = MaskSavePanel()
 
     def set_network_size(self, layer_sizes: List[int], nclasses: int):
         self.layer_sizes = layer_sizes
@@ -117,10 +118,11 @@ class ModelTrainer(SCSingletonConfigurable):
             ptdata, coords = tm().getBlock().getPointData()
             lgm().log( f"MODEL: input dims={ptdata.shape[1]}, layer_sizes={self.layer_sizes}" )
             self._model = MLP( "masks", ptdata.shape[1], self.nclasses, self.layer_sizes, **opts ).to(self.device)
+            self.mask_save_panel.set_model( self._model )
         return self._model
 
-    def panel(self)-> pn.WidgetBox:
-        return self.progress.panel()
+    def panel(self)-> pn.Column:
+        return pn.Column( self.progress.panel(), self.mask_save_panel.gui() )
 
     def abort_callback(self, event ):
         self._abort = True
@@ -153,17 +155,12 @@ class ModelTrainer(SCSingletonConfigurable):
         else:
             raise Exception(f" Unknown optimizer: {oid}")
 
-
     def load(self, **kwargs ) -> bool:
         modelId = kwargs.get('id', dm().dsid())
         if self.refresh_model:
             lgm().log( "REFRESH MODEL")
             return False
         return self.model.load( modelId )
-
-    def save(self, **kwargs):
-        model_id = kwargs.get('id', dm().dsid() )
-        self.model.save( model_id )
 
     def print_layer_stats(self, iL: int, **kwargs ):
         O: np.ndarray = self.model.get_layer_output(iL)
@@ -205,14 +202,6 @@ class ModelTrainer(SCSingletonConfigurable):
         for iter in range(self.niter):
             initial_epoch = self.training_iteration(iter, initial_epoch, train_data, labels_data, **kwargs)
         lgm().log( f"Trained network in {(time.time()-t0)/60:.3f} min" )
-        self.save(**kwargs)
-
-    def reduce(self, data: xa.DataArray ) -> Tuple[xa.DataArray,xa.DataArray]:
-        reduced: Tensor = self.model.encode( data.values, detach=False )
-        reproduction: np.ndarray = self.model.decode( reduced )
-        xreduced = xa.DataArray( reduced.detach().numpy(), dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(reduced.shape[1])), attrs=data.attrs)
-        xreproduction = data.copy( data=reproduction )
-        return xreduced, xreproduction
 
     def training_iteration(self, iter: int, initial_epoch: int, train_data: np.ndarray, labels_data: np.ndarray, **kwargs):
         [x, y] = [torch.from_numpy(tdata).to(self.device) for tdata in [train_data,labels_data]]
@@ -285,11 +274,38 @@ class ModelTrainer(SCSingletonConfigurable):
         std_data_sample = std_data if (num_standard_samples >= std_data.shape[0]) else random_sample( std_data, num_standard_samples )
         return torch.cat((anom_data, std_data_sample), 0)
 
-    def predict(self, data: xa.DataArray, **kwargs) -> xa.DataArray:
+    def predict(self, data: xa.DataArray = None, **kwargs) -> xa.DataArray:
         block: Block = tm().getBlock()
         raster = kwargs.get( 'raster', "False")
+        if data is None: data = block.getPointData()
         raw_result: xa.DataArray = self.model.predict( data )
         return block.points2raster( raw_result ) if raster else raw_result
 
     def event(self, source: str, event ):
         print( f"Processing event[{source}]: {event}")
+
+class MaskSavePanel(param.Parameterized):
+    mask_name = param.String(default="", doc="Name of saved mask network")
+
+    def __init__(self ):
+        super(MaskSavePanel, self).__init__()
+        self._model: MLP = None
+        self.mask_name_input = pn.widgets.TextInput(name='Mask Name', placeholder='Give this mask a name...')
+        self.mask_name_input.link(self, value='mask_name')
+        self.save_button = pn.widgets.Button(name='Save Mask', button_type='success', width=150)
+        self.save_button.on_click(self.save)
+        self.save_dir = f"{dm().cache_dir}/masks/cluster_mask"
+
+    def set_model( self, model: MLP ):
+        self._model = model
+
+    def save( self, event ):
+        if self._model is None:
+            ufm().show(f"No model to save.")
+        else:
+            model_id =  ".".join( [tm().tileid,self.mask_name] )
+            self._model.save( model_id, dir=self.save_dir )
+
+    def gui(self):
+        save_panel = pn.Row(self.mask_name_input, self.save_button)
+        return pn.WidgetBox( "###Save Mask", save_panel )
