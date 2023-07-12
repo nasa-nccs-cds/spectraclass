@@ -32,8 +32,8 @@ class ProgressPanel:
 
     def __init__(self, niter: int, abort_callback: Callable ):
         self._progress = pn.indicators.Progress(name='Iterations', value=0, width=400, max=niter )
-        self._log = pn.pane.Markdown("Iteration: 0")
-        self._abort = pn.widgets.Button(name='Abort', button_type='primary')
+        self._log = pn.pane.Markdown( "Iteration: 0", width=300 )
+        self._abort = pn.widgets.Button( name='Abort', button_type='warning' )
         self._abort.on_click( abort_callback )
 
     @exception_handled
@@ -42,7 +42,7 @@ class ProgressPanel:
         self._log.object = message
 
     def panel(self) -> pn.Row:
-        return pn.Row( pn.pane.Markdown("Learning Progress:"), self._progress, self._log, self._abort )
+        return pn.Row( pn.pane.Markdown("### Learning Progress:"), self._progress, self._log, self._abort )
 
 class ModelTrainer(SCSingletonConfigurable):
     optimizer_type = tl.Unicode(default_value="adam").tag(config=True, sync=True)

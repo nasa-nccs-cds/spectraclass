@@ -467,7 +467,7 @@ class ClusterManager(SCSingletonConfigurable):
         learn_button.on_click( self.learn_mask )
         apply_button = Button( name='Apply Mask', button_type='primary')
         apply_button.on_click( self.apply_mask )
-        buttonbox = pn.Row( ts_generate_button, learn_button )
+        buttonbox = pn.Row( ts_generate_button, learn_button, apply_button )
         return pn.WidgetBox("### Learning", buttonbox, mpt().panel() )
 
     @exception_handled
