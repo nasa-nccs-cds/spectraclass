@@ -64,7 +64,7 @@ class ProgressPanel(param.Parameterized):
 
     def panel(self) -> pn.WidgetBox:
         progress = pn.Row( self._progress, self._log, self._abort )
-        return pn.WidgetBox( "### Learning Progress", progress, self._loss_plot )
+        return pn.WidgetBox( "### Progress", progress, self._loss_plot )
 
 class ModelTrainer(SCSingletonConfigurable):
     optimizer_type = tl.Unicode(default_value="adam").tag(config=True, sync=True)
@@ -308,4 +308,4 @@ class MaskSavePanel(param.Parameterized):
 
     def gui(self):
         save_panel = pn.Row(self.mask_name_input, self.save_button)
-        return pn.WidgetBox( "###Save Mask", save_panel )
+        return pn.WidgetBox( "###Save", save_panel )

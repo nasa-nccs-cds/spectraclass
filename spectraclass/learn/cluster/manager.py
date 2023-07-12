@@ -468,7 +468,7 @@ class ClusterManager(SCSingletonConfigurable):
         apply_button = Button( name='Apply Mask', button_type='primary', width=150 )
         apply_button.on_click( self.apply_mask )
         buttonbox = pn.Row( ts_generate_button, learn_button, apply_button )
-        return pn.WidgetBox("### Learning", buttonbox, mpt().panel() )
+        return pn.WidgetBox("### Workflow", buttonbox, mpt().panel() )
 
     @exception_handled
     def gui(self) -> Panel:
