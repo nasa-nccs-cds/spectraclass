@@ -40,7 +40,7 @@ class ProgressPanel(param.Parameterized):
         param.Parameterized.__init__( self, **kwargs )
         self.niter = niter
         self._progress = pn.indicators.Progress( name='Iterations', value=0, width=200, max=niter )
-        self._log = pn.pane.Markdown("Iteration: 0", width=200)
+        self._log = pn.pane.Markdown("Iteration: 0", width=125)
         self._losses = []
         self._abort = pn.widgets.Button( name='Abort', button_type='warning', width=100 )
         self._abort.on_click( abort_callback )
@@ -210,7 +210,7 @@ class ModelTrainer(SCSingletonConfigurable):
         for epoch  in range( initial_epoch, final_epoch ):
             tloss, x, y_hat = self.training_epoch(epoch, x, y)
         lgm().log( f" ** ITER[{iter}]: norm data shape = {train_data.shape}, loss = {tloss}")
-        loss_msg = f"loss[{iter}/{self.niter}]: {tloss:>7f}"
+        loss_msg = f"loss[{iter}/{self.niter}]: {tloss:>4f}"
         lgm().log( loss_msg )
         self.progress.update( iter, loss_msg, tloss )
         return final_epoch
