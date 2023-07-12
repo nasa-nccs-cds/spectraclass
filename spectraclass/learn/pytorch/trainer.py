@@ -40,9 +40,9 @@ class ProgressPanel(param.Parameterized):
         param.Parameterized.__init__( self, **kwargs )
         self.niter = niter
         self._progress = pn.indicators.Progress( name='Iterations', value=0, width=200, max=niter )
-        self._log = pn.pane.Markdown("Iteration: 0")
+        self._log = pn.pane.Markdown("Iteration: 0", width=200)
         self._losses = []
-        self._abort = pn.widgets.Button( name='Abort', button_type='primary', width=100 )
+        self._abort = pn.widgets.Button( name='Abort', button_type='warning', width=100 )
         self._abort.on_click( abort_callback )
         self.loss_stream: Stream = Loss( loss=0.0 )
         self._loss_plot = hv.DynamicMap( self.plot_losses, streams=[ self.loss_stream ] )
@@ -64,7 +64,7 @@ class ProgressPanel(param.Parameterized):
 
     def panel(self) -> pn.WidgetBox:
         progress = pn.Row( self._progress, self._log, self._abort )
-        return pn.WidgetBox( "Learning Progress", progress, self._loss_plot )
+        return pn.WidgetBox( "### Learning Progress", progress, self._loss_plot )
 
 class ModelTrainer(SCSingletonConfigurable):
     optimizer_type = tl.Unicode(default_value="adam").tag(config=True, sync=True)
