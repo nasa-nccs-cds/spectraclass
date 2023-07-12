@@ -461,11 +461,11 @@ class ClusterManager(SCSingletonConfigurable):
 
     def get_learning_panel(self, data_source: str ):
         from spectraclass.learn.pytorch.trainer import mpt
-        ts_generate_button = Button( name='Generate Training Set', button_type='primary')
+        ts_generate_button = Button( name='Generate Training Set', button_type='primary', width=150 )
         ts_generate_button.on_click( partial( self.generate_training_set, data_source ) )
-        learn_button = Button( name='Learn Mask', button_type='primary')
+        learn_button = Button( name='Learn Mask', button_type='primary', width=150 )
         learn_button.on_click( self.learn_mask )
-        apply_button = Button( name='Apply Mask', button_type='primary')
+        apply_button = Button( name='Apply Mask', button_type='primary', width=150 )
         apply_button.on_click( self.apply_mask )
         buttonbox = pn.Row( ts_generate_button, learn_button, apply_button )
         return pn.WidgetBox("### Learning", buttonbox, mpt().panel() )
