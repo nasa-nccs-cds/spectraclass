@@ -40,7 +40,7 @@ class ProgressPanel(param.Parameterized):
         param.Parameterized.__init__( self, **kwargs )
         self.niter = niter
         self._progress = pn.indicators.Progress( name='Iterations', value=0, width=200, max=niter )
-        self._log = pn.pane.Markdown("Iteration: 0", width=125)
+        self._log = pn.pane.Markdown("Iteration: 0", width=150)
         self._losses = []
         self._abort = pn.widgets.Button( name='Abort', button_type='warning', width=100 )
         self._abort.on_click( abort_callback )
