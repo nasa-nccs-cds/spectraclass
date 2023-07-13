@@ -334,7 +334,8 @@ class MaskLoadPanel(MaskCache):
     def __init__(self ):
         super(MaskLoadPanel, self).__init__()
         block_selection_names = [f.split(".")[-2] for f in os.listdir(self.save_dir)]
-        self.file_selector = pn.widgets.Select(name='Cluster Mask', options=block_selection_names, value=block_selection_names[0])
+        sopts = dict( name='Cluster Mask', options=block_selection_names )
+        self.file_selector = pn.widgets.Select(**sopts)
         self.file_selector.link(self, value='mask_name')
         self.load_button = pn.widgets.Button(name='Load Mask', button_type='success', width=150)
         self.load_button.on_click(self.load)
