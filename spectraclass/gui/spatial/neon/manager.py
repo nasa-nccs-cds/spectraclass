@@ -218,11 +218,13 @@ class BlockSelection(param.Parameterized):
     def get_cache_panel(self, mode: BlockSelectMode) -> Panel:
         from spectraclass.learn.pytorch.trainer import mpt
         tabs = [ ("blocks", self.get_selection_load_panel()) ]
+        panels= []
         if mode == BlockSelectMode.CreateMask:
             tabs.append( ("save", self.get_selection_save_panel()) )
         elif mode == BlockSelectMode.LoadMask:
             tabs.append( ("clusters", mpt().get_mask_load_panel()) )
-        return  pn.WidgetBox( "## Load Data Mask", pn.Tabs( *tabs ) )
+            panels.append( ufm().gui() )
+        return  pn.WidgetBox( "## Load Data Mask", *panels, pn.Tabs( *tabs ) )
 
 class NEONTileSelector(SCSingletonConfigurable):
 
