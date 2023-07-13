@@ -116,7 +116,6 @@ class UserFeedbackManager(SCSingletonConfigurable):
         def show(self, message: str, alert_type: str = "info", **kwargs ):  #  alert_types: primary, secondary, success, danger, warning, info, light, dark.
             self._wGui.alert_type = alert_type
             self._wGui.object = message
-
             lgm().log( message )
 
         def clear(self):

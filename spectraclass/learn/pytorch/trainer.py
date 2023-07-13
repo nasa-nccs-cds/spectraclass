@@ -302,7 +302,7 @@ class MaskCache(param.Parameterized):
         self._model = model
 
     def get_mask_name(self, file_path: str ) -> str:
-        tail: str = file_path.split("--")[-1]
+        tail: str = file_path.split("__")[-1]
         return os.path.splitext(tail)[0]
 
     @property
