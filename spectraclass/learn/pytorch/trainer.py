@@ -295,6 +295,7 @@ class MaskCache(param.Parameterized):
     def __init__(self ):
         super(MaskCache, self).__init__()
         self.save_dir = f"{dm().cache_dir}/masks/cluster_mask"
+        os.makedirs( self.save_dir, exist_ok=True )
         self._model: MLP = None
 
     def set_model(self, model: MLP):
