@@ -186,11 +186,11 @@ class MLP(nn.Module):
     def load(self, tile_name: str, model_name: str, **kwargs) -> bool:
         models_dir = kwargs.get('dir', f"{self.results_dir}/{self.name}")
         os.makedirs(models_dir, exist_ok=True)
+        model_path = f"{models_dir}/{tile_name}.{self.network_type}__{model_name}.pth"
         try:
-            model_path = f"{models_dir}/{tile_name}.{self.network_type}__{model_name}.pth"
             self.load_weights( model_path )
         except Exception as err:
-            lgm().trace(f"Error loading model '{model_name}' from file {model_path}:\n  ---> {err}")
+            lgm().exception(f"Error loading model '{model_name}' from file {model_path}:\n  ---> {err}")
             ufm().show(f"Error loading '{model_name}': See log file.")
             return False
         self.eval()
