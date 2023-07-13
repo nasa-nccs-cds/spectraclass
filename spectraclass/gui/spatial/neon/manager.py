@@ -204,7 +204,10 @@ class BlockSelection(param.Parameterized):
 
     def get_selection_load_panel(self):
         block_selection_names = [ f.split(".")[-2] for f in os.listdir(self.save_dir) ]
-        file_selector = pn.widgets.Select( name='Block Mask', options=block_selection_names, value=block_selection_names[0] )
+        sopts = dict( name='Block Mask', options=block_selection_names )
+        if len(block_selection_names) > 0:
+            sopts['value'] = self.selection_name = block_selection_names[0]
+        file_selector = pn.widgets.Select( **sopts )
         file_selector.link( self, value='selection_name' )
         return pn.Row( file_selector, self.load_button  )
 
