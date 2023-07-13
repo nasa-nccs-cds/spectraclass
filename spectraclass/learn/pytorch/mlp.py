@@ -1,6 +1,7 @@
 import os
 from typing import Any, Dict, List, Tuple, Type, Optional, Union
 from collections import OrderedDict
+from spectraclass.gui.control import UserFeedbackManager, ufm
 
 from functools import partial
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
@@ -181,7 +182,6 @@ class MLP(nn.Module):
     def load_weights(self, filepath: str ):
         weights = torch.load(filepath)
         self.network().load_state_dict(weights)
-        print(f"Loaded weights from file '{filepath}'")
 
     def load(self, tile_name: str, model_name: str, **kwargs) -> bool:
         models_dir = kwargs.get('dir', f"{self.results_dir}/{self.name}")
@@ -194,6 +194,7 @@ class MLP(nn.Module):
             return False
         self.eval()
         lgm().log(f"Loaded MODEL {model_name}: {model_path}")
+        ufm().show(f"Loaded MODEL {model_name}")
         return True
 
     def get_learning_metrics(self):

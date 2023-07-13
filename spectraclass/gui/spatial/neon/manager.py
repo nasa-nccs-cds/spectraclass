@@ -37,7 +37,6 @@ class BlockSelection(param.Parameterized):
         self.rect_grid: Dict[Tuple,Tuple] = {}
         self.load_button = pn.widgets.Button( name='Load Selection',  button_type='success', width=150 )
         self.load_button.on_click( self.load_selection )
-        self.load_status = Alert()
         self.save_button = pn.widgets.Button( name='Save Selection',  button_type='success', width=150 )
         self.save_button.on_click( self.save_selection )
         self.click_select_mode = pn.widgets.RadioButtonGroup( name='Click-Select Mode', options=['Unselect', 'Mark'], value="Unselect", button_type='success')
@@ -189,16 +188,12 @@ class BlockSelection(param.Parameterized):
         except Exception as err:
             ufm().show(f"Error saving file: {err}")
 
-    def show_selection_load_status(self, msg: str):
-        self.load_status.object = msg
-
     @exception_handled
     def load_selection(self, event):
         sname = self.selection_name
         if sname:
             save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
-            ufm().show(f"Load file='{save_file}'")
-            self.show_selection_load_status( f"Load Block mask '{sname}'" )
+            ufm().show(f"Load Block mask '{sname}': file='{save_file}'")
             pdata: pd.DataFrame = pd.read_csv( save_file )
             self._selected_rectangles = {}
             for index, row in pdata.iterrows():
@@ -206,23 +201,23 @@ class BlockSelection(param.Parameterized):
                 self._selected_rectangles[bid] = self.rect_grid[bid] + (self.unmarked_color,)
             self.update()
 
-    def get_selection_load_panel(self, mode: BlockSelectMode=BlockSelectMode.CreateMask ):
+    def get_selection_load_panel(self):
         block_selection_names = [ f.split(".")[-2] for f in os.listdir(self.save_dir) ]
         file_selector = pn.widgets.Select( name='Block Mask', options=block_selection_names, value=block_selection_names[0] )
         file_selector.link( self, value='selection_name' )
-        return pn.Row( file_selector, pn.Column( self.load_button, self.load_status ) )
+        return pn.Row( file_selector, self.load_button  )
 
     def get_selection_save_panel(self, event=None ):
         return pn.Row(self.selection_name_input, self.save_button)
 
     def get_cache_panel(self, mode: BlockSelectMode) -> Panel:
         from spectraclass.learn.pytorch.trainer import mpt
-        tabs = [ ("blocks", self.get_selection_load_panel(mode)) ]
+        tabs = [ ("blocks", self.get_selection_load_panel()) ]
         if mode == BlockSelectMode.CreateMask:
             tabs.append( ("save", self.get_selection_save_panel()) )
         elif mode == BlockSelectMode.LoadMask:
             tabs.append( ("clusters", mpt().get_mask_load_panel()) )
-        return  pn.Tabs( *tabs )
+        return  pn.WidgetBox( "## Load Data Mask", ufm().gui(), pn.Tabs( *tabs ) )
 
 class NEONTileSelector(SCSingletonConfigurable):
 

@@ -338,7 +338,7 @@ class MaskLoadPanel(MaskCache):
 
     def __init__(self ):
         super(MaskLoadPanel, self).__init__()
-        block_selection_names = [ self.get_mask_name(f) for f in os.listdir(self.save_dir) ]
+        block_selection_names = [ self.get_mask_name(f) for f in os.listdir(self.save_dir) if ("__" in f) ]
         sopts = dict( name='Cluster Mask', options=block_selection_names )
         self.file_selector = pn.widgets.Select(**sopts)
         self.file_selector.link(self, value='mask_name')
