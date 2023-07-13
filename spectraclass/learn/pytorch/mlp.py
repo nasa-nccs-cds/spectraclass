@@ -190,7 +190,8 @@ class MLP(nn.Module):
             model_path = f"{models_dir}/{tile_name}.{self.network_type}__{model_name}.pth"
             self.load_weights( model_path )
         except Exception as err:
-            lgm().log(f"Error loading model '{model_name}':\n  ---> {err}")
+            lgm().trace(f"Error loading model '{model_name}' from file {model_path}:\n  ---> {err}")
+            ufm().show(f"Error loading '{model_name}': See log file.")
             return False
         self.eval()
         lgm().log(f"Loaded MODEL {model_name}: {model_path}")
