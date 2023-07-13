@@ -182,7 +182,8 @@ class BlockSelection(param.Parameterized):
         rect_indices = np.array(list(self._selected_rectangles.keys()))
         pdata = pd.DataFrame( rect_indices, columns=['x','y'] )
         save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
-        ufm().show(f"Save block selection: {sname}, file='{save_file}'")
+        ufm().show(f"Save block selection: {sname}")
+        lgm().log(f" ----> file='{save_file}'")
         try:
             pdata.to_csv( save_file )
         except Exception as err:
@@ -221,7 +222,7 @@ class BlockSelection(param.Parameterized):
             tabs.append( ("save", self.get_selection_save_panel()) )
         elif mode == BlockSelectMode.LoadMask:
             tabs.append( ("clusters", mpt().get_mask_load_panel()) )
-        return  pn.WidgetBox( "## Load Data Mask", ufm().gui(), pn.Tabs( *tabs ) )
+        return  pn.WidgetBox( "## Load Data Mask", pn.Tabs( *tabs ) )
 
 class NEONTileSelector(SCSingletonConfigurable):
 
