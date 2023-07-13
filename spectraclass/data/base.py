@@ -95,14 +95,14 @@ class DataManager(SCSingletonConfigurable):
         return self.config
 
     @classmethod
-    def initialize(cls, name: str, mode: str ):
+    def initialize(cls, name: str, mode: str, **kwargs ):
 #        try: tf.enable_eager_execution()
 #        except: pass
         name = name.lower()
         mode = mode.lower()
         dataManager = cls.instance()
         if dataManager.name is None:
-            lgm().init_logging(name, mode)
+            lgm().init_logging( name, mode, **kwargs )
             dataManager._configure_( name, mode )
             if mode.lower() not in cls._mode_data_managers_: raise Exception( f"Mode {mode} is not defined, available modes = {cls._mode_data_managers_.keys()}")
             mdm = cls._mode_data_managers_[ mode ].instance()
