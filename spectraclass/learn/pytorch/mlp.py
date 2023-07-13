@@ -182,6 +182,7 @@ class MLP(nn.Module):
     def load_weights(self, filepath: str ):
         weights = torch.load(filepath)
         self.network().load_state_dict(weights)
+        self.network().model.eval()
 
     def load(self, tile_name: str, model_name: str, **kwargs) -> bool:
         models_dir = kwargs.get('dir', f"{self.results_dir}/{self.name}")

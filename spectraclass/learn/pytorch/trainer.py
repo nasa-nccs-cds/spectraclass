@@ -119,6 +119,8 @@ class ModelTrainer(SCSingletonConfigurable):
             ptdata, coords = tm().getBlock().getPointData()
             lgm().log( f"MODEL: input dims={ptdata.shape[1]}, layer_sizes={self.layer_sizes}" )
             self._model = MLP( "masks", ptdata.shape[1], self.nclasses, self.layer_sizes, **opts ).to(self.device)
+#            input: Tensor = torch.from_numpy(ptdata.values)
+#            self._model.forward( input )
         return self._model
 
     def get_mask_load_panel(self) -> Panel:
@@ -158,13 +160,6 @@ class ModelTrainer(SCSingletonConfigurable):
         else:
             raise Exception(f" Unknown optimizer: {oid}")
 
-    def load(self, **kwargs ) -> bool:
-        modelId = kwargs.get('id', dm().dsid())
-        if self.refresh_model:
-            lgm().log( "REFRESH MODEL")
-            return False
-        return self.model.load( modelId )
-
     def print_layer_stats(self, iL: int, **kwargs ):
         O: np.ndarray = self.model.get_layer_output(iL)
         W: np.ndarray = self.model.get_layer_weights(iL - 1)
@@ -196,7 +191,6 @@ class ModelTrainer(SCSingletonConfigurable):
         self.train_losses = []
         training_set = kwargs.pop( 'training_set', None )
         if training_set is None:
-            if self.load(**kwargs): return
             (train_data, labels_data) = self.get_training_set(**kwargs)
         else:
             (train_data, labels_data) = training_set
