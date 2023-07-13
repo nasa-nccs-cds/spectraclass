@@ -161,16 +161,16 @@ class MLP(nn.Module):
         from spectraclass.data.base import DataManager, dm
         return dm().cache_dir
 
-    def save(self, name: str, **kwargs ):
+    def save(self, tile_name: str, model_name: str, **kwargs ):
         from spectraclass.gui.control import UserFeedbackManager, ufm
         models_dir = kwargs.get( 'dir', f"{self.results_dir}/{self.name}" )
         os.makedirs(models_dir, exist_ok=True)
         try:
-            model_path = f"{models_dir}/{name}.{self.network_type}.pth"
+            model_path = f"{models_dir}/{tile_name}.{self.network_type}__{model_name}.pth"
             torch.save(self._network.state_dict(), model_path)
             ufm().show(f"Saved network to file '{model_path}'" )
         except Exception as err:
-            print(f"Error saving model {name}: {err}")
+            print(f"Error saving model {tile_name}: {err}")
 
     @property
     def network( self ) -> nn.Sequential:
@@ -183,17 +183,17 @@ class MLP(nn.Module):
         self.network().load_state_dict(weights)
         print(f"Loaded weights from file '{filepath}'")
 
-    def load(self, name: str, **kwargs) -> bool:
+    def load(self, tile_name: str, model_name: str, **kwargs) -> bool:
         models_dir = kwargs.get('dir', f"{self.results_dir}/{self.name}")
         os.makedirs(models_dir, exist_ok=True)
         try:
-            model_path = f"{models_dir}/{name}.{self.network_type}.pth"
+            model_path = f"{models_dir}/{tile_name}.{self.network_type}__{model_name}.pth"
             self.load_weights( model_path )
         except Exception as err:
-            lgm().log(f"Error loading model {name} (model_path):\n  ---> {err}")
+            lgm().log(f"Error loading model {model_name} (model_path):\n  ---> {err}")
             return False
         self.eval()
-        lgm().log(f"Loaded MODEL {name}: {model_path}")
+        lgm().log(f"Loaded MODEL {model_name}: {model_path}")
         return True
 
     def get_learning_metrics(self):

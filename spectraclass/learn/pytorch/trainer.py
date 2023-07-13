@@ -301,20 +301,25 @@ class MaskCache(param.Parameterized):
     def set_model(self, model: MLP):
         self._model = model
 
+    def get_mask_name(self, file_path: str ) -> str:
+        tail: str = file_path.split("--")[-1]
+        return os.path.splitext(tail)[0]
+
     @property
     def model_id(self):
-        return ".".join([tm().tileid, self.mask_name])
+        return tm().tileid
 
     def load( self, *args ):
         if self._model is None:
             ufm().show(f"No model to load.")
         else:
-            self._model.load( self.model_id, dir=self.save_dir )
+            self._model.load( self.model_id, self.mask_name, dir=self.save_dir )
+
     def save( self, *args ):
         if self._model is None:
             ufm().show(f"No model to save.")
         else:
-            self._model.save( self.model_id, dir=self.save_dir )
+            self._model.save( self.model_id, self.mask_name, dir=self.save_dir )
 
 class MaskSavePanel(MaskCache):
 
@@ -333,7 +338,7 @@ class MaskLoadPanel(MaskCache):
 
     def __init__(self ):
         super(MaskLoadPanel, self).__init__()
-        block_selection_names = [f.split(".")[-2] for f in os.listdir(self.save_dir)]
+        block_selection_names = [ self.get_mask_name(f) for f in os.listdir(self.save_dir) ]
         sopts = dict( name='Cluster Mask', options=block_selection_names )
         self.file_selector = pn.widgets.Select(**sopts)
         self.file_selector.link(self, value='mask_name')
