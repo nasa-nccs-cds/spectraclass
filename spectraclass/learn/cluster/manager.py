@@ -1,4 +1,4 @@
-import pickle, math
+import pickle, math, os
 from random import random
 import panel as pn
 from panel.layout import Panel
@@ -481,10 +481,6 @@ class ClusterManager(SCSingletonConfigurable):
         markers_table = self.get_marker_mangement_panel()
         controls_panel = pn.Column( selection_controls, labeling_controls, markers_table )
         return pn.Tabs( ("controls",controls_panel), ("tuning",self.tuning_gui()) )
-
-    @exception_handled
-    def get_load_panel(self):
-        pass
 
     def get_marker_mangement_panel(self):
         clear_selection = Button(name="clear selection", button_type='primary')

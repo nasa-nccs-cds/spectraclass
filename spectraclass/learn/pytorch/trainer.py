@@ -1,9 +1,9 @@
 from typing import List, Union, Tuple, Optional, Dict, Type, Callable
-import torch, time
+import torch, time, os
 import traitlets as tl
 from spectraclass.gui.control import ufm
 from holoviews.streams import Stream, param
-from statistics import mean
+from panel.layout.base import Panel
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from spectraclass.data.spatial.tile.manager import TileManager, tm
@@ -94,6 +94,7 @@ class ModelTrainer(SCSingletonConfigurable):
         self._progress = None
         self.train_losses = None
         self.mask_save_panel = MaskSavePanel()
+        self.mask_load_panel = MaskLoadPanel()
 
     def set_network_size(self, layer_sizes: List[int], nclasses: int):
         self.layer_sizes = layer_sizes
@@ -119,7 +120,11 @@ class ModelTrainer(SCSingletonConfigurable):
             lgm().log( f"MODEL: input dims={ptdata.shape[1]}, layer_sizes={self.layer_sizes}" )
             self._model = MLP( "masks", ptdata.shape[1], self.nclasses, self.layer_sizes, **opts ).to(self.device)
             self.mask_save_panel.set_model( self._model )
+            self.mask_load_panel.set_model( self._model )
         return self._model
+
+    def get_mask_load_panel(self) -> Panel:
+        return self.mask_load_panel.gui()
 
     def panel(self)-> pn.Column:
         return pn.Column( self.progress.panel(), self.mask_save_panel.gui() )
@@ -284,28 +289,57 @@ class ModelTrainer(SCSingletonConfigurable):
     def event(self, source: str, event ):
         print( f"Processing event[{source}]: {event}")
 
-class MaskSavePanel(param.Parameterized):
+class MaskCache(param.Parameterized):
     mask_name = param.String(default="", doc="Name of saved mask network")
 
     def __init__(self ):
-        super(MaskSavePanel, self).__init__()
+        super(MaskCache, self).__init__()
+        self.save_dir = f"{dm().cache_dir}/masks/cluster_mask"
         self._model: MLP = None
+
+    def set_model(self, model: MLP):
+        self._model = model
+
+    @property
+    def model_id(self):
+        return ".".join([tm().tileid, self.mask_name])
+
+    def load( self, *args ):
+        if self._model is None:
+            ufm().show(f"No model to load.")
+        else:
+            self._model.load( self.model_id, dir=self.save_dir )
+    def save( self, *args ):
+        if self._model is None:
+            ufm().show(f"No model to save.")
+        else:
+            self._model.save( self.model_id, dir=self.save_dir )
+
+class MaskSavePanel(MaskCache):
+
+    def __init__(self ):
+        super(MaskSavePanel, self).__init__()
         self.mask_name_input = pn.widgets.TextInput(name='Mask Name', placeholder='Give this mask a name...')
         self.mask_name_input.link(self, value='mask_name')
         self.save_button = pn.widgets.Button(name='Save Mask', button_type='success', width=150)
         self.save_button.on_click(self.save)
-        self.save_dir = f"{dm().cache_dir}/masks/cluster_mask"
 
-    def set_model( self, model: MLP ):
-        self._model = model
-
-    def save( self, event ):
-        if self._model is None:
-            ufm().show(f"No model to save.")
-        else:
-            model_id =  ".".join( [tm().tileid,self.mask_name] )
-            self._model.save( model_id, dir=self.save_dir )
-
-    def gui(self):
+    def gui(self) -> Panel:
         save_panel = pn.Row(self.mask_name_input, self.save_button)
         return pn.WidgetBox( "###Save", save_panel )
+
+class MaskLoadPanel(MaskCache):
+
+    def __init__(self ):
+        super(MaskLoadPanel, self).__init__()
+        block_selection_names = [f.split(".")[-2] for f in os.listdir(self.save_dir)]
+        self.file_selector = pn.widgets.Select(name='Cluster Mask', options=block_selection_names, value=block_selection_names[0])
+        self.file_selector.link(self, value='mask_name')
+        self.load_button = pn.widgets.Button(name='Load Mask', button_type='success', width=150)
+        self.load_button.on_click(self.load)
+
+    def gui(self) -> Panel:
+        load_panel = pn.Row(self.file_selector, self.load_button)
+        return pn.WidgetBox( "###Load", load_panel )
+
+

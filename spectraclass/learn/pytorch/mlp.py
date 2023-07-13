@@ -184,7 +184,7 @@ class MLP(nn.Module):
         print(f"Loaded weights from file '{filepath}'")
 
     def load(self, name: str, **kwargs) -> bool:
-        models_dir = f"{self.results_dir}/models"
+        models_dir = kwargs.get('dir', f"{self.results_dir}/{self.name}")
         os.makedirs(models_dir, exist_ok=True)
         try:
             model_path = f"{models_dir}/{name}.{self.network_type}.pth"
