@@ -119,8 +119,6 @@ class ModelTrainer(SCSingletonConfigurable):
             ptdata, coords = tm().getBlock().getPointData()
             lgm().log( f"MODEL: input dims={ptdata.shape[1]}, layer_sizes={self.layer_sizes}" )
             self._model = MLP( "masks", ptdata.shape[1], self.nclasses, self.layer_sizes, **opts ).to(self.device)
-            self.mask_save_panel.set_model( self._model )
-            self.mask_load_panel.set_model( self._model )
         return self._model
 
     def get_mask_load_panel(self) -> Panel:
@@ -309,17 +307,19 @@ class MaskCache(param.Parameterized):
     def model_id(self):
         return tm().tileid
 
-    def load( self, *args ):
+    @property
+    def model(self):
         if self._model is None:
-            ufm().show(f"No model to load.")
-        else:
-            self._model.load( self.model_id, self.mask_name, dir=self.save_dir )
+            self._model = mpt().model
+        return self._model
 
+    @exception_handled
+    def load( self, *args ):
+        self.model.load( self.model_id, self.mask_name, dir=self.save_dir )
+
+    @exception_handled
     def save( self, *args ):
-        if self._model is None:
-            ufm().show(f"No model to save.")
-        else:
-            self._model.save( self.model_id, self.mask_name, dir=self.save_dir )
+        self.model.save( self.model_id, self.mask_name, dir=self.save_dir )
 
 class MaskSavePanel(MaskCache):
 
