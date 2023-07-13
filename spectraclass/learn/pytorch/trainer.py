@@ -315,6 +315,7 @@ class MaskCache(param.Parameterized):
 
     @exception_handled
     def load( self, *args ):
+        print( f"MaskCache.load: mask name = '{self.mask_name}'")
         self.model.load( self.model_id, self.mask_name, dir=self.save_dir )
 
     @exception_handled
@@ -340,6 +341,8 @@ class MaskLoadPanel(MaskCache):
         super(MaskLoadPanel, self).__init__()
         block_selection_names = [ self.get_mask_name(f) for f in os.listdir(self.save_dir) if ("__" in f) ]
         sopts = dict( name='Cluster Mask', options=block_selection_names )
+        if len(block_selection_names):
+            sopts['value'] = self.mask_name = block_selection_names[0]
         self.file_selector = pn.widgets.Select(**sopts)
         self.file_selector.link(self, value='mask_name')
         self.load_button = pn.widgets.Button(name='Load Mask', button_type='success', width=150)
@@ -347,6 +350,6 @@ class MaskLoadPanel(MaskCache):
 
     def gui(self) -> Panel:
         load_panel = pn.Row(self.file_selector, self.load_button)
-        return pn.WidgetBox( "###Load", load_panel )
+        return load_panel
 
 
