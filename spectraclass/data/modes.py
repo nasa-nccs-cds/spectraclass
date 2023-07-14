@@ -433,6 +433,9 @@ class ModeDataManager(SCSingletonConfigurable):
     def metavars(self):
         return self.METAVARS
 
+    def get_block_selection(self) -> Optional[Dict]:
+        return None
+
     def register(self):
         pass
 

@@ -21,8 +21,6 @@ import holoviews as hv
 from holoviews import opts
 from holoviews import streams
 
-def nts(**kwargs): return NEONTileSelector.instance(**kwargs)
-
 class BlockSelection(param.Parameterized):
     selection_name = param.String(default="", doc="Name of saved block selection")
 
@@ -237,7 +235,7 @@ class BlockSelection(param.Parameterized):
             panels.append( ufm().gui() )
         return  pn.WidgetBox( "### Load Data Mask", *panels, pn.Tabs( *tabs ) )
 
-class NEONTileSelector(SCSingletonConfigurable):
+class NEONTileSelector(param.Parameterized):
 
     @log_timing
     def __init__(self, **kwargs):
@@ -295,13 +293,13 @@ class NEONTileSelector(SCSingletonConfigurable):
     def get_block_selection_gui(self):
         return self.blockSelection.get_cache_panel(self.selection_mode)
 
-    def get_block_selecction(self) -> Optional[Dict]:
+    def get_block_selection(self) -> Optional[Dict]:
         return self.blockSelection.get_block_selecction()
 
     def get_cluster_panel(self):
         return clm().panel()
 
-    def gui(self):
+    def gui( self, **kwargs ):
         self.rect0 = tm().block_index
         basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
         self.rect_grid = self.blockSelection.grid_widget()

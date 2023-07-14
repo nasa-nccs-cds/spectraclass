@@ -213,8 +213,8 @@ class Tile(DataContainer):
     @log_timing
     def getBlocks(self, **kwargs ) -> List["Block"]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        from spectraclass.gui.spatial.neon.manager import NEONTileSelector, nts
-        block_selection: Optional[Dict] = nts().get_block_selecction()
+        from spectraclass.data.base import dm
+        block_selection: Optional[Dict] = dm().modal.get_block_selection()
         data_blocks = []
         for ix in range(0, tm().block_dims[0]):
             for iy in range(0, tm().block_dims[1]):

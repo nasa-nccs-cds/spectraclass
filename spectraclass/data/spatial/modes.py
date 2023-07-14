@@ -83,12 +83,15 @@ class NEONDataManager(SpatialDataManager):
 
     def __init__(self):
         super(NEONDataManager, self).__init__()
-        self.tile_selector: NEONTileSelector = None
+        self._tile_selector: NEONTileSelector = None
 
     def gui(self, **kwargs ):
-        if self.tile_selector is None:
-            self.tile_selector = nts(**kwargs)
-        return pn.Row( self.tile_selector.gui(), self.preprocessing_gui() )
+        if self._tile_selector is None:
+            self._tile_selector = NEONTileSelector(**kwargs)
+        return pn.Row( self._tile_selector.gui(), self.preprocessing_gui() )
+
+    def get_block_selection(self) -> Optional[Dict]:
+        return None if self._tile_selector is None else self._tile_selector.get_block_selection()
 
     def preprocessing_gui(self):
         exec_button = pn.widgets.Button( name='Execute',  button_type='success', width=200 )
@@ -99,7 +102,7 @@ class NEONDataManager(SpatialDataManager):
         self.prepare_inputs()
 
     def save_block_selection(self):
-        self.tile_selector.save_block_selection()
+        self._tile_selector.save_block_selection()
 
     def valid_bands(self):
         if self._valid_bands is None:
