@@ -4,7 +4,7 @@ from spectraclass.reduction.trainer import mt
 import numpy.ma as ma
 from pathlib import Path
 from spectraclass.gui.control import ufm
-from spectraclass.reduction.embedding import rm
+import panel as pn
 from spectraclass.data.base import ModeDataManager
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Set
 import stat, os, time, json

@@ -85,6 +85,7 @@ class NEONDataManager(SpatialDataManager):
         super(NEONDataManager, self).__init__()
         self._tile_selector: NEONTileSelector = None
 
+
     def gui(self, **kwargs ):
         if self._tile_selector is None:
             self._tile_selector = NEONTileSelector(**kwargs)
@@ -94,9 +95,10 @@ class NEONDataManager(SpatialDataManager):
         return None if self._tile_selector is None else self._tile_selector.get_block_selection()
 
     def preprocessing_gui(self):
+        from spectraclass.reduction.trainer import mt
         exec_button = pn.widgets.Button( name='Execute',  button_type='success', width=200 )
         exec_button.on_click( self.execute_preprocessing )
-        return pn.WidgetBox( "### Preprocessing", exec_button )
+        return pn.WidgetBox( "### Preprocessing", exec_button, mt().progress )
 
     def execute_preprocessing(self, *args ):
         self.prepare_inputs()
