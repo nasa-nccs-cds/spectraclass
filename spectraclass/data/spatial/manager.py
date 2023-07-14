@@ -306,6 +306,7 @@ class SpatialDataManager(ModeDataManager):
                 lgm().log(f" {action} for image {dm().modal.image_name} with {len(blocks)} blocks.", print=True)
                 ufm().show( f"{action} for image {dm().modal.image_name}, # active blocks = {len(blocks)}" )
                 for block in blocks:
+                    if mt().abort: return
                     result_dataset: xa.Dataset = self.process_block( block, has_metadata )
                     if result_dataset is not None:
                         block_sizes[ block.cindex ] = result_dataset.attrs[ 'nsamples']

@@ -31,9 +31,9 @@ def anomaly( train_data: Tensor, reproduced_data: Tensor ) -> Tensor:
 class ProgressPanel:
 
     def __init__(self, niter: int, abort_callback: Callable ):
-        self._progress = pn.indicators.Progress(name='Iterations', value=0, width=400, max=niter )
-        self._log = pn.pane.Markdown( "Iteration: 0", width=300 )
-        self._abort = pn.widgets.Button( name='Abort', button_type='warning' )
+        self._progress = pn.indicators.Progress(name='Iterations', value=0, width=200, max=niter )
+        self._log = pn.pane.Markdown( "Iteration: 0", width=100 )
+        self._abort = pn.widgets.Button( name='Abort', button_type='warning', width=100 )
         self._abort.on_click( abort_callback )
 
     @exception_handled
@@ -72,6 +72,10 @@ class ModelTrainer(SCSingletonConfigurable):
         self._optimizer = None
         self.loss = torch.nn.MSELoss( **kwargs )
         self._progress = None
+
+    @property
+    def abort(self) -> bool:
+        return self._abort
 
     @property
     def progress(self) -> ProgressPanel:
@@ -155,6 +159,7 @@ class ModelTrainer(SCSingletonConfigurable):
             self.model.train()
             t0, initial_epoch = time.time(), 0
             for iter in range(self.niter):
+                if self._abort: return
                 initial_epoch = self.general_training(iter, initial_epoch, **kwargs )
             lgm().log( f"Trained autoencoder in {(time.time()-t0)/60:.3f} min", print=True )
             self.save(**kwargs)
