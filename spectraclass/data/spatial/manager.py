@@ -304,7 +304,7 @@ class SpatialDataManager(ModeDataManager):
                 self.set_current_image( image_index )
                 action = "Preprocessing data blocks" if tm().reprocess else "Processing metadata"
                 lgm().log(f" {action} for image {dm().modal.image_name} with {len(blocks)} blocks.", print=True)
-                ufm().show( f"{action} for image {dm().modal.image_name}" )
+                ufm().show( f"{action} for image {dm().modal.image_name}, # active blocks = {len(blocks)}" )
                 for block in blocks:
                     result_dataset: xa.Dataset = self.process_block( block, has_metadata )
                     if result_dataset is not None:

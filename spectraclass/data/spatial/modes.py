@@ -3,6 +3,7 @@ from typing import List, Union, Tuple, Optional, Dict, Callable
 from spectraclass.gui.spatial.aviris.manager import AvirisTileSelector
 from spectraclass.gui.spatial.neon.manager import NEONTileSelector, nts
 from spectraclass.data.modes import BlockSelectMode
+from panel.widgets import Button, Select
 from pathlib import Path
 import traitlets as tl
 import panel as pn
@@ -87,7 +88,15 @@ class NEONDataManager(SpatialDataManager):
     def gui(self, **kwargs ):
         if self.tile_selector is None:
             self.tile_selector = nts(**kwargs)
-        return self.tile_selector.gui()
+        return pn.Row( self.tile_selector.gui(), self.preprocessing_gui() )
+
+    def preprocessing_gui(self):
+        exec_button = pn.widgets.Button( name='Execute',  button_type='success', width=200 )
+        exec_button.on_click( self.execute_preprocessing )
+        return pn.WidgetBox( "### Preprocessing", exec_button )
+
+    def execute_preprocessing(self):
+        self.prepare_inputs()
 
     def save_block_selection(self):
         self.tile_selector.save_block_selection()

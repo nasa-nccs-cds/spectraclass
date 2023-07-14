@@ -31,7 +31,7 @@ class BlockSelection(param.Parameterized):
         self.selection_mode = selection_mode
         self.marker_color = "red"
         self.unmarked_color = "white"
-        self._selected_rectangles: Dict[Tuple,Tuple] = {}
+        self._selected_rectangles: Dict[Tuple,Tuple] = None
         self.selection_name_input = pn.widgets.TextInput(name='Selection Name', placeholder='Give this selection a name...')
         self.selection_name_input.link( self, value='selection_name' )
         self.rect_grid: Dict[Tuple,Tuple] = {}
@@ -132,12 +132,15 @@ class BlockSelection(param.Parameterized):
         self.update()
 
     def clear_marker(self):
-        for k in self._selected_rectangles.keys():
-            if self._selected_rectangles[k][4] == self.marker_color:
-                self._selected_rectangles[k] = self._selected_rectangles[k][:4] + (self.unmarked_color,)
+        if self._selected_rectangles is not None:
+            for k in self._selected_rectangles.keys():
+                if self._selected_rectangles[k][4] == self.marker_color:
+                    self._selected_rectangles[k] = self._selected_rectangles[k][:4] + (self.unmarked_color,)
 
     @exception_handled
     def select_block( self, bid: Tuple, update=True ):
+        if self._selected_rectangles is None:
+            self._selected_rectangles = {}
         color = self.marker_color if update else self.unmarked_color
         self.clear_marker()
         try:
@@ -162,32 +165,37 @@ class BlockSelection(param.Parameterized):
         self.update()
 
     @property
-    def selected_bids(self) -> List[Tuple]:
-        return list(self._selected_rectangles.keys())
+    def selected_bids(self) -> Optional[List[Tuple]]:
+        if self._selected_rectangles is not None:
+            return list(self._selected_rectangles.keys())
 
     def block_selected(self, bid: Tuple) -> bool:
+        if self._selected_rectangles is None:  return False
         return (bid in self._selected_rectangles)
 
     def clear_block( self, bid: Tuple, update=True ):
-        self._selected_rectangles.pop(bid, None)
-        if update: self.update()
+        if self._selected_rectangles is not None:
+            self._selected_rectangles.pop(bid, None)
+            if update: self.update()
 
     @property
     def selected_rectangles(self) -> List[Tuple]:
+        if self._selected_rectangles is None:  return []
         return list(self._selected_rectangles.values())
 
     @exception_handled
     def save_selection(self, *args ):
-        sname = self.selection_name if self.selection_name else "block_selection"
-        rect_indices = np.array(list(self._selected_rectangles.keys()))
-        pdata = pd.DataFrame( rect_indices, columns=['x','y'] )
-        save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
-        ufm().show(f"Save block selection: {sname}")
-        lgm().log(f" ----> file='{save_file}'")
-        try:
-            pdata.to_csv( save_file )
-        except Exception as err:
-            ufm().show(f"Error saving file: {err}")
+        if self._selected_rectangles is not None:
+            sname = self.selection_name if self.selection_name else "block_selection"
+            rect_indices = np.array(list(self._selected_rectangles.keys()))
+            pdata = pd.DataFrame( rect_indices, columns=['x','y'] )
+            save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
+            ufm().show(f"Save block selection: {sname}")
+            lgm().log(f" ----> file='{save_file}'")
+            try:
+                pdata.to_csv( save_file )
+            except Exception as err:
+                ufm().show(f"Error saving file: {err}")
 
     @exception_handled
     def load_selection(self, event):
@@ -202,6 +210,9 @@ class BlockSelection(param.Parameterized):
                 bid = (row['x'],row['y'])
                 self._selected_rectangles[bid] = self.rect_grid[bid] + (self.unmarked_color,)
             self.update()
+
+    def get_block_selecction(self) -> Optional[Dict]:
+        return self._selected_rectangles
 
     def get_selection_load_panel(self):
         block_selection_names = [ f.split(".")[-2] for f in os.listdir(self.save_dir) ]
@@ -224,7 +235,7 @@ class BlockSelection(param.Parameterized):
         elif mode == BlockSelectMode.LoadMask:
             tabs.append( ("clusters", mpt().get_mask_load_panel()) )
             panels.append( ufm().gui() )
-        return  pn.WidgetBox( "## Load Data Mask", *panels, pn.Tabs( *tabs ) )
+        return  pn.WidgetBox( "### Load Data Mask", *panels, pn.Tabs( *tabs ) )
 
 class NEONTileSelector(SCSingletonConfigurable):
 
@@ -268,7 +279,7 @@ class NEONTileSelector(SCSingletonConfigurable):
         self.blockSelection.clear_region(self.box_selection.data)
 
     def get_load_panel(self):
-        load_panel = self.blockSelection.get_selection_load_panel(self.selection_mode)
+        load_panel = self.blockSelection.get_selection_load_panel()
         return pn.Column(load_panel)
 
     def get_control_panel(self):
@@ -283,6 +294,9 @@ class NEONTileSelector(SCSingletonConfigurable):
 
     def get_block_selection_gui(self):
         return self.blockSelection.get_cache_panel(self.selection_mode)
+
+    def get_block_selecction(self) -> Optional[Dict]:
+        return self.blockSelection.get_block_selecction()
 
     def get_cluster_panel(self):
         return clm().panel()

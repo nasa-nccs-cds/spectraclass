@@ -213,8 +213,16 @@ class Tile(DataContainer):
     @log_timing
     def getBlocks(self, **kwargs ) -> List["Block"]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        lgm().log( f"getBlocks: tile_shape[x,y]={tm().tile_shape},  block_dims[x,y]={tm().block_dims}, raster_shape={tm().tile.data.shape}")
-        return [ self.getDataBlock( ix, iy, **kwargs ) for ix in range(0,tm().block_dims[0]) for iy in range(0,tm().block_dims[1]) ]
+        from spectraclass.gui.spatial.neon.manager import NEONTileSelector, nts
+        block_selection: Optional[Dict] = nts().get_block_selecction()
+        data_blocks = []
+        for ix in range(0, tm().block_dims[0]):
+            for iy in range(0, tm().block_dims[1]):
+                if (block_selection is None) or ((ix,iy) in block_selection):
+                    data_blocks.append( self.getDataBlock( ix, iy, **kwargs )  )
+        lgm().log( f"getBlocks: tile_shape[x,y]={tm().tile_shape},  block_dims[x,y]={tm().block_dims}, "
+                   f"raster_shape={tm().tile.data.shape}, nblocks active = {len(data_blocks)}")
+        return data_blocks
 
     @log_timing
     def band_data(self, iband: int ) -> np.ndarray:
