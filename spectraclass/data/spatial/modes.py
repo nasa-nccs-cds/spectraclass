@@ -98,7 +98,7 @@ class NEONDataManager(SpatialDataManager):
         exec_button.on_click( self.execute_preprocessing )
         return pn.WidgetBox( "### Preprocessing", exec_button )
 
-    def execute_preprocessing(self):
+    def execute_preprocessing(self, *args ):
         self.prepare_inputs()
 
     def save_block_selection(self):
