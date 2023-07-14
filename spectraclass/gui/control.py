@@ -1,9 +1,11 @@
 import ipywidgets as ip
 from typing import List, Union, Tuple, Optional, Dict, Callable
 import time
+import pandas as pd
 from functools import partial
 import xarray as xa
 import numpy as np
+import holoviews as hv
 import ipywidgets as ipw
 import panel as pn
 from panel.pane import Alert
@@ -11,6 +13,10 @@ import traitlets.config as tlc
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import traitlets as tl
+
+def get_parameter_table( parms: Dict, **opts ):
+    df = pd.DataFrame( parms )
+    return hv.Table(df).options( selectable=True, editable=False ).opts( **opts )
 
 def am() -> "ActionsManager":
     return ActionsManager.instance()

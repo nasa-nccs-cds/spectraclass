@@ -4,6 +4,7 @@ from spectraclass.gui.spatial.aviris.manager import AvirisTileSelector
 from spectraclass.gui.spatial.neon.manager import NEONTileSelector
 from spectraclass.data.modes import BlockSelectMode
 from panel.widgets import Button, Select
+import holoviews as hv
 from pathlib import Path
 import traitlets as tl
 import panel as pn
@@ -85,7 +86,6 @@ class NEONDataManager(SpatialDataManager):
         super(NEONDataManager, self).__init__()
         self._tile_selector: NEONTileSelector = None
 
-
     def gui(self, **kwargs ):
         if self._tile_selector is None:
             self._tile_selector = NEONTileSelector(**kwargs)
@@ -95,10 +95,13 @@ class NEONDataManager(SpatialDataManager):
         return None if self._tile_selector is None else self._tile_selector.get_block_selection()
 
     def preprocessing_gui(self):
+
         from spectraclass.reduction.trainer import mt
         exec_button = pn.widgets.Button( name='Execute',  button_type='success', width=200 )
         exec_button.on_click( self.execute_preprocessing )
-        return pn.WidgetBox( "### Preprocessing", exec_button, mt().progress.panel() )
+        for pid in [ 'Block Mask', 'Cluster Mask']:
+            self.parameter_stream.event( param=( pid, "NONE") )
+        return pn.WidgetBox( "### Preprocessing", pn.Row(self.parameter_table, exec_button), mt().progress.panel() )
 
     def execute_preprocessing(self, *args ):
         self.prepare_inputs()

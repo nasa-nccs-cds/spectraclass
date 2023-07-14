@@ -1,8 +1,10 @@
 from typing import List, Optional, Dict, Tuple, Union
 import panel as pn
 from os import path
+import holoviews as hv
 from panel.layout import Panel
 from pathlib import Path
+from holoviews.streams import Stream, param
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from sklearn.decomposition import PCA, FastICA
 import ipywidgets as ip
@@ -40,19 +42,13 @@ def scale( x: xa.DataArray, axis = 0 ) -> xa.DataArray:
 def nsamples( trainingsets: List[np.ndarray ]):
     return sum( [ts.shape[0] for ts in trainingsets] )
 
-def get_optimizer( **kwargs ):
-    oid = kwargs.get( 'optimizer','rmsprop').lower()
-    lr = kwargs.get( 'lr', 1e-3 )
-    if   oid == "rmsprop": return tf.keras.optimizers.RMSprop( learning_rate=lr )
-    elif oid == "adam":    return tf.keras.optimizers.Adam(    learning_rate=lr )
-    elif oid == "sgd":     return tf.keras.optimizers.SGD(     learning_rate=lr )
-    else: raise Exception( f" Unknown optimizer: {oid}")
-
 class BlockSelectMode(Enum):
     LoadTile = 0
     SelectTile = 1
     CreateMask = 2
     LoadMask = 3
+
+ParameterStream = Stream.define('Parameters', param=param.Tuple(default=('',''), doc='Display Parameter Value') )
 
 class ModeDataManager(SCSingletonConfigurable):
     from spectraclass.application.controller import SpectraclassController
@@ -93,6 +89,15 @@ class ModeDataManager(SCSingletonConfigurable):
         self._metadata: Dict = None
         self._spectral_mean: Optional[xa.DataArray] = None
         self.file_selection_watcher = None
+        self.parameter_stream: Stream = ParameterStream()
+        self.parameter_table = hv.DynamicMap(self.get_parameter_display, self.parameter_stream )
+        self.parameters: Dict = {}
+
+    def get_parameter_display(self, param: Tuple):
+        from spectraclass.gui.control import get_parameter_table
+        self.parameters.pop( "", None )
+        self.parameters[ param[0] ] = [ param[1] ]
+        return get_parameter_table(self.parameters)
 
     def getSpectralMean(self, norm=False ) -> Optional[xa.DataArray]:
         if self._spectral_mean is None:
