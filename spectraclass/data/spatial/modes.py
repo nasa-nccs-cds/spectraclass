@@ -1,6 +1,7 @@
 from .manager import SpatialDataManager
 from typing import List, Union, Tuple, Optional, Dict, Callable
 from spectraclass.gui.spatial.aviris.manager import AvirisTileSelector
+from spectraclass.gui.spatial.neon.manager import NEONTileSelector
 from spectraclass.data.modes import BlockSelectMode
 from panel.widgets import Button, Select
 from pathlib import Path
