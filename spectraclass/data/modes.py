@@ -48,7 +48,7 @@ class BlockSelectMode(Enum):
     CreateMask = 2
     LoadMask = 3
 
-ParameterStream = Stream.define('Parameters', param=param.Tuple(default=('',''), doc='Display Parameter Value') )
+ParameterStream = Stream.define('Parameters', param=param.Tuple(default=('','')), doc='Display Parameter Value')
 
 class ModeDataManager(SCSingletonConfigurable):
     from spectraclass.application.controller import SpectraclassController
