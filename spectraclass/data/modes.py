@@ -48,7 +48,7 @@ class BlockSelectMode(Enum):
     CreateMask = 2
     LoadMask = 3
 
-ParameterStream = Stream.define('Parameters', param=param.Tuple(default=('','')), doc='Display Parameter Value')
+ParameterStream = Stream.define('Parameters', value=param.Tuple(default=('',''), doc='Display Parameter Value') )
 
 class ModeDataManager(SCSingletonConfigurable):
     from spectraclass.application.controller import SpectraclassController
@@ -91,13 +91,13 @@ class ModeDataManager(SCSingletonConfigurable):
         self.file_selection_watcher = None
         self.parameter_stream: Stream = ParameterStream()
         self.parameter_table = hv.DynamicMap(self.get_parameter_display, self.parameter_stream )
-        self.parameters: Dict = {}
+        self._parameters: Dict = {}
 
-    def get_parameter_display(self, param: Tuple):
+    def get_parameter_display(self, value: Tuple):
         from spectraclass.gui.control import get_parameter_table
-        self.parameters.pop( "", None )
-        self.parameters[ param[0] ] = [ param[1] ]
-        return get_parameter_table(self.parameters)
+        self._parameters.pop( "", None )
+        self._parameters[ value[0] ] = [ value[1] ]
+        return get_parameter_table(self._parameters)
 
     def getSpectralMean(self, norm=False ) -> Optional[xa.DataArray]:
         if self._spectral_mean is None:
