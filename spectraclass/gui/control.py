@@ -16,7 +16,7 @@ import traitlets as tl
 
 def get_parameter_table( parms: Dict, **opts) -> hv.Table:
     df = pd.DataFrame( parms )
-    return hv.Table(df).options( selectable=True, editable=False, **opts)
+    return hv.Table(df).options( selectable=True, editable=False ) # , **opts)
 
 def am() -> "ActionsManager":
     return ActionsManager.instance()
