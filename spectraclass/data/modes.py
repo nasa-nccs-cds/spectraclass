@@ -91,7 +91,7 @@ class ModeDataManager(SCSingletonConfigurable):
         self.file_selection_watcher = None
         self.parameter_stream: Stream = ParameterStream()
         self.parameter_table = hv.DynamicMap( self.get_parameter_display, streams=[ self.parameter_stream ] )
-        self._parameters: Dict = {}
+        self._parameters: Dict = {"Cluster Mask": "NONE", "Block Mask": "NONE"}
 
     def update_parameter(self, name: str, value ):
         self.parameter_stream.event( value=(name,value) )
