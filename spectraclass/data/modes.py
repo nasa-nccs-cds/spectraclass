@@ -102,7 +102,7 @@ class ModeDataManager(SCSingletonConfigurable):
         self._parameters.pop( "", None )
         print( f"get_parameter_display: value = {value}")
         self._parameters[ value[0] ] = [ value[1] ]
-        return get_parameter_table(self._parameters)
+        return get_parameter_table( self._parameters, height=150 )
 
     def getSpectralMean(self, norm=False ) -> Optional[xa.DataArray]:
         if self._spectral_mean is None:
