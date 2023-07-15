@@ -93,10 +93,14 @@ class ModeDataManager(SCSingletonConfigurable):
         self.parameter_table = hv.DynamicMap( self.get_parameter_display, streams=[ self.parameter_stream ] )
         self._parameters: Dict = {}
 
+    def update_parameter(self, name: str, value ):
+        self.parameter_stream.event( value=(name,value) )
+
     @exception_handled
     def get_parameter_display(self, value: Tuple) -> hv.Table:
         from spectraclass.gui.control import get_parameter_table
         self._parameters.pop( "", None )
+        print( f"get_parameter_display: value = {value}")
         self._parameters[ value[0] ] = [ value[1] ]
         return get_parameter_table(self._parameters)
 

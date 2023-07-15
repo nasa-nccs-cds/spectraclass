@@ -100,7 +100,7 @@ class NEONDataManager(SpatialDataManager):
         exec_button = pn.widgets.Button( name='Execute',  button_type='success', width=200 )
         exec_button.on_click( self.execute_preprocessing )
         for pid in [ 'Block Mask', 'Cluster Mask']:
-            self.parameter_stream.event( value=( pid, "NONE") )
+            self.update_parameter( pid, "NONE" )
         return pn.WidgetBox( "### Preprocessing", pn.Row(self.parameter_table, exec_button), mt().progress.panel() )
 
     def execute_preprocessing(self, *args ):

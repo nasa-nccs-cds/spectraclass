@@ -202,6 +202,7 @@ class BlockSelection(param.Parameterized):
             save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
             ufm().show(f"Load Block mask '{sname}'")
             lgm().log(f"Load Block mask '{sname}': file='{save_file}'")
+            dm().modal.update_parameter( "Block Mask", sname )
             pdata: pd.DataFrame = pd.read_csv( save_file )
             self._selected_rectangles = {}
             for index, row in pdata.iterrows():

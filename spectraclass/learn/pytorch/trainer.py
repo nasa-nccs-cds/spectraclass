@@ -311,6 +311,7 @@ class MaskCache(param.Parameterized):
     def load( self, *args ):
         print( f"MaskCache.load: mask name = '{self.mask_name}'")
         self.model.load( self.model_id, self.mask_name, dir=self.save_dir )
+        dm().modal.update_parameter( "Cluster Mask", self.mask_name )
 
     @exception_handled
     def save( self, *args ):
