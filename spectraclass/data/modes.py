@@ -90,10 +90,11 @@ class ModeDataManager(SCSingletonConfigurable):
         self._spectral_mean: Optional[xa.DataArray] = None
         self.file_selection_watcher = None
         self.parameter_stream: Stream = ParameterStream()
-        self.parameter_table = hv.DynamicMap(self.get_parameter_display, self.parameter_stream )
+        self.parameter_table = hv.DynamicMap( self.get_parameter_display, streams=[ self.parameter_stream ] )
         self._parameters: Dict = {}
 
-    def get_parameter_display(self, value: Tuple):
+    @exception_handled
+    def get_parameter_display(self, value: Tuple) -> hv.Table:
         from spectraclass.gui.control import get_parameter_table
         self._parameters.pop( "", None )
         self._parameters[ value[0] ] = [ value[1] ]

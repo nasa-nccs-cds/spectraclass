@@ -14,9 +14,9 @@ from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 import traitlets as tl
 
-def get_parameter_table( parms: Dict, **opts ):
+def get_parameter_table( parms: Dict ) -> hv.Table:
     df = pd.DataFrame( parms )
-    return hv.Table(df).options( selectable=True, editable=False ).opts( **opts )
+    return hv.Table(df).options( selectable=True, editable=False )
 
 def am() -> "ActionsManager":
     return ActionsManager.instance()
