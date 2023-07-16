@@ -191,7 +191,6 @@ class ModelTrainer(SCSingletonConfigurable):
                     block.initialize()
         mloss = mean(losses)
         loss_msg = f"loss[{iter}/{self.niter}]: {mloss:>7f}"
-        lgm().log( loss_msg, print=True )
         self.progress.update( iter, loss_msg, mloss )
         return initial_epoch
 

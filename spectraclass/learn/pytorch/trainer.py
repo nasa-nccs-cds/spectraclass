@@ -174,7 +174,6 @@ class ModelTrainer(SCSingletonConfigurable):
             tloss, x, y_hat = self.training_epoch(epoch, x, y)
         lgm().log( f" ** ITER[{iter}]: norm data shape = {train_data.shape}, loss = {tloss}")
         loss_msg = f"loss[{iter}/{self.niter}]: {tloss:>4f}"
-        lgm().log( loss_msg )
         self.progress.update( iter, loss_msg, tloss )
         return final_epoch
 
