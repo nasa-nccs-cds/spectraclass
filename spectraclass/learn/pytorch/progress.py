@@ -34,7 +34,10 @@ class ProgressPanel(param.Parameterized):
 
     @exception_handled
     def plot_losses(self, loss: float = 0.0 ):
-        self._losses.append(loss)
+        if (len(self._losses) == 1) and (self._losses[0] == 0.0):
+            self._losses[0] = loss
+        else:
+            self._losses.append(loss)
         iterations: np.ndarray = np.arange( len(self._losses) )
         lgm().log( f"Plot Losses: {len(self._losses)} values")
         loss_table: hv.Table = hv.Table( (iterations, np.array(self._losses) ), 'Iteration', 'Loss' )
