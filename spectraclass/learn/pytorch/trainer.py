@@ -254,6 +254,7 @@ class MaskCache(param.Parameterized):
         self.save_dir = f"{dm().cache_dir}/masks/cluster_mask"
         os.makedirs( self.save_dir, exist_ok=True )
         self._model: MLP = None
+        self._mask_data = None
 
     def set_model(self, model: MLP):
         self._model = model
@@ -279,8 +280,20 @@ class MaskCache(param.Parameterized):
         dm().modal.update_parameter( "Cluster Mask", self.mask_name )
 
     @exception_handled
-    def save( self, *args ):
+    def save( self, *args, **kwargs ):
         self.model.save( self.model_id, self.mask_name, dir=self.save_dir )
+        blocks = tm().tile.getBlocks(**kwargs)
+        masks: List[np.ndarray] = []
+        mindex: List[int] = []
+        for block in blocks:
+            ptdata, point_coords = block.getPointData()
+            mask: xa.DataArray = self.model.predict( ptdata )
+            masks.append( mask.values )
+            idx = tm().c2bi(block.block_coords)
+            mindex.append( idx )
+        mask_data = np.concatenate( masks )
+        index = np.array( mindex )
+        print( f"mask_data shape = {mask_data.shape}, index shape={index.shape}")
 
 class MaskSavePanel(MaskCache):
 
