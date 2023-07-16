@@ -107,7 +107,9 @@ class NEONDataManager(SpatialDataManager):
         exec_button = pn.widgets.Button( name='Execute',  button_type='success', width=100 )
         exec_button.on_click( self.execute_preprocessing )
         lgm().trace( "#PG: Preprocessing")
-        return pn.WidgetBox( "### Preprocessing", pn.Row(self.parameter_table, exec_button), mt().progress.panel() )
+        mask_gui = self.gui( mode = BlockSelectMode.LoadMask )
+        preprocessing_gui =  pn.WidgetBox( "### Preprocessing", pn.Row(self.parameter_table, exec_button), mt().progress.panel() )
+        return pn.Row( mask_gui, preprocessing_gui )
 
     def execute_preprocessing(self, *args ):
         self.prepare_inputs()
