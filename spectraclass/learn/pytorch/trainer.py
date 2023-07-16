@@ -285,7 +285,7 @@ class MaskCache(param.Parameterized):
             masks.append( mask.values )
             idx = tm().c2bi(block.block_coords)
             mindex.append( idx )
-        mask_data = np.concatenate( masks, axis=0 )
+        mask_data = np.stack( masks, axis=0 )
         index = np.array( mindex )
         print( f"mask_data shape = {mask_data.shape}, index shape={index.shape}")
 
