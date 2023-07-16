@@ -100,7 +100,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def get_parameter_display(self, value: Tuple) -> hv.Table:
         from spectraclass.gui.control import get_parameter_table
         self._parameters[ value[0] ] = [ value[1] ]
-        return get_parameter_table( self._parameters, height=150 )
+        return get_parameter_table( self._parameters, height=60, width=250 )
 
     def getSpectralMean(self, norm=False ) -> Optional[xa.DataArray]:
         if self._spectral_mean is None:
