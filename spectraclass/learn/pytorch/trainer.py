@@ -276,18 +276,13 @@ class MaskCache(param.Parameterized):
     @exception_handled
     def save( self, *args, **kwargs ):
         self.model.save( self.model_id, self.mask_name, dir=self.save_dir )
-        blocks = tm().tile.getBlocks(**kwargs)
-        masks: List[np.ndarray] = []
-        mindex: List[int] = []
-        for block in blocks:
-            ptdata, point_coords = block.getPointData()
-            mask: xa.DataArray = self.model.predict( ptdata )
-            masks.append( mask.values )
-            idx = tm().c2bi(block.block_coords)
-            mindex.append( idx )
-        mask_data = np.stack( masks, axis=0 )
-        index = np.array( mindex )
-        print( f"mask_data shape = {mask_data.shape}, index shape={index.shape}")
+
+    def get_mask(self, bcoord: Tuple[int,int] ) -> xa.DataArray:
+        block: Block = tm().tile.getDataBlock(*bcoord)
+        ptdata, point_coords = block.getPointData()
+        mask: xa.DataArray = self.model.predict(ptdata)
+        lgm().log( f"MaskCache->get_mask{bcoord}: shape={mask.shape}, coords={list(mask.coords.keys())}")
+        return mask
 
 class MaskSavePanel(MaskCache):
 

@@ -708,7 +708,7 @@ class Block(DataContainer):
             self.getPointData(anomaly="none",norm=False)
         return self._point_data
 
-    @log_timing
+    @exception_handled
     def getPointData( self, **kwargs ) -> Tuple[ Optional[xa.DataArray], Dict ]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.data.base import DataManager, dm
