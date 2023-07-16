@@ -369,11 +369,12 @@ class ClusterManager(SCSingletonConfigurable):
             else:
                 ptdata, coords = block.getPointData()
                 input_data: np.array = ptdata.values
-            mask_array: np.array = np.zeros(input_data.shape[0], dtype=bool)
+            mask_array: np.array = np.full( input_data.shape[0], False, dtype=bool )
             mask_array[ marker.gids ] = True
             xchunk: np.array = input_data[mask_array]
-            ychunk: np.array = np.full( [marker.size], marker.cid, np.int )
+            ychunk: np.array = np.full( [xchunk.size[0]], marker.cid, np.int )
             lgm().log(f"#CM: Add training chunk, input_data shape={input_data.shape}, xchunk shape={xchunk.shape}, ychunk shape={ychunk.shape}, #gids={marker.gids.size}")
+            lgm().log(f" --> mask_array shape={mask_array.shape}, mask_array nzeros={np.count_nonzero(mask_array)}, ychunk shape={ychunk.shape}, #gids={marker.gids.size}")
             xchunks.append( xchunk )
             ychunks.append( ychunk )
         x, y = np.concatenate( xchunks, axis=0 ), np.concatenate( ychunks, axis=0 )
