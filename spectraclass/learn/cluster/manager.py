@@ -372,7 +372,7 @@ class ClusterManager(SCSingletonConfigurable):
             mask_array: np.array = np.full( input_data.shape[0], False, dtype=bool )
             mask_array[ marker.gids ] = True
             xchunk: np.array = input_data[mask_array]
-            ychunk: np.array = np.full( [xchunk.size[0]], marker.cid, np.int )
+            ychunk: np.array = np.full( shape=[xchunk.shape[0]], fill_value=marker.cid, dtype=np.int )
             lgm().log(f"#CM: Add training chunk, input_data shape={input_data.shape}, xchunk shape={xchunk.shape}, ychunk shape={ychunk.shape}, #gids={marker.gids.size}")
             lgm().log(f" --> mask_array shape={mask_array.shape}, mask_array nzeros={np.count_nonzero(mask_array)}, ychunk shape={ychunk.shape}, #gids={marker.gids.size}")
             xchunks.append( xchunk )

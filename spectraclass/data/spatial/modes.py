@@ -3,6 +3,7 @@ from typing import List, Union, Tuple, Optional, Dict, Callable
 from spectraclass.gui.spatial.aviris.manager import AvirisTileSelector
 from spectraclass.gui.spatial.neon.manager import NEONTileSelector
 from spectraclass.data.modes import BlockSelectMode
+from spectraclass.util.logs import LogManager, lgm, log_timing
 from spectraclass.learn.pytorch.progress import ProgressPanel
 from panel.widgets import Button, Select
 import holoviews as hv
@@ -96,7 +97,7 @@ class NEONDataManager(SpatialDataManager):
     def gui(self, **kwargs ):
         if self._tile_selector is None:
             self._tile_selector = NEONTileSelector(**kwargs)
-        return pn.Row( self._tile_selector.gui(), self.preprocessing_gui() )
+        return self._tile_selector.gui()
 
     def get_block_selection(self) -> Optional[Dict]:
         return None if self._tile_selector is None else self._tile_selector.get_block_selection()
@@ -105,6 +106,7 @@ class NEONDataManager(SpatialDataManager):
         from spectraclass.reduction.trainer import mt
         exec_button = pn.widgets.Button( name='Execute',  button_type='success', width=100 )
         exec_button.on_click( self.execute_preprocessing )
+        lgm().trace( "#PG: Preprocessing")
         return pn.WidgetBox( "### Preprocessing", pn.Row(self.parameter_table, exec_button), mt().progress.panel() )
 
     def execute_preprocessing(self, *args ):
