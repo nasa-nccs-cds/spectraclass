@@ -15,8 +15,9 @@ from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timin
 import traitlets as tl
 
 def get_parameter_table( parms: Dict, **opts) -> hv.Table:
+    lgm().log( f"****>> get_parameter_table, parms={parms}")
     df = pd.DataFrame( parms )
-    return hv.Table(df).options( selectable=True, editable=False ) # , **opts)
+    return hv.Table(df).options( selectable=True, editable=False, **opts)
 
 def am() -> "ActionsManager":
     return ActionsManager.instance()
