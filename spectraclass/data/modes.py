@@ -48,7 +48,7 @@ class BlockSelectMode(Enum):
     CreateMask = 2
     LoadMask = 3
 
-ParameterStream = Stream.define('Parameters', value=param.Tuple(default=('',''), doc='Display Parameter Value') )
+ParameterStream = Stream.define('Parameters', value=param.Tuple(default=('"Block Mask"','NONE'), doc='Display Parameter Value') )
 
 class ModeDataManager(SCSingletonConfigurable):
     from spectraclass.application.controller import SpectraclassController
@@ -99,8 +99,6 @@ class ModeDataManager(SCSingletonConfigurable):
     @exception_handled
     def get_parameter_display(self, value: Tuple) -> hv.Table:
         from spectraclass.gui.control import get_parameter_table
-        self._parameters.pop( "", None )
-        print( f"get_parameter_display: value = {value}")
         self._parameters[ value[0] ] = [ value[1] ]
         return get_parameter_table( self._parameters, height=150 )
 
