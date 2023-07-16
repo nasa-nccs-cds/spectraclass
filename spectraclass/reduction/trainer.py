@@ -6,7 +6,8 @@ from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.data.spatial.tile.tile import Block
-from spectraclass.data.base import DataManager, dm
+from panel.layout.base import Panel
+from spectraclass.learn.pytorch.progress import ProgressPanel
 from torch import Tensor
 import xarray as xa, numpy as np
 from .autoencoder import Autoencoder
@@ -27,22 +28,6 @@ def random_sample( tensor: Tensor, nsamples: int, axis=0 ) -> Tensor:
 
 def anomaly( train_data: Tensor, reproduced_data: Tensor ) -> Tensor:
     return torch.sum( torch.abs(train_data - reproduced_data), 1 )
-
-class ProgressPanel:
-
-    def __init__(self, niter: int, abort_callback: Callable ):
-        self._progress = pn.indicators.Progress(name='Iterations', value=0, width=200, max=niter )
-        self._log = pn.pane.Markdown( "Iteration: 0", width=100 )
-        self._abort = pn.widgets.Button( name='Abort', button_type='warning', width=100 )
-        self._abort.on_click( abort_callback )
-
-    @exception_handled
-    def update(self, iteration: int, message: str ):
-        self._progress.value = iteration
-        self._log.object = message
-
-    def panel(self) -> pn.Row:
-        return pn.Row( pn.pane.Markdown("### Learning Progress:"), self._progress, self._log, self._abort )
 
 class ModelTrainer(SCSingletonConfigurable):
     optimizer_type = tl.Unicode(default_value="adam").tag(config=True, sync=True)
@@ -98,7 +83,7 @@ class ModelTrainer(SCSingletonConfigurable):
             self._model = Autoencoder( point_data.shape[1], self.nfeatures, **opts ).to(self.device)
         return self._model
 
-    def panel(self)-> pn.Row:
+    def panel(self)-> Panel:
         return self.progress.panel()
 
     def abort_callback(self, event ):
@@ -204,9 +189,10 @@ class ModelTrainer(SCSingletonConfigurable):
                             lgm().log( f" ** ITER[{iter}]: Focus-processed block{block.block_coords}, norm data shape = {norm_point_data.shape}, losses = {losses[-self.focus_nepoch:]}")
                             initial_epoch = final_epoch
                     block.initialize()
-        loss_msg = f"loss[{iter}/{self.niter}]: {mean(losses):>7f}"
+        mloss = mean(losses)
+        loss_msg = f"loss[{iter}/{self.niter}]: {mloss:>7f}"
         lgm().log( loss_msg, print=True )
-        self.progress.update( iter, loss_msg )
+        self.progress.update( iter, loss_msg, mloss )
         return initial_epoch
 
     def focused_training_step(self, train_input: Tensor, y_hat: Tensor ) -> Tuple[float,Tensor,Tensor]:
