@@ -92,6 +92,11 @@ class ModelTrainer(SCSingletonConfigurable):
     def get_mask_load_panel(self) -> Panel:
         return self.mask_load_panel.gui()
 
+    def get_mask(self, bcoord: Tuple[int,int] ) -> xa.DataArray:
+        return self.mask_load_panel.get_mask( bcoord )
+
+#    mask = mpt().get_mask( bcoord )
+
     def panel(self)-> pn.Column:
         return pn.Column( self.progress.panel(), self.mask_save_panel.gui() )
 
