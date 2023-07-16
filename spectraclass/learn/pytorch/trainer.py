@@ -134,22 +134,16 @@ class ModelTrainer(SCSingletonConfigurable):
     def training_epoch(self, epoch: int, x: Tensor, y: Tensor, **kwargs) -> Tuple[float,Tensor,Tensor]:
         verbose = kwargs.get( 'verbose', False )
         y_hat: Tensor = self.model.forward(x)
- #       y1: Tensor = one_hot( y, y_hat.shape[1] )
         loss: Tensor = self.loss( y_hat, y )
         lval: float = float(loss)
-        if verbose: print(f"Epoch[{epoch}/{self.nepoch}]: device={self.device}, loss={lval} ",end=" ")
+        if verbose:
+            print(f"Epoch[{epoch}/{self.nepoch}]: device={self.device}, loss={lval} ",end=" ")
+            iL = self.model.feature_layer_index
+            self.print_layer_stats( iL )
 
-        if (abs(lval)<self.loss_threshold) and ( abs(lval-self.previous_loss) < self.loss_threshold ):
-            self.model.init_weights()
-            print( f"Reinit & restart: epoch={epoch}" )
-        else:
-            if verbose:
-                iL = self.model.feature_layer_index
-                self.print_layer_stats( iL )
-
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
         self.previous_loss = lval
         return lval, x, y_hat
 
