@@ -295,8 +295,7 @@ class SpatialDataManager(ModeDataManager):
         tm().autoprocess = False
         attrs, block_sizes = {}, {}
         nbands = None
-        use_block_mask = kwargs.get( 'use_block_mask', False)
-        lgm().log(f" Preparing inputs, reprocess={tm().reprocess}, use_block_mask={use_block_mask}", print=True)
+        lgm().log(f" Preparing inputs, reprocess={tm().reprocess}", print=True)
         blocks = tm().tile.getBlocks(**kwargs)
         try:
             has_metadata = (self.metadata is not None)
