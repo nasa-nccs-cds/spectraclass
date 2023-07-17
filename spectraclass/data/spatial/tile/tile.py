@@ -720,7 +720,7 @@ class Block(DataContainer):
         anomaly = kwargs.get( 'anomaly', dm().modal.anomaly )
         if self._point_data is None:
             lgm().log(f"BLOCK[{self.dsid()}].getPointData:")
-            self._point_data, pmask, rmask =  self.raster2points( self.data )
+            self._point_data, pmask, rmask =  self.raster2points( self.data, **kwargs )
             if (self._point_data is None): return (None, {})
             # lgm().log( f"\n *** pdata: {0 if (self._point_data is None) else self._point_data.shape} " )
             # lgm().log( f"\n *** pmask: {0 if (pmask is None) else np.count_nonzero(pmask)}/{0 if (pmask is None) else pmask.shape}, " )
@@ -850,10 +850,12 @@ class Block(DataContainer):
         rname = kwargs.get( 'name', points_data.name )
         return xa.DataArray( raster_data, coords, dims, rname, points_data.attrs )
 
-    def raster2points(self, base_raster: xa.DataArray) -> Tuple[Optional[xa.DataArray], Optional[np.ndarray],  Optional[np.ndarray]]:  # base_raster dims: [ band, y, x ]
-        t0 = time.time()
+    def raster2points(self, base_raster: xa.DataArray, **kwargs) -> Tuple[Optional[xa.DataArray], Optional[np.ndarray],  Optional[np.ndarray]]:  # base_raster dims: [ band, y, x ]
+        class_filter = kwargs.get('class_filter', True)
         if (base_raster is None) or (base_raster.shape[0] == 0): return (None, None, None)
-        point_data = self.filter_point_data( base_raster.stack(samples=base_raster.dims[-2:]).transpose() )
+
+        point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
+        if class_filter: point_data = self.filter_point_data( point_data )
 
         lgm().log(f"#FPD: raster2points:  base_raster{base_raster.dims} shp={base_raster.shape}, point_data{point_data.dims} shp={point_data.shape} " )
 
