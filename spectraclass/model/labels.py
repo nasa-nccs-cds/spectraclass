@@ -524,7 +524,7 @@ class LabelsManager(SCSingletonConfigurable):
         self.unlabeled_color = kwargs.get('unlabeled_color', "white")
         selected = kwargs.get('selected', 0)
 
-        if type(labels) == list:
+        if isinstance(labels, list):
             self.unlabeled_index = kwargs.get( 'unlabeled_index', 0 )
             label_list = [ ('Unlabeled', self.unlabeled_color ) ] + labels
             for ( label, color ) in labels:
@@ -532,7 +532,7 @@ class LabelsManager(SCSingletonConfigurable):
             self._colors = [ item[1] for item in label_list ]
             self._labels = [ item[0] for item in label_list ]
             self._indices = list(range(len(label_list)))
-        elif type(labels) == dict:
+        elif isinstance(labels, dict):
             self.unlabeled_index = kwargs.get('unlabeled_index', 9999)
             for ( label, color ) in labels.values():
                 if color.lower() == self.unlabeled_color: raise Exception( f"{self.unlabeled_color} is a reserved color")
