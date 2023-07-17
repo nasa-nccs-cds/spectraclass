@@ -171,7 +171,7 @@ class ModelTrainer(SCSingletonConfigurable):
             tloss, x, y_hat = self.training_epoch(epoch, x, y)
         lgm().log( f" ** ITER[{iter}]: norm data shape = {train_data.shape}, loss = {tloss}")
         loss_msg = f"loss[{iter}/{self.niter}]: {tloss:>4f}"
-        self.progress.update( iter, loss_msg, tloss )
+        self.progress.update( iter+1, loss_msg, tloss )
         return final_epoch
 
     #
@@ -272,7 +272,6 @@ class MaskCache(param.Parameterized):
 
     @exception_handled
     def load( self, *args ):
-        print( f"MaskCache.load: mask name = '{self.mask_name}'")
         self.model.load( self.model_id, self.mask_name, dir=self.save_dir )
         dm().modal.update_parameter( "Cluster Mask", self.mask_name )
         self._model_loaded = True

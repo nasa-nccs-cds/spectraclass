@@ -769,8 +769,6 @@ class NNDescent(object):
         else:
             effective_max_candidates = self.max_candidates
 
-        print("9")
-
         # Set threading constraints
         self._original_num_threads = numba.get_num_threads()
         if self.n_jobs != -1 and self.n_jobs is not None:

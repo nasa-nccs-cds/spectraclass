@@ -11,7 +11,7 @@ from spectraclass.learn.pytorch.progress import ProgressPanel
 from torch import Tensor
 import xarray as xa, numpy as np
 from .autoencoder import Autoencoder
-import holoviews as hv, panel as pn
+from spectraclass.gui.control import UserFeedbackManager, ufm
 import hvplot.xarray  # noqa
 
 def crange( data: xa.DataArray, idim:int ) -> str:
@@ -50,7 +50,7 @@ class ModelTrainer(SCSingletonConfigurable):
     def __init__(self, **kwargs ):
         super(ModelTrainer, self).__init__()
         self.device = kwargs.get('device','cpu')
-        self.nfeatures = kwargs.get('nfeatures',3)
+        self.nfeatures = kwargs.get( 'nfeatures', self.model_dims )
         self.previous_loss: float = 1e10
         self._model: Autoencoder = None
         self._abort = False
@@ -143,10 +143,13 @@ class ModelTrainer(SCSingletonConfigurable):
         if not self.load(**kwargs):
             self.model.train()
             t0, initial_epoch = time.time(), 0
+            ufm().show("Training autoencoder...")
             for iter in range(self.niter):
                 if self._abort: return
                 initial_epoch = self.general_training(iter, initial_epoch, **kwargs )
-            lgm().log( f"Trained autoencoder in {(time.time()-t0)/60:.3f} min", print=True )
+                ufm().show( f"Processed iteration {iter+1}")
+            lgm().log( f"Trained autoencoder in {(time.time()-t0)/60:.3f} min" )
+            ufm().show("Completed training autoencoder")
             self.save(**kwargs)
 
     def reduce(self, data: xa.DataArray ) -> Tuple[xa.DataArray,xa.DataArray]:
@@ -191,7 +194,7 @@ class ModelTrainer(SCSingletonConfigurable):
                     block.initialize()
         mloss = mean(losses)
         loss_msg = f"loss[{iter}/{self.niter}]: {mloss:>7f}"
-        self.progress.update( iter, loss_msg, mloss )
+        self.progress.update( iter+1, loss_msg, mloss )
         return initial_epoch
 
     def focused_training_step(self, train_input: Tensor, y_hat: Tensor ) -> Tuple[float,Tensor,Tensor]:

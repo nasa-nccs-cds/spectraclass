@@ -147,7 +147,6 @@ class MLP(nn.Module):
     def predict(self, data: xa.DataArray) -> xa.DataArray:
         input: Tensor = torch.from_numpy(data.values)
         result: np.ndarray = self.forward(input).detach().numpy()
-        lgm().log( f"predict: result shape = {result.shape}", print=True )
         coords = dict( samples=data.coords['samples'], classes=np.arange(result.shape[1]) )
         return xa.DataArray(result, dims=['samples', 'classes'], coords=coords, attrs=data.attrs)
 

@@ -114,9 +114,6 @@ class NEONDataManager(SpatialDataManager):
     def execute_preprocessing(self, *args ):
         self.prepare_inputs()
 
-    def save_block_selection(self):
-        self._tile_selector.save_block_selection()
-
     def valid_bands(self):
         if self._valid_bands is None:
             self._unpack_valid_bands()

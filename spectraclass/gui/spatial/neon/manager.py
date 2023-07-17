@@ -229,12 +229,14 @@ class BlockSelection(param.Parameterized):
         from spectraclass.learn.pytorch.trainer import mpt
         tabs = [ ("blocks", self.get_selection_load_panel()) ]
         panels= []
+        title = "### Load Block Mask"
         if mode == BlockSelectMode.CreateMask:
             tabs.append( ("save", self.get_selection_save_panel()) )
+            title = "### Save Block Mask"
         elif mode == BlockSelectMode.LoadMask:
             tabs.append( ("clusters", mpt().get_mask_load_panel()) )
             panels.append( ufm().gui() )
-        return  pn.WidgetBox( "### Load Data Mask", *panels, pn.Tabs( *tabs ) )
+        return  pn.WidgetBox( title, *panels, pn.Tabs( *tabs ) )
 
 class NEONTileSelector(param.Parameterized):
 

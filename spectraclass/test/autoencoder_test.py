@@ -41,7 +41,6 @@ for image_index in range(dm.modal.num_images):
                     autoencoder, encoder, prebuilt = rm().get_trained_network(norm_data.shape[1], model_dims, vae=vae)
                 nepochs = iter*nblocks + bi
                 autoencoder.fit( norm_data.data, norm_data.data, initial_epoch=nepochs-1, epochs=nepochs, shuffle=True )
-                print(f" Trained autoencoder in {time.time()-t0} sec")
             block.initialize()
 
     autoencoder.save( f"{base_file_path}.autoencoder.{key}" )
