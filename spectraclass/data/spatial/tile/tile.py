@@ -708,9 +708,9 @@ class Block(DataContainer):
             self.getPointData(anomaly="none",norm=False)
         return self._point_data
 
-    def get_data_mask(self) -> Optional[xa.DataArray]:
+    def filter_point_data(self, ptdata: xa.DataArray ) -> xa.DataArray:
         from spectraclass.learn.pytorch.trainer import mpt
-        return mpt().get_mask( self.block_coords )
+        return mpt().filter_point_data( ptdata )
 
     @exception_handled
     def getPointData( self, **kwargs ) -> Tuple[ Optional[xa.DataArray], Dict ]:
@@ -734,9 +734,6 @@ class Block(DataContainer):
             self._point_mask = pmask
             self._raster_mask = rmask
         ptdata = self._point_data
-        data_mask: Optional[xa.DataArray] = self.get_data_mask()
-        if data_mask is not None:
-            lgm().log( f"#LDM: Loaded data_mask, shape={data_mask.shape}, ptdata shape = {ptdata}")
         if anomaly != "none":
             smean = dm().modal.getSpectralMean(norm=False)
             if anomaly == "diff":
@@ -856,9 +853,9 @@ class Block(DataContainer):
     def raster2points(self, base_raster: xa.DataArray) -> Tuple[Optional[xa.DataArray], Optional[np.ndarray],  Optional[np.ndarray]]:  # base_raster dims: [ band, y, x ]
         t0 = time.time()
         if (base_raster is None) or (base_raster.shape[0] == 0): return (None, None, None)
-        point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
+        point_data = self.filter_point_data( base_raster.stack(samples=base_raster.dims[-2:]).transpose() )
 
-        lgm().log(f"#IA: raster2points:  base_raster{base_raster.dims} shp={base_raster.shape}, point_data{point_data.dims} shp={point_data.shape} " )
+        lgm().log(f"#FPD: raster2points:  base_raster{base_raster.dims} shp={base_raster.shape}, point_data{point_data.dims} shp={point_data.shape} " )
 
         if '_FillValue' in point_data.attrs:
             nodata = point_data.attrs.get('_FillValue',np.nan)

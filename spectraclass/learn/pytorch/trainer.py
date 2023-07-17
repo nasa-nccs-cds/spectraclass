@@ -92,8 +92,8 @@ class ModelTrainer(SCSingletonConfigurable):
     def get_mask_load_panel(self) -> Panel:
         return self.mask_load_panel.gui()
 
-    def get_mask(self, bcoord: Tuple[int,int] ) -> xa.DataArray:
-        return self.mask_load_panel.get_mask( bcoord )
+    def filter_point_data(self, ptdata: xa.DataArray ) -> xa.DataArray:
+        return self.mask_load_panel.filter_point_data( ptdata )
 
     def panel(self)-> pn.Column:
         return pn.Column( self.progress.panel(), self.mask_save_panel.gui() )
@@ -281,13 +281,11 @@ class MaskCache(param.Parameterized):
     def save( self, *args, **kwargs ):
         self.model.save( self.model_id, self.mask_name, dir=self.save_dir )
 
-    def get_mask(self, bcoord: Tuple[int,int] ) -> Optional[xa.DataArray]:
-        if self._model_loaded:
-            block: Block = tm().tile.getDataBlock(*bcoord)
-            ptdata, point_coords = block.getPointData()
-            mask: xa.DataArray = self.model.predict(ptdata)
-            lgm().log( f"MaskCache->get_mask{bcoord}: shape={mask.shape}, coords={list(mask.coords.keys())}")
-            return mask
+    @exception_handled
+    def filter_point_data(self, ptdata: xa.DataArray ):
+        mask: xa.DataArray = self.model.predict( ptdata )
+        lgm().log(f"#FPD: MaskCache->filter_point_data: ptdata shape={ptdata.shape}, coords={list(ptdata.coords.keys())}, mask shape = {mask.shape}")
+        return ptdata
 
 class MaskSavePanel(MaskCache):
 
