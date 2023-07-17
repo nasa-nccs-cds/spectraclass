@@ -236,7 +236,7 @@ class MarkerManager( PointsInteractor ):
                 self.delete_marker( x, y )
             elif int(button) == self.LEFT_BUTTON:
                 gid,ix,iy = self.block.coords2gid(y, x)
-                lgm().log(f" *** --> selected gid = {gid}, button = {button}")
+                lgm().log(f" ***--> selected gid = {gid}, button = {button}")
                 ufm().show( f" event[{x:.2f},{y:.2f}]: ({ix},{iy},{gid}) {mdata}" )
                 self.mark_point( gid, point=(x,y) )
             self.plot()

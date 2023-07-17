@@ -519,18 +519,30 @@ class LabelsManager(SCSingletonConfigurable):
         values = range(len(self._colors))
         return list(zip(values, self._labels, self._colors))
 
-    def setLabels(self, labels: Dict[int,Tuple[str, str]], **kwargs):
-        self.unlabeled_color = kwargs.get( 'unlabeled_color', "white" )
-        self.unlabeled_index = kwargs.get( 'unlabeled_index', 9999 )
-        load_existing = kwargs.get('load',False)
-        for ( label, color ) in labels.values():
-            if color.lower() == self.unlabeled_color: raise Exception( f"{self.unlabeled_color} is a reserved color")
-        label_selections = { self.unlabeled_index: ('Unlabeled', self.unlabeled_color ) }
-        label_selections.update( labels )
-        for index, (label,color) in label_selections.items():
-            self._colors.append( color )
-            self._labels.append( label )
-            self._indices.append( index )
+    def setLabels(self, labels: Union[List[Tuple[str, str]],Dict[int,Tuple[str, str]]], **kwargs):
+        load_existing = kwargs.get('load', False)
+        self.unlabeled_color = kwargs.get('unlabeled_color', "white")
+        selected = kwargs.get('selected', 0)
+
+        if type(labels) == list:
+            self.unlabeled_index = kwargs.get( 'unlabeled_index', 0 )
+            label_list = [ ('Unlabeled', self.unlabeled_color ) ] + labels
+            for ( label, color ) in labels:
+                if color.lower() == self.unlabeled_color: raise Exception( f"{self.unlabeled_color} is a reserved color")
+            self._colors = [ item[1] for item in label_list ]
+            self._labels = [ item[0] for item in label_list ]
+            self._indices = list(range(len(label_list)))
+        elif type(labels) == dict:
+            self.unlabeled_index = kwargs.get('unlabeled_index', 9999)
+            for ( label, color ) in labels.values():
+                if color.lower() == self.unlabeled_color: raise Exception( f"{self.unlabeled_color} is a reserved color")
+            label_selections = { self.unlabeled_index: ('Unlabeled', self.unlabeled_color ) }
+            label_selections.update( labels )
+            for index, (label,color) in label_selections.items():
+                self._colors.append( color )
+                self._labels.append( label )
+                self._indices.append( index )
+
         self.class_selector = pn.widgets.RadioButtonGroup(name='Class Selection', value=self._labels[0], options=self._labels)
         if load_existing:
             self.loadLabelData( load_existing )
@@ -594,7 +606,7 @@ class LabelsManager(SCSingletonConfigurable):
             if int(button) == RIGHT_BUTTON:
                 self.clearMarker( marker )
             elif int(button) == LEFT_BUTTON:
-                lgm().log(f" *** --> selected gid = {gid}, button = {button}")
+                lgm().log(f" >> selected gid = {gid}, button = {button}")
                 ufm().show( f" event[{x:.2f},{y:.2f}]: ({ix},{iy},{gid})" )
                 self.addMarker( marker )
 
