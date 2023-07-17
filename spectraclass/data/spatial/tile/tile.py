@@ -215,7 +215,6 @@ class Tile(DataContainer):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.data.base import dm
         block_selection: Optional[Dict] = dm().modal.get_block_selection()
-        lgm().log( f"getBlocks: block_selection={list(block_selection.keys())} " )
         data_blocks = []
         for ix in range(0, tm().block_dims[0]):
             for iy in range(0, tm().block_dims[1]):
