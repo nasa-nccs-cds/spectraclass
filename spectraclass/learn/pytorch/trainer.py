@@ -95,8 +95,6 @@ class ModelTrainer(SCSingletonConfigurable):
     def get_mask(self, bcoord: Tuple[int,int] ) -> xa.DataArray:
         return self.mask_load_panel.get_mask( bcoord )
 
-#    mask = mpt().get_mask( bcoord )
-
     def panel(self)-> pn.Column:
         return pn.Column( self.progress.panel(), self.mask_save_panel.gui() )
 
@@ -253,7 +251,7 @@ class MaskCache(param.Parameterized):
         self.save_dir = f"{dm().cache_dir}/masks/cluster_mask"
         os.makedirs( self.save_dir, exist_ok=True )
         self._model: MLP = None
-        self._mask_data = None
+        self._model_loaded: bool = False
 
     def set_model(self, model: MLP):
         self._model = model
@@ -277,17 +275,19 @@ class MaskCache(param.Parameterized):
         print( f"MaskCache.load: mask name = '{self.mask_name}'")
         self.model.load( self.model_id, self.mask_name, dir=self.save_dir )
         dm().modal.update_parameter( "Cluster Mask", self.mask_name )
+        self._model_loaded = True
 
     @exception_handled
     def save( self, *args, **kwargs ):
         self.model.save( self.model_id, self.mask_name, dir=self.save_dir )
 
-    def get_mask(self, bcoord: Tuple[int,int] ) -> xa.DataArray:
-        block: Block = tm().tile.getDataBlock(*bcoord)
-        ptdata, point_coords = block.getPointData()
-        mask: xa.DataArray = self.model.predict(ptdata)
-        lgm().log( f"MaskCache->get_mask{bcoord}: shape={mask.shape}, coords={list(mask.coords.keys())}")
-        return mask
+    def get_mask(self, bcoord: Tuple[int,int] ) -> Optional[xa.DataArray]:
+        if self._model_loaded:
+            block: Block = tm().tile.getDataBlock(*bcoord)
+            ptdata, point_coords = block.getPointData()
+            mask: xa.DataArray = self.model.predict(ptdata)
+            lgm().log( f"MaskCache->get_mask{bcoord}: shape={mask.shape}, coords={list(mask.coords.keys())}")
+            return mask
 
 class MaskSavePanel(MaskCache):
 

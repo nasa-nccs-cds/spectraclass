@@ -708,6 +708,10 @@ class Block(DataContainer):
             self.getPointData(anomaly="none",norm=False)
         return self._point_data
 
+    def get_data_mask(self) -> Optional[xa.DataArray]:
+        from spectraclass.learn.pytorch.trainer import mpt
+        return mpt().get_mask( self.block_coords )
+
     @exception_handled
     def getPointData( self, **kwargs ) -> Tuple[ Optional[xa.DataArray], Dict ]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
@@ -730,6 +734,9 @@ class Block(DataContainer):
             self._point_mask = pmask
             self._raster_mask = rmask
         ptdata = self._point_data
+        data_mask: Optional[xa.DataArray] = self.get_data_mask()
+        if data_mask is not None:
+            lgm().log( f"#LDM: Loaded data_mask, shape={data_mask.shape}, ptdata shape = {ptdata}")
         if anomaly != "none":
             smean = dm().modal.getSpectralMean(norm=False)
             if anomaly == "diff":
