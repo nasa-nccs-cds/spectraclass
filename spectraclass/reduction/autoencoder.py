@@ -77,7 +77,6 @@ class Autoencoder(nn.Module):
 
     @exception_handled
     def build_ae_model(self, **kwargs):
-        lgm().trace(f"#AEC: RM BUILD AEC NETWORK: {self.input_dims} -> {self.model_dims}")
         reduction_factor = 2
 #        dargs = dict( kernel_initializer=tf.keras.initializers.RandomNormal(stddev=winit), bias_initializer=tf.keras.initializers.Zeros() )
         in_features, iLayer = self.input_dims, 0
