@@ -308,7 +308,6 @@ class NEONTileSelector(param.Parameterized):
 
     def get_tile_selection_gui(self, **kwargs ):
         self.selection_mode = kwargs.get("mode", self.selection_mode)
-        print( f"get_tile_selection_gui: selection_mode = {self.selection_mode}")
         basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
         self.rect_grid = self.blockSelection.grid_widget(**kwargs)
         image = basemap * self.rect_grid * self.selected_rec

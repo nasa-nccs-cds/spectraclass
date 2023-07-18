@@ -282,8 +282,11 @@ class MaskCache(param.Parameterized):
 
     @exception_handled
     def filter_point_data(self, ptdata: xa.DataArray ):
-        mask: xa.DataArray = self.model.predict( ptdata )
-        lgm().log(f"#FPD: MaskCache->filter_point_data: ptdata shape={ptdata.shape}, coords={list(ptdata.coords.keys())}, mask shape = {mask.shape}")
+        mask_data: xa.DataArray = self.model.predict( ptdata )
+        mask: np.ndarray = (mask_data.values[:,1] == 1)
+        nvalid = np.count_nonzero( mask )
+        lgm().log(f"#FPD: MaskCache->filter_point_data: ptdata shape={ptdata.shape}, coords={list(ptdata.coords.keys())}, "
+                  f"mask[{mask.dtype}] shape = {mask.shape}, nvalid={nvalid}")
         return ptdata
 
 class MaskSavePanel(MaskCache):
