@@ -91,13 +91,20 @@ class NEONDataManager(SpatialDataManager):
         self._abort = False
         self._progress_panel = ProgressPanel( mt().niter, self.abort_callback)
 
+    @property
+    def tile_selector(self):
+        if self._tile_selector is None:
+            self._tile_selector = NEONTileSelector()
+        return self._tile_selector
+
+    def get_tile_selection_gui(self):
+        return self.tile_selector.get_tile_selection_gui()
+
     def abort_callback(self, event ):
         self._abort = True
 
     def gui(self, **kwargs ):
-        if self._tile_selector is None:
-            self._tile_selector = NEONTileSelector(**kwargs)
-        return self._tile_selector.gui()
+        return self.tile_selector.gui(**kwargs)
 
     def get_block_selection(self) -> Optional[Dict]:
         return None if self._tile_selector is None else self._tile_selector.get_block_selection()
