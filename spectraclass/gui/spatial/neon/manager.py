@@ -317,6 +317,7 @@ class NEONTileSelector(param.Parameterized):
         self.init( **kwargs )
         return self.blockSelection.get_block_selection(**kwargs)
 
+
     def get_cluster_panel(self,**kwargs):
         self.init(**kwargs)
         return clm().panel()
