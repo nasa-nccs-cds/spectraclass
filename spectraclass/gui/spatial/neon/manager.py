@@ -257,7 +257,7 @@ class NEONTileSelector(param.Parameterized):
         else:
             self.tap_stream = SingleTap(transient=True)
         self.selected_rec = self.blockSelection.get_dynamic_selection([self.tap_stream])
-
+        self.rect_grid: hv.Rectangles = None
         self._select_all = pn.widgets.Button( name='Select All', button_type='primary', width=150 )
         self._select_all.on_click( self.select_all )
         self._select_region = pn.widgets.Button( name='Select Region', button_type='primary', width=150 )
@@ -300,25 +300,26 @@ class NEONTileSelector(param.Parameterized):
         block_panels = pn.Tabs( ("select",selection_panel), ("cache",cache_panel) )
         return pn.Tabs( ("block mask", block_panels), ( "cluster mask", clm().gui()), ( "learning", clm().get_learning_panel("points")) )
 
-
-
     def get_block_selection_gui(self,**kwargs):
-        return self.blockSelection.get_cache_panel()
+        self.selection_mode = kwargs.get("mode", self.selection_mode)
+        return self.blockSelection.get_cache_panel(self.selection_mode)
 
     def get_block_selection(self, **kwargs) -> Optional[Dict]:
-        return self.blockSelection.get_block_selection(**kwargs)
+        return self.blockSelection.get_block_selection()
 
 
-    def get_cluster_panel(self,**kwargs):
+    def get_cluster_panel(self):
         return clm().panel()
 
     def get_tile_selection_gui(self, **kwargs ):
+        self.selection_mode = kwargs.get("mode", self.selection_mode)
         basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
         self.rect_grid = self.blockSelection.grid_widget(**kwargs)
         image = basemap * self.rect_grid * self.selected_rec
         return image
 
     def gui( self, **kwargs ):
+        self.selection_mode = kwargs.get("mode", self.selection_mode)
         self.rect0 = tm().block_index
         basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
         self.rect_grid = self.blockSelection.grid_widget()
