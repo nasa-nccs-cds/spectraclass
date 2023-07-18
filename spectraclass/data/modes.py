@@ -96,7 +96,7 @@ class ModeDataManager(SCSingletonConfigurable):
     def update_parameter(self, name: str, value ):
         self.parameter_stream.event( value=(name,value) )
 
-    def get_tile_selection_gui(self):
+    def get_tile_selection_gui(self, **kwargs):
         raise Exception( "get_tile_selection_gui: call to undefined abstact method")
 
     @exception_handled

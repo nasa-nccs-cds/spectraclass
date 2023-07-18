@@ -264,11 +264,10 @@ class hvSpectraclassGui(SCSingletonConfigurable):
 
     @exception_handled
     def panel(self, title: str = None, **kwargs ) -> Panel:
-        reduced = kwargs.get( 'reduced', False )
         rows = [ self.mapviews ]
         if title is not None: rows.insert( 0, title )
         image_column = pn.Column( *rows )
-        return image_column if reduced else pn.Row(  image_column, self.get_control_panel() )
+        return pn.Row(  image_column, self.get_control_panel() )
 
 #
 # class VariableBrowser1:

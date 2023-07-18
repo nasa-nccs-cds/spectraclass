@@ -97,8 +97,8 @@ class NEONDataManager(SpatialDataManager):
             self._tile_selector = NEONTileSelector()
         return self._tile_selector
 
-    def get_tile_selection_gui(self):
-        return self.tile_selector.get_tile_selection_gui()
+    def get_tile_selection_gui(self, **kwargs):
+        return self.tile_selector.get_tile_selection_gui(**kwargs)
 
     def abort_callback(self, event ):
         self._abort = True

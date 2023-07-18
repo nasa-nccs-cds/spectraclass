@@ -294,8 +294,9 @@ class NEONTileSelector(param.Parameterized):
         block_panels = pn.Tabs( ("select",selection_panel), ("cache",cache_panel) )
         return pn.Tabs( ("block mask", block_panels), ( "cluster mask", clm().gui()), ( "learning", clm().get_learning_panel("points")) )
 
-    def get_block_selection_gui(self):
-        return self.blockSelection.get_cache_panel(self.selection_mode)
+    def get_block_selection_gui(self,**kwargs):
+        mode = kwargs.get('mode',self.selection_mode)
+        return self.blockSelection.get_cache_panel(mode)
 
     def get_block_selection(self) -> Optional[Dict]:
         return self.blockSelection.get_block_selecction()
@@ -303,14 +304,13 @@ class NEONTileSelector(param.Parameterized):
     def get_cluster_panel(self):
         return clm().panel()
 
-    def get_tile_selection_gui(self):
+    def get_tile_selection_gui(self, **kwargs ):
         basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
         self.rect_grid = self.blockSelection.grid_widget()
         image = basemap * self.rect_grid * self.selected_rec
         return image
 
     def gui( self, **kwargs ):
-        if "mode" in kwargs: self.selection_mode
         selection_mode = kwargs.get( "mode", self.selection_mode )
         self.rect0 = tm().block_index
         basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
@@ -327,7 +327,7 @@ class NEONTileSelector(param.Parameterized):
                 viz_panels = pn.Tabs( ("select", image * self.region_selection), ("cluster", cluster_panel))
                 return pn.Row( viz_panels, selection_panel )
             elif selection_mode == BlockSelectMode.LoadMask:
-                return self.get_block_selection_gui()
+                return self.get_block_selection_gui(**kwargs)
 
     @property
     def image_index(self) -> int:
