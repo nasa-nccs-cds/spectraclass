@@ -7,6 +7,8 @@ from spectraclass.data.base import DataManager
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.reduction.trainer import mt
 from typing import List, Union, Tuple, Optional, Dict, Callable
+from spectraclass.data.modes import BlockSelectMode
+
 hv.extension('bokeh')
 
 dm: DataManager = DataManager.initialize( "AGB", 'neon' )
@@ -38,4 +40,4 @@ classes = [ ('air', "cyan"),
 lm().setLabels( classes )
 
 viewer: hvSpectraclassGui   = sgui().init()
-viewer.panel()
+viewer.panel(mode=BlockSelectMode.LoadTile)

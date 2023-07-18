@@ -252,11 +252,11 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         if cname=="reproduction": return block.getReproduction(raster=True)
 
     @exception_handled
-    def get_control_panel(self) -> Panel:
+    def get_control_panel(self,**kwargs) -> Panel:
         from spectraclass.data.modes import BlockSelectMode
         from spectraclass.learn.cluster.manager import clm
         from spectraclass.gui.pointcloud import PointCloudManager, pcm
-        data_selection_panel = pn.Tabs(  ("Tile", dm().modal.get_tile_selection_gui()) ) # , ("Block",dm().modal.gui()) ] )
+        data_selection_panel = pn.Tabs(  ("Tile", dm().modal.get_tile_selection_gui(**kwargs)) ) # , ("Block",dm().modal.gui()) ] )
         manifold_panel = pn.Row( pcm().gui() )
         analytics_gui = pn.Tabs( ("Cluster", clm().gui()), ("Classify", rs().get_control_panel() ), ("Mask", mm().get_control_panel() ) )
         controls = pn.Accordion( ('Data Selection', data_selection_panel ), ('Analytics',analytics_gui), ('Manifold', manifold_panel ), toggle=True, active=[0] )
@@ -267,7 +267,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         rows = [ self.mapviews ]
         if title is not None: rows.insert( 0, title )
         image_column = pn.Column( *rows )
-        return pn.Row(  image_column, self.get_control_panel() )
+        return pn.Row(  image_column, self.get_control_panel(**kwargs) )
 
 #
 # class VariableBrowser1:

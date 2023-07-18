@@ -61,6 +61,7 @@ class BlockSelection(param.Parameterized):
         bindex =   math.floor( (x-self.bx0)/self.bdx ),  math.floor( (self.by1-y)/self.bdy )
         lgm().log( f"TS: block_index: {bindex}, x,y={(x,y)}, bx0={self.bx0}, by1={self.by1}, bdx,bdy={(self.bdx,self.bdy)}" )
         return bindex
+
     @exception_handled
     def select_rec(self, x, y):
         #       self.box_selection.data = {}    # Data can't be modified.
@@ -72,11 +73,13 @@ class BlockSelection(param.Parameterized):
                 ufm().show(f"select block {bindex}")
 
                 if self.selection_mode == BlockSelectMode.LoadTile:
-                    tm().setBlock(bindex)
-                    ufm().clear()
-                    self.clear_all()
-
-                self.select_block(bindex)
+                    if (self._selected_rectangles is None) or (bindex in self._selected_rectangles):
+                        tm().setBlock(bindex)
+                        ufm().show(f"Selecting block: {bindex}")
+                        self.select_block( bindex, update=True )
+                    else: ufm().show(f"Inactive block: {bindex}")
+                else:
+                    self.select_block(bindex)
 
             else:
                 if self.click_select_mode.value == 'Unselect':
@@ -118,7 +121,7 @@ class BlockSelection(param.Parameterized):
     def add_grid_rect(self, bid: Tuple , rect: Tuple ):
         self.rect_grid[bid] = rect
 
-    def grid_widget(self) -> hv.Rectangles:
+    def grid_widget(self,**kwargs) -> hv.Rectangles:
         return hv.Rectangles(list(self.rect_grid.values())).opts(line_color="cyan", fill_alpha=0.0, line_alpha=1.0)
 
     def select_all(self):
@@ -305,28 +308,29 @@ class NEONTileSelector(param.Parameterized):
         return clm().panel()
 
     def get_tile_selection_gui(self, **kwargs ):
+        self.selection_mode = kwargs.get("mode", self.selection_mode)
         basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
-        self.rect_grid = self.blockSelection.grid_widget()
+        self.rect_grid = self.blockSelection.grid_widget(**kwargs)
         image = basemap * self.rect_grid * self.selected_rec
         return image
 
     def gui( self, **kwargs ):
-        selection_mode = kwargs.get( "mode", self.selection_mode )
+        self.selection_mode = kwargs.get( "mode", self.selection_mode )
         self.rect0 = tm().block_index
         basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
         self.rect_grid = self.blockSelection.grid_widget()
         image = basemap * self.rect_grid * self.selected_rec
-        if selection_mode == BlockSelectMode.LoadTile:
+        if self.selection_mode == BlockSelectMode.LoadTile:
             return image
         else:
             selection_panel = self.get_control_panel()
-            if selection_mode == BlockSelectMode.SelectTile:
+            if self.selection_mode == BlockSelectMode.SelectTile:
                 return pn.Row( image * self.region_selection, selection_panel )
-            elif selection_mode == BlockSelectMode.CreateMask:
+            elif self.selection_mode == BlockSelectMode.CreateMask:
                 cluster_panel = self.get_cluster_panel()
                 viz_panels = pn.Tabs( ("select", image * self.region_selection), ("cluster", cluster_panel))
                 return pn.Row( viz_panels, selection_panel )
-            elif selection_mode == BlockSelectMode.LoadMask:
+            elif self.selection_mode == BlockSelectMode.LoadMask:
                 return self.get_block_selection_gui(**kwargs)
 
     @property
