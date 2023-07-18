@@ -212,7 +212,7 @@ class BlockSelection(param.Parameterized):
                 self._selected_rectangles[bid] = self.rect_grid[bid] + (self.unmarked_color,)
             self.update()
 
-    def get_block_selecction(self) -> Optional[Dict]:
+    def get_block_selection(self) -> Optional[Dict]:
         return self._selected_rectangles
 
     def get_selection_load_panel(self):
@@ -310,8 +310,9 @@ class NEONTileSelector(param.Parameterized):
         self.init(**kwargs)
         return self.blockSelection.get_cache_panel()
 
-    def get_block_selection(self) -> Optional[Dict]:
-        return self.blockSelection.get_block_selecction()
+    def get_block_selection(self, **kwargs) -> Optional[Dict]:
+        self.init( **kwargs )
+        return self.blockSelection.get_block_selection(**kwargs)
 
     def get_cluster_panel(self,**kwargs):
         self.init(**kwargs)

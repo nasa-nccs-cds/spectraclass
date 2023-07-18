@@ -106,8 +106,8 @@ class NEONDataManager(SpatialDataManager):
     def gui(self, **kwargs ):
         return self.tile_selector.gui(**kwargs)
 
-    def get_block_selection(self) -> Optional[Dict]:
-        return None if self._tile_selector is None else self._tile_selector.get_block_selection()
+    def get_block_selection(self,**kwargs) -> Optional[Dict]:
+        return None if self._tile_selector is None else self._tile_selector.get_block_selection(**kwargs)
 
     def preprocessing_gui(self):
         from spectraclass.reduction.trainer import mt
