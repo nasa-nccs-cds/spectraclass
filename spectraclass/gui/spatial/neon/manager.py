@@ -70,24 +70,23 @@ class BlockSelection(param.Parameterized):
             lgm().log(f"NTS: NEONTileSelector-> select block {bindex}")
 
             if not self.block_selected(bindex):
-                ufm().show(f"select block {bindex}")
-
                 if self.selection_mode == BlockSelectMode.LoadTile:
-                    if (self._selected_rectangles is None) or (bindex in self._selected_rectangles):
-                        tm().setBlock(bindex)
-                        ufm().show(f"Selecting block: {bindex}")
-                        self.select_block( bindex, update=True )
-                    else: ufm().show(f"Inactive block: {bindex}")
+                     ufm().show(f"Inactive block: {bindex}")
                 else:
+                    ufm().show(f"select block {bindex}")
                     self.select_block(bindex)
-
             else:
-                if self.click_select_mode.value == 'Unselect':
-                    ufm().show(f"clear block {bindex}")
-                    self.clear_block(bindex)
+                if self.selection_mode == BlockSelectMode.LoadTile:
+                    tm().setBlock(bindex)
+                    ufm().show(f"Selecting block: {bindex}")
+                    self.select_block(bindex, update=True)
                 else:
-                    ufm().show(f"mark block {bindex}")
-                    self.select_block(bindex)
+                    if self.click_select_mode.value == 'Unselect':
+                        ufm().show(f"clear block {bindex}")
+                        self.clear_block(bindex)
+                    else:
+                        ufm().show(f"mark block {bindex}")
+                        self.select_block(bindex)
 
         return hv.Rectangles(self.selected_rectangles, vdims = 'value').opts(color='value', fill_alpha=0.6, line_alpha=1.0, line_width=2)
 
@@ -309,6 +308,7 @@ class NEONTileSelector(param.Parameterized):
 
     def get_tile_selection_gui(self, **kwargs ):
         self.selection_mode = kwargs.get("mode", self.selection_mode)
+        print( f"get_tile_selection_gui: selection_mode = {self.selection_mode}")
         basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
         self.rect_grid = self.blockSelection.grid_widget(**kwargs)
         image = basemap * self.rect_grid * self.selected_rec
