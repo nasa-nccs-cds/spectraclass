@@ -60,7 +60,7 @@ class LogManager(SCSingletonConfigurable):
 
     def init_logging(self, name: str, mode: str, **kwargs ):
         now = datetime.now()
-        timestamp_logs = kwargs.get('timestamp_logs', True )
+        timestamp_logs = kwargs.get('timestamp_logs', False )
         timestamp = now.strftime("%j%H%M%S") if timestamp_logs else "00000"
         self.log_dir = os.path.join( os.path.expanduser("~"), ".spectraclass", "logging", mode )
         os.makedirs( self.log_dir, 0o777, exist_ok=True )

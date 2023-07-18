@@ -74,7 +74,7 @@ class BlockSelection(param.Parameterized):
                 if self.selection_mode == BlockSelectMode.LoadTile:
                     tm().setBlock(bindex)
                     ufm().clear()
-                    self.clear()
+                    self.clear_all()
 
                 self.select_block(bindex)
 
@@ -310,22 +310,23 @@ class NEONTileSelector(param.Parameterized):
         return image
 
     def gui( self, **kwargs ):
-        if "mode" in kwargs: self.selection_mode = kwargs["mode"]
+        if "mode" in kwargs: self.selection_mode
+        selection_mode = kwargs.get( "mode", self.selection_mode )
         self.rect0 = tm().block_index
         basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
         self.rect_grid = self.blockSelection.grid_widget()
         image = basemap * self.rect_grid * self.selected_rec
-        if self.selection_mode == BlockSelectMode.LoadTile:
+        if selection_mode == BlockSelectMode.LoadTile:
             return image
         else:
             selection_panel = self.get_control_panel()
-            if self.selection_mode == BlockSelectMode.SelectTile:
+            if selection_mode == BlockSelectMode.SelectTile:
                 return pn.Row( image * self.region_selection, selection_panel )
-            elif self.selection_mode == BlockSelectMode.CreateMask:
+            elif selection_mode == BlockSelectMode.CreateMask:
                 cluster_panel = self.get_cluster_panel()
                 viz_panels = pn.Tabs( ("select", image * self.region_selection), ("cluster", cluster_panel))
                 return pn.Row( viz_panels, selection_panel )
-            elif self.selection_mode == BlockSelectMode.LoadMask:
+            elif selection_mode == BlockSelectMode.LoadMask:
                 return self.get_block_selection_gui()
 
     @property
