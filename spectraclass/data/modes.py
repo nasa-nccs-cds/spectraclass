@@ -96,6 +96,9 @@ class ModeDataManager(SCSingletonConfigurable):
     def update_parameter(self, name: str, value ):
         self.parameter_stream.event( value=(name,value) )
 
+    def get_tile_selection_gui(self):
+        return None
+
     @exception_handled
     def get_parameter_display(self, value: Tuple) -> hv.Table:
         from spectraclass.gui.control import get_parameter_table

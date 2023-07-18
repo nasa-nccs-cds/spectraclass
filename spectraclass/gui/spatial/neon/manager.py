@@ -303,6 +303,12 @@ class NEONTileSelector(param.Parameterized):
     def get_cluster_panel(self):
         return clm().panel()
 
+    def get_tile_selection_gui(self):
+        basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
+        self.rect_grid = self.blockSelection.grid_widget()
+        image = basemap * self.rect_grid * self.selected_rec
+        return image
+
     def gui( self, **kwargs ):
         selection_mode = kwargs.get( "mode", self.selection_mode )
         self.rect0 = tm().block_index
