@@ -262,6 +262,7 @@ class NEONTileSelector(param.Parameterized):
         self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning', width=150 )
         self._clear_region.on_click( self.clear_region )
 
+    @exception_handled
     def init(self,**kwargs):
         self.selection_mode: BlockSelectMode = kwargs.get('mode', BlockSelectMode.LoadTile)
         if self.region_selection is None:
