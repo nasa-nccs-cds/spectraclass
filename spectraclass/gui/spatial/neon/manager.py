@@ -265,7 +265,7 @@ class NEONTileSelector(param.Parameterized):
     @exception_handled
     def init(self,**kwargs):
         self.selection_mode: BlockSelectMode = kwargs.get('mode', BlockSelectMode.LoadTile)
-        if self.region_selection is None:
+        if self.blockSelection is None:
             lgm().log( f"#NTS: selection_mode = {self.selection_mode}")
             self.region_selection: hv.Rectangles = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.75, color="white" )
             self.box_selection_stream = streams.BoxEdit(source=self.region_selection, num_objects=1)
