@@ -307,6 +307,8 @@ class NEONTileSelector(param.Parameterized):
         block_panels = pn.Tabs( ("select",selection_panel), ("cache",cache_panel) )
         return pn.Tabs( ("block mask", block_panels), ( "cluster mask", clm().gui()), ( "learning", clm().get_learning_panel("points")) )
 
+
+
     def get_block_selection_gui(self,**kwargs):
         self.init(**kwargs)
         return self.blockSelection.get_cache_panel()
