@@ -246,12 +246,17 @@ class NEONTileSelector(param.Parameterized):
     def __init__(self, **kwargs):
         super(NEONTileSelector, self).__init__()
 
-        self.region_selection: hv.Rectangles = None
-        self.blockSelection = None
-        self.tap_stream = None
-        self.selected_rec = None
-        self.rect_grid: hv.Rectangles = None
-        self.box_selection_stream = None
+        self.selection_mode: BlockSelectMode = kwargs.get('mode', BlockSelectMode.LoadTile)
+        lgm().log(f"#NTS: selection_mode = {self.selection_mode}")
+        self.region_selection: hv.Rectangles = hv.Rectangles([]).opts(active_tools=['box_edit'], fill_alpha=0.75,
+                                                                      color="white")
+        self.box_selection_stream = streams.BoxEdit(source=self.region_selection, num_objects=1)
+        self.blockSelection = BlockSelection(self.selection_mode)
+        if self.selection_mode == BlockSelectMode.LoadTile:
+            self.tap_stream = DoubleTap(transient=True)
+        else:
+            self.tap_stream = SingleTap(transient=True)
+        self.selected_rec = self.blockSelection.get_dynamic_selection([self.tap_stream])
 
         self._select_all = pn.widgets.Button( name='Select All', button_type='primary', width=150 )
         self._select_all.on_click( self.select_all )
@@ -261,18 +266,6 @@ class NEONTileSelector(param.Parameterized):
         self._clear_all.on_click( self.clear_all )
         self._clear_region  = pn.widgets.Button( name='Clear Region',  button_type='warning', width=150 )
         self._clear_region.on_click( self.clear_region )
-
-    @exception_handled
-    def init(self,**kwargs):
-        self.selection_mode: BlockSelectMode = kwargs.get('mode', BlockSelectMode.LoadTile)
-        if self.blockSelection is None:
-            lgm().log( f"#NTS: selection_mode = {self.selection_mode}")
-            self.region_selection: hv.Rectangles = hv.Rectangles([]).opts( active_tools=['box_edit'], fill_alpha=0.75, color="white" )
-            self.box_selection_stream = streams.BoxEdit(source=self.region_selection, num_objects=1)
-            self.blockSelection = BlockSelection( self.selection_mode )
-            if self.selection_mode == BlockSelectMode.LoadTile: self.tap_stream = DoubleTap( transient=True )
-            else:                                               self.tap_stream = SingleTap( transient=True )
-            self.selected_rec = self.blockSelection.get_dynamic_selection( [self.tap_stream] )
 
     def save_block_selection(self):
         self.blockSelection.save_selection()
@@ -310,27 +303,22 @@ class NEONTileSelector(param.Parameterized):
 
 
     def get_block_selection_gui(self,**kwargs):
-        self.init(**kwargs)
         return self.blockSelection.get_cache_panel()
 
     def get_block_selection(self, **kwargs) -> Optional[Dict]:
-        self.init( **kwargs )
         return self.blockSelection.get_block_selection(**kwargs)
 
 
     def get_cluster_panel(self,**kwargs):
-        self.init(**kwargs)
         return clm().panel()
 
     def get_tile_selection_gui(self, **kwargs ):
-        self.init( **kwargs )
         basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
         self.rect_grid = self.blockSelection.grid_widget(**kwargs)
         image = basemap * self.rect_grid * self.selected_rec
         return image
 
     def gui( self, **kwargs ):
-        self.init( **kwargs )
         self.rect0 = tm().block_index
         basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
         self.rect_grid = self.blockSelection.grid_widget()

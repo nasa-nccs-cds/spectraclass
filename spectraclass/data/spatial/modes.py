@@ -91,23 +91,25 @@ class NEONDataManager(SpatialDataManager):
         self._abort = False
         self._progress_panel = ProgressPanel( mt().niter, self.abort_callback)
 
-    @property
-    def tile_selector(self):
+    def get_tile_selector(self, **kwargs):
         if self._tile_selector is None:
             self._tile_selector = NEONTileSelector()
         return self._tile_selector
 
     def get_tile_selection_gui(self, **kwargs):
-        return self.tile_selector.get_tile_selection_gui(**kwargs)
+        tile_selector = self.get_tile_selector( **kwargs )
+        return tile_selector.get_tile_selection_gui(**kwargs)
 
     def abort_callback(self, event ):
         self._abort = True
 
     def gui(self, **kwargs ):
-        return self.tile_selector.gui(**kwargs)
+        tile_selector = self.get_tile_selector(**kwargs)
+        return tile_selector.gui(**kwargs)
 
     def get_block_selection(self,**kwargs) -> Optional[Dict]:
-        return None if self._tile_selector is None else self._tile_selector.get_block_selection(**kwargs)
+        tile_selector = self.get_tile_selector(**kwargs)
+        return tile_selector.get_block_selection(**kwargs)
 
     def preprocessing_gui(self):
         from spectraclass.reduction.trainer import mt
