@@ -212,8 +212,8 @@ class BlockSelection(param.Parameterized):
                 self._selected_rectangles[bid] = self.rect_grid[bid] + (self.unmarked_color,)
             self.update()
 
-    def get_block_selection(self) -> Optional[Dict]:
-        return self._selected_rectangles
+    def get_block_selection( self ) -> Optional[Dict]:
+        return  self._selected_rectangles
 
     def get_selection_load_panel(self):
         block_selection_names = [ f.split(".")[-2] for f in os.listdir(self.save_dir) ]
