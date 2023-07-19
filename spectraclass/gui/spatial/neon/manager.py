@@ -260,7 +260,7 @@ class NEONTileSelector:
     @exception_handled
     def __init__(self, **kwargs):
         lgm().log(f"#NTS: NEONTileSelector = {oct(id(self))}, selection_mode = {dm().selection_mode}")
-        self.region_selection: hv.Rectangles = hv.Rectangles([]).opts(active_tools=['box_edit'], fill_alpha=0.75, color="white")
+        self.region_selection: hv.Rectangles = hv.Rectangles([]).opts( fill_alpha=0.5, color="white" )
         self.box_selection_stream = streams.BoxEdit(source=self.region_selection, num_objects=1)
         self.blockSelection = BlockSelection()
         if dm().selection_mode == BlockSelectMode.LoadTile:
@@ -311,12 +311,11 @@ class NEONTileSelector:
         block_panels = pn.Tabs( ("select",selection_panel), ("cache",cache_panel) )
         return pn.Tabs( ("block mask", block_panels), ( "cluster mask", clm().gui()), ( "learning", clm().get_learning_panel("points")) )
 
-    def get_block_selection_gui(self,**kwargs):
+    def get_block_selection_gui(self):
         return self.blockSelection.get_cache_panel()
 
-    def get_block_selection(self, **kwargs) -> Optional[Dict]:
+    def get_block_selection(self) -> Optional[Dict]:
         return self.blockSelection.get_block_selection()
-
 
     def get_cluster_panel(self):
         return clm().panel()

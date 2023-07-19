@@ -1,5 +1,6 @@
 from spectraclass.data.spatial.tile.tile import Block
 import cartopy.crs as ccrs
+import folium
 import holoviews as hv
 import geoviews as gv
 from geoviews.element.geo import WMTS
@@ -69,7 +70,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
     def get_block_basemap(self, **kwargs ):
         point_selection = kwargs.get( 'point_selection', False )
         lgm().log(f"SPM: get_block_basemap: point_selection = {point_selection}")
-        tile_source = hv.DynamicMap( self.get_image_basemap, streams=[self.bounds_stream] )
+        tile_source = hv.DynamicMap( self.get_folium_basemap, streams=[self.bounds_stream] )
         self.set_extent()
         return tile_source * self.selection_points if point_selection else tile_source
 
@@ -79,6 +80,16 @@ class SatellitePlotManager(SCSingletonConfigurable):
         xlim, ylim = bounds[:2], bounds[2:]
         point_selection = kwargs.get( 'point_selection', False )
         tile_source: gv.element.geo.WMTS = tm().getESRIImageryServer( xlim=xlim, ylim=ylim, width=600, height=570 )
+        lgm().log( f"SPM: get basemap: bounds={bounds}, server={id(tile_source)}, dx={xlim[1]-xlim[0]} dy={ylim[1]-ylim[0]}")
+        return tile_source * self.selection_points if point_selection else tile_source
+
+    @exception_handled
+    def get_folium_basemap(self, bounds: Tuple[float,float,float,float], **kwargs):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        xlim, ylim = bounds[:2], bounds[2:]
+        point_selection = kwargs.get( 'point_selection', False )
+        tile_source: gv.element.geo.WMTS = tm().getESRIImageryServer( xlim=xlim, ylim=ylim, width=600, height=570 )
+
         lgm().log( f"SPM: get basemap: bounds={bounds}, server={id(tile_source)}, dx={xlim[1]-xlim[0]} dy={ylim[1]-ylim[0]}")
         return tile_source * self.selection_points if point_selection else tile_source
 

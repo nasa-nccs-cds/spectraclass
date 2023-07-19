@@ -1,5 +1,5 @@
 import numpy as np
-import codecs
+import codecs, folium
 import xarray as xa
 import geoviews.tile_sources as gts
 import holoviews as hv
@@ -68,6 +68,17 @@ class TileManager(SCSingletonConfigurable):
         url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{Z}/{Y}/{X}.jpg'
         lgm().log( f"TM: getESRIImageryServer{kwargs} ")
         return gv.element.geo.WMTS( url, name="EsriImagery").opts( **kwargs )
+
+    def getFoliumImageryServer(self, xlim:Tuple[float], ylim:Tuple[float], **kwargs) -> folium.Map:
+        tile_url='http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+        se, nw = tm().reproject_to_latlon( xlim[0], ylim[0] ), tm().reproject_to_latlon( xlim[1], ylim[1] )
+        map_geo = folium.Map( **kwargs )
+        map_geo.fit_bounds([ [se[1],se[0]], [nw[1],nw[0]] ])
+        map_attrs = dict( url=tile_url, layers='World Imagery', transparent=False, control=False, fmt="image/png",
+                          name='Satellite Image', overlay=True, show=True )
+        folium.raster_layers.WmsTileLayer(**map_attrs).add_to(map_geo)
+        folium.LayerControl().add_to(map_geo)
+        return map_geo
 
     @classmethod
     def encode( cls, obj ) -> str:
