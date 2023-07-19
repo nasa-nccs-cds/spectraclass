@@ -24,9 +24,8 @@ from holoviews import streams
 class BlockSelection(param.Parameterized):
     selection_name = param.String(default="", doc="Name of saved block selection")
 
-    def __init__(self, selection_mode: BlockSelectMode ):
+    def __init__(self ):
         super(BlockSelection, self).__init__()
-        self.selection_mode = selection_mode
         self.marker_color = "red"
         self.unmarked_color = "white"
         self._selected_rectangles: Dict[Tuple,Tuple] = None
@@ -70,13 +69,13 @@ class BlockSelection(param.Parameterized):
             lgm().log(f"NTS: NEONTileSelector-> select block {bindex}")
 
             if not self.block_selected(bindex):
-                if self.selection_mode == BlockSelectMode.LoadTile:
+                if dm().selection_mode == BlockSelectMode.LoadTile:
                      ufm().show(f"Inactive block: {bindex}")
                 else:
                     ufm().show(f"select block {bindex}")
                     self.select_block(bindex)
             else:
-                if self.selection_mode == BlockSelectMode.LoadTile:
+                if dm().selection_mode == BlockSelectMode.LoadTile:
                     tm().setBlock(bindex)
                     ufm().show(f"Selecting block: {bindex}")
                     self.select_block(bindex, update=True)
@@ -227,15 +226,15 @@ class BlockSelection(param.Parameterized):
     def get_selection_save_panel(self, event=None ):
         return pn.Row(self.selection_name_input, self.save_button)
 
-    def get_cache_panel(self, mode: BlockSelectMode) -> Panel:
+    def get_cache_panel(self) -> Panel:
         from spectraclass.learn.pytorch.trainer import mpt
         tabs = [ ("blocks", self.get_selection_load_panel()) ]
         panels= []
         title = "### Load Block Mask"
-        if mode == BlockSelectMode.CreateMask:
+        if dm().selection_mode == BlockSelectMode.CreateMask:
             tabs.append( ("save", self.get_selection_save_panel()) )
             title = "### Save Block Mask"
-        elif mode == BlockSelectMode.LoadMask:
+        elif dm().selection_mode == BlockSelectMode.LoadMask:
             tabs.append( ("clusters", mpt().get_mask_load_panel()) )
             panels.append( ufm().gui() )
         return  pn.WidgetBox( title, *panels, pn.Tabs( *tabs ) )
@@ -244,12 +243,11 @@ class NEONTileSelector:
 
     @exception_handled
     def __init__(self, **kwargs):
-        self.selection_mode: BlockSelectMode = kwargs.get('mode', BlockSelectMode.LoadTile)
-        lgm().log(f"#NTS: NEONTileSelector = {oct(id(self))}, selection_mode = {self.selection_mode}")
-        self.region_selection: hv.Rectangles = hv.Rectangles([(0.,0.,0.,0.)]) # .opts(active_tools=['box_edit'], fill_alpha=0.75, color="white")
+        lgm().log(f"#NTS: NEONTileSelector = {oct(id(self))}, selection_mode = {dm().selection_mode}")
+        self.region_selection: hv.Rectangles = hv.Rectangles([]).opts(active_tools=['box_edit'], fill_alpha=0.75, color="white")
         self.box_selection_stream = streams.BoxEdit(source=self.region_selection, num_objects=1)
-        self.blockSelection = BlockSelection(self.selection_mode)
-        if self.selection_mode == BlockSelectMode.LoadTile:
+        self.blockSelection = BlockSelection()
+        if dm().selection_mode == BlockSelectMode.LoadTile:
             self.tap_stream = DoubleTap(transient=True)
         else:
             self.tap_stream = SingleTap(transient=True)
@@ -291,15 +289,14 @@ class NEONTileSelector:
         select_buttons = pn.Row( self._select_all, self._select_region )
         clear_buttons = pn.Row( self._clear_all, self._clear_region)
         buttonbox = pn.WidgetBox( "### Selection Controls", select_buttons, clear_buttons )
-        selection_mode = pn.WidgetBox("### Click-select Mode", self.blockSelection.click_select_mode )
-        selection_panel = pn.Column( buttonbox, selection_mode )
-        cache_panel = self.blockSelection.get_cache_panel(self.selection_mode)
+        ckick_select = pn.WidgetBox("### Click-select Mode", self.blockSelection.click_select_mode )
+        selection_panel = pn.Column( buttonbox, ckick_select )
+        cache_panel = self.blockSelection.get_cache_panel()
         block_panels = pn.Tabs( ("select",selection_panel), ("cache",cache_panel) )
         return pn.Tabs( ("block mask", block_panels), ( "cluster mask", clm().gui()), ( "learning", clm().get_learning_panel("points")) )
 
     def get_block_selection_gui(self,**kwargs):
-        self.selection_mode = kwargs.get("mode", self.selection_mode)
-        return self.blockSelection.get_cache_panel(self.selection_mode)
+        return self.blockSelection.get_cache_panel()
 
     def get_block_selection(self, **kwargs) -> Optional[Dict]:
         return self.blockSelection.get_block_selection()
@@ -309,29 +306,27 @@ class NEONTileSelector:
         return clm().panel()
 
     def get_tile_selection_gui(self, **kwargs ):
-        self.selection_mode = kwargs.get("mode", self.selection_mode)
         basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
         self.rect_grid = self.blockSelection.grid_widget(**kwargs)
         image = basemap * self.rect_grid * self.selected_rec
         return image
 
     def gui( self, **kwargs ):
-        self.selection_mode = kwargs.get("mode", self.selection_mode)
         self.rect0 = tm().block_index
         basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
         self.rect_grid = self.blockSelection.grid_widget()
         image = basemap * self.rect_grid * self.selected_rec
-        if self.selection_mode == BlockSelectMode.LoadTile:
+        if dm().selection_mode == BlockSelectMode.LoadTile:
             return image
         else:
             selection_panel = self.get_control_panel()
-            if self.selection_mode == BlockSelectMode.SelectTile:
+            if dm().selection_mode == BlockSelectMode.SelectTile:
                 return pn.Row( image * self.region_selection, selection_panel )
-            elif self.selection_mode == BlockSelectMode.CreateMask:
+            elif dm().selection_mode == BlockSelectMode.CreateMask:
                 cluster_panel = self.get_cluster_panel()
                 viz_panels = pn.Tabs( ("select", image * self.region_selection), ("cluster", cluster_panel))
                 return pn.Row( viz_panels, selection_panel )
-            elif self.selection_mode == BlockSelectMode.LoadMask:
+            elif dm().selection_mode == BlockSelectMode.LoadMask:
                 return self.get_block_selection_gui(**kwargs)
 
     @property

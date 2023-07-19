@@ -43,6 +43,7 @@ def nsamples( trainingsets: List[np.ndarray ]):
     return sum( [ts.shape[0] for ts in trainingsets] )
 
 class BlockSelectMode(Enum):
+    NONE = -1
     LoadTile = 0
     SelectTile = 1
     CreateMask = 2

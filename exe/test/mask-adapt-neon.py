@@ -22,4 +22,4 @@ mpt().modelkey = f"agp.neon.{version}.{year}.{roi}.{block_size}"
 classes = { 1: ('forest', "green"),  0: ('non-forest', "magenta") }
 lm().setLabels( classes )
 
-dm.preprocess_gui( mode=BlockSelectMode.CreateMask )
+dm.preprocess_gui()

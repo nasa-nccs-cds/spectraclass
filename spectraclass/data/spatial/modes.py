@@ -87,36 +87,31 @@ class NEONDataManager(SpatialDataManager):
     def __init__(self):
         from spectraclass.reduction.trainer import mt
         super(NEONDataManager, self).__init__()
-        self._tile_selector: NEONTileSelector = None
+        self._tile_selector: NEONTileSelector = NEONTileSelector()
         self._abort = False
         self._progress_panel = ProgressPanel( mt().niter, self.abort_callback)
 
-    def get_tile_selector(self, **kwargs):
-        if self._tile_selector is None:
-            self._tile_selector = NEONTileSelector()
+    def get_tile_selector(self):
         return self._tile_selector
 
     def get_tile_selection_gui(self, **kwargs):
-        tile_selector = self.get_tile_selector( **kwargs )
-        return tile_selector.get_tile_selection_gui(**kwargs)
+        return self._tile_selector.get_tile_selection_gui(**kwargs)
 
     def abort_callback(self, event ):
         self._abort = True
 
     def gui(self, **kwargs ):
-        tile_selector = self.get_tile_selector(**kwargs)
-        return tile_selector.gui(**kwargs)
+        return self._tile_selector.gui(**kwargs)
 
     def get_block_selection(self,**kwargs) -> Optional[Dict]:
-        tile_selector = self.get_tile_selector(**kwargs)
-        return tile_selector.get_block_selection(**kwargs)
+        return self._tile_selector.get_block_selection(**kwargs)
 
     def preprocessing_gui(self):
         from spectraclass.reduction.trainer import mt
         exec_button = pn.widgets.Button( name='Execute',  button_type='success', width=100 )
         exec_button.on_click( self.execute_preprocessing )
         lgm().trace( "#PG: Preprocessing")
-        mask_gui = self.gui( mode = BlockSelectMode.LoadMask )
+        mask_gui = self.gui()
         preprocessing_gui =  pn.WidgetBox( "### Preprocessing", pn.Row(self.parameter_table, exec_button), mt().progress.panel() )
         return pn.Row( mask_gui, preprocessing_gui )
 

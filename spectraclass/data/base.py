@@ -65,6 +65,7 @@ class DataManager(SCSingletonConfigurable):
         super(DataManager, self).__init__()
         self._wGui = None
         self._lock = threading.Lock()
+        self.selection_mode: BlockSelectMode = BlockSelectMode.NONE
 
     def _contingent_configuration_(self):
         pass
@@ -95,7 +96,7 @@ class DataManager(SCSingletonConfigurable):
         return self.config
 
     @classmethod
-    def initialize(cls, name: str, mode: str, **kwargs ):
+    def initialize(cls, name: str, mode: str, selection_mode: BlockSelectMode, **kwargs ):
 #        try: tf.enable_eager_execution()
 #        except: pass
         name = name.lower()
@@ -103,7 +104,7 @@ class DataManager(SCSingletonConfigurable):
         dataManager = cls.instance()
         if dataManager.name is None:
             lgm().init_logging( name, mode, **kwargs )
-            dataManager._configure_( name, mode )
+            dataManager._configure_( name, mode, selection_mode )
             if mode.lower() not in cls._mode_data_managers_: raise Exception( f"Mode {mode} is not defined, available modes = {cls._mode_data_managers_.keys()}")
             mdm = cls._mode_data_managers_[ mode ].instance()
             dataManager._mode_data_manager_ = mdm
@@ -127,8 +128,9 @@ class DataManager(SCSingletonConfigurable):
         sc_dir = os.path.dirname( os.path.dirname( os.path.realpath("__file__") ) )
         return os.path.join( sc_dir, "defaults" )
 
-    def _configure_(self, name: str, mode: str ):
+    def _configure_(self, name: str, mode: str, selection_mode: BlockSelectMode ):
         self.name = name
+        self.selection_mode = selection_mode
         self.config_files.append( [ self.defaults_dir, "config.py" ] )
         user_config_file = [ self.config_dir(  mode ), f"{name}.py" ]
         ucfile = os.path.join(*user_config_file)

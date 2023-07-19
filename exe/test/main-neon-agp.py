@@ -40,4 +40,4 @@ classes = [ ('air', "cyan"),
 lm().setLabels( classes )
 
 viewer: hvSpectraclassGui   = sgui().init()
-viewer.panel(mode=BlockSelectMode.LoadTile)
+viewer.panel()
