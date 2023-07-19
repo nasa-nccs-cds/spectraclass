@@ -55,6 +55,7 @@ class TileManager(SCSingletonConfigurable):
         self.cacheTileData = True
         self._scale: Tuple[np.ndarray,np.ndarray] = None
         self.block_selection = BlockSelection()
+        self.block_image: folium.Map = None
 
     def bi2c(self, bindex: int ) -> Tuple[int,int]:
         ts1: int = self.tile_shape[1]
@@ -70,15 +71,18 @@ class TileManager(SCSingletonConfigurable):
         return gv.element.geo.WMTS( url, name="EsriImagery").opts( **kwargs )
 
     def getFoliumImageryServer(self, xlim:Tuple[float], ylim:Tuple[float], **kwargs) -> folium.Map:
-        tile_url='http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-        se, nw = tm().reproject_to_latlon( xlim[0], ylim[0] ), tm().reproject_to_latlon( xlim[1], ylim[1] )
-        map_geo = folium.Map( **kwargs )
-        map_geo.fit_bounds([ [se[1],se[0]], [nw[1],nw[0]] ])
-        map_attrs = dict( url=tile_url, layers='World Imagery', transparent=False, control=False, fmt="image/png",
-                          name='Satellite Image', overlay=True, show=True )
-        folium.raster_layers.WmsTileLayer(**map_attrs).add_to(map_geo)
-        folium.LayerControl().add_to(map_geo)
-        return map_geo
+        se, nw = tm().reproject_to_latlon(xlim[0], ylim[0]), tm().reproject_to_latlon(xlim[1], ylim[1])
+        if self.block_image is None:
+            tile_url='http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+            self.block_image = folium.Map( **kwargs )
+            self.block_image.fit_bounds([[se[1], se[0]], [nw[1], nw[0]]])
+            map_attrs = dict( url=tile_url, layers='World Imagery', transparent=False, control=False, fmt="image/png",
+                              name='Satellite Image', overlay=True, show=True )
+            folium.raster_layers.WmsTileLayer(**map_attrs).add_to(self.block_image)
+            folium.LayerControl().add_to(self.block_image)
+        else:
+            self.block_image.fit_bounds([[se[1], se[0]], [nw[1], nw[0]]])
+        return self.block_image
 
     @classmethod
     def encode( cls, obj ) -> str:

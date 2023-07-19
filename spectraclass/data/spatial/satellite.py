@@ -71,7 +71,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
         point_selection = kwargs.get( 'point_selection', False )
         lgm().log(f"SPM: get_block_basemap: point_selection = {point_selection}")
         tile_source = hv.DynamicMap( self.get_folium_basemap, streams=[self.bounds_stream] )
-        self.set_extent()
+        self.set_extent( **kwargs )
         return tile_source * self.selection_points if point_selection else tile_source
 
     @exception_handled
