@@ -31,7 +31,7 @@ class BlockSelection(param.Parameterized):
         self._selected_rectangles: Dict[Tuple,Tuple] = None
         self.selection_name_input = pn.widgets.TextInput(name='Selection Name', placeholder='Give this selection a name...')
         self.selection_name_input.link( self, value='selection_name' )
-        self.rect_grid: Dict[Tuple,Tuple] = {}
+        self._rect_grid: Dict[Tuple,Tuple] = None
         self.load_button = pn.widgets.Button( name='Load Selection',  button_type='success', width=150 )
         self.load_button.on_click( self.load_selection )
         self.save_button = pn.widgets.Button( name='Save Selection',  button_type='success', width=150 )
@@ -39,7 +39,9 @@ class BlockSelection(param.Parameterized):
         self._save_dir = None
         self.click_select_mode = pn.widgets.RadioButtonGroup( name='Click-Select Mode', options=['Unselect', 'Mark'], value="Unselect", button_type='success')
         self.dynamic_selection = None
-        self.fill_rect_grid()
+        self.xlim, self.ylim = (sys.float_info.max, -sys.float_info.max), (sys.float_info.max, -sys.float_info.max)
+        self.bdx, self.bdy = None, None
+        self.bx0, self.by1 = None, None
 
     @property
     def save_dir(self) -> str:
@@ -57,12 +59,14 @@ class BlockSelection(param.Parameterized):
 
     @property
     def region_bounds(self):
+        self.update_grid()
         return self.xlim + self.ylim
 
     @exception_handled
     def block_index(self, x, y ) -> Tuple[int,int]:
         if x is None: (x,y) = tm().block_index
         if type(x) == int: return (x,y)
+        self.update_grid()
         bindex =   math.floor( (x-self.bx0)/self.bdx ),  math.floor( (self.by1-y)/self.bdy )
         lgm().log( f"TS: block_index: {bindex}, x,y={(x,y)}, bx0={self.bx0}, by1={self.by1}, bdx,bdy={(self.bdx,self.bdy)}" )
         return bindex
@@ -95,10 +99,16 @@ class BlockSelection(param.Parameterized):
 
         return hv.Rectangles(self.selected_rectangles, vdims = 'value').opts(color='value', fill_alpha=0.6, line_alpha=1.0, line_width=2)
 
+    def update_grid(self):
+        if self._rect_grid is None:
+            self.fill_rect_grid()
+    @property
+    def rect_grid(self) -> Dict[Tuple,Tuple]:
+        self.update_grid()
+        return self._rect_grid
+
     def fill_rect_grid(self):
-        self.xlim, self.ylim = (sys.float_info.max, -sys.float_info.max), (sys.float_info.max, -sys.float_info.max)
-        self.bdx, self.bdy = None, None
-        self.bx0, self.by1 = None, None
+        self._rect_grid = {}
         blocks: List[Block] = tm().tile.getBlocks()
         for block in blocks:
             (bxlim, bylim) = block.get_extent( spm().projection )
@@ -112,7 +122,7 @@ class BlockSelection(param.Parameterized):
         for block in blocks:
             (bxlim, bylim) = block.get_extent(spm().projection)
             r = (bxlim[0], bylim[0], bxlim[1], bylim[1])
-            self.rect_grid[block.block_coords] = r
+            self._rect_grid[block.block_coords] = r
 
     def get_blocks_in_region(self, bounds: Dict ) -> List[Tuple]:
         blocks = []
@@ -129,7 +139,7 @@ class BlockSelection(param.Parameterized):
         return hv.Rectangles(list(self.rect_grid.values())).opts(line_color="cyan", fill_alpha=0.0, line_alpha=1.0)
 
     def select_all(self):
-        self._selected_rectangles = { k: v + (self.unmarked_color,) for k,v in self.rect_grid.items() }
+        self._selected_rectangles = {k: v + (self.unmarked_color,) for k,v in self.rect_grid.items()}
         self.update()
 
     def clear_all(self):
