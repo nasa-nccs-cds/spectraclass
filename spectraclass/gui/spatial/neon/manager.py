@@ -36,11 +36,17 @@ class BlockSelection(param.Parameterized):
         self.load_button.on_click( self.load_selection )
         self.save_button = pn.widgets.Button( name='Save Selection',  button_type='success', width=150 )
         self.save_button.on_click( self.save_selection )
+        self._save_dir = None
         self.click_select_mode = pn.widgets.RadioButtonGroup( name='Click-Select Mode', options=['Unselect', 'Mark'], value="Unselect", button_type='success')
-        self.save_dir = f"{dm().cache_dir}/masks/block_selection"
         self.dynamic_selection = None
-        os.makedirs(self.save_dir, exist_ok=True)
         self.fill_rect_grid()
+
+    @property
+    def save_dir(self) -> str:
+        if (self._save_dir == None):
+            self._save_dir = f"{dm().cache_dir}/masks/block_selection"
+            os.makedirs(self._save_dir, exist_ok=True)
+        return self._save_dir
 
     def get_dynamic_selection(self, streams ) -> hv.DynamicMap:
         self.dynamic_selection = hv.DynamicMap( self.select_rec, streams=streams )

@@ -10,8 +10,9 @@ block_size = 100
 year= 2016
 version = "beta_pmm"
 roi = "364203.7_4305235.0_365203.7_4306235.0"
+selection_mode: BlockSelectMode = BlockSelectMode.CreateMask
 
-dm: DataManager = DataManager.initialize( "AGB1", 'neon', timestamp_logs=False )
+dm: DataManager = DataManager.initialize( "AGB1", 'neon', selection_mode )
 dm.analysis_data_source = "spectral"
 dm.proc_type = "cpu"
 dm.modal.images_glob = f"AGB/test/{version}/SERC_{year}_{roi}/SERC_{year}_Reflectance_reflectance_warp.tif"
