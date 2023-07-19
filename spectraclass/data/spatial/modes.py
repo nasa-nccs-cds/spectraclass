@@ -87,12 +87,14 @@ class NEONDataManager(SpatialDataManager):
     def __init__(self):
         from spectraclass.reduction.trainer import mt
         super(NEONDataManager, self).__init__()
+        lgm().log(f"Create NEONDataManager: {oct(id(self))}")
         self._tile_selector: NEONTileSelector = None
         self._abort = False
         self._progress_panel = ProgressPanel( mt().niter, self.abort_callback)
 
     def get_tile_selector(self, **kwargs):
         if self._tile_selector is None:
+            lgm().log( f"Create Tile selector, NEONDataManager = {oct(id(self))}")
             self._tile_selector = NEONTileSelector()
         return self._tile_selector
 
