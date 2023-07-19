@@ -242,12 +242,12 @@ class BlockSelection(param.Parameterized):
 
 class NEONTileSelector(param.Parameterized):
 
-    @log_timing
+    @exception_handled
     def __init__(self, **kwargs):
         super(NEONTileSelector, self).__init__()
         self.selection_mode: BlockSelectMode = kwargs.get('mode', BlockSelectMode.LoadTile)
-        lgm().log(f"#NTS: selection_mode = {self.selection_mode}")
-        self.region_selection: hv.Rectangles = hv.Rectangles([]).opts(active_tools=['box_edit'], fill_alpha=0.75, color="white")
+        lgm().log(f"#NTS: NEONTileSelector = {oct(id(self))}, selection_mode = {self.selection_mode}")
+        self.region_selection: hv.Rectangles = hv.Rectangles([(0,0,0,0)]).opts(active_tools=['box_edit'], fill_alpha=0.75, color="white")
         self.box_selection_stream = streams.BoxEdit(source=self.region_selection, num_objects=1)
         self.blockSelection = BlockSelection(self.selection_mode)
         if self.selection_mode == BlockSelectMode.LoadTile:
