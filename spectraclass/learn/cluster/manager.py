@@ -141,7 +141,7 @@ class ClusterManager(SCSingletonConfigurable):
         alpha = 0.5 if visible else 0.0
         iopts = dict( colorbar=False, cmap='gray_r', alpha=alpha, clim=[0.0,1.0] )
         image: hv.Image =  hv.Image( (x,y,z) )
-        lgm().log(f"   --> plotted image: data shape={image.data.shape}")
+        lgm().log(f"   --> plotted image: data shape={image.data['z'].shape}")
         rv = image.opts( **iopts )
         lgm().log(f"   --> returning image")
         return rv
