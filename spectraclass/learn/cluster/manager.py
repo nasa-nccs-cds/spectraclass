@@ -135,10 +135,10 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.learn.pytorch.trainer import mpt
         lgm().log( f"get_mask_image: visible={visible}")
         mask: xa.DataArray = mpt().predict( raster=True )
-        lgm().log(f"   --> mask shape = {mask.shape}")
+        lgm().log(f"   --> mask shape = {mask.shape}, dims={mask.dims}")
         alpha = 0.5 if visible else 0.0
         iopts = dict( xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False )
-        image: hv.DynamicMap =  mask.hvplot.image( **iopts )
+        image: hv.Image =  hv.Image( mask.values )
         lgm().log(f"   --> plotted image: data={image.data}")
         rv = image.opts( cmap='gray_r', alpha=alpha, clim=[0.0,1.0] )
         lgm().log(f"   --> returning image")
