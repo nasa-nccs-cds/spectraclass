@@ -136,12 +136,12 @@ class ClusterManager(SCSingletonConfigurable):
         lgm().log( f"get_mask_image: visible={visible}")
         mask: xa.DataArray = mpt().predict( raster=True )
         [x,y] = [ mask.coords[c].values for c in ['x','y']]
-        z = mask.values[0]
-        lgm().log(f"   --> mask shape={z.shape}, coords={mask.dims[1:]}, vrange={[mask.min(),mask.max()]}")
+        z = np.argmax( mask.values, axis=0, keepdims=False )
+        lgm().log(f"   --> mask shape={z.shape}, coords={mask.dims[1:]}, vrange={[z.min(),z.max()]}")
         alpha = 0.5 if visible else 0.0
         iopts = dict( colorbar=False, cmap='gray_r', alpha=alpha, clim=[0.0,1.0] )
         image: hv.Image =  hv.Image( (x,y,z) )
-        lgm().log(f"   --> plotted image: data={image.data}")
+        lgm().log(f"   --> plotted image: data shape={image.data.shape}")
         rv = image.opts( **iopts )
         lgm().log(f"   --> returning image")
         return rv
