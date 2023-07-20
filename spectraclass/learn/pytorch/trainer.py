@@ -236,7 +236,8 @@ class ModelTrainer(SCSingletonConfigurable):
     def predict(self, data: xa.DataArray = None, **kwargs) -> xa.DataArray:
         block: Block = tm().getBlock(**kwargs)
         raster = kwargs.get( 'raster', "False")
-        if data is None: data = block.getPointData()
+        if data is None:
+            data, coords = block.getPointData()
         raw_result: xa.DataArray = self.model.predict( data )
         return block.points2raster( raw_result ) if raster else raw_result
 
