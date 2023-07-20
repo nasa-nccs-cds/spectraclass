@@ -110,7 +110,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
         self._cluster_image = hv.DynamicMap( self.get_cluster_image, streams=[ self._count, self.double_tap_stream, self.thresholdStream ] )
-        self._mask_image = hv.DynamicMap( self.get_mask_image, streams=dict( visible=self.apply_button.value ) )
+        self._mask_image = hv.DynamicMap( self.get_mask_image, streams=dict( visible=self.apply_button.param.value ) )
         self._marker_table_widget: hv.Table = None
         self._marker_table_selection: hv.streams.Selection1D = None
         self._marker_table = hv.DynamicMap( self.get_marker_table, streams=[ self.double_tap_stream ] )
