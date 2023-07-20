@@ -139,7 +139,7 @@ class ClusterManager(SCSingletonConfigurable):
         z = np.argmax( mask.values, axis=0, keepdims=False )
         lgm().log(f"   --> mask shape={z.shape}, coords={mask.dims[1:]}, vrange={[z.min(),z.max()]}")
         alpha = 0.5 if visible else 0.0
-        iopts = dict( colorbar=False, cmap='gray_r', alpha=alpha, clim=[0.0,1.0] )
+        iopts = dict( colorbar=False, cmap='gray_r', alpha=alpha, clim=(0.0,1.0) )
         image: hv.Image =  hv.Image( (x,y,z) )
         lgm().log(f"   --> plotted image: data shape={image.data['z'].shape}")
         rv = image.opts( **iopts )
