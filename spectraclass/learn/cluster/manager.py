@@ -138,8 +138,8 @@ class ClusterManager(SCSingletonConfigurable):
         lgm().log(f"   --> mask shape = {mask.shape}")
         alpha = 0.5 if visible else 0.0
         iopts = dict( xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False )
-        image =  mask.hvplot.image( **iopts )
-        lgm().log(f"   --> plotted image")
+        image: hv.Image =  mask.hvplot.image( **iopts )
+        lgm().log(f"   --> plotted image: shape={image.shape}")
         rv = image.opts( cmap='gray_r', alpha=alpha, clim=[0.0,1.0] )
         lgm().log(f"   --> returning image")
         return rv
