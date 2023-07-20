@@ -133,11 +133,16 @@ class ClusterManager(SCSingletonConfigurable):
     @exception_handled
     def get_mask_image(self, visible: bool) -> hv.Image:
         from spectraclass.learn.pytorch.trainer import mpt
+        lgm().log( f"get_mask_image: visible={visible}")
         mask: xa.DataArray = mpt().predict( raster=True )
+        lgm().log(f"   --> mask shape = {mask.shape}")
         alpha = 0.5 if visible else 0.0
         iopts = dict( xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False )
         image =  mask.hvplot.image( **iopts )
-        return image.opts( cmap='gray_r', alpha=alpha, clim=[0.0,1.0] )
+        lgm().log(f"   --> plotted image")
+        rv = image.opts( cmap='gray_r', alpha=alpha, clim=[0.0,1.0] )
+        lgm().log(f"   --> returning image")
+        return rv
 
     @property
     def data_source(self):
