@@ -234,7 +234,7 @@ class ModelTrainer(SCSingletonConfigurable):
         return torch.cat((anom_data, std_data_sample), 0)
 
     def predict(self, data: xa.DataArray = None, **kwargs) -> xa.DataArray:
-        block: Block = tm().getBlock()
+        block: Block = tm().getBlock(**kwargs)
         raster = kwargs.get( 'raster', "False")
         if data is None: data = block.getPointData()
         raw_result: xa.DataArray = self.model.predict( data )

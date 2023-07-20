@@ -4,7 +4,7 @@ import panel as pn
 from panel.layout import Panel
 import pandas as pd
 import holoviews as hv
-from panel.widgets import Button, Select, FloatSlider
+from panel.widgets import Button, Select, FloatSlider, Toggle
 from joblib import cpu_count
 from spectraclass.gui.spatial.widgets.markers import Marker
 from spectraclass.gui.control import UserFeedbackManager, ufm
@@ -51,6 +51,7 @@ def clm() -> "ClusterManager":
     return ClusterManager.instance()
 
 ThresholdStream = Stream.define( 'ThresholdStream', tindex=0, tvalue=1.0 )
+MaskStream = Stream.define( 'MaskStream', mask=None )
 
 class ClusterMagnitudeWidget:
     height = 26
@@ -96,8 +97,11 @@ class ClusterManager(SCSingletonConfigurable):
         super(ClusterManager, self).__init__(**kwargs)
         self.width = kwargs.pop('width',600)
         self._cluster_markers: Dict[ Tuple, Marker ] = {}
+        self.mask_cmap = []
         self.thresholdStream = ThresholdStream()
+        self.maskStream = MaskStream()
         self.double_tap_stream = DoubleTap(transient=True)
+        self.apply_button = Toggle( name='Apply Mask', button_type='primary', width=150 )
         self._max_culsters = 20
         self._marker_clear_mode: ClearMode = ClearMode.NONE
         self._ncluster_options = list( range( 2, self._max_culsters ) )
@@ -106,6 +110,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
         self._cluster_image = hv.DynamicMap( self.get_cluster_image, streams=[ self._count, self.double_tap_stream, self.thresholdStream ] )
+        self._mask_image = hv.DynamicMap( self.get_mask_image, streams=dict( visible=self.apply_button.value ) )
         self._marker_table_widget: hv.Table = None
         self._marker_table_selection: hv.streams.Selection1D = None
         self._marker_table = hv.DynamicMap( self.get_marker_table, streams=[ self.double_tap_stream ] )
@@ -120,7 +125,18 @@ class ClusterManager(SCSingletonConfigurable):
         self._ncluster_selector = pn.widgets.Select(name='#Clusters', options=self._ncluster_options, value=self.nclusters )
         self._ncluster_watcher = self._ncluster_selector.param.watch(self.on_parameter_change, ['value'], onlychanged=True )
         self._current_training_set: Tuple[np.ndarray, np.ndarray] = None
+        self.ts_generate_button = Button( name='Generate Training Set', button_type='primary', width=150 )
+        self.learn_button = Button( name='Learn Mask', button_type='primary', width=150 )
+        self.learn_button.on_click( self.learn_mask )
         self.refresh_colormap()
+
+    def get_mask_image(self, visible: bool ) -> hv.Image:
+        from spectraclass.learn.pytorch.trainer import mpt
+        mask: xa.DataArray = mpt().predict( raster=True )
+        alpha = 0.5 if visible else 0.0
+        iopts = dict( xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False )
+        image =  mask.hvplot.image( **iopts )
+        return image.opts( cmap='gray_r', alpha=alpha, clim=[0.0,1.0] )
 
     @property
     def data_source(self):
@@ -354,10 +370,6 @@ class ClusterManager(SCSingletonConfigurable):
             mpt().train( training_set=self._current_training_set )
             ufm().show("Learning mask complete.")
 
-    def apply_mask(self):
-        from spectraclass.learn.pytorch.trainer import mpt
-        mask: xa.DataArray = mpt().predict( raster=True )
-
     @exception_handled
     def generate_training_set( self, source: str, event ):
         from spectraclass.data.spatial.tile.manager import tm
@@ -431,7 +443,7 @@ class ClusterManager(SCSingletonConfigurable):
     def panel(self, **kwargs ) -> hv.DynamicMap:
         width = kwargs.get('width', 600)
         height = kwargs.get('height', 500)
-        return self.cluster_image.opts( width=width, height=height )
+        return self.cluster_image.opts( width=width, height=height ) * self._mask_image
 
     @exception_handled
     def get_cluster_image( self, index: int, tindex: int, tvalue: int, x=None, y=None ) -> hv.Image:
@@ -462,13 +474,8 @@ class ClusterManager(SCSingletonConfigurable):
 
     def get_learning_panel(self, data_source: str ):
         from spectraclass.learn.pytorch.trainer import mpt
-        ts_generate_button = Button( name='Generate Training Set', button_type='primary', width=150 )
-        ts_generate_button.on_click( partial( self.generate_training_set, data_source ) )
-        learn_button = Button( name='Learn Mask', button_type='primary', width=150 )
-        learn_button.on_click( self.learn_mask )
-        apply_button = Button( name='Apply Mask', button_type='primary', width=150 )
-        apply_button.on_click( self.apply_mask )
-        buttonbox = pn.Row( ts_generate_button, learn_button, apply_button )
+        self.ts_generate_button.on_click( partial( self.generate_training_set, data_source ) )
+        buttonbox = pn.Row( self.ts_generate_button, self.learn_button, self.apply_button )
         return pn.WidgetBox("### Workflow", buttonbox, mpt().panel() )
 
     @exception_handled
