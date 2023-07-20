@@ -79,6 +79,7 @@ class MLP(nn.Module):
         linear = nn.Linear(in_features=in_features, out_features=self.nclasses, bias=True)
         self._network.append( linear )
         self.init_weights()
+        lgm().log(f"#MPL: DONE BUILDING NETWORK: {self.input_dims} -> {self.nclasses}")
 
     def init_weights(self):
         self._network.apply(self.weights_init_uniform_rule)
@@ -181,12 +182,15 @@ class MLP(nn.Module):
             self.build_model()
         return self._network
 
+    @exception_handled
     def load_weights(self, filepath: str ):
         weights = torch.load(filepath)
         self.network.load_state_dict(weights)
         self.network.eval()
+        lgm().log(f"Loaded Weights fronm file {filepath}")
 
     def load(self, tile_name: str, model_name: str, **kwargs) -> bool:
+        lgm().log(f"Loading MODEL {model_name}")
         models_dir = kwargs.get('dir', f"{self.results_dir}/{self.name}")
         os.makedirs(models_dir, exist_ok=True)
         model_path = f"{models_dir}/{tile_name}.{self.network_type}__{model_name}.pth"
