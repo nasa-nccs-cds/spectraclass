@@ -130,7 +130,8 @@ class ClusterManager(SCSingletonConfigurable):
         self.learn_button.on_click( self.learn_mask )
         self.refresh_colormap()
 
-    def get_mask_image(self, visible: bool ) -> hv.Image:
+    @exception_handled
+    def get_mask_image(self, visible: bool) -> hv.Image:
         from spectraclass.learn.pytorch.trainer import mpt
         mask: xa.DataArray = mpt().predict( raster=True )
         alpha = 0.5 if visible else 0.0
