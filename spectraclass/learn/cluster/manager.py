@@ -3,6 +3,7 @@ from random import random
 import panel as pn
 from panel.layout import Panel
 import pandas as pd
+import hvplot, hvplot.xarray
 import holoviews as hv
 from panel.widgets import Button, Select, FloatSlider, Toggle
 from joblib import cpu_count
@@ -469,15 +470,16 @@ class ClusterManager(SCSingletonConfigurable):
     #       self.rescale( tindex, tvalue )
             self.get_cluster_map()
             self.refresh_colormap()
+        xlim, ylim = bounds( self._cluster_raster )
         title = self._cluster_raster.attrs['title']
-#        x,y,z =  self._cluster_raster.x.values,  self._cluster_raster.y.values, self._cluster_raster.values
-        iopts = dict( width=self.width, xaxis="bare", yaxis="bare", colorbar=True, title=title )
-#        image =     hv.Image( (x,y,z) ) #raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" )
-        image = hv.Image( self._cluster_raster )
-        lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, cmap={self.cmap[:8]}" )
-        ufm().show(f"  --> clusters: label='{lm().selectedLabel}'{cid}), ic={icluster}, cmap={self.cmap[:8]}")
-        ufm().show(f"  --> data: shape={self._cluster_raster.shape}, dims={self._cluster_raster.dims}")
-        return image.opts( cmap=self.cmap, width=self.width, title=title, colorbar=True )
+        iopts = dict( width=self.width, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=True, title=title )
+        image =  self._cluster_raster.hvplot.image( **iopts )
+  #      image =  hv.Image( raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" )
+  #      cmaps = ['gray','PiYG','flag','Set1']
+  #      cmap=cmaps[index % 4]
+        lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, xlim={xlim}, ylim={ylim}, cmap={self.cmap[:8]}" )
+        ufm().show(f"Generated clusters")
+        return image.opts(cmap=self.cmap)
 
     def get_learning_panel(self, data_source: str ):
         from spectraclass.learn.pytorch.trainer import mpt
