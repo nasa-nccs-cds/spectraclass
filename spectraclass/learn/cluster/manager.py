@@ -470,12 +470,9 @@ class ClusterManager(SCSingletonConfigurable):
             self.get_cluster_map()
             self.refresh_colormap()
         title = self._cluster_raster.attrs['title']
-        iopts = dict( width=self.width, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=True, title=title )
-        image =  self._cluster_raster.hvplot.image( **iopts )
-  #      xlim, ylim = bounds( raster )
-  #      image =  hv.Image( raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" )
-  #      cmaps = ['gray','PiYG','flag','Set1']
-  #      cmap=cmaps[index % 4]
+        x,y,z =  self._cluster_raster.x.values,  self._cluster_raster.y.values, self._cluster_raster.values
+        iopts = dict( width=self.width, xaxis="bare", yaxis="bare", colorbar=True, title=title )
+        image =  hv.Image( (x,y,z) ) #raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" )
         lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}, cmap={self.cmap[:8]}" )
         ufm().show(f"clusters:  x={x}, y={y}, label='{lm().selectedLabel}'{cid}), ic={icluster}, cmap={self.cmap[:8]}")
         return image.opts(cmap=self.cmap)
