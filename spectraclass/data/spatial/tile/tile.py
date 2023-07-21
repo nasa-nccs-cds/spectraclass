@@ -19,6 +19,9 @@ def combine_masks( mask1: Optional[np.ndarray], mask2: Optional[np.ndarray] ) ->
 def stat( data: xa.DataArray ) -> str:
     return f"({data.values.mean():.2f}, {data.values.std():.2f})"
 
+def nnan( data: xa.DataArray ) -> int:
+    return np.count_nonzero( np.isnan(data.values) )
+
 def size( array: Optional[Union[np.ndarray,xa.DataArray]] ):
     return "NONE" if (array is None) else array.size
 
@@ -849,15 +852,15 @@ class Block(DataContainer):
 
         unfiltered_shape = list(point_data.shape)
         if class_filter: point_data = self.filter_point_data( point_data )
-        lgm().log(f"#FPD: raster2points:  base_raster{base_raster.dims} shp={base_raster.shape}, class_filter={class_filter}, "
-                  f"point_data{point_data.dims} shp={point_data.shape}, unfiltered_shape={unfiltered_shape} " )
+        lgm().log(f"#FPD: raster2points:  base_raster{base_raster.dims} shp={base_raster.shape}, nnan={nnan(base_raster)}, class_filter={class_filter}, "
+                  f"point_data{point_data.dims} shp={point_data.shape}, nnan={nnan(point_data)}, unfiltered_shape={unfiltered_shape} " )
 
         pvcnts = [ nnan( point_data.values[ic] ) for ic in range( point_data.shape[0] ) ]
         pmask: np.ndarray = ( np.array(pvcnts) < point_data.shape[1]*0.5 )
         lgm().log(f"#FPD: pmask shp={shp(pmask)}, nvalid={np.count_nonzero(pmask)})  ")
 
         filtered_point_data: xa.DataArray = point_data[pmask,:]
-        lgm().log(f"#FPD: band-filtered point_data shape = {filtered_point_data.shape} ")
+        lgm().log(f"#FPD: band-filtered point_data shape = {filtered_point_data.shape}, nnan={nnan(filtered_point_data)} ")
         smean: np.ndarray = np.nanmean( filtered_point_data.values, axis=0 )
         for iB in range( smean.size ):
             bmask: np.ndarray = np.isnan( filtered_point_data.values[:,iB] )
@@ -867,7 +870,7 @@ class Block(DataContainer):
         filtered_point_data.attrs['dsid'] = base_raster.name
 
         lgm().log(f"#FPD: filtered_point_data{filtered_point_data.dims}{filtered_point_data.shape}:  "
-                  f"range=[{np.nanmin(filtered_point_data.values):.4f}, {np.nanmax(filtered_point_data.values):.4f}]")
+                  f"range=[{np.nanmin(filtered_point_data.values):.4f}, {np.nanmax(filtered_point_data.values):.4f}], nnan={nnan(filtered_point_data)}")
 
         return filtered_point_data.assign_coords( samples=point_index[pmask]), pmask, pmask.reshape(base_raster.shape[1:])
 
