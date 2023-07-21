@@ -140,10 +140,10 @@ class ClusterManager(SCSingletonConfigurable):
         z = np.argmax( mask.values, axis=0, keepdims=False )
         lgm().log(f"   --> mask shape={z.shape}, coords={mask.dims[1:]}, vrange={[z.min(),z.max()]}")
         alpha = 0.5 if visible else 0.0
-        iopts = dict( colorbar=False, cmap='gray', alpha=alpha, clim=(0.0,1.0) )
-        image: hv.Image =  hv.Image( (x,y,z) )
+        xlim, ylim = bounds(self._cluster_raster)
+        image: hv.Image =  hv.Image( (x,y,z), xlim=xlim, ylim=ylim, colorbar=False, clim=(0.0,1.0) )
         lgm().log(f"   --> plotted image: data shape={image.data['z'].shape}")
-        rv = image.opts( **iopts )
+        rv = image.opts( cmap='gray', alpha=alpha )
         lgm().log(f"   --> returning image")
         return rv
 
@@ -472,11 +472,9 @@ class ClusterManager(SCSingletonConfigurable):
             self.refresh_colormap()
         xlim, ylim = bounds( self._cluster_raster )
         title = self._cluster_raster.attrs['title']
-        iopts = dict( width=self.width, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=True, title=title )
+        iopts = dict( width=self.width, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=True, title=title, xlim=xlim, ylim=ylim )
         image =  self._cluster_raster.hvplot.image( **iopts )
   #      image =  hv.Image( raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" )
-  #      cmaps = ['gray','PiYG','flag','Set1']
-  #      cmap=cmaps[index % 4]
         lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, xlim={xlim}, ylim={ylim}, cmap={self.cmap[:8]}" )
         ufm().show(f"Generated clusters")
         return image.opts(cmap=self.cmap)
