@@ -473,9 +473,9 @@ class ClusterManager(SCSingletonConfigurable):
         x,y,z =  self._cluster_raster.x.values,  self._cluster_raster.y.values, self._cluster_raster.values
         iopts = dict( width=self.width, xaxis="bare", yaxis="bare", colorbar=True, title=title )
         image =  hv.Image( (x,y,z) ) #raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" )
-        lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, x={x}, y={y}, cmap={self.cmap[:8]}" )
-        ufm().show(f"clusters:  x={x}, y={y}, label='{lm().selectedLabel}'{cid}), ic={icluster}, cmap={self.cmap[:8]}")
-        return image.opts(cmap=self.cmap)
+        lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, cmap={self.cmap[:8]}" )
+        ufm().show(f"clusters: label='{lm().selectedLabel}'{cid}), ic={icluster}, cmap={self.cmap[:8]}")
+        return image.opts( cmap=self.cmap, width=self.width, title=title, colorbar=True )
 
     def get_learning_panel(self, data_source: str ):
         from spectraclass.learn.pytorch.trainer import mpt
