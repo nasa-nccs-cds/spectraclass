@@ -17,6 +17,9 @@ from .mlp import MLP
 import holoviews as hv, panel as pn
 import hvplot.xarray  # noqa
 
+def stat( data: xa.DataArray ) -> str:
+    return f"({data.values.mean():.2f}, {data.values.std():.2f})"
+
 def crange( data: xa.DataArray, idim:int ) -> str:
     sdim = data.dims[idim]
     c: np.ndarray = data.coords[sdim].values
@@ -239,6 +242,7 @@ class ModelTrainer(SCSingletonConfigurable):
         if data is None:
             data, coords = block.getPointData( **kwargs )
         raw_result: xa.DataArray = self.model.predict( data )
+        lgm().log( f"#MT: predict-> input: [shape={data.shape}, stat={stat(data)}] output: [shape={raw_result.shape}, stat={stat(raw_result)}]")
         return block.points2raster( raw_result ) if raster else raw_result
 
     def event(self, source: str, event ):
@@ -288,7 +292,6 @@ class MaskCache(param.Parameterized):
         nvalid = np.count_nonzero( mask )
         lgm().log(f"#FPD: MaskCache->filter_point_data: ptdata shape={ptdata.shape}, coords={list(ptdata.coords.keys())}, "
                   f"mask_classes: shape={mask_classes.shape}, dims={mask_classes.dims};  mask[{mask.dtype}] shape = {mask.shape}, nvalid={nvalid}")
-        lgm().log( f"#FPD: Mask classes sample: {mask_classes.values[:20]}")
         lgm().log( f"#FPD: Mask sample: {mask[:20]}")
         return ptdata
 

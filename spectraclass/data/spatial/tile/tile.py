@@ -15,6 +15,7 @@ def combine_masks( mask1: Optional[np.ndarray], mask2: Optional[np.ndarray] ) ->
     if mask1 is None: return mask2
     if mask2 is None: return mask1
     return mask1 & mask2
+
 def stat( data: xa.DataArray ) -> str:
     return f"({data.values.mean():.2f}, {data.values.std():.2f})"
 
