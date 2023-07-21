@@ -18,7 +18,8 @@ import holoviews as hv, panel as pn
 import hvplot.xarray  # noqa
 
 def stat( data: xa.DataArray ) -> str:
-    return f"({data.values.mean():.2f}, {data.values.std():.2f})"
+    x: np.ndarray = data.values
+    return f"({np.nanmean(x):.2f}, {np.nanstd(x):.2f}, {np.count_nonzero( np.isnan(x) ):.2f})"
 
 def crange( data: xa.DataArray, idim:int ) -> str:
     sdim = data.dims[idim]
