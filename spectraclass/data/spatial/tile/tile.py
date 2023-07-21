@@ -718,7 +718,7 @@ class Block(DataContainer):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.data.base import DataManager, dm
         norm = kwargs.get('norm', True)
-        anomaly = kwargs.get( 'anomaly', dm().modal.anomaly )
+        anomaly = dm().modal.anomaly
         if self._point_data is None:
             lgm().log(f"BLOCK[{self.dsid()}].getPointData:")
             self._point_data, pmask, rmask =  self.raster2points( self.data, **kwargs )

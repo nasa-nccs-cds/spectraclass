@@ -239,7 +239,7 @@ class SpatialDataManager(ModeDataManager):
             result_dataset: Optional[xa.Dataset] = None
             if raw_data is not None:
                 try:
-                    blocks_point_data, coord_data = block.getPointData(norm=False,anomaly="none")
+                    blocks_point_data, coord_data = block.getPointData(norm=False)
                     lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}")
                 except NoDataInBounds:
                     blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
@@ -295,8 +295,8 @@ class SpatialDataManager(ModeDataManager):
         tm().autoprocess = False
         attrs, block_sizes = {}, {}
         nbands = None
-        lgm().log(f" Preparing inputs, reprocess={tm().reprocess}", print=True)
         blocks = tm().tile.getBlocks(**kwargs)
+        lgm().log(f" Preparing inputs, reprocess={tm().reprocess}, nblocks={len(blocks)}", print=True)
         try:
             has_metadata = (self.metadata is not None)
             for image_index in range( dm().modal.num_images ):
