@@ -1,4 +1,3 @@
-c.ModeDataManager.nclasses = 3
 c.ModeDataManager.subsample_index = 1
 c.ModeDataManager.class_file = "NONE"
 c.DataManager.proc_type = "skl"

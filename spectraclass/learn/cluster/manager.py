@@ -34,12 +34,19 @@ class ClearMode(Enum):
 def arange( data: xa.DataArray, axis=None ) -> Tuple[np.ndarray,np.ndarray]:
     return ( np.nanmin(data.values,axis=axis), np.nanmax(data.values,axis=axis) )
 
-def bounds( raster: xa.DataArray ) -> Tuple[Tuple,Tuple]:
+def bounds1( raster: xa.DataArray ) -> Tuple[Tuple,Tuple]:
     xc, yc = raster.coords['x'].to_numpy(), raster.coords['y'].to_numpy()
     dx, dy = xc[1]-xc[0], yc[1]-yc[0]
     bnds = ( xc[0]-dx, xc[-1]+dx), ( yc[0]-dy, yc[-1]+dy)
     print( f"bounds: {dx} {dy} {bnds[0]} {bnds[1]}")
     return bnds
+
+def bounds( raster: xa.DataArray ) -> Tuple[Tuple,Tuple]:
+    xc, yc = raster.coords['x'].to_numpy(), raster.coords['y'].to_numpy()
+    dx, dy = xc[1]-xc[0], yc[1]-yc[0]
+    xlim = ( xc[0]-dx, xc[-1]+dx)
+    ylim = (yc[0] - dy, yc[-1] + dy) if (dy > 0) else (yc[-1] + dy, yc[0] - dy)
+    return xlim, ylim
 
 def cindx( v: float ) -> int:
     return math.floor( v*255.99 )
