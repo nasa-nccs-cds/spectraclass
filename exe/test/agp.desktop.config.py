@@ -1,5 +1,4 @@
 c.ModeDataManager.nclasses = 1
-c.ModeDataManager.anomaly = "diff"
 c.ModeDataManager.reduce_sparsity = 0.0
 c.ModeDataManager.subsample_index = 1
 c.ModeDataManager.class_file = "NONE"

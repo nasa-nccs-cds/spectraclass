@@ -68,7 +68,6 @@ class ModeDataManager(SCSingletonConfigurable):
 
     model_dims = tl.Int(16).tag(config=True, sync=True)
     subsample_index = tl.Int(1).tag(config=True, sync=True)
-    anomaly = tl.Unicode("none").tag(config=True, sync=True)
     modelkey = tl.Unicode("0000").tag(config=True, sync=True)
 
     def __init__(self, ):
@@ -105,18 +104,6 @@ class ModeDataManager(SCSingletonConfigurable):
         from spectraclass.gui.control import get_parameter_table
         self._parameters[ value[0] ] = [ value[1] ]
         return get_parameter_table( self._parameters, height=60, width=400 )
-
-    def getSpectralMean(self, norm=False ) -> Optional[xa.DataArray]:
-        if self._spectral_mean is None:
-            self._spectral_mean = self.load_spectral_mean()
-        return tm().norm(self._spectral_mean) if norm else self._spectral_mean
-
-    def load_spectral_mean(self) -> Optional[xa.DataArray]:
-        from spectraclass.data.base import DataManager, dm
-        file_path = f"{dm().cache_dir}/{self.modelkey}.spectral_mean.nc"
-        if os.path.exists( file_path ):
-            spectral_mean: xa.DataArray = xa.open_dataarray( file_path )
-            return spectral_mean
 
     @property
     def ext(self):
@@ -259,7 +246,7 @@ class ModeDataManager(SCSingletonConfigurable):
         key: str = kwargs.get( 'key', self.modelkey )
         filter_sig = tm().get_band_filter_signature()
         model_dims: int = kwargs.get('dims', self.model_dims)
-        aefiles = [f"{dm().cache_dir}/autoencoder.{model_dims}.{filter_sig}.{key}.{dm().modal.anomaly}", f"{dm().cache_dir}/encoder.{model_dims}.{filter_sig}.{key}"]
+        aefiles = [f"{dm().cache_dir}/autoencoder.{model_dims}.{filter_sig}.{key}", f"{dm().cache_dir}/encoder.{model_dims}.{filter_sig}.{key}"]
         lgm().log(f"#AEC: autoencoder_files (key={key}): {aefiles}")
         return aefiles
 

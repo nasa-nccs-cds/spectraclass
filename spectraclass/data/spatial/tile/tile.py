@@ -706,7 +706,7 @@ class Block(DataContainer):
     @property
     def raw_point_data(self):
         if self._point_data is None:
-            self.getPointData(anomaly="none",norm=False)
+            self.getPointData(norm=False)
         return self._point_data
 
     def filter_point_data(self, ptdata: xa.DataArray ) -> xa.DataArray:
@@ -716,9 +716,7 @@ class Block(DataContainer):
     @exception_handled
     def getPointData( self, **kwargs ) -> Tuple[ Optional[xa.DataArray], Dict ]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        from spectraclass.data.base import DataManager, dm
         norm = kwargs.get('norm', True)
-        anomaly = dm().modal.anomaly
         if self._point_data is None:
             lgm().log(f"BLOCK[{self.dsid()}].getPointData:")
             self._point_data, pmask, rmask =  self.raster2points( self.data, **kwargs )
@@ -734,13 +732,7 @@ class Block(DataContainer):
             self._point_data.attrs['rmask'] = rmask
             self._point_mask = pmask
             self._raster_mask = rmask
-        ptdata = self._point_data
-        if anomaly != "none":
-            smean = dm().modal.getSpectralMean(norm=False)
-            ptdata = ptdata.copy( data=ptdata-smean )
-            lgm().log(f"#AS: ANOMALY.stats[mean,std]: block={self.block_coords} raw={stat(self._point_data)}, mean={stat(smean)}, anomaly={stat(ptdata)} ")
-        if norm:
-            ptdata = tm().norm( ptdata )
+        ptdata = tm().norm( self._point_data ) if norm else self._point_data
         return ( ptdata, self._point_coords )
 
     @property
