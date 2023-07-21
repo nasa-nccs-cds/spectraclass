@@ -472,7 +472,7 @@ class ClusterManager(SCSingletonConfigurable):
         title = self._cluster_raster.attrs['title']
 #        x,y,z =  self._cluster_raster.x.values,  self._cluster_raster.y.values, self._cluster_raster.values
         iopts = dict( width=self.width, xaxis="bare", yaxis="bare", colorbar=True, title=title )
-#        image =  hv.Image( (x,y,z) ) #raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" )
+#        image =     hv.Image( (x,y,z) ) #raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" )
         image = hv.Image( self._cluster_raster )
         lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, cmap={self.cmap[:8]}" )
         ufm().show(f"  --> clusters: label='{lm().selectedLabel}'{cid}), ic={icluster}, cmap={self.cmap[:8]}")
