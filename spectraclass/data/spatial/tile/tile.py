@@ -848,7 +848,7 @@ class Block(DataContainer):
 
         unfiltered_shape = list(point_data.shape)
         if class_filter: point_data = self.filter_point_data( point_data )
-        lgm().log(f"#FPD: raster2points:  base_raster{base_raster.dims} shp={base_raster.shape}, "
+        lgm().log(f"#FPD: raster2points:  base_raster{base_raster.dims} shp={base_raster.shape}, class_filter={class_filter}, "
                   f"point_data{point_data.dims} shp={point_data.shape}, unfiltered_shape={unfiltered_shape} " )
 
         pvcnts = [ nnan( point_data.values[ic] ) for ic in range( point_data.shape[0] ) ]
