@@ -738,12 +738,10 @@ class Block(DataContainer):
             smean = dm().modal.getSpectralMean(norm=False)
             if anomaly == "diff":
                 ptdata = ptdata.copy( data=ptdata-smean )
-            else:
-                fratio: np.ndarray = (ptdata/smean).values.flatten()
-                fratio[ fratio == 0.0 ] = 1.0
-                ratio: np.ndarray = fratio.reshape(ptdata.shape)
-                if   anomaly == "ratio":    ptdata = ptdata.copy( data= ratio-1.0 )
-                elif anomaly == "logratio": ptdata = ptdata.copy( data= np.log( ratio ) )
+            elif anomaly == "ratio":
+                fratio: np.ndarray = (ptdata/smean).values
+                ptdata = ptdata.copy( data= fratio-1.0 )
+            lgm().log(f" Get anomaly:{anomaly}, vrange = {(ptdata.values.min(), ptdata.values.max(),)} ")
         if norm:
             ptdata = tm().norm( ptdata )
         return ( ptdata, self._point_coords )
