@@ -15,7 +15,8 @@ def combine_masks( mask1: Optional[np.ndarray], mask2: Optional[np.ndarray] ) ->
     if mask1 is None: return mask2
     if mask2 is None: return mask1
     return mask1 & mask2
-
+def stat( data: xa.DataArray ) -> str:
+    return f"({data.values.mean():.2f},{data.values.std():.2f})"
 
 def size( array: Optional[Union[np.ndarray,xa.DataArray]] ):
     return "NONE" if (array is None) else array.size
@@ -736,12 +737,8 @@ class Block(DataContainer):
         ptdata = self._point_data
         if anomaly != "none":
             smean = dm().modal.getSpectralMean(norm=False)
-            if anomaly == "diff":
-                ptdata = ptdata.copy( data=ptdata-smean )
-            elif anomaly == "ratio":
-                fratio: np.ndarray = (ptdata/smean).values
-                ptdata = ptdata.copy( data= fratio-1.0 )
-            lgm().log(f" Get anomaly:{anomaly}, vrange = {(ptdata.values.min(), ptdata.values.max(),)} ")
+            ptdata = ptdata.copy( data=ptdata-smean )
+            lgm().log(f"#AS: ANOMALY.stats[mean,std]: raw={stat(self._point_data)}, mean={stat(smean)}, anomaly={stat(ptdata)} ")
         if norm:
             ptdata = tm().norm( ptdata )
         return ( ptdata, self._point_coords )
