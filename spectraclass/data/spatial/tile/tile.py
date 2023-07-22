@@ -714,7 +714,7 @@ class Block(DataContainer):
             self.getPointData(norm=False)
         return self._point_data
 
-    def filter_point_data(self, ptdata: xa.DataArray ) -> xa.DataArray:
+    def filter_point_data(self, ptdata: xa.DataArray ) -> Tuple[xa.DataArray,np.ndarray]:
         from spectraclass.learn.pytorch.trainer import mpt
         return mpt().filter_point_data( ptdata )
 
@@ -738,8 +738,11 @@ class Block(DataContainer):
             self._point_mask = pmask
             self._raster_mask = rmask
 
-        ptdata = tm().norm( self._point_data ) if norm else self._point_data
-        ptdata: xa.DataArray = self.filter_point_data(ptdata) if class_filter else ptdata
+        ptdata: xa.DataArray = tm().norm( self._point_data ) if norm else self._point_data
+        if class_filter:
+            pmask: np.ndarray  = self._point_data.attrs['pmask']
+            ptdata, cpmask = self.filter_point_data(ptdata)
+            self._point_data.attrs['pmask'] = pmask[cpmask]
         lgm().log(f"#FPD[{self.block_coords}]->getPointData: shape={ptdata.shape}, norm={norm}, stat={stat(ptdata)}")
         return ( ptdata, self._point_coords )
 

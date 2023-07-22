@@ -96,7 +96,7 @@ class ModelTrainer(SCSingletonConfigurable):
     def get_mask_load_panel(self) -> Panel:
         return self.mask_load_panel.gui()
 
-    def filter_point_data(self, ptdata: xa.DataArray ) -> xa.DataArray:
+    def filter_point_data(self, ptdata: xa.DataArray ) -> Tuple[xa.DataArray,np.ndarray]:
         return self.mask_load_panel.filter_point_data( ptdata )
 
     def panel(self)-> pn.Column:
@@ -287,7 +287,7 @@ class MaskCache(param.Parameterized):
         self.model.save( self.model_id, self.mask_name, dir=self.save_dir )
 
     @exception_handled
-    def filter_point_data(self, ptdata: xa.DataArray ):
+    def filter_point_data(self, ptdata: xa.DataArray ) -> Tuple[xa.DataArray,np.ndarray]:
         mask_classes: xa.DataArray = mpt().predict( ptdata, raster=False )
         mask: np.ndarray = np.argmax( mask_classes.values, axis=1, keepdims=False ).astype( np.bool )
         nvalid = np.count_nonzero( mask )
@@ -296,7 +296,7 @@ class MaskCache(param.Parameterized):
         lgm().log( f"#FPDM: classes: shape={mask_classes.shape}, dims={mask_classes.dims};  mask[{mask.dtype}] shape = {mask.shape}, nvalid={nvalid}")
         lgm().log( f"#FPDM: classes stat={stat(mask_classes)}, sample={mask_classes.values[:20,:]}")
         lgm().log(f"#FPDM: filtered data shape={fpdata.shape}, dims={fpdata.dims}")
-        return fpdata
+        return fpdata, mask
 
 class MaskSavePanel(MaskCache):
 
