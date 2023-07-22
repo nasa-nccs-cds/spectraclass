@@ -738,8 +738,8 @@ class Block(DataContainer):
             self._point_mask = pmask
             self._raster_mask = rmask
 
-        ptdata: xa.DataArray = self.filter_point_data( self._point_data ) if class_filter else self._point_data
-        ptdata = tm().norm( ptdata ) if norm else ptdata
+        ptdata = tm().norm( self._point_data ) if norm else self._point_data
+        ptdata: xa.DataArray = self.filter_point_data(ptdata) if class_filter else ptdata
         lgm().log(f"#FPD[{self.block_coords}]->getPointData: shape={ptdata.shape}, norm={norm}, stat={stat(ptdata)}")
         return ( ptdata, self._point_coords )
 
