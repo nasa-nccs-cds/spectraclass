@@ -17,7 +17,8 @@ def combine_masks( mask1: Optional[np.ndarray], mask2: Optional[np.ndarray] ) ->
     return mask1 & mask2
 
 def stat( data: xa.DataArray ) -> str:
-    return f"({data.values.mean():.2f}, {data.values.std():.2f})"
+    x: np.ndarray = data.values
+    return f"({np.nanmean(x):.2f}, {np.nanstd(x):.2f}, {np.count_nonzero( np.isnan(x) ):.2f})"
 
 def nnan( data: xa.DataArray ) -> int:
     return np.count_nonzero( np.isnan(data.values) )
