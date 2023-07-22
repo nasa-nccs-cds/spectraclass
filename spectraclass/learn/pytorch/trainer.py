@@ -291,8 +291,8 @@ class MaskCache(param.Parameterized):
         mask_classes: xa.DataArray = mpt().predict( ptdata, raster=False )
         mask: np.ndarray = np.argmax( mask_classes.values, axis=1, keepdims=False )
         nvalid = np.count_nonzero( mask )
-        lgm().log(f"#FPD: MaskCache->filter_point_data: ptdata shape={ptdata.shape}, coords={list(ptdata.coords.keys())}, "
-                  f"mask_classes: shape={mask_classes.shape}, dims={mask_classes.dims};  mask[{mask.dtype}] shape = {mask.shape}, nvalid={nvalid}")
+        lgm().log( f"#FPD: MaskCache->filter_point_data: ptdata shape={ptdata.shape}, coords={list(ptdata.coords.keys())}, stat={stat(ptdata)}")
+        lgm().log( f"#FPD: mask_classes: shape={mask_classes.shape}, dims={mask_classes.dims};  mask[{mask.dtype}] shape = {mask.shape}, nvalid={nvalid}")
         lgm().log( f"#FPD: Mask sample: {mask[:20]}")
         return ptdata
 
