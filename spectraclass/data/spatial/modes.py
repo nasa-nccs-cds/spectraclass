@@ -110,7 +110,6 @@ class NEONDataManager(SpatialDataManager):
         from spectraclass.reduction.trainer import mt
         exec_button = pn.widgets.Button( name='Execute',  button_type='success', width=100 )
         exec_button.on_click( self.execute_preprocessing )
-        lgm().trace( "#PG: Preprocessing")
         mask_gui = self.gui()
         preprocessing_gui =  pn.WidgetBox( "### Preprocessing", pn.Row(self.parameter_table, exec_button), mt().progress.panel() )
         return pn.Row( mask_gui, preprocessing_gui )

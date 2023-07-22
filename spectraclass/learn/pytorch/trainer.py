@@ -293,7 +293,7 @@ class MaskCache(param.Parameterized):
         nvalid = np.count_nonzero( mask )
         lgm().log( f"#FPDM: filter_point_data: ptdata shape={ptdata.shape}, coords={list(ptdata.coords.keys())}, stat={stat(ptdata)}")
         lgm().log( f"#FPDM: classes: shape={mask_classes.shape}, dims={mask_classes.dims};  mask[{mask.dtype}] shape = {mask.shape}, nvalid={nvalid}")
-        lgm().log( f"#FPDM: sample: {mask[:20]}")
+        lgm().log( f"#FPDM: classes stat={stat(mask_classes)}, sample={mask_classes[:20,:]}")
         return ptdata
 
 class MaskSavePanel(MaskCache):
