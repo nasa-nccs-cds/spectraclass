@@ -39,6 +39,7 @@ class ModelTrainer(SCSingletonConfigurable):
     reduce_nimages = tl.Int(100).tag(config=True, sync=True)
     model_dims = tl.Int(3).tag(config=True, sync=True)
     modelkey = tl.Unicode(default_value="").tag(config=True, sync=True)
+    device = tl.Unicode(default_value="cpu").tag(config=True, sync=True)
     nepoch = tl.Int(5).tag(config=True, sync=True)
     focus_nepoch = tl.Int(5).tag(config=True, sync=True)
     focus_ratio = tl.Float(10.0).tag(config=True, sync=True)
@@ -49,8 +50,6 @@ class ModelTrainer(SCSingletonConfigurable):
 
     def __init__(self, **kwargs ):
         super(ModelTrainer, self).__init__()
-        self.device = kwargs.get('device','cpu')
-        self.nfeatures = kwargs.get( 'nfeatures', self.model_dims )
         self.previous_loss: float = 1e10
         self._model: Autoencoder = None
         self._abort = False
@@ -80,7 +79,7 @@ class ModelTrainer(SCSingletonConfigurable):
             block: Block = tm().getBlock()
             point_data, grid = block.getPointData()
             opts = dict ( wmag=self.init_wts_mag, init_bias=self.init_bias_mag, log_step=self.log_step )
-            self._model = Autoencoder( point_data.shape[1], self.nfeatures, **opts ).to(self.device)
+            self._model = Autoencoder( point_data.shape[1], self.model_dims, **opts ).to(self.device)
         return self._model
 
     def panel(self)-> Panel:
