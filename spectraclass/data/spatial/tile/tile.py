@@ -742,6 +742,8 @@ class Block(DataContainer):
         if class_filter:
             pmask: np.ndarray  = self._point_data.attrs['pmask']
             ptdata, cpmask = self.filter_point_data(ptdata)
+            lgm().log( f"#FPD[{self.block_coords}]->getPointData: pmask shape={pmask.shape}, nz={np.count_nonzero(cpmask)}, "
+                       f" cpmask shape={cpmask.shape}, nz={np.count_nonzero(cpmask)}")
             self._point_data.attrs['pmask'] = pmask[cpmask]
         lgm().log(f"#FPD[{self.block_coords}]->getPointData: shape={ptdata.shape}, norm={norm}, stat={stat(ptdata)}")
         return ( ptdata, self._point_coords )
