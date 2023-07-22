@@ -830,13 +830,13 @@ class Block(DataContainer):
         self._raster_mask = points_data.attrs['rmask']
         rnz = np.count_nonzero(self.raster_mask)
         pnz = np.count_nonzero(self.point_mask)
+        lgm().log(f"  --> pdata, shape={rpdata.shape}; rmask, shape={self.raster_mask.shape}, #nz={rnz}")
+        lgm().log(f"  --> points_data, shape={points_data.shape}; pmask, shape={self.point_mask.shape}, #nz={pnz}\n\n")
         if pnz == points_data.shape[0]:
             rpdata[ self.point_mask ] = points_data.data
         else:
             if pnz != rnz:
                 lgm().log( f"\n\n ERROR: mask shape mismatch:  {rnz} vs {pnz}")
-                lgm().log(  f"  --> pdata, shape={rpdata.shape}; rmask, shape={self.raster_mask.shape}, #nz={rnz}")
-                lgm().log(  f"  --> points_data, shape={points_data.shape}; pmask, shape={self.point_mask.shape}, #nz={pnz}\n\n")
             else:
                  rpdata[ self.raster_mask ] = points_data.data[ self.point_mask ]
         raster_data = rpdata.transpose().reshape([points_data.shape[1], self.data.shape[1], self.data.shape[2]])
