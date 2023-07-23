@@ -831,8 +831,8 @@ class Block(DataContainer):
         self._raster_mask = points_data.attrs.get('rmask',None)
         rnz = np.count_nonzero(self.raster_mask) if self.raster_mask is not None else -1
         pnz = np.count_nonzero(self.point_mask)  if self.point_mask  is not None else -1
-        lgm().log(f"  --> rpdata, shape={rpdata.shape}; rmask, shape={self.raster_mask.shape}, #nz={rnz}")
-        lgm().log(f"  --> points_data, shape={points_data.shape}; pmask, shape={self.point_mask.shape}, #nz={pnz}\n\n")
+        lgm().log(f"  --> rpdata, shape={rpdata.shape}; rmask #nz={rnz}")
+        lgm().log(f"  --> points_data, shape={points_data.shape}; pmask #nz={pnz}\n\n")
         if pnz == points_data.shape[0]:
             rpdata[ self.point_mask ] = points_data.data
         elif rpdata.shape[0] == points_data.shape[0]:
