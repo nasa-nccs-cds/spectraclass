@@ -829,20 +829,14 @@ class Block(DataContainer):
         rpdata = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
         lgm().log(f"points2raster:  points_data.attrs = {list(points_data.attrs.keys())}")
         self._point_mask  = points_data.attrs.get('pmask',None)
-        self._raster_mask = points_data.attrs.get('rmask',None)
-        rnz = np.count_nonzero(self.raster_mask) if self.raster_mask is not None else -1
         pnz = np.count_nonzero(self.point_mask)  if self.point_mask  is not None else -1
-        lgm().log(f"  --> rpdata, shape={rpdata.shape}; rmask #nz={rnz}")
         lgm().log(f"  --> points_data, shape={points_data.shape}; pmask #nz={pnz}\n\n")
         if pnz == points_data.shape[0]:
             rpdata[ self.point_mask ] = points_data.data
         elif rpdata.shape[0] == points_data.shape[0]:
             rpdata = points_data.values.copy()
         else:
-            if pnz != rnz:
-                lgm().log( f"\n\n ERROR: mask shape mismatch:  {rnz} vs {pnz}")
-            else:
-                 rpdata[ self.raster_mask ] = points_data.data[ self.point_mask ]
+            raise Exception( f"Size mismatch: pnz={pnz}, points_data.shape={points_data.shape}, rpdata.shape={rpdata.shape}")
         raster_data = rpdata.transpose().reshape([points_data.shape[1], self.data.shape[1], self.data.shape[2]])
         lgm().log( f"points->raster[{self.dsid()}], time= {time.time()-t0:.2f} sec, points: dims={points_data.dims}, shape={points_data.shape}" )
         lgm().log( f"  ---> data: dims={self.data.dims}, shape={self.data.shape}, attrs={points_data.attrs.keys()}" )
