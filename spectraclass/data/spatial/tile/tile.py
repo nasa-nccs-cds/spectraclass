@@ -658,8 +658,8 @@ class Block(DataContainer):
         self._model_data.attrs['block_coords'] = self.block_coords
         self._model_data.attrs['dsid'] = self.dsid()
         self._model_data.attrs['file_name'] = self.file_name
-        self._model_data.attrs['pmask'] = pcoords['pmask']
-        self._model_data.attrs['rmask'] = pcoords['rmask']
+        self._model_data.attrs['pmask'] = pcoords.get('pmask',None)
+        self._model_data.attrs['rmask'] = pcoords.get('rmask',None)
         self._model_data.name = self.file_name
 
     @exception_handled
@@ -827,10 +827,10 @@ class Block(DataContainer):
         coords = [(dims[0], points_data[dims[0]].data), (dims[1], self.data[dims[1]].data), (dims[2], self.data[dims[2]].data)]
         rpdata = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
         lgm().log(f"points2raster:  points_data.attrs = {list(points_data.attrs.keys())}")
-        self._point_mask  = points_data.attrs['pmask']
-        self._raster_mask = points_data.attrs['rmask']
-        rnz = np.count_nonzero(self.raster_mask)
-        pnz = np.count_nonzero(self.point_mask)
+        self._point_mask  = points_data.attrs.get('pmask',None)
+        self._raster_mask = points_data.attrs.get('rmask',None)
+        rnz = np.count_nonzero(self.raster_mask) if self.raster_mask is not None else -1
+        pnz = np.count_nonzero(self.point_mask)  if self.point_mask  is not None else -1
         lgm().log(f"  --> rpdata, shape={rpdata.shape}; rmask, shape={self.raster_mask.shape}, #nz={rnz}")
         lgm().log(f"  --> points_data, shape={points_data.shape}; pmask, shape={self.point_mask.shape}, #nz={pnz}\n\n")
         if pnz == points_data.shape[0]:
