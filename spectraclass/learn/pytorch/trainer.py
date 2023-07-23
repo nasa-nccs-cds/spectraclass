@@ -241,8 +241,7 @@ class ModelTrainer(SCSingletonConfigurable):
     def predict(self, data: xa.DataArray = None, **kwargs) -> xa.DataArray:
         block: Block = tm().getBlock(**kwargs)
         raster = kwargs.get( 'raster', "False")
-        if data is None:
-            data, coords = block.point_data
+        if data is None: data = block.point_data
         raw_result: xa.DataArray = self.model.predict( data )
         lgm().log( f"#MT: predict-> input: [shape={data.shape}, stat={stat(data)}] output: [shape={raw_result.shape}, stat={stat(raw_result)}]")
         return block.points2raster( raw_result ) if raster else raw_result
@@ -318,14 +317,11 @@ class MaskLoadPanel(MaskCache):
         self.load_button = pn.widgets.Button(name='Load Mask', button_type='success', width=150)
         self.load_button.on_click(self.load)
         sopts = dict( name='Cluster Mask', options=block_selection_names )
-        if mt().cluster_mask != "":
-            sopts['value'] = self.mask_name = mt().cluster_mask
-            self.load()
-        elif len(block_selection_names):
-            sopts['value'] = self.mask_name = block_selection_names[0]
-        self.file_selector = pn.widgets.Select(**sopts)
+        if mt().cluster_mask != "":        self.mask_name = mt().cluster_mask
+        elif len(block_selection_names):   self.mask_name = block_selection_names[0]
+        self.file_selector = pn.widgets.Select( value=self.mask_name, **sopts )
         self.file_selector.link(self, value='mask_name')
-
+        self.load()
 
     def gui(self) -> Panel:
         load_panel = pn.Row(self.file_selector, self.load_button)
