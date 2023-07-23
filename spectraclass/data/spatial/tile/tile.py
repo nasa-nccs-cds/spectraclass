@@ -621,12 +621,15 @@ class Block(DataContainer):
             if raw_raster.size == 0: ufm().show( "This block does not appear to have any data.", "warning" )
         return raw_raster
 
+    @exception_handled
     def getModelData(self, raster: bool = True ) -> xa.DataArray:
         return self.points2raster( self.model_data ) if raster else self.model_data
 
+    @exception_handled
     def getSpectralData(self, raster: bool = True ) -> xa.DataArray:
         return self.data if raster else self.getPointData()
 
+    @exception_handled
     def getBandData( self, **kwargs ) -> xa.DataArray:
         raster = kwargs.pop( 'raster', True)
         ptdata, pcoords = self.getPointData( **kwargs )
