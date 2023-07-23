@@ -658,8 +658,7 @@ class Block(DataContainer):
         self._model_data.attrs['block_coords'] = self.block_coords
         self._model_data.attrs['dsid'] = self.dsid()
         self._model_data.attrs['file_name'] = self.file_name
-        self._model_data.attrs['pmask'] = pcoords.get('pmask',None)
-        self._model_data.attrs['rmask'] = pcoords.get('rmask',None)
+        self._model_data.attrs['pmask'] = pdata.attrs.get('pmask',None)
         self._model_data.name = self.file_name
 
     @exception_handled
@@ -738,11 +737,12 @@ class Block(DataContainer):
         self._point_data = tm().norm( self._point_data ) if norm else self._point_data
         if class_filter:
             cfmask = self.get_class_mask( self._point_data )
-            self._point_data.attrs['pmask'] = self._point_coords['mask'] = self._point_mask  = cfmask
+            self._point_mask  = cfmask
             self._point_data = self._point_data[cfmask]
             lgm().log(f"#FPDM-getPointData: filtered data shape={self._point_data.shape}, cfmask shape={cfmask.shape}, nz={np.count_nonzero(cfmask)}")
         self._point_data.attrs['type'] = 'block'
         self._point_data.attrs['dsid'] = self.dsid()
+        self._point_data.attrs['pmask'] = self._point_mask
         return ( self._point_data, self._point_coords )
 
     @property
