@@ -738,15 +738,13 @@ class Block(DataContainer):
             self._point_mask = pmask
             self._raster_mask = rmask
 
-        ptdata: xa.DataArray = tm().norm( self._point_data ) if norm else self._point_data
+        self._point_data = tm().norm( self._point_data ) if norm else self._point_data
         if class_filter:
-            ptdata, cfmask = self.filter_point_data(ptdata)
-            self._point_data.attrs['cfmask'] = cfmask
-            lgm().log(f"#FPD: pmask shape={self._point_data.attrs['pmask'].shape}, cfmask shape={cfmask.shape}, "
-                      f"rmask shape={self._point_data.attrs['rmask'].shape}")
-        lgm().log(f"#FPD[{self.block_coords}]->getPointData: shape={ptdata.shape}, norm={norm}, stat={stat(ptdata)}")
-
-        return ( ptdata, self._point_coords )
+            ptdata, cfmask = self.filter_point_data( self._point_data )
+            self._point_mask = self._point_data.attrs['pmask'] & cfmask
+            self._point_data.attrs['pmask'] = self._point_mask
+            self._point_data.attrs['rmask'] = self._raster_mask = pmask.reshape(self.data.shape[1:])
+        return ( self._point_data, self._point_coords )
 
     @property
     def point_mask(self) -> np.ndarray:
