@@ -739,7 +739,6 @@ class Block(DataContainer):
         if class_filter:
             cfmask = self.get_class_mask( self._point_data )
             self._point_data.attrs['pmask'] = self._point_coords['mask'] = self._point_mask  = cfmask
-            self._point_data.attrs['rmask'] = self._raster_mask = self._point_mask.reshape(self.data.shape[1:])
             self._point_data = self._point_data[cfmask]
             lgm().log(f"#FPDM-getPointData: filtered data shape={self._point_data.shape}, cfmask shape={cfmask.shape}, nz={np.count_nonzero(cfmask)}")
         self._point_data.attrs['type'] = 'block'
