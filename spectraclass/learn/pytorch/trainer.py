@@ -339,6 +339,7 @@ class MaskLoadPanel(MaskCache):
 
     def gui(self) -> Panel:
         load_panel = pn.Row(self.file_selector, self.load_button)
+        if self.mask_name != "": self.load()
         return load_panel
 
 
