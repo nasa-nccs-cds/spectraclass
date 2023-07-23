@@ -731,19 +731,17 @@ class Block(DataContainer):
             # lgm().log( f"\n *** rmask: {0 if (rmask is None) else np.count_nonzero(rmask)}/{0 if (rmask is None) else rmask.shape}" )
             self._point_coords: Dict[str,np.ndarray] = dict( y=self.data.y.values, x=self.data.x.values, mask=pmask, pmask=pmask, rmask=rmask )
             self._samples_axis = self._point_data.coords['samples']
-            self._point_data.attrs['type'] = 'block'
-            self._point_data.attrs['dsid'] = self.dsid()
-            self._point_data.attrs['pmask'] = pmask
-            self._point_data.attrs['rmask'] = rmask
             self._point_mask = pmask
             self._raster_mask = rmask
-
         self._point_data = tm().norm( self._point_data ) if norm else self._point_data
         if class_filter:
             ptdata, cfmask = self.filter_point_data( self._point_data )
             self._point_mask = self._point_data.attrs['pmask'] & cfmask
-            self._point_data.attrs['pmask'] = self._point_mask
-            self._point_data.attrs['rmask'] = self._raster_mask = self._point_mask.reshape(self.data.shape[1:])
+            self._raster_mask = self._point_mask.reshape(self.data.shape[1:])
+        self._point_data.attrs['pmask'] = self._point_mask
+        self._point_data.attrs['rmask'] = self._raster_mask
+        self._point_data.attrs['type'] = 'block'
+        self._point_data.attrs['dsid'] = self.dsid()
         return ( self._point_data, self._point_coords )
 
     @property
@@ -833,10 +831,12 @@ class Block(DataContainer):
         self._raster_mask = points_data.attrs['rmask']
         rnz = np.count_nonzero(self.raster_mask)
         pnz = np.count_nonzero(self.point_mask)
-        lgm().log(f"  --> pdata, shape={rpdata.shape}; rmask, shape={self.raster_mask.shape}, #nz={rnz}")
+        lgm().log(f"  --> rpdata, shape={rpdata.shape}; rmask, shape={self.raster_mask.shape}, #nz={rnz}")
         lgm().log(f"  --> points_data, shape={points_data.shape}; pmask, shape={self.point_mask.shape}, #nz={pnz}\n\n")
         if pnz == points_data.shape[0]:
             rpdata[ self.point_mask ] = points_data.data
+        elif rpdata.shape[0] == points_data.shape[0]:
+            rpdata = points_data.values.copy()
         else:
             if pnz != rnz:
                 lgm().log( f"\n\n ERROR: mask shape mismatch:  {rnz} vs {pnz}")
