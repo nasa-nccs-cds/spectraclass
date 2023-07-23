@@ -607,9 +607,9 @@ class ModeDataManager(SCSingletonConfigurable):
                 dvars: Dict[str,Union[xa.DataArray,List,Dict]] = self.dset_subsample( self._current_dataset, dsid=self.dsid(), **kwargs )
                 attrs = self._current_dataset.attrs.copy()
                 raw_data = dvars['raw']
-                point_data, pcoords = block.getPointData()
+                raw_point_data = block.raw_point_data
                 lgm().log( f" -----> point_data: shape = {raw_data.shape}, #NULL={np.count_nonzero(np.isnan(raw_data.values))}/{raw_data.size}")
-                dvars['samples'] = point_data.coords['samples']
+                dvars['samples'] = raw_point_data.coords['samples']
                 attrs['dsid'] = self.dsid()
                 attrs['type'] = 'spectra'
                 dvars['attrs'] = attrs

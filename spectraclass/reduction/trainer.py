@@ -79,7 +79,7 @@ class ModelTrainer(SCSingletonConfigurable):
     def model(self):
         if self._model is None:
             block: Block = tm().getBlock()
-            point_data, grid = block.getPointData()
+            point_data = block.filtered_point_data
             opts = dict ( wmag=self.init_wts_mag, init_bias=self.init_bias_mag, log_step=self.log_step )
             self._model = Autoencoder( point_data.shape[1], self.model_dims, **opts ).to(self.device)
         return self._model
