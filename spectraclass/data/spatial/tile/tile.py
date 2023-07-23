@@ -617,8 +617,8 @@ class Block(DataContainer):
     @exception_handled
     def getBandData( self, **kwargs ) -> xa.DataArray:
         raster = kwargs.pop( 'raster', True)
-        ptdata, pcoords = self.createPointData(**kwargs)
-        return self.points2raster( ptdata ) if raster else  ptdata
+        self.createPointData(**kwargs)
+        return self.raster_data if raster else self.point_data
 
     @property
     def model_data(self) -> xa.DataArray:
@@ -701,6 +701,11 @@ class Block(DataContainer):
         return self._point_data
 
     @property
+    def raster_data(self) -> Optional[xa.DataArray]:
+        if self._point_data is None: self.createPointData()
+        return self.points2raster( self._point_data )
+
+    @property
     def point_data(self) -> Optional[xa.DataArray]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         if self._point_data is None: self.createPointData()
@@ -744,11 +749,6 @@ class Block(DataContainer):
     def raster_mask(self) -> Optional[np.ndarray]:
         if self._point_data is None: self.createPointData()
         return self._raster_mask
-
-    @property
-    def point_coords(self) -> Dict[str,np.ndarray]:
-        if self._point_data is None: self.createPointData()
-        return  self._point_coords
 
     @property
     def mask(self) -> np.ndarray:
