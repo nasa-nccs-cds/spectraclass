@@ -743,7 +743,7 @@ class Block(DataContainer):
             ptdata, cfmask = self.filter_point_data( self._point_data )
             self._point_mask = self._point_data.attrs['pmask'] & cfmask
             self._point_data.attrs['pmask'] = self._point_mask
-            self._point_data.attrs['rmask'] = self._raster_mask = pmask.reshape(self.data.shape[1:])
+            self._point_data.attrs['rmask'] = self._raster_mask = self._point_mask.reshape(self.data.shape[1:])
         return ( self._point_data, self._point_coords )
 
     @property
