@@ -718,45 +718,42 @@ class Block(DataContainer):
         from spectraclass.learn.pytorch.trainer import mpt
         return mpt().filter_point_data( ptdata )
 
+    def get_class_mask(self, ptdata: xa.DataArray ) -> np.ndarray:
+        from spectraclass.learn.pytorch.trainer import mpt
+        return mpt().get_class_mask( ptdata )
+
     @exception_handled
     def getPointData( self, **kwargs ) -> Tuple[ Optional[xa.DataArray], Dict ]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         norm = kwargs.get('norm', True)
         class_filter = kwargs.get('class_filter', True)
         if self._point_data is None:
-            self._point_data, pmask, rmask =  self.raster2points( self.data, **kwargs )
+            self._point_data =  self.raster2points( self.data, **kwargs )
             if (self._point_data is None): return (None, {})
-            # lgm().log( f"\n *** pdata: {0 if (self._point_data is None) else self._point_data.shape} " )
-            # lgm().log( f"\n *** pmask: {0 if (pmask is None) else np.count_nonzero(pmask)}/{0 if (pmask is None) else pmask.shape}, " )
-            # lgm().log( f"\n *** rmask: {0 if (rmask is None) else np.count_nonzero(rmask)}/{0 if (rmask is None) else rmask.shape}" )
-            self._point_coords: Dict[str,np.ndarray] = dict( y=self.data.y.values, x=self.data.x.values, mask=pmask, pmask=pmask, rmask=rmask )
+            self._point_coords: Dict[str,np.ndarray] = dict( y=self.data.y.values, x=self.data.x.values )
             self._samples_axis = self._point_data.coords['samples']
-            self._point_mask = pmask
-            self._raster_mask = rmask
         self._point_data = tm().norm( self._point_data ) if norm else self._point_data
         if class_filter:
-            ptdata, cfmask = self.filter_point_data( self._point_data )
-            self._point_mask = self._point_data.attrs['pmask'] & cfmask
-            self._raster_mask = self._point_mask.reshape(self.data.shape[1:])
-        self._point_data.attrs['pmask'] = self._point_mask
-        self._point_data.attrs['rmask'] = self._raster_mask
+            cfmask = self.get_class_mask( self._point_data )
+            self._point_data.attrs['pmask'] = self._point_coords['mask'] = self._point_mask  = cfmask
+            self._point_data.attrs['rmask'] = self._raster_mask = self._point_mask.reshape(self.data.shape[1:])
         self._point_data.attrs['type'] = 'block'
         self._point_data.attrs['dsid'] = self.dsid()
         return ( self._point_data, self._point_coords )
 
     @property
-    def point_mask(self) -> np.ndarray:
-        if self._point_mask is None: self.getPointData()
+    def point_mask(self) -> Optional[np.ndarray]:
+        if self._point_data is None: self.getPointData()
         return self._point_mask
 
     @property
-    def raster_mask(self) -> np.ndarray:
-        if self._raster_mask is None: self.getPointData()
+    def raster_mask(self) -> Optional[np.ndarray]:
+        if self._point_data is None: self.getPointData()
         return self._raster_mask
 
     @property
     def point_coords(self) -> Dict[str,np.ndarray]:
-        if self._point_coords is None: self.getPointData()
+        if self._point_data is None: self.getPointData()
         return  self._point_coords
 
     @property
@@ -848,32 +845,52 @@ class Block(DataContainer):
         rname = kwargs.get( 'name', points_data.name )
         return xa.DataArray( raster_data, coords, dims, rname, points_data.attrs )
 
-    def raster2points(self, base_raster: xa.DataArray, **kwargs) -> Tuple[Optional[xa.DataArray], Optional[np.ndarray],  Optional[np.ndarray]]:  # base_raster dims: [ band, y, x ]
-        if (base_raster is None) or (base_raster.shape[0] == 0): return (None, None, None)
+    def raster2points(self, base_raster: xa.DataArray, **kwargs) -> Optional[xa.DataArray]:  # base_raster dims: [ band, y, x ]
+        if (base_raster is None) or (base_raster.shape[0] == 0): return None
         point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
 
         if '_FillValue' in point_data.attrs:
             nodata = point_data.attrs.get('_FillValue',np.nan)
             point_data = point_data if np.isnan(nodata) else point_data.where(point_data != nodata, np.nan)
 
-        pvcnts = [ nnan( point_data.values[ic] ) for ic in range( point_data.shape[0] ) ]
-        pmask: np.ndarray = ( np.array(pvcnts) < point_data.shape[1]*0.5 )
-        lgm().log(f"#FPD[{self.block_coords}]: pmask shp={shp(pmask)}, nvalid={np.count_nonzero(pmask)})  ")
-
-        filtered_point_data: xa.DataArray = point_data[pmask,:]
-        lgm().log(f"#FPD[{self.block_coords}]: band-filtered point_data shape = {filtered_point_data.shape}, nnan={nnan(filtered_point_data)} ")
-        smean: np.ndarray = np.nanmean( filtered_point_data.values, axis=0 )
+        lgm().log(f"#FPD[{self.block_coords}]: band-filtered point_data shape = {point_data.shape}, nnan={nnan(point_data)} ")
+        smean: np.ndarray = np.nanmean( point_data.values, axis=0 )
         for iB in range( smean.size ):
-            bmask: np.ndarray = np.isnan( filtered_point_data.values[:,iB] )
-            filtered_point_data[ bmask, iB ] = smean[iB]
+            bmask: np.ndarray = np.isnan( point_data.values[:,iB] )
+            point_data[ bmask, iB ] = smean[iB]
 
-        point_index = np.arange(0, base_raster.shape[-1] * base_raster.shape[-2])
-        filtered_point_data.attrs['dsid'] = base_raster.name
+        point_data.attrs['dsid'] = base_raster.name
+        lgm().log(f"#FPD[{self.block_coords}]: filtered_point_data{point_data.dims}{point_data.shape}:  "
+                  f"range=[{np.nanmin(point_data.values):.4f}, {np.nanmax(point_data.values):.4f}], nnan={nnan(point_data)}")
 
-        lgm().log(f"#FPD[{self.block_coords}]: filtered_point_data{filtered_point_data.dims}{filtered_point_data.shape}:  "
-                  f"range=[{np.nanmin(filtered_point_data.values):.4f}, {np.nanmax(filtered_point_data.values):.4f}], nnan={nnan(filtered_point_data)}")
+        return point_data
 
-        return filtered_point_data.assign_coords( samples=point_index[pmask]), pmask, pmask.reshape(base_raster.shape[1:])
+    # def raster2points2(self, base_raster: xa.DataArray, **kwargs) -> Tuple[Optional[xa.DataArray], Optional[np.ndarray],  Optional[np.ndarray]]:  # base_raster dims: [ band, y, x ]
+    #     if (base_raster is None) or (base_raster.shape[0] == 0): return (None, None, None)
+    #     point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
+    #
+    #     if '_FillValue' in point_data.attrs:
+    #         nodata = point_data.attrs.get('_FillValue',np.nan)
+    #         point_data = point_data if np.isnan(nodata) else point_data.where(point_data != nodata, np.nan)
+    #
+    #     pvcnts = [ nnan( point_data.values[ic] ) for ic in range( point_data.shape[0] ) ]
+    #     pmask: np.ndarray = ( np.array(pvcnts) < point_data.shape[1]*0.5 )
+    #     lgm().log(f"#FPD[{self.block_coords}]: pmask shp={shp(pmask)}, nvalid={np.count_nonzero(pmask)})  ")
+    #
+    #     filtered_point_data: xa.DataArray = point_data[pmask,:]
+    #     lgm().log(f"#FPD[{self.block_coords}]: band-filtered point_data shape = {filtered_point_data.shape}, nnan={nnan(filtered_point_data)} ")
+    #     smean: np.ndarray = np.nanmean( filtered_point_data.values, axis=0 )
+    #     for iB in range( smean.size ):
+    #         bmask: np.ndarray = np.isnan( filtered_point_data.values[:,iB] )
+    #         filtered_point_data[ bmask, iB ] = smean[iB]
+    #
+    #     point_index = np.arange(0, base_raster.shape[-1] * base_raster.shape[-2])
+    #     filtered_point_data.attrs['dsid'] = base_raster.name
+    #
+    #     lgm().log(f"#FPD[{self.block_coords}]: filtered_point_data{filtered_point_data.dims}{filtered_point_data.shape}:  "
+    #               f"range=[{np.nanmin(filtered_point_data.values):.4f}, {np.nanmax(filtered_point_data.values):.4f}], nnan={nnan(filtered_point_data)}")
+    #
+    #     return filtered_point_data.assign_coords( samples=point_index[pmask]), pmask, pmask.reshape(base_raster.shape[1:])
 
 #     def raster2points1( self, base_raster: xa.DataArray ) -> Tuple[ Optional[xa.DataArray], Optional[np.ndarray], Optional[np.ndarray] ]:   #  base_raster dims: [ band, y, x ]
 #         t0 = time.time()
