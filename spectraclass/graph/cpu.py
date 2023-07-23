@@ -103,10 +103,10 @@ class cpActivationFlow(ActivationFlow):
             kwargs = dict( n_trees=n_trees, n_iters=n_iters, n_neighbors=self.nneighbors, max_candidates=60, verbose=True, metric = self.metric )
             if self.metric == "minkowski": kwargs['metric_kwds'] = dict( p=self.p )
             ndata = self.nodes.values
-            lgm().log(f"Computing NN-Graph[{id(self)}] with parms= {kwargs}, nodes shape = {self.nodes.shape}, #NULL={np.count_nonzero(np.isnan(ndata))}",print=True)
-            lgm().log( f" ---> data ave = {ndata.mean()}, std = {ndata.std()}, range = [{ndata.min()},{ndata.max()}]",print=True)
+            lgm().log(f"Computing NN-Graph[{id(self)}] with parms= {kwargs}, nodes shape = {self.nodes.shape}, #NULL={np.count_nonzero(np.isnan(ndata))}")
+            lgm().log( f" ---> data ave = {ndata.mean()}, std = {ndata.std()}, range = [{ndata.min()},{ndata.max()}]")
             self._knn_graph = NNDescent( ndata, **kwargs )
-            ufm().show(f"Completed spectral graph in {time.time()-t0:.2f} sec")
+            lgm().log(f"Completed spectral graph in {time.time()-t0:.2f} sec")
         return self._knn_graph
 
     def getEdgeIndex(self) -> Tuple[np.ndarray,np.ndarray]:
