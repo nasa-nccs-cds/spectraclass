@@ -3,6 +3,7 @@ import torch, time, os
 import traitlets as tl
 from spectraclass.learn.pytorch.progress import ProgressPanel
 from spectraclass.gui.control import ufm
+from spectraclass.reduction.trainer import mt
 from holoviews.streams import Stream, param
 from panel.layout.base import Panel
 from spectraclass.model.base import SCSingletonConfigurable
@@ -314,13 +315,17 @@ class MaskLoadPanel(MaskCache):
     def __init__(self ):
         super(MaskLoadPanel, self).__init__()
         block_selection_names = [ self.get_mask_name(f) for f in os.listdir(self.save_dir) if ("__" in f) ]
+        self.load_button = pn.widgets.Button(name='Load Mask', button_type='success', width=150)
+        self.load_button.on_click(self.load)
         sopts = dict( name='Cluster Mask', options=block_selection_names )
-        if len(block_selection_names):
+        if mt().cluster_mask != "":
+            sopts['value'] = self.mask_name = mt().cluster_mask
+            self.load()
+        elif len(block_selection_names):
             sopts['value'] = self.mask_name = block_selection_names[0]
         self.file_selector = pn.widgets.Select(**sopts)
         self.file_selector.link(self, value='mask_name')
-        self.load_button = pn.widgets.Button(name='Load Mask', button_type='success', width=150)
-        self.load_button.on_click(self.load)
+
 
     def gui(self) -> Panel:
         load_panel = pn.Row(self.file_selector, self.load_button)

@@ -47,6 +47,8 @@ class ModelTrainer(SCSingletonConfigurable):
     niter = tl.Int(25).tag(config=True, sync=True)
     log_step = tl.Int(10).tag(config=True, sync=True)
     refresh_model = tl.Bool(False).tag(config=True, sync=True)
+    block_mask = tl.Unicode(default_value="").tag(config=True, sync=True)
+    cluster_mask = tl.Unicode(default_value="").tag(config=True, sync=True)
 
     def __init__(self, **kwargs ):
         super(ModelTrainer, self).__init__()
