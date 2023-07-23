@@ -412,6 +412,7 @@ class Block(DataContainer):
         self._flow = None
         self._samples_axis: Optional[xa.DataArray] = None
         self._point_data: Optional[xa.DataArray] = None
+        self._filtered_point_data: Optional[xa.DataArray] = None
         self._point_coords: Optional[Dict[str,np.ndarray]] = None
         self._point_mask: Optional[np.ndarray] = None
         self._raster_mask: Optional[np.ndarray] = None
@@ -424,22 +425,6 @@ class Block(DataContainer):
         self._trecs: Tuple[ Dict[int,ThresholdRecord], Dict[int,ThresholdRecord] ] = ( {}, {} )
         self.block_coords: Tuple[int,int] = (ix,iy)
         self.tile_index = itile
-
-    def initialize_data(self):
-        self.initialize()
-        self.init_task = None
-        self._index_array: xa.DataArray = None
-        self._gid_array: np.ndarray = None
-        self._flow = None
-        self._samples_axis: Optional[xa.DataArray] = None
-        self._point_data: Optional[xa.DataArray] = None
-        self._point_coords: Optional[Dict[str,np.ndarray]] = None
-        self._point_mask: Optional[np.ndarray] = None
-        self._raster_mask: Optional[np.ndarray] = None
-        self._tmask: np.ndarray = None
-        self._model_data: xa.DataArray = None
-        self._reproduction = None
-        self._reduction_input_data = None
 
     def set_thresholds(self, bUseModel: bool, iFrame: int, thresholds: Tuple[float,float] ) -> bool:
         trec: ThresholdRecord = self.threshold_record( bUseModel, iFrame )
@@ -627,12 +612,12 @@ class Block(DataContainer):
 
     @exception_handled
     def getSpectralData(self, raster: bool = True ) -> xa.DataArray:
-        return self.data if raster else self.getPointData()
+        return self.data if raster else self.createPointData()
 
     @exception_handled
     def getBandData( self, **kwargs ) -> xa.DataArray:
         raster = kwargs.pop( 'raster', True)
-        ptdata, pcoords = self.getPointData( **kwargs )
+        ptdata, pcoords = self.createPointData(**kwargs)
         return self.points2raster( ptdata ) if raster else  ptdata
 
     @property
@@ -651,7 +636,7 @@ class Block(DataContainer):
 
     def _get_model_data(self):
         from spectraclass.reduction.trainer import mt
-        pdata, pcoords = self.getPointData()
+        pdata, pcoords = self.createPointData()
         lgm().log(f"_get_model_data: pcoords = {list(pcoords.keys())}")
         (self._model_data, self._reproduction) = mt().reduce( pdata )
         self._reduction_input_data = pdata
@@ -711,53 +696,58 @@ class Block(DataContainer):
         return bounds
 
     @property
-    def raw_point_data(self):
-        if self._point_data is None:
-            self.getPointData(norm=False)
+    def raw_point_data(self) -> Optional[xa.DataArray]:
+        if self._point_data is None: self.createPointData()
         return self._point_data
 
-    def filter_point_data(self, ptdata: xa.DataArray ) -> Tuple[xa.DataArray,np.ndarray]:
-        from spectraclass.learn.pytorch.trainer import mpt
-        return mpt().filter_point_data( ptdata )
+    @property
+    def point_data(self) -> Optional[xa.DataArray]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        if self._point_data is None: self.createPointData()
+        return tm().norm( self._point_data )
 
-    def get_class_mask(self, ptdata: xa.DataArray ) -> np.ndarray:
-        from spectraclass.learn.pytorch.trainer import mpt
-        return mpt().get_class_mask( ptdata )
+    @property
+    def filtered_point_data(self) -> Optional[xa.DataArray]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        if self._point_data is None: self.createPointData()
+        return tm().norm( self._point_data[self._point_mask] )
+
+    @property
+    def class_mask(self) -> np.ndarray:
+        if self._point_data is None: self.createPointData()
+        return self._point_mask
+
+    def point_coords(self)-> Dict[str, np.ndarray]:
+        if self._point_data is None: self.createPointData()
+        return self._point_coords
 
     @exception_handled
-    def getPointData( self, **kwargs ) -> Tuple[ Optional[xa.DataArray], Dict ]:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        norm = kwargs.get('norm', True)
-        class_filter = kwargs.get('class_filter', True)
-        if self._point_data is None:
-            self._point_data =  self.raster2points( self.data, **kwargs )
-            if (self._point_data is None): return (None, {})
-            self._point_coords: Dict[str,np.ndarray] = dict( y=self.data.y.values, x=self.data.x.values )
+    def createPointData(self, **kwargs):
+        from spectraclass.learn.pytorch.trainer import mpt
+        self._point_data =  self.raster2points( self.data, **kwargs )
+        if self._point_data is not None:
             self._samples_axis = self._point_data.coords['samples']
-        self._point_data = tm().norm( self._point_data ) if norm else self._point_data
-        if class_filter:
-            cfmask = self.get_class_mask( self._point_data )
-            self._point_mask  = cfmask
-            self._point_data = self._point_data[cfmask]
-            lgm().log(f"#FPDM-getPointData: filtered data shape={self._point_data.shape}, cfmask shape={cfmask.shape}, nz={np.count_nonzero(cfmask)}")
-        self._point_data.attrs['type'] = 'block'
-        self._point_data.attrs['dsid'] = self.dsid()
-        self._point_data.attrs['pmask'] = self._point_mask
-        return ( self._point_data, self._point_coords )
+            self._point_mask  = mpt().get_class_mask( self._point_data )
+            lgm().log(f"#FPDM-getPointData: filtered data shape={self._point_data.shape}, "
+                      f"cfmask shape={self._point_mask.shape}, nz={np.count_nonzero(self._point_mask)}")
+            self._point_data.attrs['type'] = 'block'
+            self._point_data.attrs['dsid'] = self.dsid()
+            self._point_data.attrs['pmask'] = self._point_mask
+            self._point_coords: Dict[str, np.ndarray] = dict(y=self.data.y.values, x=self.data.x.values)
 
     @property
     def point_mask(self) -> Optional[np.ndarray]:
-        if self._point_data is None: self.getPointData()
+        if self._point_data is None: self.createPointData()
         return self._point_mask
 
     @property
     def raster_mask(self) -> Optional[np.ndarray]:
-        if self._point_data is None: self.getPointData()
+        if self._point_data is None: self.createPointData()
         return self._raster_mask
 
     @property
     def point_coords(self) -> Dict[str,np.ndarray]:
-        if self._point_data is None: self.getPointData()
+        if self._point_data is None: self.createPointData()
         return  self._point_coords
 
     @property

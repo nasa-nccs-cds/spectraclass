@@ -96,9 +96,6 @@ class ModelTrainer(SCSingletonConfigurable):
     def get_mask_load_panel(self) -> Panel:
         return self.mask_load_panel.gui()
 
-    def filter_point_data(self, ptdata: xa.DataArray ) -> Tuple[xa.DataArray,np.ndarray]:
-        return self.mask_load_panel.filter_point_data( ptdata )
-
     def get_class_mask(self, ptdata: xa.DataArray ) -> np.ndarray:
         return self.mask_load_panel.get_class_mask( ptdata )
 
@@ -115,7 +112,7 @@ class ModelTrainer(SCSingletonConfigurable):
         training_data, training_labels = None, None
         for ( (tindex, block_coords, cid), gids ) in label_data.items():
             block = tm().getBlock( tindex=tindex, block_coords=block_coords )
-            input_data, coords = block.getPointData()
+            input_data, coords = block.filtered_point_data, block.point_coords
             training_mask: np.ndarray = np.isin( input_data.samples.values, gids )
             tdata: np.ndarray = input_data.values[ training_mask ]
             tlabels: np.ndarray = np.full([gids.size], cid)
@@ -244,7 +241,7 @@ class ModelTrainer(SCSingletonConfigurable):
         block: Block = tm().getBlock(**kwargs)
         raster = kwargs.get( 'raster', "False")
         if data is None:
-            data, coords = block.getPointData( class_filter=False )
+            data, coords = block.point_data
         raw_result: xa.DataArray = self.model.predict( data )
         lgm().log( f"#MT: predict-> input: [shape={data.shape}, stat={stat(data)}] output: [shape={raw_result.shape}, stat={stat(raw_result)}]")
         return block.points2raster( raw_result ) if raster else raw_result
@@ -290,25 +287,13 @@ class MaskCache(param.Parameterized):
         self.model.save( self.model_id, self.mask_name, dir=self.save_dir )
 
     @exception_handled
-    def filter_point_data(self, ptdata: xa.DataArray ) -> Tuple[xa.DataArray,np.ndarray]:
-        mask_classes: xa.DataArray = mpt().predict( ptdata, raster=False )
-        mask: np.ndarray = np.argmax( mask_classes.values, axis=1, keepdims=False ).astype( np.bool )
-        nvalid = np.count_nonzero( mask )
-        fpdata = ptdata[mask]
-        lgm().log( f"#FPDM: filter_point_data: ptdata shape={ptdata.shape}, coords={list(ptdata.coords.keys())}, stat={stat(ptdata)}")
-        lgm().log( f"#FPDM: classes: shape={mask_classes.shape}, dims={mask_classes.dims};  mask[{mask.dtype}] shape = {mask.shape}, nvalid={nvalid}")
-        lgm().log( f"#FPDM: classes stat={stat(mask_classes)}, sample={mask_classes.values[:20,:]}")
-        lgm().log(f"#FPDM: filtered data shape={fpdata.shape}, dims={fpdata.dims}")
-        return fpdata, mask
-
-    @exception_handled
     def get_class_mask(self, ptdata: xa.DataArray ) -> np.ndarray:
         mask_classes: xa.DataArray = mpt().predict( ptdata, raster=False )
         mask: np.ndarray = np.argmax( mask_classes.values, axis=1, keepdims=False ).astype( np.bool )
         nvalid = np.count_nonzero( mask )
         lgm().log( f"#FPDM: filter_point_data: ptdata shape={ptdata.shape}, coords={list(ptdata.coords.keys())}, stat={stat(ptdata)}")
         lgm().log( f"#FPDM: classes: shape={mask_classes.shape}, dims={mask_classes.dims};  mask[{mask.dtype}] shape = {mask.shape}, nvalid={nvalid}")
-        lgm().log( f"#FPDM: classes stat={stat(mask_classes)}, sample={mask_classes.values[:20,:]}")
+        lgm().log( f"#FPDM: classes stat={stat(mask_classes)}")
         return mask
 
 class MaskSavePanel(MaskCache):

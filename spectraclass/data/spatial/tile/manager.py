@@ -200,7 +200,7 @@ class TileManager(SCSingletonConfigurable):
     def in_bounds( self, pids: List[int] ) -> bool:
         try:
             block = self.getBlock()
-            point_data: xa.DataArray = block.getPointData()[0]
+            point_data: xa.DataArray = block.createPointData()[0]
             result = point_data.sel( dict(samples=pids) ).values
             return True
         except KeyError:
