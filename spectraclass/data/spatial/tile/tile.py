@@ -611,10 +611,6 @@ class Block(DataContainer):
         return self.points2raster( self.model_data ) if raster else self.model_data
 
     @exception_handled
-    def getSpectralData(self, raster: bool = True ) -> xa.DataArray:
-        return self.data if raster else self.createPointData()
-
-    @exception_handled
     def getBandData( self, **kwargs ) -> xa.DataArray:
         raster = kwargs.pop( 'raster', True)
         self.createPointData(**kwargs)
@@ -740,11 +736,6 @@ class Block(DataContainer):
             self._point_coords: Dict[str, np.ndarray] = dict(y=self.data.y.values, x=self.data.x.values)
 
     @property
-    def point_mask(self) -> Optional[np.ndarray]:
-        if self._point_data is None: self.createPointData()
-        return self._point_mask
-
-    @property
     def raster_mask(self) -> Optional[np.ndarray]:
         if self._point_data is None: self.createPointData()
         return self._raster_mask
@@ -816,19 +807,20 @@ class Block(DataContainer):
         dims = [points_data.dims[1], self.data.dims[1], self.data.dims[2]]
         coords = [(dims[0], points_data[dims[0]].data), (dims[1], self.data[dims[1]].data), (dims[2], self.data[dims[2]].data)]
         rpdata = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
-        lgm().log(f"points2raster:  points_data.attrs = {list(points_data.attrs.keys())}")
+        lgm().log(f"#P2R points2raster:  points_data.attrs = {list(points_data.attrs.keys())}")
         self._point_mask  = points_data.attrs.get('pmask',None)
-        pnz = np.count_nonzero(self.point_mask)  if self.point_mask  is not None else -1
-        lgm().log(f"  --> points_data, shape={points_data.shape}; pmask #nz={pnz}\n\n")
+        pnz = np.count_nonzero(self.class_mask)  if self.class_mask  is not None else -1
+        lgm().log(f"#P2R --> points_data, shape={points_data.shape}; pmask #nz={pnz}; raster shape = {rpdata.shape}; "
+                  f"cmask shape = {self.class_mask.shape}")
         if pnz == points_data.shape[0]:
-            rpdata[ self.point_mask ] = points_data.data
+            rpdata[ self.class_mask ] = points_data.data
         elif rpdata.shape[0] == points_data.shape[0]:
             rpdata = points_data.values.copy()
         else:
             raise Exception( f"Size mismatch: pnz={pnz}, points_data.shape={points_data.shape}, rpdata.shape={rpdata.shape}")
         raster_data = rpdata.transpose().reshape([points_data.shape[1], self.data.shape[1], self.data.shape[2]])
-        lgm().log( f"points->raster[{self.dsid()}], time= {time.time()-t0:.2f} sec, points: dims={points_data.dims}, shape={points_data.shape}" )
-        lgm().log( f"  ---> data: dims={self.data.dims}, shape={self.data.shape}, attrs={points_data.attrs.keys()}" )
+        lgm().log( f"#P2R points->raster[{self.dsid()}], time= {time.time()-t0:.2f} sec, raster: dims={dims}, "
+                   f"shape={raster_data.shape}, nnan = {np.count_nonzero(np.isnan(raster_data))}" )
         rname = kwargs.get( 'name', points_data.name )
         return xa.DataArray( raster_data, coords, dims, rname, points_data.attrs )
 

@@ -228,7 +228,7 @@ class BlockSelection(param.Parameterized):
             self.update()
 
     def get_block_selection( self ) -> Optional[Dict]:
-        return  self._selected_rectangles
+        return self._selected_rectangles
 
     def get_selection_load_panel(self):
         from spectraclass.reduction.trainer import mt
