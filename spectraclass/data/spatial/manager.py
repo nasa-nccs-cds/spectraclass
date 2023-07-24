@@ -239,7 +239,7 @@ class SpatialDataManager(ModeDataManager):
             result_dataset: Optional[xa.Dataset] = None
             if raw_data is not None:
                 try:
-                    blocks_point_data, coord_data = block.getBandData(norm=False)
+                    blocks_point_data = block.getBandData(norm=False)
                     lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}")
                 except NoDataInBounds:
                     blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
