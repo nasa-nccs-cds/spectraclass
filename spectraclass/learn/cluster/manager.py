@@ -320,9 +320,11 @@ class ClusterManager(SCSingletonConfigurable):
         return self._cluster_points.samples.values
 
     def gid2pid( self, gid: int ) -> int:
-        pids = np.where( self.samples == gid )
-        if isinstance(pids,tuple): pids = pids[0]
-        return pids[0] if len(pids) else -1
+        pids: np.ndarray = np.asarray( self.samples == gid ).nonzero()
+        lgm().log( f"gid2pid[{gid}]-> nsamples: size={self.samples.size}, range={[self.samples.min(),self.samples.max()], }"
+                   f"pids: size={pids.size}, range={[pids.min(),pids.max()]} ")
+ #       if isinstance(pids,tuple): pids = pids[0]
+        return pids[0] if (pids.size > 0) else -1
 
     def get_cluster(self, gid: int ) -> int:
         pid: int = self.gid2pid( gid )
@@ -628,7 +630,7 @@ class ClusterSelector:
         from spectraclass.model.labels import lm
         from spectraclass.gui.control import ufm
         lgm().log(f"ClusterSelector: on_button_press: enabled={self.enabled}")
-        if (event.xdata != None) and (event.ydata != None) and (event.inaxes == self.ax) and self.enabled:
+        if (event.xdata != None) and (event.ydata != None) and self.enabled:
             if int(event.button) == self.LEFT_BUTTON:
                 gid,ix,iy = self.block.coords2gid(event.ydata, event.xdata)
                 cid = lm().current_cid
