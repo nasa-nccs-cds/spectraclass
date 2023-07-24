@@ -32,7 +32,7 @@ class  ClusterBase(TransformerMixin,ClusterMixin,BaseEstimator):
     def embedding(self, ndim: int = 3 ) -> xa.DataArray:
         from spectraclass.data.base import DataManager, dm
         self.n_clusters = ndim
-        model_data: xa.DataArray = dm().getModelData()
+        model_data: xa.DataArray = dm().getModelData(raster=False)
         self.cluster( model_data )
         return self.get_cluster_membership( model_data )
 

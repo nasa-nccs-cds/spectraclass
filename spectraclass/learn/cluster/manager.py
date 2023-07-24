@@ -532,7 +532,7 @@ class ClusterManager(SCSingletonConfigurable):
             self.generate_clusters()
 
     def generate_clusters(self):
-        mdata: xa.DataArray = self.get_input_data()
+        mdata: xa.DataArray = self.get_input_data( raster=False )
         ufm().show(f"Creating clusters using {self.mid} for block {mdata.attrs['block']}, input shape={mdata.shape}")
         self.cluster( mdata )
 
