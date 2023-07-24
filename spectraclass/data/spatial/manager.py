@@ -233,7 +233,6 @@ class SpatialDataManager(ModeDataManager):
                 return None
         else:
             ea1, ea2 = np.empty(shape=[0], dtype=np.float32), np.empty(shape=[0, 0], dtype=np.float32)
-            coord_data = {}
             ufm().show( f"Processing Block{block.block_coords}..." )
             raw_data: Optional[xa.DataArray] = block.data
             result_dataset: Optional[xa.Dataset] = None
@@ -252,7 +251,7 @@ class SpatialDataManager(ModeDataManager):
                 self.spectral_means.append( ( ptcount, smean ) )
                 data_vars = dict( raw=raw_data )
                 lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.shape[0]} samples" )
-                data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y', 'x'], coords={d: raw_data.coords[d] for d in ['x', 'y']} )
+                #data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y', 'x'], coords={d: raw_data.coords[d] for d in ['x', 'y']} )
                 result_dataset = xa.Dataset(data_vars)
                 result_dataset.attrs['tile_shape'] = tm().tile.data.shape
                 result_dataset.attrs['block_dims'] = tm().block_dims
