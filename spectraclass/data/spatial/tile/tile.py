@@ -607,7 +607,8 @@ class Block(DataContainer):
         return raw_raster
 
     @exception_handled
-    def getModelData(self, raster: bool = True ) -> xa.DataArray:
+    def getModelData(self,  **kwargs ) -> xa.DataArray:
+        raster = kwargs.pop('raster', True)
         return self.points2raster( self.model_data ) if raster else self.model_data
 
     @exception_handled

@@ -296,9 +296,9 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import tm
         block = kwargs.get( 'block', tm().getBlock() )
         if self.data_source == "model":
-            data = block.getModelData()
+            data = block.getModelData(**kwargs)
         elif self.data_source == "spectral":
-            data = block.getBandData()
+            data = block.getBandData(**kwargs)
         else:
             raise Exception( f"Unknown data source: {self.data_source}")
         data.attrs['block'] = block.block_coords
@@ -310,7 +310,7 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import tm
         block = tm().getBlock()
         if self.cluster_points is None:
-            self.cluster( self.get_input_data() )
+            self.cluster( self.get_input_data(raster=False) )
         self._cluster_raster: xa.DataArray = block.points2raster( self.cluster_points, name="Cluster" ).squeeze()
         self._cluster_raster.attrs['title'] = f"Block = {block.block_coords}"
         return self._cluster_raster

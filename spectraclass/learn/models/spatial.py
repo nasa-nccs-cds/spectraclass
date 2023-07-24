@@ -71,7 +71,7 @@ class SpatialModelWrapper(KerasLearningModel):
             lgm().log(f">>> get_training_set: blocks={[b.index for b in label_blocks]}")
             for block in label_blocks:
                 label_map: np.ndarray  = lm().get_label_map( block=block ).values.flatten()
-                base_data: xa.DataArray = block.getSpectralData(True) if use_spectral_data else block.getModelData(True)
+                base_data: xa.DataArray = block.getBandData(raster=True) if use_spectral_data else block.getModelData(raster=True)
                 if self.mtype == ModelType.SPECTRALSPATIAL:
                     tdata: xa.DataArray = base_data.fillna(0.0).expand_dims('batch', 0)
                 else:
