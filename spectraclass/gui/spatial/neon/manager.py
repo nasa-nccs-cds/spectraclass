@@ -164,7 +164,7 @@ class BlockSelection(param.Parameterized):
             lgm().log( f" KeyError in select_block, bid={bid}, rect keys={list(self.rect_grid.keys())}")
             raise err
         if update:
-            tm().block_index = bid
+            tm().setBlock(bid)
             self.update()
 
     def select_region(self, bounds: Dict  ):

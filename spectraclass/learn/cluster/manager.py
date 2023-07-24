@@ -294,12 +294,11 @@ class ClusterManager(SCSingletonConfigurable):
 
     def get_input_data( self, **kwargs ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import tm
-        from spectraclass.data.base import DataManager, dm
         block = kwargs.get( 'block', tm().getBlock() )
         if self.data_source == "model":
-            data = dm().getModelData(block=block)
+            data = block.getModelData()
         elif self.data_source == "spectral":
-            data, coords = block.getPointData()
+            data = block.getBandData()
         else:
             raise Exception( f"Unknown data source: {self.data_source}")
         data.attrs['block'] = block.block_coords
