@@ -82,7 +82,7 @@ class GenericClusterBase(ClusterBase):
         if self._cluster_data is not None:
             cdata = self._cluster_data.squeeze()
             if self._threshold > 0.0:  cdata = np.where( self.threshold_mask, cdata, 0 )
-            lgm().log( f"cluster_data: data.shape={self._cluster_data.shape}, threshold-mask.shape = {self.threshold_mask.shape}"
+            lgm().log( f"#GCB: cluster_data: data.shape={self._cluster_data.shape}, threshold-mask.shape = {self.threshold_mask.shape}"
                        f", threshold-mask.gtz = {np.count_nonzero(self.threshold_mask)}, cdata.shape = {cdata.shape},  #gtz = {np.count_nonzero(cdata)}")
             cdata_array = xa.DataArray( cdata, dims=['samples'], name="cluster_data", coords=dict( samples=self._samples ), attrs=self._attrs )
             return cdata_array.expand_dims( "cluster", 1 )
@@ -95,6 +95,7 @@ class GenericClusterBase(ClusterBase):
         self._threshold_mask = None
         self._cluster_data = np.expand_dims( self._model.fit_predict( data.values ), axis=1 ) + 1
         self._samples = data.samples.values
+        lgm().log(f"#GCB: self._samples(data.samples.values): shape={self._samples.shape}, range={[self._samples.min(),self._samples.max()]}" )
         self._max_cluster_distance = 0.0
         cluster_centers: np.ndarray = self._model.cluster_centers_
 
