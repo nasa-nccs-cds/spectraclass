@@ -320,10 +320,11 @@ class ClusterManager(SCSingletonConfigurable):
         return self._cluster_points.samples.values
 
     def gid2pid( self, gid: int ) -> int:
-        pids: np.ndarray = np.asarray( self.samples == gid ).nonzero()
-        lgm().log( f"gid2pid[{gid}]-> nsamples: size={self.samples.size}, range={[self.samples.min(),self.samples.max()], }"
-                   f"pids: size={pids.size}, range={[pids.min(),pids.max()]} ")
- #       if isinstance(pids,tuple): pids = pids[0]
+        lgm().log( f"gid2pid[{gid}]-> nsamples: size={self.samples.size}, range={[self.samples.min(), self.samples.max()]}" )
+        pids = np.asarray( self.samples == gid ).nonzero()
+        lgm().log(f"result: type={type(pids)}, len={len(pids)}")
+        if isinstance(pids,tuple): pids = pids[0]
+        lgm().log( f"pids: size={pids.size}, range={[pids.min(),pids.max()]} ")
         return pids[0] if (pids.size > 0) else -1
 
     def get_cluster(self, gid: int ) -> int:
