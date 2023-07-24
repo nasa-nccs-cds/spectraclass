@@ -231,12 +231,14 @@ class BlockSelection(param.Parameterized):
         return  self._selected_rectangles
 
     def get_selection_load_panel(self):
+        from spectraclass.reduction.trainer import mt
         block_selection_names = [ f.split(".")[-2] for f in os.listdir(self.save_dir) ]
         sopts = dict( name='Block Mask', options=block_selection_names )
-        if len(block_selection_names) > 0:
-            sopts['value'] = self.selection_name = block_selection_names[0]
-        file_selector = pn.widgets.Select( **sopts )
+        if mt().block_mask != "":             self.selection_name = mt().block_mask
+        elif len(block_selection_names) > 0:  self.selection_name = block_selection_names[0]
+        file_selector = pn.widgets.Select( value=self.selection_name, **sopts )
         file_selector.link( self, value='selection_name' )
+        self.update()
         return pn.Row( file_selector, self.load_button  )
 
     def get_selection_save_panel(self, event=None ):
@@ -326,7 +328,7 @@ class NEONTileSelector:
         image = basemap * self.rect_grid * self.selected_rec
         return image
 
-    def gui( self, **kwargs ):
+    def gui( self ):
         self.rect0 = tm().block_index
         basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
         self.rect_grid = self.blockSelection.grid_widget()
@@ -342,7 +344,7 @@ class NEONTileSelector:
                 viz_panels = pn.Tabs( ("select", image * self.region_selection), ("cluster", cluster_panel))
                 return pn.Row( viz_panels, selection_panel )
             elif dm().selection_mode == BlockSelectMode.LoadMask:
-                return self.get_block_selection_gui(**kwargs)
+                return self.get_block_selection_gui()
 
     @property
     def image_index(self) -> int:
