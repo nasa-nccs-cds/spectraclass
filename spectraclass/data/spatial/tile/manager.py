@@ -1,6 +1,7 @@
 import numpy as np
 import codecs, folium
 import xarray as xa
+import panel as pn
 import geoviews.tile_sources as gts
 import holoviews as hv
 from holoviews.streams import Stream, param
@@ -37,9 +38,6 @@ class PointsOutOfBoundsException(Exception):
 class BlockSelection(param.Parameterized):
     index = param.Integer(default=-1, doc="selected block index")
 
-Bounds = Stream.define('Bounds', bounds=param.Tuple(default=(0.0, 1.0, 0.0, 1.0),
-                                                    doc='Image Axis Bounds: x0, x1, y0, y1'))
-
 class TileManager(SCSingletonConfigurable):
 
     block_size = tl.Int(250).tag( config=True, sync=True )
@@ -59,12 +57,12 @@ class TileManager(SCSingletonConfigurable):
         self.cacheTileData = True
         self._scale: Tuple[np.ndarray,np.ndarray] = None
         self.block_selection = BlockSelection()
-        self.block_image: folium.Map = None
-        self.sat_view_stream: Stream = Bounds()
-        self.satellite_block_view = hv.DynamicMap( self.getFoliumImageryServer, streams=[self.sat_view_stream] )
+        self._block_image: folium.Map = None
 
     def set_sat_view_bounds(self, bounds: Tuple[float,float,float,float] ):
-        self.sat_view_stream.event( bounds=bounds )
+        xlim, ylim = bounds[:2], bounds[2:]
+        se, nw = tm().reproject_to_latlon( xlim[0], ylim[0] ), tm().reproject_to_latlon(xlim[1], ylim[1])
+        self.block_image.fit_bounds([[se[1], se[0]], [nw[1], nw[0]]])
 
     def bi2c(self, bindex: int ) -> Tuple[int,int]:
         ts1: int = self.tile_shape[1]
@@ -79,20 +77,22 @@ class TileManager(SCSingletonConfigurable):
         lgm().log( f"TM: getESRIImageryServer{kwargs} ")
         return gv.element.geo.WMTS( url, name="EsriImagery").opts( **kwargs )
 
-    def getFoliumImageryServer(self, bounds:Tuple[float,float,float,float], **kwargs) -> folium.Map:
-        xlim, ylim = bounds[:2], bounds[2:]
+    def createFoliumImageryServer(self, **kwargs) -> folium.Map:
+        xlim, ylim = tm().getBlock().getBounds()
         se, nw = tm().reproject_to_latlon( xlim[0], ylim[0] ), tm().reproject_to_latlon(xlim[1], ylim[1])
-        if self.block_image is None:
-            tile_url='http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-            self.block_image = folium.Map( **kwargs )
-            self.block_image.fit_bounds([[se[1], se[0]], [nw[1], nw[0]]])
-            map_attrs = dict( url=tile_url, layers='World Imagery', transparent=False, control=False, fmt="image/png",
-                              name='Satellite Image', overlay=True, show=True )
-            folium.raster_layers.WmsTileLayer(**map_attrs).add_to(self.block_image)
-            folium.LayerControl().add_to(self.block_image)
-        else:
-            self.block_image.fit_bounds([[se[1], se[0]], [nw[1], nw[0]]])
-        return self.block_image
+        tile_url='http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+        self._block_image = folium.Map( **kwargs )
+        self._block_image.fit_bounds([[se[1], se[0]], [nw[1], nw[0]]])
+        map_attrs = dict( url=tile_url, layers='World Imagery', transparent=False, control=False, fmt="image/png",
+                          name='Satellite Image', overlay=True, show=True )
+        folium.raster_layers.WmsTileLayer(**map_attrs).add_to(self._block_image)
+        folium.LayerControl().add_to(self._block_image)
+
+    @property
+    def block_image(self) -> folium.Map:
+        if self._block_image is None:
+            self.createFoliumImageryServer()
+        return self._block_image
 
     @classmethod
     def encode( cls, obj ) -> str:
