@@ -92,7 +92,7 @@ class TileManager(SCSingletonConfigurable):
         return fmap
 
     def update_satellite_view(self):
-        self._block_image.object = self.get_folium_map()
+        self._block_image.object = self.get_folium_map( tm().getBlock() )
 
     @property
     def satellite_block_view(self) -> pn.pane.HTML:
