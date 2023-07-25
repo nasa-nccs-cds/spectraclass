@@ -175,7 +175,7 @@ class ModelTrainer(SCSingletonConfigurable):
                 lgm().log(f" NBLOCKS = {num_training_blocks}/{len(blocks)}, block shape = {blocks[0].shape}")
             for iB, block in enumerate(blocks):
                 if iB < self.reduce_nblocks:
-                    norm_point_data, grid = block.getPointData( norm=True )
+                    norm_point_data = block.getBandData(raster=False)
                     if norm_point_data.shape[0] > 0:
                         input_tensor: Tensor = torch.from_numpy(norm_point_data.values)
                         x = input_tensor.to(self.device)
