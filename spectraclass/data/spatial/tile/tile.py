@@ -827,7 +827,8 @@ class Block(DataContainer):
 
     def raster2points(self, base_raster: xa.DataArray, **kwargs) -> Optional[xa.DataArray]:  # base_raster dims: [ band, y, x ]
         if (base_raster is None) or (base_raster.shape[0] == 0): return None
-        point_data = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
+        stacked_data: xa.DataArray = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
+        point_data: xa.DataArray = stacked_data.assign_coords({"samples": np.arange(stacked_data.shape[0])})
 
         if '_FillValue' in point_data.attrs:
             nodata = point_data.attrs.get('_FillValue',np.nan)

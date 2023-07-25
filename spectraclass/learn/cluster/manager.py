@@ -324,7 +324,7 @@ class ClusterManager(SCSingletonConfigurable):
         pids = np.asarray( self.samples == gid ).nonzero()
         lgm().log(f"result: type={type(pids)}, len={len(pids)}")
         if isinstance(pids,tuple): pids = pids[0]
-        lgm().log( f"pids: size={pids.size}, range={[pids.min(),pids.max()]} ")
+        lgm().log( f"pids[0]: type={type(pids)}, len={pids.size}")
         return pids[0] if (pids.size > 0) else -1
 
     def get_cluster(self, gid: int ) -> int:
