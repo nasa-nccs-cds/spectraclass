@@ -394,11 +394,8 @@ class ClusterManager(SCSingletonConfigurable):
         xchunks, ychunks = [], []
         for (image_index, block_coords, icluster, nclusters), marker in self._cluster_markers.items():
             block = tm().getBlock( bindex=block_coords )
-            if source == "model":
-                input_data: np.array = block.getModelData( raster=False ).values
-            else:
-                ptdata, coords = block.getPointData()
-                input_data: np.array = ptdata.values
+            if source == "model":   input_data: np.array = block.getModelData(raster=False).values
+            else:                   input_data: np.array = block.getBandData(raster=False).values
             mask_array: np.array = np.full( input_data.shape[0], False, dtype=bool )
             mask_array[ marker.gids ] = True
             xchunk: np.array = input_data[mask_array]
