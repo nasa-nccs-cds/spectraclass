@@ -37,6 +37,86 @@ def random_sample( tensor: Tensor, nsamples: int, axis=0 ) -> Tensor:
 def anomaly( train_data: Tensor, reproduced_data: Tensor ) -> Tensor:
     return torch.sum( torch.abs(train_data - reproduced_data), 1 )
 
+
+class MaskCache(param.Parameterized):
+    mask_name = param.String(default="", doc="Name of saved mask network")
+
+    def __init__(self ):
+        super(MaskCache, self).__init__()
+        self.save_dir = f"{dm().cache_dir}/masks/cluster_mask"
+        os.makedirs( self.save_dir, exist_ok=True )
+        self._model: MLP = None
+        self._model_loaded: bool = False
+
+    def set_model(self, model: MLP):
+        self._model = model
+
+    def get_mask_name(self, file_path: str ) -> str:
+        tail: str = file_path.split("__")[-1]
+        return os.path.splitext(tail)[0]
+
+    @property
+    def model_id(self):
+        return tm().tileid
+
+    @property
+    def model(self):
+        if self._model is None:
+            self._model = mpt().model
+        return self._model
+
+    @exception_handled
+    def load( self, *args ):
+        self.model.load( self.model_id, self.mask_name, dir=self.save_dir )
+        dm().modal.update_parameter( "Cluster Mask", self.mask_name )
+        self._model_loaded = True
+
+    @exception_handled
+    def save( self, *args, **kwargs ):
+        self.model.save( self.model_id, self.mask_name, dir=self.save_dir )
+
+    @exception_handled
+    def get_class_mask(self, ptdata: xa.DataArray ) -> np.ndarray:
+        mask_classes: xa.DataArray = mpt().predict( ptdata, raster=False )
+        mask: np.ndarray = np.argmax( mask_classes.values, axis=1, keepdims=False ).astype( np.bool )
+        nvalid = np.count_nonzero( mask )
+        lgm().log( f"#FPDM: filter_point_data: ptdata shape={ptdata.shape}, coords={list(ptdata.coords.keys())}, stat={stat(ptdata)}")
+        lgm().log( f"#FPDM: classes: shape={mask_classes.shape}, dims={mask_classes.dims};  mask[{mask.dtype}] shape = {mask.shape}, nvalid={nvalid}")
+        lgm().log( f"#FPDM: classes stat={stat(mask_classes)}")
+        return mask
+
+class MaskSavePanel(MaskCache):
+
+    def __init__(self ):
+        super(MaskSavePanel, self).__init__()
+        self.mask_name_input = pn.widgets.TextInput(name='Mask Name', placeholder='Give this mask a name...')
+        self.mask_name_input.link(self, value='mask_name')
+        self.save_button = pn.widgets.Button(name='Save Mask', button_type='success', width=150)
+        self.save_button.on_click(self.save)
+
+    def gui(self) -> Panel:
+        save_panel = pn.Row(self.mask_name_input, self.save_button)
+        return pn.WidgetBox( "###Save", save_panel )
+
+class MaskLoadPanel(MaskCache):
+
+    def __init__(self ):
+        super(MaskLoadPanel, self).__init__()
+        block_selection_names = [ self.get_mask_name(f) for f in os.listdir(self.save_dir) if ("__" in f) ]
+        self.load_button = pn.widgets.Button(name='Load Mask', button_type='success', width=150)
+        self.load_button.on_click(self.load)
+        sopts = dict( name='Cluster Mask', options=block_selection_names )
+        if mt().cluster_mask != "":        self.mask_name = mt().cluster_mask
+        elif len(block_selection_names):   self.mask_name = block_selection_names[0]
+        self.file_selector = pn.widgets.Select( value=self.mask_name, **sopts )
+        self.file_selector.link(self, value='mask_name')
+        self.load()
+
+    def gui(self) -> Panel:
+        load_panel = pn.Row(self.file_selector, self.load_button)
+        if self.mask_name != "": self.load()
+        return load_panel
+
 class ModelTrainer(SCSingletonConfigurable):
     optimizer_type = tl.Unicode(default_value="adam").tag(config=True, sync=True)
     learning_rate = tl.Float(0.01).tag(config=True, sync=True)
@@ -64,8 +144,20 @@ class ModelTrainer(SCSingletonConfigurable):
         self.loss = CrossEntropyLoss( **kwargs )
         self._progress = None
         self.train_losses = None
-        self.mask_save_panel = MaskSavePanel()
-        self.mask_load_panel = MaskLoadPanel()
+        self._mask_save_panel: MaskSavePanel = None
+        self._mask_load_panel: MaskLoadPanel = None
+
+    @property
+    def mask_save_panel(self) -> MaskSavePanel:
+        if self._mask_save_panel is None:
+            self._mask_save_panel = MaskSavePanel()
+        return self._mask_save_panel
+
+    @property
+    def mask_load_panel(self) -> MaskLoadPanel:
+        if self._mask_load_panel is None:
+            self._mask_load_panel = MaskLoadPanel()
+        return self._mask_load_panel
 
     def set_network_size(self, layer_sizes: List[int], nclasses: int):
         self.layer_sizes = layer_sizes
@@ -248,84 +340,3 @@ class ModelTrainer(SCSingletonConfigurable):
 
     def event(self, source: str, event ):
         print( f"Processing event[{source}]: {event}")
-
-class MaskCache(param.Parameterized):
-    mask_name = param.String(default="", doc="Name of saved mask network")
-
-    def __init__(self ):
-        super(MaskCache, self).__init__()
-        self.save_dir = f"{dm().cache_dir}/masks/cluster_mask"
-        os.makedirs( self.save_dir, exist_ok=True )
-        self._model: MLP = None
-        self._model_loaded: bool = False
-
-    def set_model(self, model: MLP):
-        self._model = model
-
-    def get_mask_name(self, file_path: str ) -> str:
-        tail: str = file_path.split("__")[-1]
-        return os.path.splitext(tail)[0]
-
-    @property
-    def model_id(self):
-        return tm().tileid
-
-    @property
-    def model(self):
-        if self._model is None:
-            self._model = mpt().model
-        return self._model
-
-    @exception_handled
-    def load( self, *args ):
-        self.model.load( self.model_id, self.mask_name, dir=self.save_dir )
-        dm().modal.update_parameter( "Cluster Mask", self.mask_name )
-        self._model_loaded = True
-
-    @exception_handled
-    def save( self, *args, **kwargs ):
-        self.model.save( self.model_id, self.mask_name, dir=self.save_dir )
-
-    @exception_handled
-    def get_class_mask(self, ptdata: xa.DataArray ) -> np.ndarray:
-        mask_classes: xa.DataArray = mpt().predict( ptdata, raster=False )
-        mask: np.ndarray = np.argmax( mask_classes.values, axis=1, keepdims=False ).astype( np.bool )
-        nvalid = np.count_nonzero( mask )
-        lgm().log( f"#FPDM: filter_point_data: ptdata shape={ptdata.shape}, coords={list(ptdata.coords.keys())}, stat={stat(ptdata)}")
-        lgm().log( f"#FPDM: classes: shape={mask_classes.shape}, dims={mask_classes.dims};  mask[{mask.dtype}] shape = {mask.shape}, nvalid={nvalid}")
-        lgm().log( f"#FPDM: classes stat={stat(mask_classes)}")
-        return mask
-
-class MaskSavePanel(MaskCache):
-
-    def __init__(self ):
-        super(MaskSavePanel, self).__init__()
-        self.mask_name_input = pn.widgets.TextInput(name='Mask Name', placeholder='Give this mask a name...')
-        self.mask_name_input.link(self, value='mask_name')
-        self.save_button = pn.widgets.Button(name='Save Mask', button_type='success', width=150)
-        self.save_button.on_click(self.save)
-
-    def gui(self) -> Panel:
-        save_panel = pn.Row(self.mask_name_input, self.save_button)
-        return pn.WidgetBox( "###Save", save_panel )
-
-class MaskLoadPanel(MaskCache):
-
-    def __init__(self ):
-        super(MaskLoadPanel, self).__init__()
-        block_selection_names = [ self.get_mask_name(f) for f in os.listdir(self.save_dir) if ("__" in f) ]
-        self.load_button = pn.widgets.Button(name='Load Mask', button_type='success', width=150)
-        self.load_button.on_click(self.load)
-        sopts = dict( name='Cluster Mask', options=block_selection_names )
-        if mt().cluster_mask != "":        self.mask_name = mt().cluster_mask
-        elif len(block_selection_names):   self.mask_name = block_selection_names[0]
-        self.file_selector = pn.widgets.Select( value=self.mask_name, **sopts )
-        self.file_selector.link(self, value='mask_name')
-        self.load()
-
-    def gui(self) -> Panel:
-        load_panel = pn.Row(self.file_selector, self.load_button)
-        if self.mask_name != "": self.load()
-        return load_panel
-
-
