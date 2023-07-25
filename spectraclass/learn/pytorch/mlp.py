@@ -187,7 +187,7 @@ class MLP(nn.Module):
         weights = torch.load(filepath)
         self.network.load_state_dict(weights)
         self.network.eval()
-        lgm().log(f"Loaded Weights fronm file {filepath}")
+        lgm().trace(f"Loaded Weights from file {filepath}")
 
     def load(self, tile_name: str, model_name: str, **kwargs) -> bool:
         lgm().log(f"Loading MODEL {model_name}")
