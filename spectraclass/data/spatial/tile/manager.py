@@ -77,12 +77,12 @@ class TileManager(SCSingletonConfigurable):
         return gv.element.geo.WMTS( url, name="EsriImagery").opts( **kwargs )
 
     def get_folium_map(self, bounds: Tuple[float,float,float,float] = None  ) -> folium.Map:
-        if bounds is None: bounds = tm().getBlock().extent
-        yext, xext = tm().reproject_to_latlon( bounds[0], bounds[1] ), tm().reproject_to_latlon( bounds[2], bounds[3] )
-        lgm().log( f"#FM: get_folium_map: bounds={bounds}, xext={xext}, yext={yext}")
+        x0, x1, y0, y1 =  tm().getBlock().extent if bounds is None else bounds
+        ( xL0, yL0 ), ( xL1, yL1 ) = tm().reproject_to_latlon( x0, y0 ), tm().reproject_to_latlon( x1, y1 )
+        lgm().log( f"#FM: get_folium_map: bounds={x0, x1, y0, y1}, sw={( xL0, yL0 )}, ne={( xL1, yL1 )}")
         tile_url='http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
         fmap = folium.Map( width=self.map_size )
-        fmap.fit_bounds([[yext[0], xext[0]], [yext[1], xext[1]]])
+        fmap.fit_bounds([ (yL0,xL0), (yL1,xL1) ])
         map_attrs = dict( url=tile_url, layers='World Imagery', transparent=False, control=False, fmt="image/png",
                           name='Satellite Image', overlay=True, show=True )
         folium.raster_layers.WmsTileLayer(**map_attrs).add_to(fmap)
