@@ -81,17 +81,18 @@ class TileManager(SCSingletonConfigurable):
         xlim, ylim = tm().getBlock().getBounds()
         se, nw = tm().reproject_to_latlon( xlim[0], ylim[0] ), tm().reproject_to_latlon(xlim[1], ylim[1])
         tile_url='http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-        self._block_image = folium.Map( **kwargs )
-        self._block_image.fit_bounds([[se[1], se[0]], [nw[1], nw[0]]])
+        map = folium.Map( **kwargs )
+        map.fit_bounds([[se[1], se[0]], [nw[1], nw[0]]])
         map_attrs = dict( url=tile_url, layers='World Imagery', transparent=False, control=False, fmt="image/png",
                           name='Satellite Image', overlay=True, show=True )
-        folium.raster_layers.WmsTileLayer(**map_attrs).add_to(self._block_image)
-        folium.LayerControl().add_to(self._block_image)
+        folium.raster_layers.WmsTileLayer(**map_attrs).add_to(map)
+        folium.LayerControl().add_to(map)
+        self._block_image = map
 
     @property
     def satellite_block_view(self) -> folium.Map:
         if self._block_image is None:
-            self.createFoliumImageryServer()
+            self.createFoliumImageryServer( width=700, height=700 )
         return self._block_image
 
     @classmethod

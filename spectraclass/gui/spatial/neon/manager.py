@@ -323,7 +323,7 @@ class NEONTileSelector:
         return clm().panel()
 
     def get_satellite_panel(self):
-        return tm().satellite_block_view
+        return pn.WidgetBox( "### Block Image", tm().satellite_block_view )
 
     def get_tile_selection_gui(self, **kwargs ):
         basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
