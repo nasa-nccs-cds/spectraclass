@@ -61,7 +61,7 @@ class TileManager(SCSingletonConfigurable):
         self.block_selection = BlockSelection()
         self.block_image: folium.Map = None
         self.sat_view_stream: Stream = Bounds()
-        self.satellite_block_view = hv.DynamicMap( self.getFoliumImageryServer, self.sat_view_stream )
+        self.satellite_block_view = hv.DynamicMap( self.getFoliumImageryServer, streams=[self.sat_view_stream] )
 
     def set_sat_view_bounds(self, bounds: Tuple[float,float,float,float] ):
         self.sat_view_stream.event( bounds=bounds )
