@@ -57,7 +57,7 @@ class TileManager(SCSingletonConfigurable):
         self.cacheTileData = True
         self._scale: Tuple[np.ndarray,np.ndarray] = None
         self.block_selection = BlockSelection()
-        self._block_image: pn.pane.HTML = pn.pane.HTML(sizing_mode="stretch_width", min_height=600)
+        self._block_image: pn.pane.HTML = pn.pane.HTML(sizing_mode="stretch_width", height=900, width=900)
 
     def set_sat_view_bounds(self, bounds: Tuple[float,float,float,float] ):
         xlim, ylim = bounds[:2], bounds[2:]
@@ -78,8 +78,9 @@ class TileManager(SCSingletonConfigurable):
 
     def get_folium_map(self, xlim: Tuple[float,float], ylim: Tuple[float,float] ) -> folium.Map:
         se, nw = tm().reproject_to_latlon( xlim[0], ylim[0] ), tm().reproject_to_latlon(xlim[1], ylim[1])
+        lgm().log( f"#FM: get_folium_map: xlim={xlim}, ylim={ylim}, se={se}, nw={nw}")
         tile_url='http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-        fmap = folium.Map( width=600, height=600 )
+        fmap = folium.Map( width=900, height=900 )
         fmap.fit_bounds([[se[1], se[0]], [nw[1], nw[0]]])
         map_attrs = dict( url=tile_url, layers='World Imagery', transparent=False, control=False, fmt="image/png",
                           name='Satellite Image', overlay=True, show=True )
