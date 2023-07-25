@@ -55,13 +55,13 @@ class TileManager(SCSingletonConfigurable):
         self._tiles: Dict[str,Tile] = {}
         self._idxtiles: Dict[int, Tile] = {}
         self.cacheTileData = True
+        self.map_size = 600
         self._scale: Tuple[np.ndarray,np.ndarray] = None
         self.block_selection = BlockSelection()
-        self._block_image: pn.pane.HTML = pn.pane.HTML(sizing_mode="stretch_width", height=900, width=900)
+        self._block_image: pn.pane.HTML = pn.pane.HTML(sizing_mode="stretch_width", width=self.map_size)
 
     def set_sat_view_bounds(self, bounds: Tuple[float,float,float,float] ):
-        xlim, ylim = bounds[:2], bounds[2:]
-        self._block_image.object = self.get_folium_map( xlim, ylim )
+        self._block_image.object = self.get_folium_map( bounds )
 
     def bi2c(self, bindex: int ) -> Tuple[int,int]:
         ts1: int = self.tile_shape[1]
@@ -76,11 +76,12 @@ class TileManager(SCSingletonConfigurable):
         lgm().log( f"TM: getESRIImageryServer{kwargs} ")
         return gv.element.geo.WMTS( url, name="EsriImagery").opts( **kwargs )
 
-    def get_folium_map(self, xlim: Tuple[float,float], ylim: Tuple[float,float] ) -> folium.Map:
-        se, nw = tm().reproject_to_latlon( xlim[0], ylim[0] ), tm().reproject_to_latlon(xlim[1], ylim[1])
-        lgm().log( f"#FM: get_folium_map: xlim={xlim}, ylim={ylim}, se={se}, nw={nw}")
+    def get_folium_map(self, bounds: Tuple[float,float,float,float] = None  ) -> folium.Map:
+        if bounds is None: bounds = tm().getBlock().extent
+        se, nw = tm().reproject_to_latlon( bounds[0], bounds[1] ), tm().reproject_to_latlon( bounds[2], bounds[3] )
+        lgm().log( f"#FM: get_folium_map: bounds={bounds}, se={se}, nw={nw}")
         tile_url='http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-        fmap = folium.Map( width=900, height=900 )
+        fmap = folium.Map( width=self.map_size )
         fmap.fit_bounds([[se[1], se[0]], [nw[1], nw[0]]])
         map_attrs = dict( url=tile_url, layers='World Imagery', transparent=False, control=False, fmt="image/png",
                           name='Satellite Image', overlay=True, show=True )
@@ -89,8 +90,7 @@ class TileManager(SCSingletonConfigurable):
         return fmap
 
     def update_satellite_view(self):
-        xlim, ylim = tm().getBlock().getBounds()
-        self._block_image.object = self.get_folium_map(xlim, ylim)
+        self._block_image.object = self.get_folium_map()
 
     @property
     def satellite_block_view(self) -> pn.pane.HTML:
