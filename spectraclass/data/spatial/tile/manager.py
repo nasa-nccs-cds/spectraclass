@@ -57,12 +57,11 @@ class TileManager(SCSingletonConfigurable):
         self.cacheTileData = True
         self._scale: Tuple[np.ndarray,np.ndarray] = None
         self.block_selection = BlockSelection()
-        self._block_image: folium.Map = None
+        self._block_image: pn.pane.HTML = pn.pane.HTML(sizing_mode="stretch_width", min_height=600)
 
     def set_sat_view_bounds(self, bounds: Tuple[float,float,float,float] ):
         xlim, ylim = bounds[:2], bounds[2:]
-        se, nw = tm().reproject_to_latlon( xlim[0], ylim[0] ), tm().reproject_to_latlon(xlim[1], ylim[1])
-        self.satellite_block_view.fit_bounds([[se[1], se[0]], [nw[1], nw[0]]])
+        self._block_image.object = self.get_folium_map( xlim, ylim )
 
     def bi2c(self, bindex: int ) -> Tuple[int,int]:
         ts1: int = self.tile_shape[1]
@@ -77,22 +76,24 @@ class TileManager(SCSingletonConfigurable):
         lgm().log( f"TM: getESRIImageryServer{kwargs} ")
         return gv.element.geo.WMTS( url, name="EsriImagery").opts( **kwargs )
 
-    def createFoliumImageryServer(self, **kwargs):
-        xlim, ylim = tm().getBlock().getBounds()
+    def get_folium_map(self, xlim: Tuple[float,float], ylim: Tuple[float,float] ) -> folium.Map:
         se, nw = tm().reproject_to_latlon( xlim[0], ylim[0] ), tm().reproject_to_latlon(xlim[1], ylim[1])
         tile_url='http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-        map = folium.Map( **kwargs )
-        map.fit_bounds([[se[1], se[0]], [nw[1], nw[0]]])
+        fmap = folium.Map( width=600, height=600 )
+        fmap.fit_bounds([[se[1], se[0]], [nw[1], nw[0]]])
         map_attrs = dict( url=tile_url, layers='World Imagery', transparent=False, control=False, fmt="image/png",
                           name='Satellite Image', overlay=True, show=True )
         folium.raster_layers.WmsTileLayer(**map_attrs).add_to(map)
-        folium.LayerControl().add_to(map)
-        self._block_image = map
+        folium.LayerControl().add_to(fmap)
+        return fmap
+
+    def update_satellite_view(self):
+        xlim, ylim = tm().getBlock().getBounds()
+        self._block_image.object = self.get_folium_map(xlim, ylim)
 
     @property
-    def satellite_block_view(self) -> folium.Map:
-        if self._block_image is None:
-            self.createFoliumImageryServer( width=700, height=700 )
+    def satellite_block_view(self) -> pn.pane.HTML:
+        self.update_satellite_view()
         return self._block_image
 
     @classmethod
