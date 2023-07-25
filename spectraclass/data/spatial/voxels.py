@@ -1,6 +1,7 @@
 import time, math, os, sys, numpy as np
 from typing import List, Union, Tuple, Optional, Dict, Callable, Iterable
 from spectraclass.util.logs import LogManager, lgm
+from spectraclass.util.logs import lgm, exception_handled
 from matplotlib import cm
 import numpy.ma as ma
 import xarray as xa
@@ -19,12 +20,14 @@ class Voxelizer:
         self.vrange = ( self.vids.min(), self.vids.max() )
         lgm().log( f" ** compute vindices[{self.vids.shape}]--> bounds: {[self.vids.min(), self.vids.max()]}")
 
+    @exception_handled
     def compute_bounds(self, points: np.ndarray ):
-        bnds = []
-        for i in range(3):
-            x = points[: ,i]
-            bnds.append( (x.min(), x.max()) )
-        self.bounds = np.array( bnds )
+        if points.size > 0:
+            bnds = []
+            for i in range(3):
+                x = points[: ,i]
+                bnds.append( (x.min(), x.max()) )
+            self.bounds = np.array( bnds )
 
     @property
     def origin(self) -> np.ndarray:
