@@ -77,7 +77,7 @@ class TileManager(SCSingletonConfigurable):
         lgm().log( f"TM: getESRIImageryServer{kwargs} ")
         return gv.element.geo.WMTS( url, name="EsriImagery").opts( **kwargs )
 
-    def createFoliumImageryServer(self, **kwargs) -> folium.Map:
+    def createFoliumImageryServer(self, **kwargs):
         xlim, ylim = tm().getBlock().getBounds()
         se, nw = tm().reproject_to_latlon( xlim[0], ylim[0] ), tm().reproject_to_latlon(xlim[1], ylim[1])
         tile_url='http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
@@ -89,7 +89,7 @@ class TileManager(SCSingletonConfigurable):
         folium.LayerControl().add_to(self._block_image)
 
     @property
-    def block_image(self) -> folium.Map:
+    def satellite_block_view(self) -> folium.Map:
         if self._block_image is None:
             self.createFoliumImageryServer()
         return self._block_image
