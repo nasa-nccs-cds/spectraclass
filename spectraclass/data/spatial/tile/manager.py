@@ -60,8 +60,8 @@ class TileManager(SCSingletonConfigurable):
         self.block_selection = BlockSelection()
         self._block_image: pn.pane.HTML = pn.pane.HTML(sizing_mode="stretch_width", width=self.map_size)
 
-    def set_sat_view_bounds(self, bounds: Tuple[float,float,float,float] ):
-        self._block_image.object = self.get_folium_map( bounds )
+    def set_sat_view_bounds(self, block: Block ):
+        self._block_image.object = self.get_folium_map( block )
 
     def bi2c(self, bindex: int ) -> Tuple[int,int]:
         ts1: int = self.tile_shape[1]
@@ -77,13 +77,13 @@ class TileManager(SCSingletonConfigurable):
         return gv.element.geo.WMTS( url, name="EsriImagery").opts( **kwargs )
 
     @exception_handled
-    def get_folium_map(self, bounds: Tuple[float,float,float,float] = None  ) -> folium.Map:
-        x0, x1, y0, y1 =  tm().getBlock().extent if bounds is None else bounds
-        ( yL0, xL0 ), ( yL1, xL1 ) = tm().reproject_to_latlon( x0, y0 ), tm().reproject_to_latlon( x1, y1 )
-        lgm().log( f"#FM: get_folium_map: bounds={x0, x1, y0, y1}, sw={( xL0, yL0 )}, ne={( xL1, yL1 )}")
+    def get_folium_map(self, block: Block  ) -> folium.Map:
+        from spectraclass.data.spatial.satellite import spm
+        extent = list(block.get_extent( spm().projection ))
+        lgm().log( f"#FM: get_folium_map: extent={extent}")
         tile_url='http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
         fmap = folium.Map( width=self.map_size )
-        fmap.fit_bounds([ (yL0,xL0), (yL1,xL1) ])
+        fmap.fit_bounds(extent)
         map_attrs = dict( url=tile_url, layers='World Imagery', transparent=False, control=False, fmt="image/png",
                           name='Satellite Image', overlay=True, show=True )
         folium.raster_layers.WmsTileLayer(**map_attrs).add_to(fmap)
@@ -203,7 +203,7 @@ class TileManager(SCSingletonConfigurable):
             block = self.getBlock()
             dm().loadCurrentProject( 'setBlock', True, block=block, bindex=self.block_index )
             self.block_selection.index = self.c2bi(block_index)
-            self.set_sat_view_bounds( block.bounds )
+            self.set_sat_view_bounds( block )
             return True
         return False
 
