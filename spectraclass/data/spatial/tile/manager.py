@@ -78,11 +78,11 @@ class TileManager(SCSingletonConfigurable):
 
     def get_folium_map(self, bounds: Tuple[float,float,float,float] = None  ) -> folium.Map:
         if bounds is None: bounds = tm().getBlock().extent
-        se, nw = tm().reproject_to_latlon( bounds[0], bounds[1] ), tm().reproject_to_latlon( bounds[2], bounds[3] )
-        lgm().log( f"#FM: get_folium_map: bounds={bounds}, se={se}, nw={nw}")
+        yext, xext = tm().reproject_to_latlon( bounds[0], bounds[1] ), tm().reproject_to_latlon( bounds[2], bounds[3] )
+        lgm().log( f"#FM: get_folium_map: bounds={bounds}, xext={xext}, yext={yext}")
         tile_url='http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
         fmap = folium.Map( width=self.map_size )
-        fmap.fit_bounds([[se[1], se[0]], [nw[1], nw[0]]])
+        fmap.fit_bounds([[yext[0], xext[0]], [yext[1], xext[1]]])
         map_attrs = dict( url=tile_url, layers='World Imagery', transparent=False, control=False, fmt="image/png",
                           name='Satellite Image', overlay=True, show=True )
         folium.raster_layers.WmsTileLayer(**map_attrs).add_to(fmap)
