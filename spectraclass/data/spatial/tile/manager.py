@@ -62,7 +62,7 @@ class TileManager(SCSingletonConfigurable):
     def set_sat_view_bounds(self, bounds: Tuple[float,float,float,float] ):
         xlim, ylim = bounds[:2], bounds[2:]
         se, nw = tm().reproject_to_latlon( xlim[0], ylim[0] ), tm().reproject_to_latlon(xlim[1], ylim[1])
-        self.block_image.fit_bounds([[se[1], se[0]], [nw[1], nw[0]]])
+        self.satellite_block_view.fit_bounds([[se[1], se[0]], [nw[1], nw[0]]])
 
     def bi2c(self, bindex: int ) -> Tuple[int,int]:
         ts1: int = self.tile_shape[1]
