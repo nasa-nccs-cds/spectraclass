@@ -113,6 +113,10 @@ class DataContainer:
         wkt = self.data.spatial_ref.attrs['crs_wkt']
         return crs.Projection(self.wkt_to_proj4(wkt))
 
+    @property
+    def wkt(self) -> str:
+        return self.data.spatial_ref.attrs['crs_wkt']
+
     def get_extent(self, projection: crs.Projection = None) -> Tuple[Tuple[float, float], Tuple[float, float]]:
         ext = self.extent
         if projection is None:
