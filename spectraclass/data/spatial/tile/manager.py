@@ -76,9 +76,10 @@ class TileManager(SCSingletonConfigurable):
         lgm().log( f"TM: getESRIImageryServer{kwargs} ")
         return gv.element.geo.WMTS( url, name="EsriImagery").opts( **kwargs )
 
+    @exception_handled
     def get_folium_map(self, bounds: Tuple[float,float,float,float] = None  ) -> folium.Map:
         x0, x1, y0, y1 =  tm().getBlock().extent if bounds is None else bounds
-        ( xL0, yL0 ), ( xL1, yL1 ) = tm().reproject_to_latlon( x0, y0 ), tm().reproject_to_latlon( x1, y1 )
+        ( yL0, xL0 ), ( yL1, xL1 ) = tm().reproject_to_latlon( x0, y0 ), tm().reproject_to_latlon( x1, y1 )
         lgm().log( f"#FM: get_folium_map: bounds={x0, x1, y0, y1}, sw={( xL0, yL0 )}, ne={( xL1, yL1 )}")
         tile_url='http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
         fmap = folium.Map( width=self.map_size )
