@@ -83,7 +83,7 @@ class TileManager(SCSingletonConfigurable):
         fmap.fit_bounds([[se[1], se[0]], [nw[1], nw[0]]])
         map_attrs = dict( url=tile_url, layers='World Imagery', transparent=False, control=False, fmt="image/png",
                           name='Satellite Image', overlay=True, show=True )
-        folium.raster_layers.WmsTileLayer(**map_attrs).add_to(map)
+        folium.raster_layers.WmsTileLayer(**map_attrs).add_to(fmap)
         folium.LayerControl().add_to(fmap)
         return fmap
 
