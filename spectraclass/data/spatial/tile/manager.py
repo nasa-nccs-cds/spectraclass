@@ -3,6 +3,7 @@ import codecs, folium
 import xarray as xa
 import geoviews.tile_sources as gts
 import holoviews as hv
+from holoviews.streams import Stream, param
 import shapely.vectorized as svect
 from typing import List, Union, Tuple, Optional, Dict
 from pyproj import Proj
@@ -36,6 +37,9 @@ class PointsOutOfBoundsException(Exception):
 class BlockSelection(param.Parameterized):
     index = param.Integer(default=-1, doc="selected block index")
 
+Bounds = Stream.define('Bounds', bounds=param.Tuple(default=(0.0, 1.0, 0.0, 1.0),
+                                                    doc='Image Axis Bounds: x0, x1, y0, y1'))
+
 class TileManager(SCSingletonConfigurable):
 
     block_size = tl.Int(250).tag( config=True, sync=True )
@@ -56,6 +60,11 @@ class TileManager(SCSingletonConfigurable):
         self._scale: Tuple[np.ndarray,np.ndarray] = None
         self.block_selection = BlockSelection()
         self.block_image: folium.Map = None
+        self.sat_view_stream: Stream = Bounds()
+        self.satellite_block_view = hv.DynamicMap( self.getFoliumImageryServer, self.sat_view_stream )
+
+    def set_sat_view_bounds(self, bounds: Tuple[float,float,float,float] ):
+        self.sat_view_stream.event( bounds=bounds )
 
     def bi2c(self, bindex: int ) -> Tuple[int,int]:
         ts1: int = self.tile_shape[1]
@@ -70,8 +79,9 @@ class TileManager(SCSingletonConfigurable):
         lgm().log( f"TM: getESRIImageryServer{kwargs} ")
         return gv.element.geo.WMTS( url, name="EsriImagery").opts( **kwargs )
 
-    def getFoliumImageryServer(self, xlim:Tuple[float], ylim:Tuple[float], **kwargs) -> folium.Map:
-        se, nw = tm().reproject_to_latlon(xlim[0], ylim[0]), tm().reproject_to_latlon(xlim[1], ylim[1])
+    def getFoliumImageryServer(self, bounds:Tuple[float,float,float,float], **kwargs) -> folium.Map:
+        xlim, ylim = bounds[:2], bounds[2:]
+        se, nw = tm().reproject_to_latlon( xlim[0], ylim[0] ), tm().reproject_to_latlon(xlim[1], ylim[1])
         if self.block_image is None:
             tile_url='http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
             self.block_image = folium.Map( **kwargs )
@@ -186,8 +196,10 @@ class TileManager(SCSingletonConfigurable):
             lgm().log( f"TileManager.setBlock -> {block_index}")
             ufm().show( f"Set Block: {block_index}")
             self.block_index = tuple(block_index)
-            dm().loadCurrentProject( 'setBlock', True, bindex=block_index )
+            block = self.getBlock( block_index )
+            dm().loadCurrentProject( 'setBlock', True, block=block, bindex=self.block_index )
             self.block_selection.index = self.c2bi(block_index)
+            self.set_sat_view_bounds( block.bounds )
             return True
         return False
 

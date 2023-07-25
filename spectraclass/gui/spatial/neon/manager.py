@@ -1,5 +1,4 @@
 import os.path
-
 from spectraclass.gui.control import UserFeedbackManager, ufm
 import param, numpy as np
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
@@ -10,6 +9,7 @@ from panel.pane import Alert
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.learn.cluster.manager import clm
 import pandas as pd
+from holoviews.streams import Stream, param
 from spectraclass.data.spatial.satellite import spm
 from typing import List, Union, Tuple, Optional, Dict, Callable
 import panel as pn, glob
@@ -322,6 +322,9 @@ class NEONTileSelector:
     def get_cluster_panel(self):
         return clm().panel()
 
+    def get_satellite_panel(self):
+        return tm().satellite_block_view
+
     def get_tile_selection_gui(self, **kwargs ):
         basemap = spm().get_image_basemap( self.blockSelection.region_bounds )
         self.rect_grid = self.blockSelection.grid_widget(**kwargs)
@@ -341,7 +344,10 @@ class NEONTileSelector:
                 return pn.Row( image * self.region_selection, selection_panel )
             elif dm().selection_mode == BlockSelectMode.CreateMask:
                 cluster_panel = self.get_cluster_panel()
-                viz_panels = pn.Tabs( ("select", image * self.region_selection), ("cluster", cluster_panel))
+                satellite_panel = self.get_satellite_panel()
+                viz_panels = pn.Tabs( ("select", image * self.region_selection),
+                                      ("cluster", cluster_panel),
+                                      ("satellite", satellite_panel))
                 return pn.Row( viz_panels, selection_panel )
             elif dm().selection_mode == BlockSelectMode.LoadMask:
                 return self.get_block_selection_gui()
@@ -360,32 +366,31 @@ class NEONDatasetManager:
 
     @log_timing
     def __init__(self, **kwargs):
-        from spectraclass.data.base import DataManager
+
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        self.dm: DataManager = DataManager.initialize( "DatasetManager", 'aviris' )
-        if "cache_dir" in kwargs: self.dm.modal.cache_dir = kwargs["cache_dir"]
-        if "data_dir"  in kwargs: self.dm.modal.data_dir = kwargs["data_dir"]
-        if "images_glob" in kwargs: self.dm.modal.images_glob = kwargs["images_glob"]
+        if "cache_dir" in kwargs: dm().modal.cache_dir = kwargs["cache_dir"]
+        if "data_dir"  in kwargs: dm().modal.data_dir = kwargs["data_dir"]
+        if "images_glob" in kwargs: dm().modal.images_glob = kwargs["images_glob"]
         self.init_band = kwargs.get( "init_band", 160 )
         self.grid_color = kwargs.get("grid_color", 'white')
         self.selection_color = kwargs.get("selection_color", 'black')
         self.slw = kwargs.get("slw", 3)
         self.colorstretch = 2.0
-        self.dm.proc_type = "cpu"
+        dm().proc_type = "cpu"
         self._selected_block: Tuple[int,int] = (0,0)
         TileManager.block_size = kwargs.get( 'block_size',  250 )
-        self.nimages = len( self.dm.modal.image_names )
+        self.nimages = len( dm().modal.image_names )
         self._nbands = None
         lgm().log( f"NEONDatasetManager: Found {self.nimages} images "  )
 
 
     @property
     def image_index(self) -> int:
-        return self.dm.modal.file_selector.index
+        return dm().modal.file_selector.index
 
     @property
     def image_name(self) -> str:
-        return self.dm.modal.get_image_name( self.image_index )
+        return dm().modal.get_image_name( self.image_index )
 
     def clear_block_cache(self):
         self._transformed_block_data = None

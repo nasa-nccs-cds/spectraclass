@@ -33,6 +33,9 @@ class SatellitePlotManager(SCSingletonConfigurable):
         self.block_source: gv.element.geo.WMTS = None
         pn.bind( self.set_extent, block_selection=tm().block_selection.param.index )
 
+    def panel(self):
+        return None
+
     @property
     def block(self) -> Block:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
