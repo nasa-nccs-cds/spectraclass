@@ -1,5 +1,4 @@
 import traceback
-
 from skimage.transform import ProjectiveTransform
 import numpy as np
 from osgeo import ogr, osr
@@ -550,7 +549,7 @@ class Block(DataContainer):
             raster_slice.attrs['transform'] = self.translate_transform( raster_slice.attrs['transform'] )
             raw_raster = raster_slice if (raster_slice.size == 0) else TileManager.process_tile_data( raster_slice )
             lgm().log(f" *** BLOCK{self.block_coords}: load-slice ybounds={ybounds}, xbounds={xbounds}, raster shape={raw_raster.shape}")
-        block_raster = self._apply_mask( raw_raster )
+        block_raster = raw_raster # self._apply_mask( raw_raster )
         block_raster.attrs['block_coords'] = self.block_coords
         block_raster.attrs['tile_shape'] = tm().tile.data.shape
         block_raster.attrs['block_dims'] = tm().block_dims
@@ -728,11 +727,13 @@ class Block(DataContainer):
 
     @exception_handled
     def createPointData(self, **kwargs):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.learn.pytorch.trainer import mpt
         self._point_data =  self.raster2points( self.data, **kwargs )
         if self._point_data is not None:
             self._samples_axis = self._point_data.coords['samples']
-            self._point_mask  = mpt().get_class_mask( self._point_data )
+            normed_data = tm().norm( self._point_data )
+            self._point_mask  = mpt().get_class_mask( normed_data )
             lgm().log(f"#FPDM-getPointData: filtered data shape={self._point_data.shape}, "
                       f"cfmask shape={self._point_mask.shape}, nz={np.count_nonzero(self._point_mask)}")
             self._point_data.attrs['type'] = 'block'
