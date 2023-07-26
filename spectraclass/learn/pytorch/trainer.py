@@ -205,7 +205,7 @@ class ModelTrainer(SCSingletonConfigurable):
         training_data, training_labels = None, None
         for ( (tindex, block_coords, cid), gids ) in label_data.items():
             block = tm().getBlock( tindex=tindex, block_coords=block_coords )
-            input_data, coords = block.filtered_point_data, block.point_coords
+            input_data: xa.DataArray = block.getBandData(raster=False)
             training_mask: np.ndarray = np.isin( input_data.samples.values, gids )
             tdata: np.ndarray = input_data.values[ training_mask ]
             tlabels: np.ndarray = np.full([gids.size], cid)
