@@ -83,16 +83,16 @@ class TileManager(SCSingletonConfigurable):
         data_crs = block.data.spatial_ref.attrs['crs_wkt']
         geotrans = Transformer.from_crs( data_crs, f'epsg:4326')
         x0, x1, y0, y1 =  block.extent
-  #      ( yL0, xL0 ), ( yL1, xL1 ) = tm().reproject_to_latlon( x0, y0 ), tm().reproject_to_latlon( x1, y1 )
-        ( xL0, yL0 ), ( xL1, yL1 ) = geotrans.transform(  x0, y0 ), geotrans.transform(  x1, y1 )
-        lgm().log( f"#FM: get_folium_map: block.extent={x0, x1, y0, y1}, sw={( xL0, yL0 )}, ne={( xL1, yL1 )}, data_crs={data_crs}")
-        fmap.fit_bounds([ ( xL0, yL0 ), ( xL1, yL1 ) ])
+        bounds = [ geotrans.transform(  x0, y0 ), geotrans.transform(  x1, y1 ) ]
+        lgm().log( f"#FM: get_folium_map: block.extent={x0, x1, y0, y1}, bounds={bounds}, data_crs={data_crs}")
+        fmap.fit_bounds(bounds)
         map_attrs = dict( url=tile_url, layers='World Imagery', transparent=False, control=False, fmt="image/png",
                           name='Satellite Image', overlay=True, show=True )
         map_layer = folium.raster_layers.WmsTileLayer(**map_attrs)
         map_bounds = map_layer.get_bounds()
         lgm().log( f"#FM: map_bounds={map_bounds}")
         map_layer.add_to(fmap)
+        folium.Rectangle( bounds, color="white" ).add_to(fmap)
         folium.LayerControl().add_to(fmap)
         return fmap
 
