@@ -81,7 +81,7 @@ class TileManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.satellite import spm
         tile_url='http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
         fmap = folium.Map( width=self.map_size )
-        (xlim, ylim) = block.get_extent(spm().projection)
+        (xlim, ylim) = block.get_extent( ccrs.Mollweide() )
         lgm().log( f"#FM: get_folium_map: xlim={xlim}, ylim={ylim}")
         fmap.fit_bounds([ (ylim[0],xlim[0]), (ylim[1],xlim[1]) ])
         map_attrs = dict( url=tile_url, layers='World Imagery', transparent=False, control=False, fmt="image/png",
