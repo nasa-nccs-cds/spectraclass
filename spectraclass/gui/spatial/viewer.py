@@ -156,16 +156,16 @@ class VariableBrowser:
     def get_frame(self, iteration: int, block_selection: int ) -> hv.Image:
         ts = time.time()
         if block_selection >= 0:
-            lgm().log( f"VB: {self.cname}-> get_frame: iteration={iteration} block_selection={block_selection} ")
+            lgm().log( f"#VB: {self.cname}-> get_frame: iteration={iteration} block_selection={block_selection} ")
             self.update_block( block_selection )
         fdata: xa.DataArray = self.data[iteration]
         xlim, ylim = bounds( fdata )
         iopts = dict(width=self.width, height=self.height, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, xlim=xlim, ylim=ylim )
         t2 = time.time()
         result: hv.Image = fdata.hvplot.image( **iopts )
-        lgm().log(f"VB: iteration={iteration}, block={block_selection}, data shape={fdata.shape}, result: {result}")
+        lgm().log(f"#VB: iteration={iteration}, block={block_selection}, data shape={fdata.shape}, result: {result}")
         tf = time.time()
-        lgm().log( f"TT: get_frame dt={tf-ts} t2={t2-ts}")
+        lgm().log( f"#VB: get_frame dt={tf-ts} t2={t2-ts}")
         return result
 
     @exception_handled
@@ -209,7 +209,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         self.browsers = { cname: VariableBrowser( cname ) for cname in collections }
         self.browsers['bands'].verification = plotopts.pop('verification',None)
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
-        self.panels.append(('satellite', spm().get_block_basemap()))
+        self.panels.append(('satellite', tm().satellite_block_view) )
         self.panels.append( ('clusters', clm().panel() ) )
         self.mapviews = pn.Tabs( *self.panels, dynamic=True )
         self.tab_watcher = self.mapviews.param.watch(self.on_tab_change, ['active'], onlychanged=True)

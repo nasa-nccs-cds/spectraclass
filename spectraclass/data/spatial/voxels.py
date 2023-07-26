@@ -48,6 +48,7 @@ class Voxelizer:
         nb = self.nbins.flatten().astype(int)
         return vid3[:,0]*nb[1]*nb[2] + vid3[:,1]*nb[2] + vid3[:,2]
 
+    @exception_handled
     def compute_voxel_indices(self, points: xa.DataArray ):
         v3id = (self.normalize(points.values) * self.nbins).astype(int)
         self.vids = self.serialize( v3id )
