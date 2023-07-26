@@ -83,7 +83,7 @@ class TileManager(SCSingletonConfigurable):
         x0, x1, y0, y1 =  block.extent
         ( yL0, xL0 ), ( yL1, xL1 ) = tm().reproject_to_latlon( x0, y0 ), tm().reproject_to_latlon( x1, y1 )
         lgm().log( f"#FM: get_folium_map: block.extent={x0, x1, y0, y1}, sw={( xL0, yL0 )}, ne={( xL1, yL1 )}")
-        fmap.fit_bounds([ ( yL0, xL0 ), ( yL1, xL1 ) ])
+        fmap.fit_bounds([ ( xL0, yL0 ), ( xL1, yL1 ) ])
         map_attrs = dict( url=tile_url, layers='World Imagery', transparent=False, control=False, fmt="image/png",
                           name='Satellite Image', overlay=True, show=True )
         map_layer = folium.raster_layers.WmsTileLayer(**map_attrs)
