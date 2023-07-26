@@ -78,12 +78,12 @@ class TileManager(SCSingletonConfigurable):
 
     @exception_handled
     def get_folium_map(self, block: Block  ) -> folium.Map:
-        from spectraclass.data.spatial.satellite import spm
         tile_url='http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
         fmap = folium.Map( width=self.map_size )
-        (xlim, ylim) = block.get_extent( ccrs.Mollweide() )
-        lgm().log( f"#FM: get_folium_map: xlim={xlim}, ylim={ylim}")
-        fmap.fit_bounds([ (ylim[0],xlim[0]), (ylim[1],xlim[1]) ])
+        x0, x1, y0, y1 =  block.extent
+        ( yL0, xL0 ), ( yL1, xL1 ) = tm().reproject_to_latlon( x0, y0 ), tm().reproject_to_latlon( x1, y1 )
+        lgm().log( f"#FM: get_folium_map: block.extent={x0, x1, y0, y1}, sw={( xL0, yL0 )}, ne={( xL1, yL1 )}")
+        fmap.fit_bounds([ ( yL0, xL0 ), ( yL1, xL1 ) ])
         map_attrs = dict( url=tile_url, layers='World Imagery', transparent=False, control=False, fmt="image/png",
                           name='Satellite Image', overlay=True, show=True )
         map_layer = folium.raster_layers.WmsTileLayer(**map_attrs)
