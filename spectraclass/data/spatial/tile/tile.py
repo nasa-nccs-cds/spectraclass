@@ -616,9 +616,14 @@ class Block(DataContainer):
 
     @exception_handled
     def getBandData( self, **kwargs ) -> xa.DataArray:
-        raster = kwargs.pop( 'raster', True)
+        raster = kwargs.get( 'raster', True)
         self.createPointData(**kwargs)
-        return self.raster_data if raster else self.point_data
+        if raster:  return self.get_raster_data( **kwargs )
+        else:       return self.get_point_data( **kwargs )
+
+    def get_point_data( self, **kwargs) -> xa.DataArray:
+        class_filter =  kwargs.get( 'class_filter', False)
+        return self.filtered_point_data if class_filter else self.point_data
 
     @property
     def model_data(self) -> xa.DataArray:
@@ -699,10 +704,14 @@ class Block(DataContainer):
         if self._point_data is None: self.createPointData()
         return self._point_data
 
-    @property
-    def raster_data(self) -> Optional[xa.DataArray]:
+    def get_raster_data(self, **kwargs ) -> Optional[xa.DataArray]:
+        class_filter = kwargs.get( 'class_filter', False )
         if self._point_data is None: self.createPointData()
-        return self.points2raster( self._point_data )
+        xptdata = self._point_data
+        if class_filter:
+            ptdata = np.where( self._point_mask, self._point_data.values, np.nan )
+            xptdata = self._point_data.copy( data=ptdata )
+        return self.points2raster( xptdata )
 
     @property
     def point_data(self) -> Optional[xa.DataArray]:
