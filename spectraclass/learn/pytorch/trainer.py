@@ -92,11 +92,15 @@ class MaskSavePanel(MaskCache):
         self.mask_name_input = pn.widgets.TextInput(name='Mask Name', placeholder='Give this mask a name...')
         self.mask_name_input.link(self, value='mask_name')
         self.save_button = pn.widgets.Button(name='Save Mask', button_type='success', width=150)
-        self.save_button.on_click(self.save)
+        self.save_button.on_click( self.save_selection )
 
     def gui(self) -> Panel:
         save_panel = pn.Row(self.mask_name_input, self.save_button)
         return pn.WidgetBox( "###Save", save_panel )
+
+    def save_selection(self, *args, **kwargs):
+        self.mask_name = self.mask_name_input.value
+        self.save( *args, **kwargs )
 
 class MaskLoadPanel(MaskCache):
 
