@@ -95,7 +95,7 @@ class BlockSelection(param.Parameterized):
                         self.clear_block( bindex, update=False )
                     else:
                         ufm().show(f"mark block {bindex}")
-                        self.select_block( bindex, update=False )
+                        self.select_block( bindex )
 
         return hv.Rectangles(self.selected_rectangles, vdims = 'value').opts(color='value', fill_alpha=0.6, line_alpha=1.0, line_width=2)
 
