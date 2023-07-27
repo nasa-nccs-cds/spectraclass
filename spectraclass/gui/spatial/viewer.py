@@ -114,7 +114,7 @@ class VariableBrowser:
         lgm().log(f"DYM: update_graph")
         ts = time.time()
         block: Block = tm().getBlock()
-        graph_data: xa.DataArray = self.data.sel(x=x, y=y, method="nearest")
+        graph_data: xa.DataArray = block.filtered_raster_data.sel(x=x, y=y, method="nearest")
         lgm().log(f"V%% Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, dims={graph_data.dims}, range={arange(graph_data)}")
         is_probe = (lm().current_cid == 0) and (self.cname == "bands")
         line_color = "black" if is_probe else lm().current_color
@@ -133,8 +133,10 @@ class VariableBrowser:
         if is_probe:
             reproduction: xa.DataArray = block.getReproduction(raster=True)
             verification_data: xa.DataArray = reproduction.sel( x=x, y=y, method="nearest" )
-            lgm().log(f"V%%  [{self.cname}]  input_data       shape={graph_data.shape}, dims={graph_data.dims}, range={crange(graph_data,0)}")
-            lgm().log( f"V%% [{self.cname}] verification_data shape={verification_data.shape}, dims={verification_data.dims}, range={crange(verification_data,0)}" )
+            lgm().log(f"V%%  [{self.cname}]  input_data       shape={graph_data.shape}, dims={graph_data.dims}, "
+                      f"range={crange(graph_data,0)}, vange={arange(graph_data)}")
+            lgm().log( f"V%% [{self.cname}] verification_data shape={graph_data.shape}, dims={verification_data.dims}, "
+                       f"range={crange(verification_data,0)}, vange={arange(verification_data)}" )
             verification_curve = hv.Curve( verification_data ).opts( line_width=1, line_color='grey', **popts )
             new_curves.append( verification_curve )
         t2 = time.time()
@@ -243,7 +245,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
     def get_data( self, cname: str, **kwargs ) -> xa.DataArray:
         block: Block = tm().getBlock( **kwargs )
         lgm().log( f"sgui:get_data[{cname}] block = {block.index}")
-        if cname=="bands":        return block.getBandData(raster=True, norm=True)
+        if cname=="bands":        return block.filtered_raster_data
         if cname=="features":     return dm().getModelData(block=block, raster=True, norm=True)
         if cname=="reproduction": return block.getReproduction(raster=True)
 

@@ -726,6 +726,13 @@ class Block(DataContainer):
         return tm().norm( self._point_data[self._point_mask] )
 
     @property
+    def filtered_raster_data(self) -> Optional[xa.DataArray]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        if self._point_data is None: self.createPointData()
+        fpoint_data: xa.DataArray = tm().norm( self._point_data[self._point_mask] )
+        return self.points2raster( fpoint_data )
+
+    @property
     def class_mask(self) -> np.ndarray:
         if self._point_data is None: self.createPointData()
         return self._point_mask
