@@ -277,10 +277,11 @@ class ClusterManager(SCSingletonConfigurable):
         if reset: self.model.reset()
 
     def run_cluster_model( self, data: xa.DataArray ):
+        from spectraclass.learn.pytorch.trainer import stat
         self.nclusters = self._ncluster_selector.value
         self.clear()
         self.model.n_clusters = self.nclusters
-        lgm().log( f"#CM: Creating {self.nclusters} clusters from input data shape = {data.shape}")
+        lgm().log( f"#CM: Creating {self.nclusters} clusters from input data ->> shape = {data.shape}, stat={stat(data)}")
         self.model.cluster(data)
         self._cluster_points = self.model.cluster_data
 
@@ -296,7 +297,7 @@ class ClusterManager(SCSingletonConfigurable):
         if self.data_source == "model":
             data = block.getModelData(**kwargs)
         elif self.data_source == "spectral":
-            data = block.getBandData(**kwargs)
+            data = block.get_point_data( **kwargs )
         else:
             raise Exception( f"Unknown data source: {self.data_source}")
         data.attrs['block'] = block.block_coords
@@ -308,7 +309,7 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import tm
         block = tm().getBlock()
         if self.cluster_points is None:
-            self.cluster( self.get_input_data(raster=False) )
+            self.cluster( self.get_input_data( raster=False, class_filter=False ) )
         self._cluster_raster: xa.DataArray = block.points2raster( self.cluster_points, name="Cluster" ).squeeze()
         self._cluster_raster.attrs['title'] = f"Block = {block.block_coords}"
         return self._cluster_raster
@@ -530,8 +531,8 @@ class ClusterManager(SCSingletonConfigurable):
             self.generate_clusters()
 
     def generate_clusters(self):
-        mdata: xa.DataArray = self.get_input_data( raster=False )
-        ufm().show(f"Creating clusters using {self.mid} for block {mdata.attrs['block']}, input shape={mdata.shape}")
+        mdata: xa.DataArray = self.get_input_data( raster=False, class_filter=False )
+        ufm().show(f"#CM: Creating clusters using {self.mid} for block {mdata.attrs['block']}, input shape={mdata.shape}")
         self.cluster( mdata )
 
     def create_embedding(self, ndim: int = 3):
