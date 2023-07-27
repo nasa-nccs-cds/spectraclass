@@ -37,7 +37,7 @@ class BlockSelection(param.Parameterized):
         self.save_button = pn.widgets.Button( name='Save Selection',  button_type='success', width=150 )
         self.save_button.on_click( self.save_selection )
         self._save_dir = None
-        self.click_select_mode = pn.widgets.RadioButtonGroup( name='Click-Select Mode', options=['Unselect', 'Mark'], value="Unselect", button_type='success')
+        self.click_select_mode = pn.widgets.RadioButtonGroup( name='Click-Select Mode', options=['Unselect', 'Mark'], value="Mark", button_type='success')
         self.dynamic_selection = None
         self.xlim, self.ylim = (sys.float_info.max, -sys.float_info.max), (sys.float_info.max, -sys.float_info.max)
         self.bdx, self.bdy = None, None
@@ -92,10 +92,10 @@ class BlockSelection(param.Parameterized):
                 else:
                     if self.click_select_mode.value == 'Unselect':
                         ufm().show(f"clear block {bindex}")
-                        self.clear_block(bindex)
+                        self.clear_block( bindex, update=False )
                     else:
                         ufm().show(f"mark block {bindex}")
-                        self.select_block(bindex)
+                        self.select_block( bindex, update=False )
 
         return hv.Rectangles(self.selected_rectangles, vdims = 'value').opts(color='value', fill_alpha=0.6, line_alpha=1.0, line_width=2)
 
