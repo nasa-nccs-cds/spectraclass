@@ -260,9 +260,9 @@ class hvSpectraclassGui(SCSingletonConfigurable):
             raise Exception( f"Unkonwn data type: {cname}")
         return result
 
-    def get_clim(self, data: np.ndarray, sfactor: float):
+    def get_clim(self, data: np.ndarray, sfactor: float) -> Tuple[float,float]:
         dmean, drng = data.mean(), sfactor*data.std()
-        return [ dmean-drng, dmean+drng ]
+        return ( dmean-drng, dmean+drng )
 
     @exception_handled
     def get_control_panel(self,**kwargs) -> Panel:
