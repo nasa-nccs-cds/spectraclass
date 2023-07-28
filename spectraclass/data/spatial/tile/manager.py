@@ -66,17 +66,19 @@ class TileManager(SCSingletonConfigurable):
         result = point_data
         if self.anomaly:
             ms: xa.DataArray = self.get_mean_spectrum()
-            result = self.norm( point_data - ms )
-            lgm().log( f"#ANOM.prepare_inputs-> input: shape={point_data.shape}, stat={stat(point_data)}; result: shape={result.shape}, stat={stat(result)}")
+            sdiff: xa.DataArray = point_data - ms
+            result = self.norm( sdiff )
+            lgm().log( f"#ANOM.prepare_inputs-> input: shape={point_data.shape}, stat={stat(point_data)}; "
+                       f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
         return result
 
     def set_sat_view_bounds(self, block: Block ):
         self._block_image.object = self.get_folium_map( block )
 
-    def get_mean_spectrum(self) -> xa.DataArray:
+    def get_mean_spectrum(self,**kwargs) -> xa.DataArray:
         from spectraclass.learn.pytorch.trainer import stat
         from spectraclass.data.base import dm
-        block_selection: Optional[Dict] = dm().modal.get_block_selection()
+        block_selection: Optional[Dict] = kwargs.get( "blocksel", dm().modal.get_block_selection() )
         dsum: xa.DataArray = None
         npts: int = 0
         for (ix,iy) in block_selection.keys():

@@ -28,7 +28,6 @@ class SpatialDataManager(ModeDataManager):
 
     def __init__( self  ):   # Tile shape (y,x) matches image shape (row,col)
         super(SpatialDataManager, self).__init__()
-        self.spectral_means: List[ Tuple[int,np.ndarray] ] = []
 
     def getSpectralData( self, **kwargs ) -> Optional[xa.DataArray]:
         from spectraclass.gui.spatial.map import MapManager, mm
@@ -215,9 +214,10 @@ class SpatialDataManager(ModeDataManager):
         return xa.Dataset( data_vars=data_vars, coords=coords )
 
     @exception_handled
-    def process_block( self, block: Block, has_metadata: bool  ) -> Optional[xa.Dataset]:
+    def process_block( self, block: Block, has_metadata: bool, **kwargs  ) -> Optional[xa.Dataset]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.data.base import DataManager, dm
+        baseline_spectrum = kwargs.get( 'baseline', None )
         t0, reprocess = time.time(), tm().reprocess
         block_data_file = dm().modal.dataFile(block=block)
         if os.path.exists(block_data_file) and reprocess:
@@ -246,10 +246,9 @@ class SpatialDataManager(ModeDataManager):
                 if blocks_point_data.size == 0:
                     ufm().show(f"NO DATA in BLOCK {block.block_coords} *** ")
                     return None
-                smean = np.nanmean( block.raw_point_data.values, axis=0 )
-                ptcount = np.count_nonzero( ~np.isnan(block.raw_point_data) )
-                self.spectral_means.append( ( ptcount, smean ) )
                 data_vars = dict( raw=raw_data )
+                if baseline_spectrum is not None:
+                    data_vars['baseline'] = baseline_spectrum
                 lgm().log(  f" Writing output file: '{block_data_file}' with {blocks_point_data.shape[0]} samples" )
                 #data_vars['mask'] = xa.DataArray( coord_data['mask'].reshape(raw_data.shape[1:]), dims=['y', 'x'], coords={d: raw_data.coords[d] for d in ['x', 'y']} )
                 result_dataset = xa.Dataset(data_vars)
@@ -294,7 +293,8 @@ class SpatialDataManager(ModeDataManager):
         tm().autoprocess = False
         attrs, block_sizes = {}, {}
         nbands = None
-        blocks = tm().tile.getBlocks(**kwargs)
+        blocks: Dict = dm().modal.get_block_selection()
+        baseline_spectrum:  Optional[xa.DataArray] = tm().get_mean_spectrum( blocksel=blocks ) if tm().anomaly else None
         lgm().log(f" Preparing inputs, reprocess={tm().reprocess}, nblocks={len(blocks)}", print=True)
         try:
             has_metadata = (self.metadata is not None)
@@ -305,35 +305,17 @@ class SpatialDataManager(ModeDataManager):
                 ufm().show( f"{action} for image {dm().modal.image_name}, # active blocks = {len(blocks)}" )
                 for block in blocks:
                     if mt().abort: return
-                    result_dataset: xa.Dataset = self.process_block( block, has_metadata )
+                    result_dataset: xa.Dataset = self.process_block( block, has_metadata, baseline=baseline_spectrum )
                     if result_dataset is not None:
                         block_sizes[ block.cindex ] = result_dataset.attrs[ 'nsamples']
                         if nbands is None: nbands = result_dataset.attrs[ 'nbands']
                         result_dataset.close()
-            if len( self.spectral_means ) > 0:
-                self.process_spectral_mean()
             if not has_metadata:
                 self.write_metadata(block_sizes, attrs)
             mt().train()
         except Exception as err:
             print( f"\n *** Error in processing workflow, check log file for details: {lgm().log_file} *** ")
             lgm().exception("prepare_inputs error:")
-
-    @exception_handled
-    def process_spectral_mean(self):
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        total_samples = sum( [ v[0] for v in self.spectral_means ]  )
-        wmeans = [ (v[0]/total_samples)*v[1] for v in self.spectral_means ]
-        spectral_mean = xa.DataArray( np.add.reduce( wmeans ), dims=['band'], coords=dict( band=tm().tile.data.band ) )
-        file_path = f"{dm().cache_dir}/{self.modelkey}.spectral_mean.nc"
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        try:
-            if os.path.isfile(file_path): os.remove(file_path)
-            spectral_mean.to_netcdf( file_path )
-            lgm().log(f"Writing spectral_mean file: {file_path}", print=True)
-        except Exception as err:
-            lgm().log(f" ---> ERROR Writing spectral_mean file at {file_path}: {err}", print=True)
-
 
     def update_band_range(self, band_range: Tuple[np.ndarray,np.ndarray], dataset: xa.Dataset ) -> Tuple[np.ndarray,np.ndarray]:
         band_min: np.ndarray = dataset['band_min'].squeeze() if band_range is None else np.fmin( band_range[0], dataset['band_min'].values ).squeeze()
