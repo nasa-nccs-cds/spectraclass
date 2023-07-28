@@ -251,7 +251,8 @@ class LabelsManager(SCSingletonConfigurable):
         from ..graph.manager import ActivationFlowManager
         from spectraclass.data.spatial.tile.manager import tm
         if self._flow is None:
-            point_data: xa.DataArray = tm().getBlock().getPointData()[0]
+            block: Block = tm().getBlock()
+            point_data: xa.DataArray = block.filtered_point_data
             self._init_labels_data( point_data )
             self._flow = ActivationFlowManager.instance().getActivationFlow()
 

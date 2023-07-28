@@ -37,7 +37,7 @@ class SpectralCNN(Network):
     def _build_model(self, **kwargs) -> Tuple[tf.keras.models.Model,Dict]:
         from spectraclass.data.spatial.tile.manager import tm
         from spectraclass.model.labels import lm
-        pd: xa.DataArray = tm().getBlock().getPointData()[0]
+        pd: xa.DataArray = tm().getBlock().filtered_point_data
         input_shape: List[int] = list(pd.expand_dims("channels",2).shape[1:])
         nb, nfeatures = input_shape[0], -1
         nclasses = lm().nLabels

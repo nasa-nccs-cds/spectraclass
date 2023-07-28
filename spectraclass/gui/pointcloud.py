@@ -40,6 +40,7 @@ class PointCloudManager(SCSingletonConfigurable):
     def __init__( self):
         super(PointCloudManager, self).__init__()
         self._gui = None
+        self._xyz = None
         self.points: p3js.Points = None
         self.marker_points: Optional[p3js.Points] = None
         self.marker_gids = {}
