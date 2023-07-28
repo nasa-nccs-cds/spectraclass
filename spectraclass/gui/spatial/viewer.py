@@ -250,10 +250,10 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         if cname=="bands":
             result = block.filtered_raster_data
             result.attrs['clim'] = self.get_clim( result.values, sfactor )
-        if cname=="features":
+        elif cname=="features":
             result = dm().getModelData(block=block, raster=True, norm=True)
             result.attrs['clim'] = self.get_clim( result.values, sfactor )
-        if cname=="reproduction":
+        elif cname=="reproduction":
             result = block.getReproduction(raster=True)
             result.attrs['clim'] = self.get_clim( block.filtered_raster_data.values, sfactor )
         else:
