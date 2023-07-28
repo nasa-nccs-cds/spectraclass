@@ -621,6 +621,11 @@ class Block(DataContainer):
         if raster:  return self.get_raster_data( **kwargs )
         else:       return self.get_point_data( **kwargs )
 
+    def get_constant_array(self, value: float, **kwargs  ) -> xa.DataArray:
+        raster = kwargs.get('raster', True )
+        bdata: xa.DataArray = self.data if raster else self.point_data
+        return bdata.copy( data=np.full( bdata.shape, value ) )
+
     def get_point_data( self, **kwargs) -> xa.DataArray:
         class_filter =  kwargs.get( 'class_filter', False)
         return self.filtered_point_data if class_filter else self.point_data

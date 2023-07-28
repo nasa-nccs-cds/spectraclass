@@ -292,15 +292,19 @@ class ClusterManager(SCSingletonConfigurable):
         lgm().log( f"#CM: exec cluster, op-count={ccount}" )
 
     def get_input_data( self, **kwargs ) -> xa.DataArray:
+        from spectraclass.data.base import DataManager, dm, DataType
         from spectraclass.data.spatial.tile.manager import tm
-        block = kwargs.get( 'block', tm().getBlock() )
-        if self.data_source == "model":
-            data = block.getModelData(**kwargs)
-        elif self.data_source == "spectral":
-            data = tm().prepare_inputs( block.get_point_data( **kwargs ) )
+        block: Block = kwargs.get('block', tm().getBlock())
+        if len( dm().modal.get_block_selection() ) == 0:
+            data = block.get_constant_array( value=0, raster=False )
         else:
-            raise Exception( f"Unknown data source: {self.data_source}")
-        data.attrs['block'] = block.block_coords
+            if self.data_source == "model":
+                data = block.getModelData(**kwargs)
+            elif self.data_source == "spectral":
+                data = tm().prepare_inputs( block.get_point_data( **kwargs ) )
+            else:
+                raise Exception( f"Unknown data source: {self.data_source}")
+            data.attrs['block'] = block.block_coords
         return data
 
 
