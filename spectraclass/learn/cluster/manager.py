@@ -295,7 +295,7 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.data.base import DataManager, dm, DataType
         from spectraclass.data.spatial.tile.manager import tm
         block: Block = kwargs.get('block', tm().getBlock())
-        if len( dm().modal.get_block_selection() ) == 0:
+        if dm().modal.get_block_selection() is None:
             data = block.get_constant_array( value=0, raster=False )
         else:
             if self.data_source == "model":
