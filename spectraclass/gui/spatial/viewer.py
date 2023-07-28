@@ -162,7 +162,8 @@ class VariableBrowser:
             self.update_block( block_selection )
         fdata: xa.DataArray = self.data[iteration]
         xlim, ylim = bounds( fdata )
-        iopts = dict(width=self.width, height=self.height, cmap=self.cmap, xaxis="bare", yaxis="bare", x="x", y="y", colorbar=False, xlim=xlim, ylim=ylim )
+        iopts = dict(width=self.width, height=self.height, cmap=self.cmap, clim=self.data.attrs['clim'], xaxis="bare",
+                     yaxis="bare", x="x", y="y", colorbar=False, xlim=xlim, ylim=ylim )
         t2 = time.time()
         result: hv.Image = fdata.hvplot.image( **iopts )
         lgm().log(f"#VB: iteration={iteration}, block={block_selection}, data shape={fdata.shape}, result: {result}")
@@ -243,11 +244,25 @@ class hvSpectraclassGui(SCSingletonConfigurable):
             #         new_slider.value.apply.opts( value=old_slider.value )
 
     def get_data( self, cname: str, **kwargs ) -> xa.DataArray:
+        sfactor = kwargs.get('sfactor', 2.0)
         block: Block = tm().getBlock( **kwargs )
         lgm().log( f"sgui:get_data[{cname}] block = {block.index}")
-        if cname=="bands":        return block.filtered_raster_data
-        if cname=="features":     return dm().getModelData(block=block, raster=True, norm=True)
-        if cname=="reproduction": return block.getReproduction(raster=True)
+        if cname=="bands":
+            result = block.filtered_raster_data
+            result.attrs['clim'] = self.get_clim( result.values, sfactor )
+        if cname=="features":
+            result = dm().getModelData(block=block, raster=True, norm=True)
+            result.attrs['clim'] = self.get_clim( result.values, sfactor )
+        if cname=="reproduction":
+            result = block.getReproduction(raster=True)
+            result.attrs['clim'] = self.get_clim( block.filtered_raster_data.values, sfactor )
+        else:
+            raise Exception( f"Unkonwn data type: {cname}")
+        return result
+
+    def get_clim(self, data: np.ndarray, sfactor: float):
+        dmean, drng = data.mean(), sfactor*data.std()
+        return [ dmean-drng, dmean+drng ]
 
     @exception_handled
     def get_control_panel(self,**kwargs) -> Panel:
