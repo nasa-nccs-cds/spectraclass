@@ -160,10 +160,22 @@ class ModelTrainer(SCSingletonConfigurable):
         xreproduction = data.copy( data=reproduction )
         return xreduced, xreproduction
 
+    def prepare_inputs(self, point_data: xa.DataArray, **kwargs ) -> xa.DataArray:
+        from spectraclass.learn.pytorch.trainer import stat
+        baseline_spectrum: Optional[xa.DataArray] = kwargs.pop('baseline', None)
+        result = point_data
+        if baseline_spectrum is not None:
+            sdiff: xa.DataArray = point_data - baseline_spectrum
+            result = tm().norm( sdiff )
+            lgm().log( f"#ANOM.prepare_inputs{kwargs}-> input: shape={point_data.shape}, stat={stat(point_data)}; "
+                       f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
+        return result
+
     def general_training(self, iter: int, initial_epoch: int, **kwargs ):
         from spectraclass.data.base import DataManager, dm
         from spectraclass.data.spatial.tile.tile import Block, Tile
         num_reduce_images = min( dm().modal.num_images, self.reduce_nimages )
+
         losses, tloss = [], 0.0
         y_hat: Tensor = None
         for image_index in range( num_reduce_images ):
@@ -175,7 +187,8 @@ class ModelTrainer(SCSingletonConfigurable):
                 lgm().log(f" NBLOCKS = {num_training_blocks}/{len(blocks)}, block shape = {blocks[0].shape}")
             for iB, block in enumerate(blocks):
                 if iB < self.reduce_nblocks:
-                    norm_point_data = block.getBandData( raster=False, class_filter=True )
+                    raw_point_data = block.getBandData( raster=False, class_filter=True )
+                    norm_point_data = self.prepare_inputs( raw_point_data, iter=iter, ib=iB, **kwargs )
                     if norm_point_data.shape[0] > 0:
                         input_tensor: Tensor = torch.from_numpy(norm_point_data.values)
                         x = input_tensor.to(self.device)

@@ -312,7 +312,7 @@ class SpatialDataManager(ModeDataManager):
                         result_dataset.close()
             if not has_metadata:
                 self.write_metadata(block_sizes, attrs)
-            mt().train()
+            mt().train( baseline=baseline_spectrum )
         except Exception as err:
             print( f"\n *** Error in processing workflow, check log file for details: {lgm().log_file} *** ")
             lgm().exception("prepare_inputs error:")
