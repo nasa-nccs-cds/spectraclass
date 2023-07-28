@@ -114,7 +114,6 @@ class MaskLoadPanel(MaskCache):
         elif len(block_selection_names):   self.mask_name = block_selection_names[0]
         self.file_selector = pn.widgets.Select( value=self.mask_name, **sopts )
         self.file_selector.link(self, value='mask_name')
-        self.load()
 
     def gui(self) -> Panel:
         load_panel = pn.Row(self.file_selector, self.load_button)
