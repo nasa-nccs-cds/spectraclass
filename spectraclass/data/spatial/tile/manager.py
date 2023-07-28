@@ -44,6 +44,7 @@ class TileManager(SCSingletonConfigurable):
     block_index = tl.Tuple( default_value=(0,0) ).tag( config=True, sync=True )
     mask_class = tl.Int(0).tag( config=True, sync=True )
     autoprocess = tl.Bool(True).tag( config=True, sync=True )
+    anomaly = tl.Bool(False).tag(config=True, sync=True)
     reprocess = tl.Bool(False).tag( config=True, sync=True )
     image_attrs = {}
     ESPG = 3857
@@ -60,8 +61,33 @@ class TileManager(SCSingletonConfigurable):
         self.block_selection = BlockSelection()
         self._block_image: pn.pane.HTML = pn.pane.HTML(sizing_mode="stretch_width", width=self.map_size)
 
+    def prepare_inputs(self, point_data: xa.DataArray ) -> xa.DataArray:
+        from spectraclass.learn.pytorch.trainer import stat
+        result = point_data
+        if self.anomaly:
+            ms: xa.DataArray = self.get_mean_spectrum()
+            result = self.norm( point_data - ms )
+            lgm().log( f"#ANOM.prepare_inputs-> input: shape={point_data.shape}, stat={stat(point_data)}; result: shape={result.shape}, stat={stat(result)}")
+        return result
+
     def set_sat_view_bounds(self, block: Block ):
         self._block_image.object = self.get_folium_map( block )
+
+    def get_mean_spectrum(self) -> xa.DataArray:
+        from spectraclass.learn.pytorch.trainer import stat
+        from spectraclass.data.base import dm
+        block_selection: Optional[Dict] = dm().modal.get_block_selection()
+        dsum: xa.DataArray = None
+        npts: int = 0
+        for (ix,iy) in block_selection.keys():
+            block: Block = self.tile.getDataBlock(ix, iy)
+            pdata: xa.DataArray = block.get_point_data()
+            pdsum: xa.DataArray = pdata.sum( dim=str(pdata.dims[0]) )
+            npts = npts + pdata.shape[0]
+            dsum = pdsum if (dsum is None) else dsum + pdsum
+        smean: xa.DataArray = dsum/npts
+        lgm().log( f"#ANOM.get_mean_spectrum({len(block_selection)} blocks)-> smean: shape={smean.shape}, stat={stat(smean)}")
+        return smean
 
     def bi2c(self, bindex: int ) -> Tuple[int,int]:
         ts1: int = self.tile_shape[1]

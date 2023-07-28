@@ -100,11 +100,11 @@ class NEONDataManager(SpatialDataManager):
     def abort_callback(self, event ):
         self._abort = True
 
-    def gui(self, **kwargs ):
-        return self._tile_selector.gui(**kwargs)
+    def gui(self):
+        return self._tile_selector.gui()
 
-    def get_block_selection(self,**kwargs) -> Optional[Dict]:
-        return self._tile_selector.get_block_selection(**kwargs)
+    def get_block_selection(self) -> Optional[Dict]:
+        return self._tile_selector.get_block_selection()
 
     def preprocessing_gui(self):
         from spectraclass.reduction.trainer import mt

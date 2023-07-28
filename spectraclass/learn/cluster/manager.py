@@ -297,7 +297,7 @@ class ClusterManager(SCSingletonConfigurable):
         if self.data_source == "model":
             data = block.getModelData(**kwargs)
         elif self.data_source == "spectral":
-            data = block.get_point_data( **kwargs )
+            data = tm().prepare_inputs( block.get_point_data( **kwargs ) )
         else:
             raise Exception( f"Unknown data source: {self.data_source}")
         data.attrs['block'] = block.block_coords
