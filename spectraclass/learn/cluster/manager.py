@@ -281,7 +281,7 @@ class ClusterManager(SCSingletonConfigurable):
         self.nclusters = self._ncluster_selector.value
         self.clear()
         self.model.n_clusters = self.nclusters
-        lgm().log( f"#CM: Creating {self.nclusters} clusters from input data ->> shape = {data.shape}, stat={stat(data)}, anomaly={data.attrs.get('anomaly','UNDEF')}")
+        lgm().log( f"#CM: Creating {self.nclusters} clusters from input data ->> shape = {data.shape}, stat={stat(data)}, anomaly={data.attrs['anomaly']}")
         self.model.cluster(data)
         self._cluster_points = self.model.cluster_data
 
@@ -313,7 +313,8 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import tm
         block = tm().getBlock()
         if self.cluster_points is None:
-            self.cluster( self.get_input_data( raster=False, class_filter=False ) )
+            mdata: xa.DataArray = self.get_input_data(raster=False, class_filter=False)
+            self.cluster( mdata )
         self._cluster_raster: xa.DataArray = block.points2raster( self.cluster_points, name="Cluster" ).squeeze()
         self._cluster_raster.attrs['title'] = f"Block = {block.block_coords}"
         return self._cluster_raster

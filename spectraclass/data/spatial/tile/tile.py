@@ -740,21 +740,18 @@ class Block(DataContainer):
 
     @property
     def point_data(self) -> Optional[xa.DataArray]:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         if self._point_data is None: self.createPointData()
-        return tm().norm( self._point_data )
+        return self._point_data
 
     @property
     def filtered_point_data(self) -> Optional[xa.DataArray]:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         if self._point_data is None: self.createPointData()
-        return tm().norm( self._point_data[self._point_mask] )
+        return self._point_data[self._point_mask]
 
     @property
     def filtered_raster_data(self) -> Optional[xa.DataArray]:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         if self._point_data is None: self.createPointData()
-        fpoint_data: xa.DataArray = tm().norm( self._point_data[self._point_mask] )
+        fpoint_data: xa.DataArray = self._point_data[self._point_mask]
         return self.points2raster( fpoint_data )
 
     @property
@@ -768,19 +765,18 @@ class Block(DataContainer):
 
     @exception_handled
     def createPointData(self, **kwargs):
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.learn.pytorch.trainer import mpt
-        self._point_data =  self.raster2points( self.data, **kwargs )
+        self._point_data =  self.raster2points( self.data, norm=True, **kwargs )
         if self._point_data is not None:
             self._samples_axis = self._point_data.coords['samples']
-            normed_data = tm().norm( self._point_data )
-            self._point_mask  = mpt().get_class_mask( normed_data )
+            self._point_mask  = mpt().get_class_mask( self._point_data )
             lgm().log(f"#FPDM-getPointData: filtered data shape={self._point_data.shape}, "
                       f"cfmask shape={self._point_mask.shape}, nz={np.count_nonzero(self._point_mask)}")
             self._point_data.attrs['type'] = 'block'
             self._point_data.attrs['dsid'] = self.dsid()
             self._point_data.attrs['pmask'] = self._point_mask
             self._point_coords: Dict[str, np.ndarray] = dict(y=self.data.y.values, x=self.data.x.values)
+        lgm().log( f"#CPD: attrs={self._point_data.attrs}")
 
     @property
     def raster_mask(self) -> Optional[np.ndarray]:
