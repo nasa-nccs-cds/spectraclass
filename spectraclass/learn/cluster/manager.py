@@ -281,7 +281,7 @@ class ClusterManager(SCSingletonConfigurable):
         self.nclusters = self._ncluster_selector.value
         self.clear()
         self.model.n_clusters = self.nclusters
-        lgm().log( f"#CM: Creating {self.nclusters} clusters from input data ->> shape = {data.shape}, stat={stat(data)}, anomaly={data.attrs['anomaly']}")
+        lgm().log( f"#CM: Creating {self.nclusters} clusters from input data ->> shape = {data.shape}, stat={stat(data)}, anomaly={data.attrs.get('anomaly','UNDEF')}")
         self.model.cluster(data)
         self._cluster_points = self.model.cluster_data
 

@@ -183,7 +183,7 @@ class ModelTrainer(SCSingletonConfigurable):
         if self._model is None:
             opts = dict ( wmag=self.init_wts_mag, init_bias=self.init_bias_mag, log_step=self.log_step )
             b: Block = tm().getBlock()
-            lgm().trace( f"MODEL: input dims={b.point_data.shape[1]}, layer_sizes={self.layer_sizes}" )
+            lgm().log( f"MODEL: input dims={b.point_data.shape[1]}, layer_sizes={self.layer_sizes}" )
             self._model = MLP( "masks", b.point_data.shape[1], self.nclasses, self.layer_sizes, **opts ).to(self.device)
 #            input: Tensor = torch.from_numpy(ptdata.values)
 #            self._model.forward( input )
