@@ -558,7 +558,7 @@ class Block(DataContainer):
         block_raster.attrs['dsid'] = self.dsid()
         block_raster.attrs['file_name'] = self.file_name
         block_raster.name = self.file_name
-        lgm().log( f"CBD: block data, shape: {block_raster.shape}, dims: {block_raster.dims}, attrs: {list(block_raster.attrs.keys())}")
+        lgm().log( f"#CBD: block data, shape: {block_raster.shape}, dims: {block_raster.dims}, attrs: {list(block_raster.attrs.keys())}")
         return block_raster
 
     @property
@@ -891,7 +891,10 @@ class Block(DataContainer):
         lgm().log(f"#FPD[{self.block_coords}]: filtered_point_data{point_data.dims}{point_data.shape}:  "
                   f"range=[{np.nanmin(point_data.values):.4f}, {np.nanmax(point_data.values):.4f}], nnan={nnan(point_data)}")
 
-        return tm().norm(point_data) if norm else point_data
+        result = tm().norm(point_data) if norm else point_data
+        lgm().log(f"#CBD[{self.block_coords}].r2p: base_raster attrs: {list(base_raster.attrs.keys())}" )
+        lgm().log(f"#CBD[{self.block_coords}].r2p: result attrs: {list(result.attrs.keys())}")
+        return result
 
     # def raster2points2(self, base_raster: xa.DataArray, **kwargs) -> Tuple[Optional[xa.DataArray], Optional[np.ndarray],  Optional[np.ndarray]]:  # base_raster dims: [ band, y, x ]
     #     if (base_raster is None) or (base_raster.shape[0] == 0): return (None, None, None)

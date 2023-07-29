@@ -70,7 +70,7 @@ class MLP(nn.Module):
         self._network = nn.Sequential()
         activation = self._get_activation_function()
         for iL, layer_size in enumerate(self._layer_sizes):
-            linear = nn.Linear(in_features=in_features, out_features=layer_size, bias=True)
+            linear = nn.Linear( in_features=in_features, out_features=layer_size, bias=True, dtype=np.float )
             linear.register_forward_hook(partial(self.layer_forward_hook, iL))
             linear.register_forward_pre_hook(partial(self.layer_forward_pre_hook, iL))
             self._network.append( linear )

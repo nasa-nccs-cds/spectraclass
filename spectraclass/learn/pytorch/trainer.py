@@ -211,7 +211,7 @@ class ModelTrainer(SCSingletonConfigurable):
             input_data: xa.DataArray = block.get_point_data()
             training_mask: np.ndarray = np.isin( input_data.samples.values, gids )
             tdata: np.ndarray = input_data.values[ training_mask ]
-            tlabels: np.ndarray = np.full([gids.size], cid)
+            tlabels: np.ndarray = np.full([gids.size], float(cid) )
             lgm().log( f"#TD: Adding training data: tindex={tindex} bindex={block_coords} cid={cid} #gids={gids.size},  "
                        f"Block-Data-stat={stat(input_data)}, TData-stat={stat(tdata)}, Labels-stat=[{np.count_nonzero(tlabels)/tlabels.size}], "
                        f"data.shape={tdata.shape} labels.shape={tlabels.shape} mask.shape={training_mask.shape}, anomaly={input_data.attrs['anomaly']}")
@@ -219,7 +219,7 @@ class ModelTrainer(SCSingletonConfigurable):
             training_labels = tlabels if (training_labels is None) else np.append( training_labels, tlabels, axis=0 )
         lgm().log(f"#TD: SHAPES--> training_data: {training_data.shape}, training_labels: {training_labels.shape}" )
         lgm().log(f"#TD: Data-stat={stat(training_data)}, labels-stat=[{np.count_nonzero(training_labels)/training_labels.size}]")
-        return ( training_data, training_labels )
+        return ( training_data.astype(np.float), training_labels.astype(np.float) )
 
     def get_optimizer(self):
         oid = self.optimizer_type
