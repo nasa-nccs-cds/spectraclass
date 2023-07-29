@@ -667,6 +667,7 @@ class Block(DataContainer):
         self._reduction_input_data = pdata
         self._model_data.attrs['block_coords'] = self.block_coords
         self._model_data.attrs['dsid'] = self.dsid()
+        self._model_data.attrs['anomaly'] = False
         self._model_data.attrs['file_name'] = self.file_name
         self._model_data.attrs['pmask'] = pdata.attrs.get('pmask',None)
         self._model_data.name = self.file_name

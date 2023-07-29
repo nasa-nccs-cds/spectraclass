@@ -117,7 +117,7 @@ class GenericClusterBase(ClusterBase):
 
     @property
     def threshold_mask( self ):
-        if self._threshold_mask is None:
+        if (self._threshold_mask is None) and (self._max_cluster_distance > 0.0):
             cluster_distances = np.zeros( self._cluster_data.shape[0], np.float32 ) # ndarray[n-clusters,n-model-dims]
             for iC in range( 1, self.n_clusters+1 ):
                 (dmask, cluster_distance) = self._cluster_distances[iC]
