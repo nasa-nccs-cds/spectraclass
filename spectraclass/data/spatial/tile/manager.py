@@ -70,6 +70,7 @@ class TileManager(SCSingletonConfigurable):
             result = self.norm( sdiff )
             lgm().log( f"#ANOM.prepare_inputs-> input: shape={point_data.shape}, stat={stat(point_data)}; "
                        f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
+            result.attrs['anomaly'] = True
         return result
 
     def set_sat_view_bounds(self, block: Block ):
