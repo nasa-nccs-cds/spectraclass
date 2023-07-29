@@ -273,7 +273,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         data_selection_panel = pn.Tabs(  ("Tile", dm().modal.get_tile_selection_gui(**kwargs)) ) # , ("Block",dm().modal.gui()) ] )
         manifold_panel = pn.Row( pcm().gui() )
         analytics_gui = pn.Tabs( ("Cluster", clm().gui()), ("Classify", rs().get_control_panel() ), ("Mask", mm().get_control_panel() ) )
-        controls = pn.Accordion( ('Data Selection', data_selection_panel ), ('Analytics',analytics_gui), ('Manifold', manifold_panel ), toggle=True, active=[0] )
+        controls = pn.Accordion( ('Data Selection', data_selection_panel ), ('Analytics',analytics_gui), toggle=True, active=[0] ) # , ('Manifold', manifold_panel )
         return pn.Column( self.alert, controls )
 
     @exception_handled

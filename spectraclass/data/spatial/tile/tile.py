@@ -593,11 +593,10 @@ class Block(DataContainer):
     def load_block_raster(self) -> Optional[xa.DataArray]:
         from spectraclass.data.base import DataManager, dm
         from spectraclass.gui.control import UserFeedbackManager, ufm
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         raw_raster: Optional[xa.DataArray] = None
         if self.has_data_file():
             dataset: xa.Dataset = dm().modal.loadDataFile( block=self )
-            raw_raster = tm().mask_nodata( dataset["raw"] )
+            raw_raster = self.extract_input_data( dataset )
             lgm().log( f" @BLOCK{self.block_coords}---> raw data attrs = {dataset['raw'].attrs.keys()}" )
             # if self.block_coords == (0,0):
             #     lgm().trace("LOADING BLOCK (0,0):")
@@ -608,6 +607,21 @@ class Block(DataContainer):
             lgm().log(f" @BLOCK{self.block_coords}->get_data: load-datafile raster shape={raw_raster.shape}, exent= ({x[0]},{x[-1]}) ({y[0]},{y[-1]})")
             if raw_raster.size == 0: ufm().show( "This block does not appear to have any data.", "warning" )
         return raw_raster
+
+    @exception_handled
+    def extract_input_data(self, dataset: xa.Dataset, **kwargs ) -> xa.DataArray:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.learn.pytorch.trainer import stat
+        raw_data: xa.DataArray = tm().mask_nodata( dataset["raw"] )
+        point_data = self.raster2points( raw_data, norm=True, **kwargs)
+        baseline_spectrum: xa.DataArray = dataset.get('baseline', None )
+        result = point_data
+        if baseline_spectrum is not None:
+            sdiff: xa.DataArray = point_data - baseline_spectrum
+            result = tm().norm( sdiff )
+            lgm().log( f"#ANOM.TILE.prepare_inputs{kwargs}-> input: shape={point_data.shape}, stat={stat(point_data)}; "
+                       f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
+        return result
 
     @exception_handled
     def getModelData(self,  **kwargs ) -> xa.DataArray:
@@ -854,6 +868,8 @@ class Block(DataContainer):
         return xa.DataArray( raster_data, coords, dims, rname, points_data.attrs )
 
     def raster2points(self, base_raster: xa.DataArray, **kwargs) -> Optional[xa.DataArray]:  # base_raster dims: [ band, y, x ]
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        norm = kwargs.get('norm',False)
         if (base_raster is None) or (base_raster.shape[0] == 0): return None
         stacked_data: xa.DataArray = base_raster.stack(samples=base_raster.dims[-2:]).transpose()
         point_data: xa.DataArray = stacked_data.assign_coords({"samples": np.arange(stacked_data.shape[0])})
@@ -872,7 +888,7 @@ class Block(DataContainer):
         lgm().log(f"#FPD[{self.block_coords}]: filtered_point_data{point_data.dims}{point_data.shape}:  "
                   f"range=[{np.nanmin(point_data.values):.4f}, {np.nanmax(point_data.values):.4f}], nnan={nnan(point_data)}")
 
-        return point_data
+        return tm().norm(point_data) if norm else point_data
 
     # def raster2points2(self, base_raster: xa.DataArray, **kwargs) -> Tuple[Optional[xa.DataArray], Optional[np.ndarray],  Optional[np.ndarray]]:  # base_raster dims: [ band, y, x ]
     #     if (base_raster is None) or (base_raster.shape[0] == 0): return (None, None, None)
