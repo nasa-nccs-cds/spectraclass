@@ -262,7 +262,7 @@ class ModelTrainer(SCSingletonConfigurable):
             (train_data, labels_data) = training_set
         self.model.train()
         t0, initial_epoch = time.time(), 0
-        lgm().log( f"#TM.Train: train_data.shape={train_data.shape}, labels_data.shape={labels_data.shape}")
+        lgm().log( f"#TM.Train: train_data[{train_data.dtype}].shape={train_data.shape}, labels_data[{labels_data.dtype}].shape={labels_data.shape}")
         for iter in range(self.niter):
             initial_epoch = self.training_iteration(iter, initial_epoch, train_data, labels_data, **kwargs)
         lgm().log( f"#TM: Trained network in {(time.time()-t0)/60:.3f} min" )
