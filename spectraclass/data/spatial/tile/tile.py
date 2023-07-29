@@ -891,6 +891,7 @@ class Block(DataContainer):
             point_data[ bmask, iB ] = smean[iB]
 
         point_data.attrs['dsid'] = base_raster.name
+        point_data.attrs.update( base_raster.attrs )
         lgm().log(f"#FPD[{self.block_coords}]: filtered_point_data{point_data.dims}{point_data.shape}:  "
                   f"range=[{np.nanmin(point_data.values):.4f}, {np.nanmax(point_data.values):.4f}], nnan={nnan(point_data)}")
 
