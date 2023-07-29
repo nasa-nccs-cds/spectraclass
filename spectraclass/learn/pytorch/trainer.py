@@ -262,9 +262,10 @@ class ModelTrainer(SCSingletonConfigurable):
             (train_data, labels_data) = training_set
         self.model.train()
         t0, initial_epoch = time.time(), 0
+        lgm().log( f"#TM.Train: train_data.shape={train_data.shape}, labels_data.shape={labels_data.shape}")
         for iter in range(self.niter):
             initial_epoch = self.training_iteration(iter, initial_epoch, train_data, labels_data, **kwargs)
-        lgm().log( f"Trained network in {(time.time()-t0)/60:.3f} min" )
+        lgm().log( f"#TM: Trained network in {(time.time()-t0)/60:.3f} min" )
 
     def training_iteration(self, iter: int, initial_epoch: int, train_data: np.ndarray, labels_data: np.ndarray, **kwargs):
         [x, y] = [torch.from_numpy(tdata).to(self.device) for tdata in [train_data,labels_data]]
@@ -272,7 +273,7 @@ class ModelTrainer(SCSingletonConfigurable):
         tloss = 0.0
         for epoch  in range( initial_epoch, final_epoch ):
             tloss, x, y_hat = self.training_epoch(epoch, x, y)
-        lgm().log( f" ** ITER[{iter}]-> norm data: [shape={train_data.shape}, STAT={stat(train_data)}], "
+        lgm().log( f"#TM.ITER[{iter}]: norm data: [shape={train_data.shape}, STAT={stat(train_data)}], "
                    f"labels: [{np.count_nonzero(labels_data)}/{labels_data.size}], loss: [{tloss}]")
         loss_msg = f"loss[{iter}/{self.niter}]: {tloss:>4f}"
         self.progress.update( iter+1, loss_msg, tloss )
