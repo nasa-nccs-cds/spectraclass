@@ -64,7 +64,7 @@ class TileManager(SCSingletonConfigurable):
     def prepare_inputs(self, point_data: xa.DataArray ) -> xa.DataArray:
         from spectraclass.learn.pytorch.trainer import stat
         result = point_data
-        if self.anomaly:
+        if self.anomaly and not point_data.attrs['anomaly']:
             ms: xa.DataArray = self.get_mean_spectrum()
             sdiff: xa.DataArray = point_data - ms
             result = self.norm( sdiff )
