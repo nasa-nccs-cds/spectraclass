@@ -625,8 +625,8 @@ class Block(DataContainer):
             result.attrs['anomaly'] = (baseline_spectrum is not None)
             return self.points2raster(result) if raster else result
         else:
-            if raster: return self.raster2points( raw_data, norm=True, **kwargs)
-            else:      return tm().norm( raw_data )
+            if raster: return tm().norm( raw_data )
+            else:      return self.raster2points( raw_data, norm=True, **kwargs)
 
     @exception_handled
     def getModelData(self,  **kwargs ) -> xa.DataArray:
