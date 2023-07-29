@@ -613,17 +613,20 @@ class Block(DataContainer):
     def extract_input_data(self, dataset: xa.Dataset, **kwargs ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.learn.pytorch.trainer import stat
+        raster = kwargs.get('raster',True)
         raw_data: xa.DataArray = tm().mask_nodata( dataset["raw"] )
-        point_data = self.raster2points( raw_data, norm=True, **kwargs)
         baseline_spectrum: xa.DataArray = dataset.get('baseline', None )
-        result = point_data
-        if baseline_spectrum is not None:
+        if (baseline_spectrum is not None) and tm().anomaly:
+            point_data = self.raster2points( raw_data, norm=True, **kwargs)
             sdiff: xa.DataArray = point_data - baseline_spectrum
             result = tm().norm( sdiff )
             lgm().log( f"#ANOM.TILE.extract_input_data{kwargs}-> input: shape={point_data.shape}, stat={stat(point_data)}; "
                        f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
-        result.attrs['anomaly'] = (baseline_spectrum is not None)
-        return result
+            result.attrs['anomaly'] = (baseline_spectrum is not None)
+            return self.points2raster(result) if raster else result
+        else:
+            if raster: return self.raster2points( raw_data, norm=True, **kwargs)
+            else:      return tm().norm( raw_data )
 
     @exception_handled
     def getModelData(self,  **kwargs ) -> xa.DataArray:
