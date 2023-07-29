@@ -540,7 +540,7 @@ class ClusterManager(SCSingletonConfigurable):
     def generate_clusters(self):
         ufm().show(f"Creating clusters using {self.mid}")
         mdata: xa.DataArray = self.get_input_data( raster=False, class_filter=False )
-        lgm().log(f"#CM: Creating clusters using {self.mid} for block {mdata.attrs['block']}, input shape={mdata.shape}")
+        lgm().log(f"#CBD: Creating clusters using {self.mid} for block {mdata.attrs['block']}, input shape={mdata.shape}, attrs={list(mdata.attrs.keys())}'")
         self.cluster( mdata )
 
     def create_embedding(self, ndim: int = 3):

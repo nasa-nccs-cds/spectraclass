@@ -558,7 +558,7 @@ class Block(DataContainer):
         block_raster.attrs['dsid'] = self.dsid()
         block_raster.attrs['file_name'] = self.file_name
         block_raster.name = self.file_name
-        lgm().log( f"IA: block data, shape: {block_raster.shape}, dims: {block_raster.dims}")
+        lgm().log( f"CBD: block data, shape: {block_raster.shape}, dims: {block_raster.dims}, attrs: {list(block_raster.attrs.keys())}")
         return block_raster
 
     @property
@@ -776,7 +776,7 @@ class Block(DataContainer):
             self._point_data.attrs['dsid'] = self.dsid()
             self._point_data.attrs['pmask'] = self._point_mask
             self._point_coords: Dict[str, np.ndarray] = dict(y=self.data.y.values, x=self.data.x.values)
-        lgm().log( f"#CPD: attrs={self._point_data.attrs}")
+        lgm().log( f"#CBD: point_data attrs={list(self._point_data.attrs.keys())}")
 
     @property
     def raster_mask(self) -> Optional[np.ndarray]:

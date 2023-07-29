@@ -64,12 +64,12 @@ class TileManager(SCSingletonConfigurable):
     def prepare_inputs(self, point_data: xa.DataArray ) -> xa.DataArray:
         from spectraclass.learn.pytorch.trainer import stat
         result = point_data
+        lgm().log(f"#ANOM.prepare_inputs-> input: shape={point_data.shape}, stat={stat(point_data)}, attrs={list(point_data.attrs.keys())} ")
         if self.anomaly and not point_data.attrs['anomaly']:
             ms: xa.DataArray = self.get_mean_spectrum()
             sdiff: xa.DataArray = point_data - ms
             result = self.norm( sdiff )
-            lgm().log( f"#ANOM.prepare_inputs-> input: shape={point_data.shape}, stat={stat(point_data)}; "
-                       f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
+            lgm().log( f"#ANOM.prepare_inputs-> result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
             result.attrs['anomaly'] = True
         return result
 
