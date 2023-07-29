@@ -214,7 +214,7 @@ class ModelTrainer(SCSingletonConfigurable):
             tlabels: np.ndarray = np.full([gids.size], cid)
             lgm().log( f"#TD: Adding training data: tindex={tindex} bindex={block_coords} cid={cid} #gids={gids.size},  "
                        f"Block-Data-stat={stat(input_data)}, TData-stat={stat(tdata)}, Labels-stat=[{np.count_nonzero(tlabels)/tlabels.size}], "
-                       f"data.shape={tdata.shape} labels.shape={tlabels.shape} mask.shape={training_mask.shape}")
+                       f"data.shape={tdata.shape} labels.shape={tlabels.shape} mask.shape={training_mask.shape}, anomaly={input_data.attrs['anomaly']}")
             training_data   = tdata   if (training_data   is None) else np.append( training_data,   tdata,   axis=0 )
             training_labels = tlabels if (training_labels is None) else np.append( training_labels, tlabels, axis=0 )
         lgm().log(f"#TD: SHAPES--> training_data: {training_data.shape}, training_labels: {training_labels.shape}" )
