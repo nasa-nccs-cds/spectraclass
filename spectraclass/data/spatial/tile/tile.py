@@ -549,6 +549,7 @@ class Block(DataContainer):
             raster_slice.attrs['transform'] = self.translate_transform( raster_slice.attrs['transform'] )
             raw_raster = raster_slice if (raster_slice.size == 0) else TileManager.process_tile_data( raster_slice )
             lgm().log(f" *** BLOCK{self.block_coords}: load-slice ybounds={ybounds}, xbounds={xbounds}, raster shape={raw_raster.shape}")
+            raw_raster.attrs['anomaly'] = False
         block_raster = raw_raster # self._apply_mask( raw_raster )
         block_raster.attrs['block_coords'] = self.block_coords
         block_raster.attrs['tile_shape'] = tm().tile.data.shape
@@ -619,8 +620,9 @@ class Block(DataContainer):
         if baseline_spectrum is not None:
             sdiff: xa.DataArray = point_data - baseline_spectrum
             result = tm().norm( sdiff )
-            lgm().log( f"#ANOM.TILE.prepare_inputs{kwargs}-> input: shape={point_data.shape}, stat={stat(point_data)}; "
+            lgm().log( f"#ANOM.TILE.extract_input_data{kwargs}-> input: shape={point_data.shape}, stat={stat(point_data)}; "
                        f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
+        result.attrs['anomaly'] = (baseline_spectrum is not None)
         return result
 
     @exception_handled

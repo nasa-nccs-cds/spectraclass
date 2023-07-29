@@ -165,6 +165,7 @@ class ModelTrainer(SCSingletonConfigurable):
         baseline_spectrum: Optional[xa.DataArray] = kwargs.pop('baseline', None)
         result = point_data
         if baseline_spectrum is not None:
+            assert not point_data.attrs['anomaly'], "Anomaly already applied"
             sdiff: xa.DataArray = point_data - baseline_spectrum
             result = tm().norm( sdiff )
             lgm().log( f"#ANOM.prepare_inputs{kwargs}-> input: shape={point_data.shape}, stat={stat(point_data)}; "
