@@ -520,6 +520,10 @@ class LabelsManager(SCSingletonConfigurable):
         return len(self._labels)
 
     @property
+    def nMarkers(self) -> int:
+        return len(self._markers)
+
+    @property
     def labeledColors(self) -> List[Tuple[int,str,str]]:
         values = range(len(self._colors))
         return list(zip(values, self._labels, self._colors))

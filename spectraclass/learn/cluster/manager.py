@@ -142,8 +142,9 @@ class ClusterManager(SCSingletonConfigurable):
 
     def get_mask_image(self, visible: bool) -> hv.Image:
         from spectraclass.learn.pytorch.trainer import mpt
-        lgm().log( f"get_mask_image: visible={visible}")
-        try:
+        from spectraclass.model.labels import LabelsManager, lm
+        lgm().log( f"#CM: get_mask_image: visible={visible}, #Markers={lm().nMarkers}")
+        if lm().hasTrainData:
             mask: xa.DataArray = mpt().predict( raster=True )
             [x,y] = [ mask.coords[c].values for c in ['x','y']]
             z = np.argmax( mask.values, axis=0, keepdims=False )
@@ -153,8 +154,10 @@ class ClusterManager(SCSingletonConfigurable):
             image: hv.Image =  hv.Image( (x,y,z) )
             lgm().log(f"#CM:    --> plotted image: data shape={image.data['z'].shape}")
             return image.opts( cmap='gray', alpha=alpha, xlim=xlim, ylim=ylim, colorbar=False, clim=(0.0,1.0) )
-        except Exception as err:
-            return self.get_blank_image()
+        else:
+            image: hv.Image= self.get_blank_image()
+            lgm().log(f"#CM:    --> plotted blank image: data shape={image.data['z'].shape}")
+            return image
 
     def get_blank_image(self) -> hv.Image:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
