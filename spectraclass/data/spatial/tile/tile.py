@@ -485,7 +485,7 @@ class Block(DataContainer):
         if self._tmask is not None:
             if not raster:
                 ptmask = self._tmask.flatten()
-                if reduced: ptmask = ptmask[self._point_mask]
+                if reduced: ptmask = ptmask[self.point_mask]
                 return ptmask
         return self._tmask
 
@@ -504,7 +504,7 @@ class Block(DataContainer):
             #     self._tmask = self.raster_mask
         if (not raster) and (self._tmask is not None):
             ptmask = self._tmask.flatten()
-            if reduced: ptmask = ptmask[self._point_mask]
+            if reduced: ptmask = ptmask[self.point_mask]
             return ptmask
         return self._tmask
 
@@ -734,7 +734,7 @@ class Block(DataContainer):
         if self._point_data is None: self.createPointData()
         xptdata = self._point_data
         if class_filter:
-            ptdata = np.where( self._point_mask, self._point_data.values, np.nan )
+            ptdata = np.where( self.point_mask, self._point_data.values, np.nan )
             xptdata = self._point_data.copy( data=ptdata )
         return self.points2raster( xptdata )
 
@@ -746,18 +746,18 @@ class Block(DataContainer):
     @property
     def filtered_point_data(self) -> Optional[xa.DataArray]:
         if self._point_data is None: self.createPointData()
-        return self._point_data[self._point_mask]
+        return self._point_data[self.point_mask]
 
     @property
     def filtered_raster_data(self) -> Optional[xa.DataArray]:
         if self._point_data is None: self.createPointData()
-        fpoint_data: xa.DataArray = self._point_data[self._point_mask]
+        fpoint_data: xa.DataArray = self._point_data[self.point_mask]
         return self.points2raster( fpoint_data )
 
     @property
     def class_mask(self) -> np.ndarray:
         if self._point_data is None: self.createPointData()
-        return self._point_mask
+        return self.point_mask
 
     def point_coords(self)-> Dict[str, np.ndarray]:
         if self._point_data is None: self.createPointData()
@@ -765,18 +765,23 @@ class Block(DataContainer):
 
     @exception_handled
     def createPointData(self, **kwargs):
-        from spectraclass.learn.pytorch.trainer import mpt
         self._point_data =  self.raster2points( self.data, norm=True, **kwargs )
         if self._point_data is not None:
             self._samples_axis = self._point_data.coords['samples']
-            self._point_mask  = mpt().get_class_mask( self._point_data )
-            lgm().log(f"#FPDM-getPointData: filtered data shape={self._point_data.shape}, "
-                      f"cfmask shape={self._point_mask.shape}, nz={np.count_nonzero(self._point_mask)}")
+            lgm().log(f"#FPDM-getPointData: filtered data shape={self._point_data.shape}")
             self._point_data.attrs['type'] = 'block'
             self._point_data.attrs['dsid'] = self.dsid()
-            self._point_data.attrs['pmask'] = self._point_mask
             self._point_coords: Dict[str, np.ndarray] = dict(y=self.data.y.values, x=self.data.x.values)
         lgm().log( f"#CBD: point_data attrs={list(self._point_data.attrs.keys())}")
+
+    @property
+    def point_mask(self):
+        from spectraclass.learn.pytorch.trainer import mpt
+        if self._point_mask is None:
+            self._point_mask = mpt().get_class_mask( self._point_data )
+            self._point_data.attrs['pmask'] = self._point_mask
+            lgm().log(f"#FPDM-point_mask: cfmask shape={self._point_mask.shape}, nz={np.count_nonzero(self._point_mask)}")
+        return self._point_mask
 
     @property
     def raster_mask(self) -> Optional[np.ndarray]:
