@@ -120,7 +120,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
         self._cluster_image = hv.DynamicMap( self.get_cluster_image, streams=[ self._count, self.double_tap_stream, self.thresholdStream ] )
-        self._mask_image = hv.DynamicMap( self.get_mask_image, streams=dict( visible=self.apply_button.param.value ) )
+      #  self._mask_image = hv.DynamicMap( self.get_mask_image, streams=dict( visible=self.apply_button.param.value ) )
         self._marker_table_widget: hv.Table = None
         self._marker_table_selection: hv.streams.Selection1D = None
         self._marker_table = hv.DynamicMap( self.get_marker_table, streams=[ self.double_tap_stream ] )
@@ -480,7 +480,7 @@ class ClusterManager(SCSingletonConfigurable):
     def panel(self, **kwargs ) -> hv.DynamicMap:
         width = kwargs.get('width', 600)
         height = kwargs.get('height', 500)
-        return self.cluster_image.opts( width=width, height=height ) * self._mask_image
+        return self.cluster_image.opts( width=width, height=height ) # * self._mask_image
 
     @exception_handled
     def get_cluster_image( self, index: int, tindex: int, tvalue: int, x=None, y=None ) -> hv.Image:
