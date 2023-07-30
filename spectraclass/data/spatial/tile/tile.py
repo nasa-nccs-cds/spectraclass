@@ -890,7 +890,8 @@ class Block(DataContainer):
         lgm().log(f"#FPD[{self.block_coords}]: filtered_point_data{point_data.dims}{point_data.shape}:  "
                   f"range=[{np.nanmin(point_data.values):.4f}, {np.nanmax(point_data.values):.4f}], nnan={nnan(point_data)}")
 
-        return tm().norm(point_data) if norm else point_data
+        result: xa.DataArray = tm().norm(point_data) if norm else point_data
+        return result.astype( base_raster.dtype )
 
     # def raster2points2(self, base_raster: xa.DataArray, **kwargs) -> Tuple[Optional[xa.DataArray], Optional[np.ndarray],  Optional[np.ndarray]]:  # base_raster dims: [ band, y, x ]
     #     if (base_raster is None) or (base_raster.shape[0] == 0): return (None, None, None)
