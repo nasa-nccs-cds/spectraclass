@@ -337,12 +337,13 @@ class ModelTrainer(SCSingletonConfigurable):
         std_data_sample = std_data if (num_standard_samples >= std_data.shape[0]) else random_sample( std_data, num_standard_samples )
         return torch.cat((anom_data, std_data_sample), 0)
 
-    def predict(self, data: xa.DataArray = None, **kwargs) -> xa.DataArray:
+    def predict(self, block_data: xa.DataArray = None, **kwargs) -> xa.DataArray:
+        raster = kwargs.pop( 'raster', False )
         block: Block = tm().getBlock(**kwargs)
-        raster = kwargs.get( 'raster', "False")
-        if data is None: data = block.point_data
-        raw_result: xa.DataArray = self.model.predict( data )
-        lgm().log( f"#MT: predict-> input: [shape={data.shape}, stat={stat(data)}] output: [shape={raw_result.shape}, stat={stat(raw_result)}]")
+        if block_data is None: block_data = block.get_point_data(**kwargs)
+        input_data: xa.DataArray = tm().prepare_inputs(block_data)
+        raw_result: xa.DataArray = self.model.predict( input_data )
+        lgm().log( f"#MT: predict-> input: [shape={input_data.shape}, stat={stat(input_data)}], anomaly={input_data.attrs.get('anomaly','UNDEF')}, output: [shape={raw_result.shape}, stat={stat(raw_result)}]")
         return block.points2raster( raw_result ) if raster else raw_result
 
     def event(self, source: str, event ):
