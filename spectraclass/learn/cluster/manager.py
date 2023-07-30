@@ -313,7 +313,8 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import tm
         block = tm().getBlock()
         if self.cluster_points is None:
-            self.cluster( self.get_input_data( raster=False, class_filter=False ) )
+            mdata = self.get_input_data( raster=False, class_filter=False )
+            self.cluster( mdata )
         self._cluster_raster: xa.DataArray = block.points2raster( self.cluster_points, name="Cluster" ).squeeze()
         self._cluster_raster.attrs['title'] = f"Block = {block.block_coords}"
         return self._cluster_raster
@@ -392,19 +393,19 @@ class ClusterManager(SCSingletonConfigurable):
             ufm().show("Learning mask complete.")
 
     @exception_handled
-    def generate_training_set( self, source: str, event ):
+    def generate_training_set( self, source: str, *args, **kwargs ):
         from spectraclass.data.spatial.tile.manager import tm
         xchunks, ychunks = [], []
         for (image_index, block_coords, icluster, nclusters), marker in self._cluster_markers.items():
             block = tm().getBlock( bindex=block_coords )
             if source == "model":   input_data: xa.DataArray = block.getModelData(raster=False)
-            else:                   input_data: xa.DataArray = block.getBandData(raster=False)
+            else:                   input_data: xa.DataArray = tm().prepare_inputs( block.get_point_data(**kwargs) )
             mask_array: np.array = np.full( input_data.shape[0], False, dtype=bool )
             mask_array[ marker.gids ] = True
             xchunk: np.array = input_data.values[mask_array]
             ychunk: np.array = np.full( shape=[xchunk.shape[0]], fill_value=marker.cid, dtype=np.int )
             lgm().log(f"#CM: Add training chunk, input_data shape={input_data.shape}, xchunk shape={xchunk.shape}, ychunk shape={ychunk.shape}, #gids={marker.gids.size}")
-            lgm().log(f" --> mask_array shape={mask_array.shape}, mask_array nzeros={np.count_nonzero(mask_array)}, anomaly={input_data.attrs.get('anomaly','UNDEF')}")
+            lgm().log(f"#CM:  --> mask_array shape={mask_array.shape}, mask_array nzeros={np.count_nonzero(mask_array)}, anomaly={input_data.attrs.get('anomaly','UNDEF')}")
             xchunks.append( xchunk )
             ychunks.append( ychunk )
         x, y = np.concatenate( xchunks, axis=0 ), np.concatenate( ychunks, axis=0 )
@@ -468,6 +469,7 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         cid, icluster = lm().current_cid, -1
+        ufm().show(f"Generating clusters")
 
         if x is not None:
             block: Block = tm().getBlock()
@@ -485,7 +487,7 @@ class ClusterManager(SCSingletonConfigurable):
         image =  self._cluster_raster.hvplot.image( **iopts )
   #      image =  hv.Image( raster.to_numpy(), xlim=xlim, ylim=ylim, colorbar=False, title=raster.attrs['title'], xaxis="bare", yaxis="bare" )
         lgm().log( f"#CM: create cluster image[{index}], tindex={tindex}, tvalue={tvalue}, xlim={xlim}, ylim={ylim}, cmap={self.cmap[:8]}" )
-        ufm().show(f"Generated clusters")
+        ufm().show(f"Completed generating clusters")
         return image.opts(cmap=self.cmap, xlim=xlim, ylim=ylim)
 
     def get_learning_panel(self, data_source: str ):
@@ -536,7 +538,7 @@ class ClusterManager(SCSingletonConfigurable):
 
     def generate_clusters(self):
         mdata: xa.DataArray = self.get_input_data( raster=False, class_filter=False )
-        ufm().show(f"#CM: Creating clusters using {self.mid} for block {mdata.attrs['block']}, input shape={mdata.shape}")
+        lgm().log(f"#CM: Creating clusters using {self.mid} for block {mdata.attrs['block']}, input shape={mdata.shape}")
         self.cluster( mdata )
 
     def create_embedding(self, ndim: int = 3):
