@@ -284,6 +284,10 @@ class LabelsManager(SCSingletonConfigurable):
             label_data[key] = marker.gids if (key not in label_data) else np.append(label_data[key], marker.gids, axis=0)
         return label_data
 
+    @property
+    def hasTrainData(self):
+        return len(self._markers) > 0
+
     def getTrainingBlocks(self) -> List[Block]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         block_data = { ( marker.image_index, marker.block_coords ) for marker in self._markers }
