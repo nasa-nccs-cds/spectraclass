@@ -30,6 +30,7 @@ class Autoencoder(nn.Module):
         super().__init__()
         self.input_dims = input_dims
         self.model_dims = model_dims
+        self._module0 = None
         self._layer_outputs: Dict[int, List[np.ndarray]] = {}
         self._layer_weights: Dict[int, List[np.ndarray]] = {}
         self._activation = kwargs.get('activation', 'lru')
@@ -84,6 +85,7 @@ class Autoencoder(nn.Module):
         while in_features > self.model_dims:
             out_features = max( int(round(in_features / reduction_factor)), self.model_dims )
             linear = nn.Linear(in_features=in_features, out_features=out_features, bias=True)
+            if self._module0 is None: self._module0 = linear
             activation = None if (out_features == self.model_dims) else self._activation
             self._add_layer( encoder_modules, iLayer, linear, activation )
             in_features, iLayer = out_features, iLayer + 1
@@ -97,6 +99,11 @@ class Autoencoder(nn.Module):
             in_features, iLayer = out_features, iLayer + 1
         self._decoder = nn.Sequential(decoder_modules)
         self.init_weights()
+
+    @property
+    def dtype(self) -> np.dtype:
+        wts: np.ndarray = self._module0.weight.detach().numpy()
+        return wts.dtype
 
     def init_weights(self):
         self._encoder.apply(self.weights_init_uniform_rule)

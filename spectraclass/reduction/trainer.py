@@ -154,23 +154,16 @@ class ModelTrainer(SCSingletonConfigurable):
             self.save(**kwargs)
 
     def reduce(self, data: xa.DataArray ) -> Tuple[xa.DataArray,xa.DataArray]:
-        reduced: Tensor = self.model.encode( data.values, detach=False )
+        reduced: Tensor = self.model.encode( data.astype(self.dtype).values, detach=False )
         reproduction: np.ndarray = self.model.decode( reduced )
         xreduced = xa.DataArray( reduced.detach().numpy(), dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(reduced.shape[1])), attrs=data.attrs)
         xreproduction = data.copy( data=reproduction )
         return xreduced, xreproduction
 
-    def prepare_inputs(self, point_data: xa.DataArray, **kwargs ) -> xa.DataArray:
-        from spectraclass.learn.pytorch.trainer import stat
-        baseline_spectrum: Optional[xa.DataArray] = kwargs.pop('baseline', None)
-        result = point_data
-        if baseline_spectrum is not None:
-            assert not point_data.attrs['anomaly'], "Anomaly already applied"
-            sdiff: xa.DataArray = point_data - baseline_spectrum
-            result = tm().norm( sdiff )
-            lgm().log( f"#ANOM.prepare_inputs{kwargs}-> input: shape={point_data.shape}, stat={stat(point_data)}; "
-                       f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
-        return result
+    @property
+    def dtype(self):
+        W: np.ndarray = self.model.get_layer_weights(0)
+        return W.dtype
 
     def general_training(self, iter: int, initial_epoch: int, **kwargs ):
         from spectraclass.data.base import DataManager, dm
@@ -179,6 +172,7 @@ class ModelTrainer(SCSingletonConfigurable):
 
         losses, tloss = [], 0.0
         y_hat: Tensor = None
+
         for image_index in range( num_reduce_images ):
             dm().modal.set_current_image(image_index)
             blocks: List[Block] = tm().tile.getBlocks()
@@ -189,9 +183,9 @@ class ModelTrainer(SCSingletonConfigurable):
             for iB, block in enumerate(blocks):
                 if iB < self.reduce_nblocks:
                     raw_point_data = block.getBandData( raster=False, class_filter=True )
-                    norm_point_data = self.prepare_inputs( raw_point_data, iter=iter, ib=iB, **kwargs )
+                    norm_point_data = tm().prepare_inputs( raw_point_data, **kwargs )
                     if norm_point_data.shape[0] > 0:
-                        input_tensor: Tensor = torch.from_numpy(norm_point_data.values)
+                        input_tensor: Tensor = torch.from_numpy( norm_point_data.values.astype(self.model.dtype) )
                         x = input_tensor.to(self.device)
                         final_epoch = initial_epoch + self.nepoch
                         for epoch  in range( initial_epoch, final_epoch ):

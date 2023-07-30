@@ -62,11 +62,11 @@ class TileManager(SCSingletonConfigurable):
         self.block_selection = BlockSelection()
         self._block_image: pn.pane.HTML = pn.pane.HTML(sizing_mode="stretch_width", width=self.map_size)
 
-    def prepare_inputs(self, point_data: xa.DataArray ) -> xa.DataArray:
+    def prepare_inputs(self, point_data: xa.DataArray, **kwargs ) -> xa.DataArray:
         from spectraclass.learn.pytorch.trainer import stat
         result = point_data
         if self.anomaly and not result.attrs.get("anomaly",False):
-            ms: Optional[xa.DataArray] = self.get_mean_spectrum()
+            ms: Optional[xa.DataArray] = kwargs.pop( 'baseline', self.get_mean_spectrum() )
             if ms is not None:
                 sdiff: xa.DataArray = point_data - ms
                 result = self.norm( sdiff )
