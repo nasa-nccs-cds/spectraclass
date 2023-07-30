@@ -56,7 +56,7 @@ class TileManager(SCSingletonConfigurable):
         self._tiles: Dict[str,Tile] = {}
         self._idxtiles: Dict[int, Tile] = {}
         self.cacheTileData = True
-        self._mean_spectrum: Dict[ List[Tuple], xa.DataArray ] = {}
+        self._mean_spectrum: Dict[ int, xa.DataArray ] = {}
         self.map_size = 600
         self._scale: Tuple[np.ndarray,np.ndarray] = None
         self.block_selection = BlockSelection()
@@ -78,10 +78,8 @@ class TileManager(SCSingletonConfigurable):
     def set_sat_view_bounds(self, block: Block ):
         self._block_image.object = self.get_folium_map( block )
 
-    def get_block_selection_key( self, selection: Dict ) -> List[Tuple]:
-        bskey = list( selection.keys() )
-        bskey.sort()
-        return bskey
+    def get_block_selection_key( self, selection: Dict ) -> int:
+        return sum( [ tm().c2bi(bid) for bid in selection.keys() ] )
 
     def get_mean_spectrum(self,**kwargs) -> Optional[xa.DataArray]:
         from spectraclass.learn.pytorch.trainer import stat
