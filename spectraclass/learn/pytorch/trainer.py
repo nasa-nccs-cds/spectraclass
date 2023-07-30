@@ -347,7 +347,7 @@ class ModelTrainer(SCSingletonConfigurable):
         if lm().hasTrainData:
             raw_result: xa.DataArray = self.model.predict( data )
         else:
-            raw_result: xa.DataArray = data.copy( data=np.full( [data.shape[0],2], 0.0 ) )
+            raw_result: xa.DataArray = data.copy( data=np.full( data.shape, 0.0 ) )
         lgm().log( f"#MT: predict-> input: [shape={data.shape}, stat={stat(data)}] output: [shape={raw_result.shape}, stat={stat(raw_result)}]")
         return block.points2raster( raw_result ) if raster else raw_result
 
