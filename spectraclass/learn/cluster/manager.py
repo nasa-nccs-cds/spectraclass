@@ -210,7 +210,7 @@ class ClusterManager(SCSingletonConfigurable):
         from  .kmeans import KMeansCluster, BisectingKMeans
         nclusters = self._ncluster_selector.value
         self.update_colors( self._max_culsters )
-        lgm().log( f"#CM: Creating {mid} model with {nclusters} clusters")
+        lgm().trace( f"#CM: Creating {mid} model with {nclusters} clusters")
         if mid == "kmeans":
             params = dict(  random_state= self.random_state, batch_size= 256 * cpu_count() )
             return KMeansCluster( nclusters, **params )
