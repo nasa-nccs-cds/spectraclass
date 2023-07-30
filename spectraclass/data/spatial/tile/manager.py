@@ -56,6 +56,7 @@ class TileManager(SCSingletonConfigurable):
         self._tiles: Dict[str,Tile] = {}
         self._idxtiles: Dict[int, Tile] = {}
         self.cacheTileData = True
+        self._mean_spectrum: Dict[ List[Tuple], xa.DataArray ] = {}
         self.map_size = 600
         self._scale: Tuple[np.ndarray,np.ndarray] = None
         self.block_selection = BlockSelection()
@@ -77,20 +78,29 @@ class TileManager(SCSingletonConfigurable):
     def set_sat_view_bounds(self, block: Block ):
         self._block_image.object = self.get_folium_map( block )
 
+    def get_block_selection_key( self, selection: Dict ) -> List[Tuple]:
+        bskey = list( selection.keys() )
+        bskey.sort()
+        return bskey
+
     def get_mean_spectrum(self,**kwargs) -> Optional[xa.DataArray]:
         from spectraclass.learn.pytorch.trainer import stat
         from spectraclass.data.base import dm
         block_selection: Optional[Dict] = kwargs.get( "blocksel", dm().modal.get_block_selection() )
         if block_selection is not None:
-            dsum: xa.DataArray = None
-            npts: int = 0
-            for (ix,iy) in block_selection.keys():
-                block: Block = self.tile.getDataBlock(ix, iy)
-                pdata: xa.DataArray = block.get_point_data()
-                pdsum: xa.DataArray = pdata.sum( dim=str(pdata.dims[0]) )
-                npts = npts + pdata.shape[0]
-                dsum = pdsum if (dsum is None) else dsum + pdsum
-            smean: xa.DataArray = dsum/npts
+            bskey = self.get_block_selection_key(block_selection)
+            smean = self._mean_spectrum.get( bskey, None )
+            if smean is None:
+                dsum: xa.DataArray = None
+                npts: int = 0
+                for (ix,iy) in block_selection.keys():
+                    block: Block = self.tile.getDataBlock(ix, iy)
+                    pdata: xa.DataArray = block.get_point_data()
+                    pdsum: xa.DataArray = pdata.sum( dim=str(pdata.dims[0]) )
+                    npts = npts + pdata.shape[0]
+                    dsum = pdsum if (dsum is None) else dsum + pdsum
+                smean: xa.DataArray = dsum/npts
+                self._mean_spectrum[bskey] = smean
             lgm().log( f"#ANOM.get_mean_spectrum({len(block_selection)} blocks)-> smean: shape={smean.shape}, stat={stat(smean)}")
             return smean
 
