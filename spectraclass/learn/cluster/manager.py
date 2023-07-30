@@ -291,6 +291,9 @@ class ClusterManager(SCSingletonConfigurable):
             self.run_cluster_model( data )
             ccount = self.refresh()
             lgm().log( f"#CM: exec cluster, op-count={ccount}" )
+        else:
+            self._cluster_points = data.copy( data=np.full( data.shape, 0.0 ) )
+
 
     def get_input_data( self, **kwargs ) -> xa.DataArray:
         from spectraclass.data.base import DataManager, dm, DataType
