@@ -344,8 +344,9 @@ class ModelTrainer(SCSingletonConfigurable):
         block: Block = tm().getBlock(**kwargs)
         raster = kwargs.get( 'raster', "False")
         if data is None: data = block.point_data
+        lgm().trace(f"#MT: predict-> input: [shape={data.shape}, stat={stat(data)}, dtype={data.dtype}]")
         raw_result: xa.DataArray = self.model.predict( data )
-        lgm().log( f"#MT: predict-> input: [shape={data.shape}, stat={stat(data)}] output: [shape={raw_result.shape}, stat={stat(raw_result)}]")
+        lgm().log( f"#MT: predict-> output: [shape={raw_result.shape}, stat={stat(raw_result)}]")
         return block.points2raster( raw_result ) if raster else raw_result
 
     def event(self, source: str, event ):
