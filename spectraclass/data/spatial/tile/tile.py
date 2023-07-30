@@ -857,8 +857,8 @@ class Block(DataContainer):
         rpdata = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
         lgm().log(f"#P2R points2raster:  points_data.attrs = {list(points_data.attrs.keys())}")
         self._point_mask  = points_data.attrs.get('pmask',None)
-        if self.class_mask is not None:
-            pnz = np.count_nonzero(self.class_mask)
+        if self._point_mask is not None:
+            pnz = np.count_nonzero(self._point_mask)
             lgm().log(f"#P2R --> cmask shape = {self.class_mask.shape}")
         else: pnz = -1
         lgm().log(f"#P2R --> points_data, shape={points_data.shape}; pmask #nz={pnz}; raster shape = {rpdata.shape}; ")
