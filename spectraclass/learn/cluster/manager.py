@@ -287,9 +287,10 @@ class ClusterManager(SCSingletonConfigurable):
 
     @exception_handled
     def cluster(self, data: xa.DataArray ):
-        self.run_cluster_model( data )
-        ccount = self.refresh()
-        lgm().log( f"#CM: exec cluster, op-count={ccount}" )
+        if len( self._cluster_markers ) > 0:
+            self.run_cluster_model( data )
+            ccount = self.refresh()
+            lgm().log( f"#CM: exec cluster, op-count={ccount}" )
 
     def get_input_data( self, **kwargs ) -> xa.DataArray:
         from spectraclass.data.base import DataManager, dm, DataType
