@@ -65,32 +65,34 @@ class TileManager(SCSingletonConfigurable):
         from spectraclass.learn.pytorch.trainer import stat
         result = point_data
         if self.anomaly and not result.attrs.get("anomaly",False):
-            ms: xa.DataArray = self.get_mean_spectrum()
-            sdiff: xa.DataArray = point_data - ms
-            result = self.norm( sdiff )
-            lgm().log( f"#ANOM.prepare_inputs-> input: shape={point_data.shape}, stat={stat(point_data)}; "
-                       f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
-            result.attrs['anomaly'] = True
+            ms: Optional[xa.DataArray] = self.get_mean_spectrum()
+            if ms is not None:
+                sdiff: xa.DataArray = point_data - ms
+                result = self.norm( sdiff )
+                lgm().log( f"#ANOM.prepare_inputs-> input: shape={point_data.shape}, stat={stat(point_data)}; "
+                           f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
+                result.attrs['anomaly'] = True
         return result.astype( point_data.dtype )
 
     def set_sat_view_bounds(self, block: Block ):
         self._block_image.object = self.get_folium_map( block )
 
-    def get_mean_spectrum(self,**kwargs) -> xa.DataArray:
+    def get_mean_spectrum(self,**kwargs) -> Optional[xa.DataArray]:
         from spectraclass.learn.pytorch.trainer import stat
         from spectraclass.data.base import dm
         block_selection: Optional[Dict] = kwargs.get( "blocksel", dm().modal.get_block_selection() )
-        dsum: xa.DataArray = None
-        npts: int = 0
-        for (ix,iy) in block_selection.keys():
-            block: Block = self.tile.getDataBlock(ix, iy)
-            pdata: xa.DataArray = block.get_point_data()
-            pdsum: xa.DataArray = pdata.sum( dim=str(pdata.dims[0]) )
-            npts = npts + pdata.shape[0]
-            dsum = pdsum if (dsum is None) else dsum + pdsum
-        smean: xa.DataArray = dsum/npts
-        lgm().log( f"#ANOM.get_mean_spectrum({len(block_selection)} blocks)-> smean: shape={smean.shape}, stat={stat(smean)}")
-        return smean
+        if block_selection is not None:
+            dsum: xa.DataArray = None
+            npts: int = 0
+            for (ix,iy) in block_selection.keys():
+                block: Block = self.tile.getDataBlock(ix, iy)
+                pdata: xa.DataArray = block.get_point_data()
+                pdsum: xa.DataArray = pdata.sum( dim=str(pdata.dims[0]) )
+                npts = npts + pdata.shape[0]
+                dsum = pdsum if (dsum is None) else dsum + pdsum
+            smean: xa.DataArray = dsum/npts
+            lgm().log( f"#ANOM.get_mean_spectrum({len(block_selection)} blocks)-> smean: shape={smean.shape}, stat={stat(smean)}")
+            return smean
 
     def bi2c(self, bindex: int ) -> Tuple[int,int]:
         ts1: int = self.tile_shape[1]
