@@ -407,6 +407,7 @@ class ClusterManager(SCSingletonConfigurable):
                 anom_input_data: xa.DataArray = tm().prepare_inputs( input_data )
                 lgm().log( f"#CM.generate_training_set: input_data{input_data.shape}[{input_data.dtype}] stat={stat(input_data)} ")
                 lgm().log( f"#CM.generate_training_set: anom_input_data{anom_input_data.shape}[{anom_input_data.dtype}] stat={stat(anom_input_data)} ")
+                input_data = anom_input_data
             mask_array: np.array = np.full( input_data.shape[0], False, dtype=bool )
             mask_array[ marker.gids ] = True
             xchunk: np.array = input_data.values[mask_array]

@@ -71,7 +71,7 @@ class TileManager(SCSingletonConfigurable):
             lgm().log( f"#ANOM.prepare_inputs-> input: shape={point_data.shape}, stat={stat(point_data)}; "
                        f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
             result.attrs['anomaly'] = True
-        return result
+        return result.astype( point_data.dtype )
 
     def set_sat_view_bounds(self, block: Block ):
         self._block_image.object = self.get_folium_map( block )
