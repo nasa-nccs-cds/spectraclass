@@ -339,15 +339,12 @@ class ModelTrainer(SCSingletonConfigurable):
         std_data_sample = std_data if (num_standard_samples >= std_data.shape[0]) else random_sample( std_data, num_standard_samples )
         return torch.cat((anom_data, std_data_sample), 0)
 
+    @exception_handled
     def predict(self, data: xa.DataArray = None, **kwargs) -> xa.DataArray:
-        from spectraclass.model.labels import LabelsManager, Action, lm
         block: Block = tm().getBlock(**kwargs)
         raster = kwargs.get( 'raster', "False")
         if data is None: data = block.point_data
-        if lm().hasTrainData:
-            raw_result: xa.DataArray = self.model.predict( data )
-        else:
-            raw_result: xa.DataArray = data.copy( data=np.full( data.shape, 0.0 ) )
+        raw_result: xa.DataArray = self.model.predict( data )
         lgm().log( f"#MT: predict-> input: [shape={data.shape}, stat={stat(data)}] output: [shape={raw_result.shape}, stat={stat(raw_result)}]")
         return block.points2raster( raw_result ) if raster else raw_result
 

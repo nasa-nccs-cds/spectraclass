@@ -140,19 +140,30 @@ class ClusterManager(SCSingletonConfigurable):
         self.learn_button.on_click( self.learn_mask )
         self.refresh_colormap()
 
-    @exception_handled
     def get_mask_image(self, visible: bool) -> hv.Image:
         from spectraclass.learn.pytorch.trainer import mpt
         lgm().log( f"get_mask_image: visible={visible}")
-        mask: xa.DataArray = mpt().predict( raster=True )
-        [x,y] = [ mask.coords[c].values for c in ['x','y']]
-        z = np.argmax( mask.values, axis=0, keepdims=False )
-        lgm().log(f"#CM:    --> classification shape={mask.shape}, mask shape={z.shape}, coords={mask.dims[1:]}, vrange={[mask.values.min(),mask.values.max()]}, nz={np.count_nonzero(z)}")
-        alpha = 0.5 if visible else 0.0
-        xlim, ylim = bounds(self._cluster_raster)
-        image: hv.Image =  hv.Image( (x,y,z) )
-        lgm().log(f"#CM:    --> plotted image: data shape={image.data['z'].shape}")
-        return image.opts( cmap='gray', alpha=alpha, xlim=xlim, ylim=ylim, colorbar=False, clim=(0.0,1.0) )
+        try:
+            mask: xa.DataArray = mpt().predict( raster=True )
+            [x,y] = [ mask.coords[c].values for c in ['x','y']]
+            z = np.argmax( mask.values, axis=0, keepdims=False )
+            lgm().log(f"#CM:    --> classification shape={mask.shape}, mask shape={z.shape}, coords={mask.dims[1:]}, vrange={[mask.values.min(),mask.values.max()]}, nz={np.count_nonzero(z)}")
+            alpha = 0.5 if visible else 0.0
+            xlim, ylim = bounds(self._cluster_raster)
+            image: hv.Image =  hv.Image( (x,y,z) )
+            lgm().log(f"#CM:    --> plotted image: data shape={image.data['z'].shape}")
+            return image.opts( cmap='gray', alpha=alpha, xlim=xlim, ylim=ylim, colorbar=False, clim=(0.0,1.0) )
+        except Exception as err:
+            return self.get_blank_image()
+
+    def get_blank_image(self) -> hv.Image:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        block: Block = tm().getBlock()
+        [x, y] = [block.data.coords[c].values for c in ['x', 'y']]
+        z = np.full((x.size, y.size), 0.0)
+        image: hv.Image = hv.Image((x, y, z))
+        xlim, ylim = bounds(block.data)
+        return image.opts(cmap='gray', alpha=1.0, xlim=xlim, ylim=ylim, colorbar=False, clim=(0.0, 1.0))
 
     @property
     def data_source(self):
