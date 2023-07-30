@@ -91,6 +91,7 @@ class TileManager(SCSingletonConfigurable):
             bskey = self.get_block_selection_key(block_selection)
             smean = self._mean_spectrum.get( bskey, None )
             if smean is None:
+                ufm().show( f"Computing mean spectrum over {len(block_selection)} blocks")
                 dsum: xa.DataArray = None
                 npts: int = 0
                 for (ix,iy) in block_selection.keys():
@@ -101,6 +102,7 @@ class TileManager(SCSingletonConfigurable):
                     dsum = pdsum if (dsum is None) else dsum + pdsum
                 smean: xa.DataArray = dsum/npts
                 self._mean_spectrum[bskey] = smean
+                ufm().show( f"Done Computing mean spectrum")
             lgm().log( f"#ANOM.get_mean_spectrum({len(block_selection)} blocks)-> smean: shape={smean.shape}, stat={stat(smean)}")
             return smean
 
