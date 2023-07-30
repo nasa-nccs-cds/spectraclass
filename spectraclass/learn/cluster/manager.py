@@ -397,14 +397,14 @@ class ClusterManager(SCSingletonConfigurable):
         xchunks, ychunks = [], []
         for (image_index, block_coords, icluster, nclusters), marker in self._cluster_markers.items():
             block = tm().getBlock( bindex=block_coords )
-            if source == "model":   input_data: np.array = block.getModelData(raster=False).values
-            else:                   input_data: np.array = block.getBandData(raster=False).values
+            if source == "model":   input_data: xa.DataArray = block.getModelData(raster=False)
+            else:                   input_data: xa.DataArray = block.getBandData(raster=False)
             mask_array: np.array = np.full( input_data.shape[0], False, dtype=bool )
             mask_array[ marker.gids ] = True
-            xchunk: np.array = input_data[mask_array]
+            xchunk: np.array = input_data.values[mask_array]
             ychunk: np.array = np.full( shape=[xchunk.shape[0]], fill_value=marker.cid, dtype=np.int )
             lgm().log(f"#CM: Add training chunk, input_data shape={input_data.shape}, xchunk shape={xchunk.shape}, ychunk shape={ychunk.shape}, #gids={marker.gids.size}")
-            lgm().log(f" --> mask_array shape={mask_array.shape}, mask_array nzeros={np.count_nonzero(mask_array)}, ychunk shape={ychunk.shape}, #gids={marker.gids.size}")
+            lgm().log(f" --> mask_array shape={mask_array.shape}, mask_array nzeros={np.count_nonzero(mask_array)}, anomaly={input_data.attrs.get('anomaly','UNDEF')}")
             xchunks.append( xchunk )
             ychunks.append( ychunk )
         x, y = np.concatenate( xchunks, axis=0 ), np.concatenate( ychunks, axis=0 )
