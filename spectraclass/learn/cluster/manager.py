@@ -396,10 +396,11 @@ class ClusterManager(SCSingletonConfigurable):
     def generate_training_set( self, source: str, *args, **kwargs ):
         from spectraclass.data.spatial.tile.manager import tm
         xchunks, ychunks = [], []
+        ufm().show(f"Generating training set from {len(self._cluster_markers)} labeled regions")
         for (image_index, block_coords, icluster, nclusters), marker in self._cluster_markers.items():
             block = tm().getBlock( bindex=block_coords )
             if source == "model":   input_data: xa.DataArray = block.getModelData(raster=False)
-            else:                   input_data: xa.DataArray = tm().prepare_inputs( block.get_point_data(**kwargs) )
+            else:                   input_data: xa.DataArray = block.get_point_data(**kwargs) # tm().prepare_inputs( block.get_point_data(**kwargs) )
             mask_array: np.array = np.full( input_data.shape[0], False, dtype=bool )
             mask_array[ marker.gids ] = True
             xchunk: np.array = input_data.values[mask_array]
