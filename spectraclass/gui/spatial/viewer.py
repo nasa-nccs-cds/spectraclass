@@ -214,7 +214,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         self.browsers['bands'].verification = plotopts.pop('verification',None)
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
         self.panels.append(('satellite', tm().satellite_block_view) )
-        self.panels.append( ('clusters', clm().panel() ) )
+      #  self.panels.append( ('clusters', clm().panel() ) )
         self.mapviews = pn.Tabs( *self.panels, dynamic=True )
         self.tab_watcher = self.mapviews.param.watch(self.on_tab_change, ['active'], onlychanged=True)
         return self
