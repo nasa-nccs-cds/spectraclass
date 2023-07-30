@@ -95,13 +95,14 @@ class TileManager(SCSingletonConfigurable):
                 for (ix,iy) in block_selection.keys():
                     block: Block = self.tile.getDataBlock(ix, iy)
                     pdata: xa.DataArray = block.get_point_data()
+                    ufm().show(f" ... processing block {(ix,iy)}")
                     pdsum: xa.DataArray = pdata.sum( dim=str(pdata.dims[0]) )
                     npts = npts + pdata.shape[0]
                     dsum = pdsum if (dsum is None) else dsum + pdsum
                 smean: xa.DataArray = dsum/npts
                 self._mean_spectrum[bskey] = smean
                 ufm().show( f"Done Computing mean spectrum")
-            lgm().log( f"#ANOM.get_mean_spectrum({len(block_selection)} blocks)-> smean: shape={smean.shape}, stat={stat(smean)}")
+                lgm().log( f"#ANOM.get_mean_spectrum({len(block_selection)} blocks)-> smean: shape={smean.shape}, stat={stat(smean)}")
             return smean
 
     def bi2c(self, bindex: int ) -> Tuple[int,int]:
