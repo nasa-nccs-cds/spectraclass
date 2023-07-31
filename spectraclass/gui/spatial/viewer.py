@@ -1,10 +1,12 @@
 import traceback, time
 from typing import List, Union, Tuple, Optional, Dict, Type, Hashable, Callable
 import hvplot.xarray
+import traitlets as tl
 from panel.widgets.player import DiscretePlayer
 from spectraclass.learn.cluster.manager import clm
 import holoviews as hv
 from spectraclass.data.base import dm
+import traitlets.config as tlc
 from panel.layout import Panel
 from spectraclass.widgets.masks import mm, MaskManager
 from spectraclass.widgets.regions import RegionSelector, rs
@@ -60,6 +62,36 @@ def bounds( data: xa.DataArray ) -> Tuple[ Tuple[float,float], Tuple[float,float
     xlim = ( xaxis[0]-dx, xaxis[-1]+dx )
     ylim = ( yaxis[0]-dy, yaxis[-1]+dy ) if dy>0 else ( yaxis[-1]+dy, yaxis[0]-dy )
     return xlim,ylim
+
+class RGBViewer(tlc.Configurable):
+    rgb = tl.Tuple(default_value=(50,150,300)).tag(config=True, sync=True)
+
+    def __init__(self, **plotopts):
+        super(RGBViewer, self).__init__()
+        lgm().log(f" --> data shape = {self.data.shape}", print=True)
+        self.width = plotopts.get('width', 600)
+        self.height = plotopts.get('height', 500)
+        self.nbands = 0
+        self.rplayer: DiscretePlayer = DiscretePlayer(name='Red',   options=list(range(self.nbands)), value=self.rgb[0])
+        self.gplayer: DiscretePlayer = DiscretePlayer(name='Green', options=list(range(self.nbands)), value=self.rgb[1])
+        self.bplayer: DiscretePlayer = DiscretePlayer(name='Blue',  options=list(range(self.nbands)), value=self.rgb[2])
+        self.image = hv.DynamicMap( self.get_image, streams=dict( ir=self.rplayer.param.value,
+                                                                  ig=self.gplayer.param.value,
+                                                                  ib=self.bplayer.param.value ) )
+
+    def get_data(self, ir: int, ig:int, ib: int ) -> xa.DataArray:
+        return tm().tile.rgb_data( (ir,ig,ib) )
+
+    def get_image(self, ir: int, ig:int, ib: int ):
+        RGB: xa.DataArray = tm().tile.rgb_data( (ir,ig,ib), norm=True)
+        x: np.ndarray = RGB.coords['x'].values
+        y: np.ndarrayy = RGB.coords['y'].values
+        dx, dy = (x[1]-x[0])/2, (y[1]-y[0])/2
+        bounds = ( x[0]-dx, y[0]-dy, x[1]+dx, y[1]+dy )
+        return hv.RGB( RGB.values, bounds=bounds ).opts( colorbar=False )
+
+    def panel(self,**kwargs):
+        return pn.Column( self.image, self.rplayer, self.gplayer, self.bplayer )
 
 class VariableBrowser:
 
@@ -214,6 +246,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         self.browsers['bands'].verification = plotopts.pop('verification',None)
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
         self.panels.append(('satellite', tm().satellite_block_view) )
+        self.panels.append(('rgb', tm().rgb_viewer()))
         self.panels.append( ('clusters', clm().panel() ) )
         self.mapviews = pn.Tabs( *self.panels, dynamic=True )
         self.tab_watcher = self.mapviews.param.watch(self.on_tab_change, ['active'], onlychanged=True)

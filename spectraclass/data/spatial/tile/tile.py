@@ -239,8 +239,19 @@ class Tile(DataContainer):
         return data_blocks
 
     @log_timing
-    def band_data(self, iband: int ) -> np.ndarray:
-        return self.data[ iband, :, : ].to_numpy().squeeze()
+    def band_data(self, iband: int, **kwargs ) -> xa.DataArray:
+        rv = self.data[ iband, :, : ]
+        return rv
+
+    def rgb_data(self, bands: Tuple[int,int,int], **kwargs ) -> xa.DataArray:
+        norm = kwargs.get('norm',False)
+        dim = self.data.dims
+        slices: List[xa.DataArray] = [ self.data[ iband, :, : ] for iband in bands ]
+        rgb: xa.DataArray = xa.concat( slices, dim=dim[0] )
+        if norm:
+            dmin, dmax = rgb.values.min(), rgb.values.max()
+            rgb = (rgb-dmin)/(dmax-dmin)
+        return rgb.transpose( dim[1], dim[2], dim[0] )
 
     @log_timing
     def block_slice_data(self, iband: int, xbounds: Tuple[int,int], ybounds: Tuple[int,int] ) -> np.ndarray:
