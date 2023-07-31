@@ -82,7 +82,7 @@ class MLP(nn.Module):
         lgm().log(f"#MPL: DONE BUILDING NETWORK: {self.input_dims} -> {self.nclasses}")
 
     def get_dtype(self) -> np.dtype:
-        wts: np.ndarray = self._network[0].weight.detach().numpy()
+        wts: np.ndarray = self.network.weight.detach().numpy()
         return wts.dtype
 
     def init_weights(self):
