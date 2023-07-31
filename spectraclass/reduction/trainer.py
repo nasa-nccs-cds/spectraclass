@@ -164,11 +164,11 @@ class ModelTrainer(SCSingletonConfigurable):
         from spectraclass.learn.pytorch.trainer import stat
         baseline_spectrum: Optional[xa.DataArray] = kwargs.pop('baseline', None)
         result = point_data
-        if baseline_spectrum is not None:
-            sdiff: xa.DataArray = point_data - baseline_spectrum
-            result = tm().norm( sdiff )
-            lgm().log( f"#ANOM.prepare_inputs{kwargs}-> input: shape={point_data.shape}, stat={stat(point_data)}; "
-                       f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
+        # if baseline_spectrum is not None:
+        #     sdiff: xa.DataArray = point_data - baseline_spectrum
+        #     result = tm().norm( sdiff )
+        #     lgm().log( f"#ANOM.prepare_inputs{kwargs}-> input: shape={point_data.shape}, stat={stat(point_data)}; "
+        #                f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
         return result
 
     def general_training(self, iter: int, initial_epoch: int, **kwargs ):

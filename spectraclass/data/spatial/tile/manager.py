@@ -465,7 +465,7 @@ class TileManager(SCSingletonConfigurable):
         if data is not None:
             dave, dmag = np.nanmean(data.values, keepdims=True, axis=axis), np.nanstd(data.values, keepdims=True, axis=axis)
             normed_data = (data.values - dave) / dmag
-            return data.copy(data=normed_data)
+            return data.copy(data=normed_data).astype( data.dtype )
 
 
 
