@@ -81,6 +81,10 @@ class MLP(nn.Module):
         self.init_weights()
         lgm().log(f"#MPL: DONE BUILDING NETWORK: {self.input_dims} -> {self.nclasses}")
 
+    def get_dtype(self) -> np.dtype:
+        wts: np.ndarray = self._network[0].weight.detach().numpy()
+        return wts.dtype
+
     def init_weights(self):
         self._network.apply(self.weights_init_uniform_rule)
 
@@ -146,7 +150,7 @@ class MLP(nn.Module):
         return nn.Module.train(self, mode)
 
     def predict(self, data: xa.DataArray) -> xa.DataArray:
-        input: Tensor = torch.from_numpy(data.values)
+        input: Tensor = torch.from_numpy( data.values.astype( self.get_dtype() ) )
         result: np.ndarray = self.forward(input).detach().numpy()
         coords = dict( samples=data.coords['samples'], classes=np.arange(result.shape[1]) )
         return xa.DataArray(result, dims=['samples', 'classes'], coords=coords, attrs=data.attrs)
