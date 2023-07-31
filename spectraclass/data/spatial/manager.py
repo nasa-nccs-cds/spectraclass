@@ -371,7 +371,8 @@ class SpatialDataManager(ModeDataManager):
         input_bands.attrs['transform'] = [ gt[1], gt[2], gt[0], gt[4], gt[5], gt[3] ]
         lgm().log(f" --> transform: {input_bands.attrs['transform']}")
         lgm().log(f"#RG: data attrs: {list(input_bands.attrs.keys())}")
-        lgm().log(f"#RG: spatial_ref: {input_bands.spatial_ref}")
+        sref: xa.DataArray = input_bands.spatial_ref
+        lgm().log(f"#RG: spatial_ref: attrs={list(sref.attrs.keys())}, coords={list(sref.coords.keys())}, dims={sref.dims}")
         for (k, v) in input_bands.coords.items(): lgm().log(f"     ** {k}: {v.shape}, range: {(v.values.min(),v.values.max())}")
         lgm().log(f" --> coord shapes:")
 #        lgm().log("ATTRIBUTES:")
