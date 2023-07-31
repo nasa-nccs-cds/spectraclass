@@ -248,8 +248,10 @@ class Tile(DataContainer):
         dim = self.data.dims
         slices: List[xa.DataArray] = [ self.data[ iband, :, : ] for iband in bands ]
         rgb: xa.DataArray = xa.concat( slices, dim=dim[0] )
+        lgm().log( f"RGB: rgb.shape={rgb.shape}, dims={rgb.dims}")
         if norm:
             dmin, dmax = rgb.values.min(), rgb.values.max()
+            lgm().log(f"RGB: rgb dmin={dmin}, dmax={dmax}")
             rgb = (rgb-dmin)/(dmax-dmin)
         return rgb.transpose( dim[1], dim[2], dim[0] )
 
