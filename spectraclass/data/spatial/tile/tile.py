@@ -881,10 +881,11 @@ class Block(DataContainer):
             point_data = point_data if np.isnan(nodata) else point_data.where(point_data != nodata, np.nan)
 
         lgm().log(f"#FPD[{self.block_coords}]: band-filtered point_data shape = {point_data.shape}, nnan={nnan(point_data)} ")
-        smean: np.ndarray = np.nanmean( point_data.values, axis=0 )
-        for iB in range( smean.size ):
-            bmask: np.ndarray = np.isnan( point_data.values[:,iB] )
-            point_data[ bmask, iB ] = smean[iB]
+        if point_data.size > 0:
+            smean: np.ndarray = np.nanmean( point_data.values, axis=0 )
+            for iB in range( smean.size ):
+                bmask: np.ndarray = np.isnan( point_data.values[:,iB] )
+                point_data[ bmask, iB ] = smean[iB]
 
         point_data.attrs['dsid'] = base_raster.name
         lgm().log(f"#FPD[{self.block_coords}]: filtered_point_data{point_data.dims}{point_data.shape}:  "

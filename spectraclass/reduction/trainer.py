@@ -162,8 +162,7 @@ class ModelTrainer(SCSingletonConfigurable):
 
     @property
     def dtype(self):
-        W: np.ndarray = self.model.get_layer_weights(0)
-        return W.dtype
+        return self.model.dtype
 
     def general_training(self, iter: int, initial_epoch: int, **kwargs ):
         from spectraclass.data.base import DataManager, dm
