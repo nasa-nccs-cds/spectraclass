@@ -5,7 +5,6 @@ import traitlets as tl
 from panel.widgets.player import DiscretePlayer
 from spectraclass.learn.cluster.manager import clm
 import holoviews as hv
-from spectraclass.data.base import dm
 import traitlets.config as tlc
 from panel.layout import Panel
 from spectraclass.widgets.masks import mm, MaskManager
@@ -15,7 +14,6 @@ from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.gui.control import UserFeedbackManager, ufm
 from spectraclass.data.spatial.tile.manager import TileManager, tm
-from spectraclass.data.spatial.satellite import spm
 from holoviews.streams import SingleTap, DoubleTap
 import geoviews.feature as gf
 import panel as pn
@@ -278,6 +276,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
             #         new_slider.value.apply.opts( value=old_slider.value )
 
     def get_data( self, cname: str, **kwargs ) -> xa.DataArray:
+        from spectraclass.data.base import dm
         sfactor = kwargs.get('sfactor', 2.0)
         block: Block = tm().getBlock( **kwargs )
         lgm().log( f"sgui:get_data[{cname}] block = {block.index}")
@@ -300,11 +299,11 @@ class hvSpectraclassGui(SCSingletonConfigurable):
 
     @exception_handled
     def get_control_panel(self,**kwargs) -> Panel:
-        from spectraclass.data.modes import BlockSelectMode
+        from spectraclass.data.base import dm
         from spectraclass.learn.cluster.manager import clm
-        from spectraclass.gui.pointcloud import PointCloudManager, pcm
+    #    from spectraclass.gui.pointcloud import PointCloudManager, pcm
         data_selection_panel = pn.Tabs(  ("Tile", dm().modal.get_tile_selection_gui(**kwargs)) ) # , ("Block",dm().modal.gui()) ] )
-        manifold_panel = pn.Row( pcm().gui() )
+   #     manifold_panel = pn.Row( pcm().gui() )
         analytics_gui = pn.Tabs( ("Cluster", clm().gui()), ("Classify", rs().get_control_panel() ), ("Mask", mm().get_control_panel() ) )
         controls = pn.Accordion( ('Data Selection', data_selection_panel ), ('Analytics',analytics_gui), toggle=True, active=[0] ) # , ('Manifold', manifold_panel )
         return pn.Column( self.alert, controls )
