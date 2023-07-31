@@ -237,6 +237,7 @@ class SpatialDataManager(ModeDataManager):
             raw_data: Optional[xa.DataArray] = block.data
             result_dataset: Optional[xa.Dataset] = None
             if raw_data is not None:
+                raw_data.attrs['anomaly'] = int(raw_data.attrs.get('anomaly', 0))
                 try:
                     blocks_point_data = block.getBandData(norm=False)
                     lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}")
