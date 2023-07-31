@@ -86,7 +86,7 @@ class RGBViewer(tlc.Configurable):
         y: np.ndarrayy = RGB.coords['y'].values
         dx, dy = (x[1]-x[0])/2, (y[1]-y[0])/2
         bounds = ( x[0]-dx, y[0]-dy, x[1]+dx, y[1]+dy )
-        return hv.RGB( RGB.values, bounds=bounds ).opts( colorbar=False )
+        return hv.RGB( RGB.values, bounds=bounds ).opts( colorbar=False, width=self.width, height=self.height )
 
     def panel(self,**kwargs):
         return pn.Column( self.image, self.rplayer, self.gplayer, self.bplayer )
