@@ -182,6 +182,7 @@ class Tile(DataContainer):
     def __init__(self, tile_index: int, **kwargs ):
         super(Tile, self).__init__(**kwargs)
         self._blocks = {}
+        self.spatial_ref = None
         self._index = tile_index
         self.subsampling: int =  kwargs.get('subsample',1)
         self._mean = None
@@ -623,7 +624,9 @@ class Block(DataContainer):
             lgm().log( f"#ANOM.TILE.extract_input_data{kwargs}-> input: shape={point_data.shape}, stat={stat(point_data)}; "
                        f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
         result.attrs['anomaly'] = (baseline_spectrum is not None)
-        return self.points2raster(  result, coords=raw_data.coords ) if raster else result
+        if raster: result = self.points2raster(  result, coords=raw_data.coords )
+        result.attrs.update( dataset["raw"].attrs )
+        return result
 
     @exception_handled
     def getModelData(self,  **kwargs ) -> xa.DataArray:

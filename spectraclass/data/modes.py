@@ -654,6 +654,7 @@ class ModeDataManager(SCSingletonConfigurable):
                 lgm().log( f"#GID: loadDataFile: {dFile}, coords={coords}, vars={vars}" )
                 lgm().log( f"#GID:  --> coords={coords}")
                 lgm().log( f"#GID:  --> vars={vars}")
+                lgm().log( f"#GID:  --> attrs={self._current_dataset.attrs}")
                 x,y = self._current_dataset.x.values, self._current_dataset.y.values
                 lgm().log(f"#GID:  --> exent= ({x[0]},{x[-1]}) ({y[0]},{y[-1]})")
         return self._current_dataset
