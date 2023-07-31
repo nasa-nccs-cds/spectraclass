@@ -586,7 +586,7 @@ class Block(DataContainer):
     def has_data_file(self, non_empty=False ) -> bool:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         file_exists = path.isfile(self.data_file) and tm().load_block_cache
-        lgm().trace(f" BLOCK{self.block_coords}: file_exists={file_exists}, data file= {self.data_file}")
+        lgm().log(f" BLOCK{self.block_coords}: file_exists={file_exists}, data file= {self.data_file}")
         # if non_empty and file_exists:
         #     return self.has_data_samples()
         return file_exists
