@@ -31,7 +31,7 @@ def anomaly( train_data: Tensor, reproduced_data: Tensor ) -> Tensor:
 
 class ModelTrainer(SCSingletonConfigurable):
     optimizer_type = tl.Unicode(default_value="adam").tag(config=True, sync=True)
-    learning_rate = tl.Float(0.0001).tag(config=True, sync=True)
+    learning_rate = tl.Float(0.01).tag(config=True, sync=True)
     loss_threshold = tl.Float(1e-6).tag(config=True, sync=True)
     init_wts_mag = tl.Float(0.1).tag(config=True, sync=True)
     init_bias_mag = tl.Float(0.1).tag(config=True, sync=True)
