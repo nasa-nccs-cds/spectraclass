@@ -311,7 +311,6 @@ class DataManager(SCSingletonConfigurable):
         self._project_data = None
         return self._mode_data_manager_.loadCurrentProject()
 
-
     def prepare_inputs( self, **kwargs ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         print( " ---------------------------- Project Init ---------------------------- ")
