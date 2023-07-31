@@ -85,7 +85,7 @@ class RGBViewer(tlc.Configurable):
         x: np.ndarray = RGB.coords['x'].values
         y: np.ndarrayy = RGB.coords['y'].values
         dx, dy = (x[1]-x[0])/2, (y[1]-y[0])/2
-        bounds = ( x[0]-dx, y[0]-dy, x[1]+dx, y[1]+dy )
+        bounds = ( x[0]-dx, y[0]-dy, x[-1]+dx, y[-1]+dy )
         lgm().log( f"#RGB: RGB.shape={RGB.shape}, xlen={x.size}, ylen={y.size}, bounds={bounds}" ) # ", vrange={RGB.values.min}")
         return hv.RGB( RGB.values, bounds=bounds ).opts( width=self.width, height=self.height )
 
