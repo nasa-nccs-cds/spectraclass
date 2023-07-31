@@ -109,12 +109,16 @@ class DataContainer:
 
     @property
     def projection(self) -> crs.Projection:
-        wkt = self.data.spatial_ref.attrs['crs_wkt']
-        return crs.Projection(self.wkt_to_proj4(wkt))
+        return crs.Projection(self.proj4)
 
     @property
     def wkt(self) -> str:
-        return self.data.spatial_ref.attrs['crs_wkt']
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        return tm().tile.spatial_ref.attrs['crs_wkt']
+
+    @property
+    def proj4(self) -> str:
+        return self.wkt_to_proj4(self.wkt)
 
     def get_extent(self, projection: crs.Projection = None) -> Tuple[Tuple[float, float], Tuple[float, float]]:
         ext = self.extent
@@ -182,7 +186,7 @@ class Tile(DataContainer):
     def __init__(self, tile_index: int, **kwargs ):
         super(Tile, self).__init__(**kwargs)
         self._blocks = {}
-        self.spatial_ref = None
+        self.spatial_ref: xa.DataArray = None
         self._index = tile_index
         self.subsampling: int =  kwargs.get('subsample',1)
         self._mean = None
