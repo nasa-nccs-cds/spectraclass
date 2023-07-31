@@ -4,7 +4,6 @@ import xarray as xa
 from panel.layout import Panel
 import panel as pn
 import geoviews.tile_sources as gts
-from spectraclass.gui.spatial.viewer import RGBViewer
 import holoviews as hv
 from holoviews.streams import Stream, param
 import shapely.vectorized as svect
@@ -55,6 +54,7 @@ class TileManager(SCSingletonConfigurable):
     geotrans = Transformer.from_crs( f'epsg:{ESPG}', f'epsg:4326' )
 
     def __init__(self):
+        from spectraclass.gui.spatial.viewer import RGBViewer
         super(TileManager, self).__init__()
         self._tiles: Dict[str,Tile] = {}
         self._idxtiles: Dict[int, Tile] = {}
@@ -65,9 +65,6 @@ class TileManager(SCSingletonConfigurable):
         self.block_selection = BlockSelection()
         self._block_image: pn.pane.HTML = pn.pane.HTML(sizing_mode="stretch_width", width=self.map_size)
         self._rgb_viewer = RGBViewer()
-
-    def update_rgb_viewer(self):
-        pass
 
     def prepare_inputs(self, point_data: xa.DataArray, **kwargs ) -> xa.DataArray:
         from spectraclass.learn.pytorch.trainer import stat

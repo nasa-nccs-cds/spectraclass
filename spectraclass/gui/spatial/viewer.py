@@ -13,7 +13,6 @@ from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.model.labels import LabelsManager, lm
 from spectraclass.gui.control import UserFeedbackManager, ufm
-from spectraclass.data.spatial.tile.manager import TileManager, tm
 from holoviews.streams import SingleTap, DoubleTap
 import geoviews.feature as gf
 import panel as pn
@@ -66,7 +65,6 @@ class RGBViewer(tlc.Configurable):
 
     def __init__(self, **plotopts):
         super(RGBViewer, self).__init__()
-        lgm().log(f" --> data shape = {self.data.shape}", print=True)
         self.width = plotopts.get('width', 600)
         self.height = plotopts.get('height', 500)
         self.nbands = 0
@@ -78,9 +76,11 @@ class RGBViewer(tlc.Configurable):
                                                                   ib=self.bplayer.param.value ) )
 
     def get_data(self, ir: int, ig:int, ib: int ) -> xa.DataArray:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         return tm().tile.rgb_data( (ir,ig,ib) )
 
     def get_image(self, ir: int, ig:int, ib: int ):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         RGB: xa.DataArray = tm().tile.rgb_data( (ir,ig,ib), norm=True)
         x: np.ndarray = RGB.coords['x'].values
         y: np.ndarrayy = RGB.coords['y'].values
@@ -94,6 +94,7 @@ class RGBViewer(tlc.Configurable):
 class VariableBrowser:
 
     def __init__(self, cname: str, **plotopts ):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         self.cname = cname
         self._block_selection: int = None
         lgm().log( f"Creating VariableBrowser {cname}", print=True)
@@ -141,6 +142,7 @@ class VariableBrowser:
 
     @exception_handled
     def update_graph(self, x, y) -> hv.Overlay:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         lgm().log(f"DYM: update_graph")
         ts = time.time()
         block: Block = tm().getBlock()
@@ -177,6 +179,7 @@ class VariableBrowser:
         return result
 
     def update_block(self, block_selection: int ):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         if self._block_selection != block_selection:
             lgm().log(f" ------------>>>  VariableBrowser[{self.cname}].select_block: {block_selection}  <<<------------ ")
             bcoords = tm().bi2c(block_selection)
@@ -239,6 +242,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
 
     @exception_handled
     def init( self, **plotopts ):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         collections = [ "bands", 'features', "reproduction" ]
         self.browsers = { cname: VariableBrowser( cname ) for cname in collections }
         self.browsers['bands'].verification = plotopts.pop('verification',None)
@@ -256,6 +260,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         mpt().train()
 
     def add_test_markers(self, rpolys: List[Dict[str,Union[np.ndarray,int]]], **kwargs ) -> List[Marker]:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         markers = []
         for rpoly in rpolys:
             marker = tm().get_region_marker( rpoly, rpoly['ic'], **kwargs )
@@ -276,6 +281,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
             #         new_slider.value.apply.opts( value=old_slider.value )
 
     def get_data( self, cname: str, **kwargs ) -> xa.DataArray:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.data.base import dm
         sfactor = kwargs.get('sfactor', 2.0)
         block: Block = tm().getBlock( **kwargs )
