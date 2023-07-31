@@ -288,7 +288,6 @@ class SpatialDataManager(ModeDataManager):
                 npts = npts + sum.attrs['scale']
         return dsum/npts
 
-    @exception_handled
     def prepare_inputs(self, **kwargs ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         tm().autoprocess = False
