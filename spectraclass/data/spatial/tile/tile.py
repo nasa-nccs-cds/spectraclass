@@ -623,7 +623,7 @@ class Block(DataContainer):
             lgm().log( f"#ANOM.TILE.extract_input_data{kwargs}-> input: shape={point_data.shape}, stat={stat(point_data)}; "
                        f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
         result.attrs['anomaly'] = (baseline_spectrum is not None)
-        return self.points2raster(  result ) if raster else result
+        return self.points2raster(  result, coords=raw_data.coords ) if raster else result
 
     @exception_handled
     def getModelData(self,  **kwargs ) -> xa.DataArray:
@@ -848,9 +848,11 @@ class Block(DataContainer):
 
     def points2raster(self, points_data: xa.DataArray, **kwargs ) -> xa.DataArray:
         t0 = time.time()
-        dims = [points_data.dims[1], self.data.dims[1], self.data.dims[2]]
-        coords = [(dims[0], points_data[dims[0]].data), (dims[1], self.data[dims[1]].data), (dims[2], self.data[dims[2]].data)]
-        rpdata = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
+        coords = kwargs.get( 'coords', self.data.coords )
+        [x, y] = [ coords[cn].values for cn in ['x','y']]
+        dims = [ points_data.dims[1], 'y', 'x' ]
+        coords = [(dims[0], points_data[dims[0]].data), ('y', y), ('x',x)]
+        rpdata = np.full([x.size * y.size, points_data.shape[1]], float('nan'))
         lgm().log(f"#P2R points2raster:  points_data.attrs = {list(points_data.attrs.keys())}")
         self._point_mask  = points_data.attrs.get('pmask',None)
         if self._point_mask is not None:
@@ -864,7 +866,7 @@ class Block(DataContainer):
             rpdata = points_data.values.copy()
         else:
             raise Exception( f"Size mismatch: pnz={pnz}, points_data.shape={points_data.shape}, rpdata.shape={rpdata.shape}")
-        raster_data = rpdata.transpose().reshape([points_data.shape[1], self.data.shape[1], self.data.shape[2]])
+        raster_data = rpdata.transpose().reshape([points_data.shape[1], y.size, x.size])
         lgm().log( f"#P2R points->raster[{self.dsid()}], time= {time.time()-t0:.2f} sec, raster: dims={dims}, "
                    f"shape={raster_data.shape}, nnan = {np.count_nonzero(np.isnan(raster_data))}" )
         rname = kwargs.get( 'name', points_data.name )
