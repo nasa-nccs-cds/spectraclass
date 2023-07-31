@@ -47,6 +47,10 @@ class Autoencoder(nn.Module):
         self._iteration = 0
         self._log_step = kwargs.get( 'log_step', 10 )
 
+    def get_dtype(self) -> np.dtype:
+        wts: np.ndarray = self._module0.weight.detach().numpy()
+        return wts.dtype
+
     @property
     def output_dim(self):
         return self._n_species
@@ -99,11 +103,6 @@ class Autoencoder(nn.Module):
             in_features, iLayer = out_features, iLayer + 1
         self._decoder = nn.Sequential(decoder_modules)
         self.init_weights()
-
-    @property
-    def dtype(self) -> np.dtype:
-        wts: np.ndarray = self._module0.weight.detach().numpy()
-        return wts.dtype
 
     def init_weights(self):
         self._encoder.apply(self.weights_init_uniform_rule)

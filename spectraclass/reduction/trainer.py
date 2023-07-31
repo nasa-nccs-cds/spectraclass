@@ -154,15 +154,14 @@ class ModelTrainer(SCSingletonConfigurable):
             self.save(**kwargs)
 
     def reduce(self, data: xa.DataArray ) -> Tuple[xa.DataArray,xa.DataArray]:
-        reduced: Tensor = self.model.encode( data.astype(self.dtype).values, detach=False )
+        reduced: Tensor = self.model.encode( data.astype( self.get_dtype() ).values, detach=False )
         reproduction: np.ndarray = self.model.decode( reduced )
         xreduced = xa.DataArray( reduced.detach().numpy(), dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(reduced.shape[1])), attrs=data.attrs)
         xreproduction = data.copy( data=reproduction )
         return xreduced, xreproduction
 
-    @property
-    def dtype(self):
-        return self.model.dtype
+    def get_dtype(self):
+        return self.model.get_dtype()
 
     def general_training(self, iter: int, initial_epoch: int, **kwargs ):
         from spectraclass.data.base import DataManager, dm
