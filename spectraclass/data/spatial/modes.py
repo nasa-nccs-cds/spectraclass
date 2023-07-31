@@ -114,6 +114,10 @@ class NEONDataManager(SpatialDataManager):
         preprocessing_gui =  pn.WidgetBox( "### Preprocessing", pn.Row(self.parameter_table, exec_button), mt().progress.panel() )
         return pn.Row( mask_gui, preprocessing_gui )
 
+    def process_config_gui(self):
+        mask_gui = self.gui()
+        return pn.Row( mask_gui )
+
     def execute_preprocessing(self, *args ):
         self.prepare_inputs()
 
