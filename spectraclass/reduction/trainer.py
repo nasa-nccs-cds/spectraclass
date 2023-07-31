@@ -184,13 +184,14 @@ class ModelTrainer(SCSingletonConfigurable):
                     raw_point_data = block.getBandData( raster=False, class_filter=True )
                     norm_point_data = tm().prepare_inputs( raw_point_data, **kwargs )
                     if norm_point_data.shape[0] > 0:
-                        input_tensor: Tensor = torch.from_numpy( norm_point_data.values.astype(self.model.dtype) )
+                        lgm().log( f" * ITER[{iter}]: Processing block{block.block_coords}, norm data shape = {norm_point_data.shape}, dtype={norm_point_data.values.dtype}")
+                        input_tensor: Tensor = torch.from_numpy( norm_point_data.values ) # .astype(self.model.dtype) )
                         x = input_tensor.to(self.device)
                         final_epoch = initial_epoch + self.nepoch
                         for epoch  in range( initial_epoch, final_epoch ):
                             tloss, x, y_hat = self.training_step( epoch, x )
                             losses.append( tloss )
-                        lgm().log( f" * ITER[{iter}]: Processed block{block.block_coords}, norm data shape = {norm_point_data.shape}, losses = {losses[-self.nepoch:]}")
+                        lgm().log( f" ---> losses = {losses[-self.nepoch:]}")
                         initial_epoch = final_epoch
                         if self.focus_nepoch > 0:
                             final_epoch = initial_epoch + self.focus_nepoch
