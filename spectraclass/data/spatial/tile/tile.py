@@ -756,7 +756,8 @@ class Block(DataContainer):
 
     @property
     def class_mask(self) -> np.ndarray:
-        if self._point_data is None: self.createPointData()
+        if self._point_mask is None:
+            self.createPointData()
         return self._point_mask
 
     def point_coords(self)-> Dict[str, np.ndarray]:
@@ -853,7 +854,7 @@ class Block(DataContainer):
         rpdata = np.full([self.data.shape[1] * self.data.shape[2], points_data.shape[1]], float('nan'))
         lgm().log(f"#P2R points2raster:  points_data.attrs = {list(points_data.attrs.keys())}")
         self._point_mask  = points_data.attrs.get('pmask',None)
-        if self.class_mask is not None:
+        if self._point_mask is not None:
             pnz = np.count_nonzero(self.class_mask)
             lgm().log(f"#P2R --> cmask shape = {self.class_mask.shape}")
         else: pnz = -1
