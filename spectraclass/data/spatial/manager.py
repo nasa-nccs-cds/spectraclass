@@ -363,15 +363,16 @@ class SpatialDataManager(ModeDataManager):
     @exception_handled
     def readGeoTiff(self, input_file_path: str ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        input_bands = rio.open_rasterio( input_file_path )
+        input_bands: xa.DataArray = rio.open_rasterio( input_file_path )
         input_bands.attrs['long_name'] = Path(input_file_path).stem
         lgm().log( f"Completed Reading raster file {input_file_path}, dims = {input_bands.dims}, shape = {input_bands.shape}", print=True )
         tm().tile.spatial_ref = input_bands.spatial_ref
         gt = [ float(sval) for sval in input_bands.spatial_ref.GeoTransform.split() ]
         input_bands.attrs['transform'] = [ gt[1], gt[2], gt[0], gt[4], gt[5], gt[3] ]
         lgm().log(f" --> transform: {input_bands.attrs['transform']}")
-        lgm().log(f" --> coord shapes:")
+        lgm().log(f"#RG: data attrs: {list(input_bands.attrs.keys())}")
         for (k, v) in input_bands.coords.items(): lgm().log(f"     ** {k}: {v.shape}, range: {(v.values.min(),v.values.max())}")
+        lgm().log(f" --> coord shapes:")
 #        lgm().log("ATTRIBUTES:")
 #        for (k,v) in input_bands.attrs.items(): lgm().log(f" ** {k}: {v}" )
 #         nodata = input_bands.attrs.get( '_FillValue' )
