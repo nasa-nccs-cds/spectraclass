@@ -600,12 +600,13 @@ class Block(DataContainer):
         if self.has_data_file():
             dataset: xa.Dataset = dm().modal.loadDataFile( block=self )
             raw_raster = self.extract_input_data( dataset, raster=True )
-            lgm().log( f" @BLOCK{self.block_coords}---> raw data attrs = {dataset['raw'].attrs.keys()}" )
             for aid, aval in dataset.attrs.items():
                 if aid not in raw_raster.attrs:
                     raw_raster.attrs[aid] = aval
             x,y = raw_raster.x.values, raw_raster.y.values
-            lgm().log(f" @BLOCK{self.block_coords}->get_data: load-datafile raster shape={raw_raster.shape}, exent= ({x[0]},{x[-1]}) ({y[0]},{y[-1]})")
+            lgm().log(f"#LB: @BLOCK{self.block_coords}->get_data: load-datafile raster shape={raw_raster.shape}, exent= ({x[0]},{x[-1]}) ({y[0]},{y[-1]})")
+            lgm().log(f"#LB: @BLOCK{self.block_coords}---> raw data attrs = {raw_raster.attrs.keys()}")
+            lgm().log(f"#LB: @BLOCK{self.block_coords}---> dset attrs = {dataset.attrs.keys()}")
             if raw_raster.size == 0: ufm().show( "This block does not appear to have any data.", "warning" )
         return raw_raster
 
