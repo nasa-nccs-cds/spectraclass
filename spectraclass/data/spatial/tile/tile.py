@@ -223,7 +223,7 @@ class Tile(DataContainer):
     def getBlocks(self, **kwargs ) -> List["Block"]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.data.base import dm
-        block_selection: Optional[Dict] = kwargs.get( 'blocks', dm().modal.get_block_selection() )
+        block_selection: Optional[Dict] = kwargs.get( 'selection', dm().modal.get_block_selection() )
         data_blocks = []
         for ix in range(0, tm().block_dims[0]):
             for iy in range(0, tm().block_dims[1]):

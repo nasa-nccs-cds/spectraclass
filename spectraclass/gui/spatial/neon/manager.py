@@ -109,7 +109,7 @@ class BlockSelection(param.Parameterized):
 
     def fill_rect_grid(self):
         self._rect_grid = {}
-        blocks: List[Block] = tm().tile.getBlocks()
+        blocks: List[Block] = tm().tile.getBlocks( selection=None )
         for block in blocks:
             (bxlim, bylim) = block.get_extent( spm().projection )
             self.xlim = ( min(bxlim[0],self.xlim[0]), max(bxlim[1],self.xlim[1]) )
@@ -123,6 +123,7 @@ class BlockSelection(param.Parameterized):
             (bxlim, bylim) = block.get_extent(spm().projection)
             r = (bxlim[0], bylim[0], bxlim[1], bylim[1])
             self._rect_grid[block.block_coords] = r
+        lgm().log(f"TS: Create rect grid with {len(blocks)} blocks")
 
     def get_blocks_in_region(self, bounds: Dict ) -> List[Tuple]:
         blocks = []
@@ -218,9 +219,9 @@ class BlockSelection(param.Parameterized):
         if sname:
             save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
             ufm().show(f"Load Block mask '{sname}'")
-            lgm().log(f"Load Block mask '{sname}': file='{save_file}'")
             dm().modal.update_parameter( "Block Mask", sname )
             pdata: pd.DataFrame = pd.read_csv( save_file )
+            lgm().log(f"Load Block mask '{sname}': file='{save_file}', shape={pdata.shape}")
             self._selected_rectangles = {}
             for index, row in pdata.iterrows():
                 bid = (row['x'],row['y'])
