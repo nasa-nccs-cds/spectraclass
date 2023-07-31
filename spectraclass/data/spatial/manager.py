@@ -303,8 +303,9 @@ class SpatialDataManager(ModeDataManager):
                 action = "Preprocessing data blocks" if tm().reprocess else "Processing metadata"
                 lgm().log(f" {action} for image {dm().modal.image_name} with {len(blocks)} blocks.", print=True)
                 ufm().show( f"{action} for image {dm().modal.image_name}, # active blocks = {len(blocks)}" )
-                for block in blocks:
+                for bid in blocks.keys():
                     if mt().abort: return
+                    block = tm().getBlock(bindex=bid)
                     result_dataset: xa.Dataset = self.process_block( block, has_metadata, baseline=baseline_spectrum )
                     if result_dataset is not None:
                         block_sizes[ block.cindex ] = result_dataset.attrs[ 'nsamples']

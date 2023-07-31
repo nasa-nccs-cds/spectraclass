@@ -319,9 +319,9 @@ class DataManager(SCSingletonConfigurable):
         print( f" *model_dims = {dm().modal.model_dims}")
         self._mode_data_manager_.prepare_inputs( **kwargs )
 
-    @exception_handled
-    def process_block( self, block, has_metadata: bool ) -> xa.Dataset:
-        return self._mode_data_manager_.process_block( block, has_metadata )
+    # @exception_handled
+    # def process_block( self, block, has_metadata: bool ) -> xa.Dataset:
+    #     return self._mode_data_manager_.process_block( block, has_metadata )
 
     @exception_handled
     def getSpectralData( self, **kwargs ) -> Optional[xa.DataArray]:
