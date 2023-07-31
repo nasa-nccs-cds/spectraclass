@@ -848,7 +848,8 @@ class Block(DataContainer):
 
     def points2raster(self, points_data: xa.DataArray, **kwargs ) -> xa.DataArray:
         t0 = time.time()
-        coords = kwargs.get( 'coords', self.data.coords )
+        coords = kwargs.get( 'coords', None )
+        if coords is None: coords = self.data.coords
         [x, y] = [ coords[cn].values for cn in ['x','y']]
         dims = [ points_data.dims[1], 'y', 'x' ]
         coords = [(dims[0], points_data[dims[0]].data), ('y', y), ('x',x)]
