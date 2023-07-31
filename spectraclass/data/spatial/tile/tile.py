@@ -597,7 +597,7 @@ class Block(DataContainer):
         raw_raster: Optional[xa.DataArray] = None
         if self.has_data_file():
             dataset: xa.Dataset = dm().modal.loadDataFile( block=self )
-            raw_raster = self.extract_input_data( dataset )
+            raw_raster = self.extract_input_data( dataset, raster=True )
             lgm().log( f" @BLOCK{self.block_coords}---> raw data attrs = {dataset['raw'].attrs.keys()}" )
             # if self.block_coords == (0,0):
             #     lgm().trace("LOADING BLOCK (0,0):")
@@ -613,6 +613,7 @@ class Block(DataContainer):
     def extract_input_data(self, dataset: xa.Dataset, **kwargs ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.learn.pytorch.trainer import stat
+        raster = kwargs.get('raster',False)
         raw_data: xa.DataArray = tm().mask_nodata( dataset["raw"] )
         point_data = self.raster2points( raw_data, norm=True, **kwargs)
         baseline_spectrum: xa.DataArray = dataset.get('baseline', None )
@@ -623,7 +624,7 @@ class Block(DataContainer):
             lgm().log( f"#ANOM.TILE.extract_input_data{kwargs}-> input: shape={point_data.shape}, stat={stat(point_data)}; "
                        f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
         result.attrs['anomaly'] = (baseline_spectrum is not None)
-        return result
+        return self.points2raster(  result ) if raster else result
 
     @exception_handled
     def getModelData(self,  **kwargs ) -> xa.DataArray:
