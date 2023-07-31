@@ -104,7 +104,7 @@ class skActivationFlow(ActivationFlow):
         self._D: np.ndarray = D_sk.astype(np.float32)
         lgm().log(f" --->  $$$sklD: setNodeData D=> {self.D.__class__}:{self.D.dtype}", print=True)
         dt = (time.time() - t0)
-        lgm().trace( f"\nComputed NN skGraph with {self._knn_graph.n_neighbors} neighbors and {self.nodes.shape[0]} verts in {dt} sec ({dt / 60} min)\n")
+        lgm().log( f"\nComputed NN skGraph with {self._knn_graph.n_neighbors} neighbors and {self.nodes.shape[0]} verts in {dt} sec ({dt / 60} min)\n")
         ufm().show(f"Computed graph ({self.nodes.shape[0]} verts) in {dt:.1} sec.")
 
     def setNodeData(self, nodes_data: xa.DataArray ):

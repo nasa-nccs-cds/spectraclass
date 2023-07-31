@@ -44,6 +44,7 @@ class TileManager(SCSingletonConfigurable):
     block_index = tl.Tuple( default_value=(0,0) ).tag( config=True, sync=True )
     mask_class = tl.Int(0).tag( config=True, sync=True )
     autoprocess = tl.Bool(True).tag( config=True, sync=True )
+    load_block_cache = tl.Bool(True).tag( config=True, sync=True )
     anomaly = tl.Bool(False).tag(config=True, sync=True)
     reprocess = tl.Bool(False).tag( config=True, sync=True )
     image_attrs = {}

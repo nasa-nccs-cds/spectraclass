@@ -1157,7 +1157,7 @@ class cpUMAP(UMAP):
             else:
                 init = self.init
                 lgm().log(f"Running umap[{self.n_components}] with init {init}, input shape = {self._raw_data.shape}")
-#                lgm().trace( "COMPUTING UMAP" )
+#                lgm().log( "COMPUTING UMAP" )
 
         self._initial_alpha = self.learning_rate
         self._validate_parameters()

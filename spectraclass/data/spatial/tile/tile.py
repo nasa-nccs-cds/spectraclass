@@ -352,7 +352,7 @@ class Tile(DataContainer):
 class ThresholdRecord:
 
     def __init__(self, fdata: xa.DataArray, block_coords: Tuple[int,int], image_index: int ):
-        lgm().trace( f"#TR: Create ThresholdRecord[{image_index}:{block_coords}] ")
+        lgm().log( f"#TR: Create ThresholdRecord[{image_index}:{block_coords}] ")
         self._tmask: xa.DataArray = None
         self._block_coords: Tuple[int,int] = block_coords
         self._image_index: int = image_index
@@ -584,7 +584,8 @@ class Block(DataContainer):
         return file_exists
 
     def has_data_file(self, non_empty=False ) -> bool:
-        file_exists = path.isfile(self.data_file)
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        file_exists = path.isfile(self.data_file) and tm().load_block_cache
         lgm().log(f" BLOCK{self.block_coords}: file_exists={file_exists}, data file= {self.data_file}")
         # if non_empty and file_exists:
         #     return self.has_data_samples()
@@ -599,8 +600,6 @@ class Block(DataContainer):
             dataset: xa.Dataset = dm().modal.loadDataFile( block=self )
             raw_raster = self.extract_input_data( dataset, raster=True )
             lgm().log( f" @BLOCK{self.block_coords}---> raw data attrs = {dataset['raw'].attrs.keys()}" )
-            # if self.block_coords == (0,0):
-            #     lgm().trace("LOADING BLOCK (0,0):")
             for aid, aval in dataset.attrs.items():
                 if aid not in raw_raster.attrs:
                     raw_raster.attrs[aid] = aval
