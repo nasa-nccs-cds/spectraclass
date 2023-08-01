@@ -349,10 +349,10 @@ class NEONTileSelector:
                 elif dm().selection_mode == BlockSelectMode.CreateMask:
                     cluster_panel = self.get_cluster_panel()
                     satellite_panel = self.get_satellite_panel()
-                    viz_panels = pn.Tabs( ("select", image * self.region_selection),
-                                          ("cluster", cluster_panel),
-                                          ("satellite", satellite_panel),
-                                          ("rgb", tm().rgb_viewer()) )
+                    viz_panels = pn.Tabs(("select", image * self.region_selection),
+                                         ("cluster", cluster_panel),
+                                         ("satellite", satellite_panel),
+                                         ("rgb", tm().rgbviewer()))
                     return pn.Row( viz_panels, selection_panel )
 
 

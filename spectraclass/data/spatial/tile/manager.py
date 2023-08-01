@@ -64,7 +64,7 @@ class TileManager(SCSingletonConfigurable):
         self._scale: Tuple[np.ndarray,np.ndarray] = None
         self.block_selection = BlockSelection()
         self._block_image: pn.pane.HTML = pn.pane.HTML(sizing_mode="stretch_width", width=self.map_size)
-        self._rgb_viewer = RGBViewer()
+        self.rgbviewer = RGBViewer()
 
     def prepare_inputs(self, point_data: xa.DataArray, **kwargs ) -> xa.DataArray:
         from spectraclass.learn.pytorch.trainer import stat
@@ -150,7 +150,7 @@ class TileManager(SCSingletonConfigurable):
         return self._block_image
 
     def rgb_viewer(self,**kwargs) -> Panel:
-        return self._rgb_viewer.panel(**kwargs)
+        return self.rgbviewer.panel(**kwargs)
 
     @classmethod
     def encode( cls, obj ) -> str:
