@@ -109,7 +109,9 @@ class RGBViewer(tlc.Configurable):
         return hv.RGB( RGB.values, bounds=bounds ).opts( width=self.width, height=self.height )
 
     def panel(self,**kwargs):
-        return pn.Column( self.image*self.selection_dmap, self.point_graph, self.rplayer, self.gplayer, self.bplayer )
+        return pn.Column( self.image, self.rplayer, self.gplayer, self.bplayer )
+
+    #    return pn.Column( self.image*self.selection_dmap, self.point_graph, self.rplayer, self.gplayer, self.bplayer )
 
 class VariableBrowser:
 
