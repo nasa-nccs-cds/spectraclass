@@ -69,9 +69,13 @@ class RGBViewer(tlc.Configurable):
         self.width = plotopts.get('width', 600)
         self.height = plotopts.get('height', 500)
 
-    def init_gui(self,**kwargs):
+    @property
+    def bands(self) -> np.ndarray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        bmax = tm().tile.data.bands.values.max()
+        return tm().tile.data.band.values
+
+    def init_gui(self,**kwargs):
+        bmax = self.bands.max()
         self.tap_stream = SingleTap( transient=True )
         self.selection_dmap = hv.DynamicMap( self.select_points, streams=[self.tap_stream] )
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream] )

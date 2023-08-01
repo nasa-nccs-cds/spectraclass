@@ -243,7 +243,7 @@ class Tile(DataContainer):
         return self.data[ iband, :, : ]
 
     def band2index(self, iband: int ) -> int:
-        bands: np.ndarray = self.data.bands.values
+        bands: np.ndarray = self.data.band.values
         return (np.abs(bands - iband)).argmin()
 
     def rgb_data(self, bands: Tuple[int,int,int] ) -> xa.DataArray:
