@@ -235,7 +235,7 @@ class Tile(DataContainer):
                 if (block_selection is None) or ((ix,iy) in block_selection):
                     data_blocks.append( self.getDataBlock( ix, iy, **kwargs )  )
         lgm().log( f"getBlocks: tile_shape[x,y]={tm().tile_shape},  block_dims[x,y]={tm().block_dims}, "
-                   f"raster_shape={tm().tile.data.shape}, nblocks active = {len(data_blocks)}")
+                   f"raster_shape={self.data.shape}, nblocks active = {len(data_blocks)}")
         return data_blocks
 
     @log_timing
