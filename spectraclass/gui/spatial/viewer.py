@@ -192,7 +192,8 @@ class VariableBrowser:
 
         if (self.current_curve_data is not None) and (self.current_curve_data[0] > 0):
             self.curves.append( self.current_curve_data[1].opts(line_width=1) )
-        current_curve = hv.Curve(graph_data).opts(line_width=3, line_color = line_color, **popts)
+        data_table: hv.Table = hv.Table((graph_data.band.values, graph_data.values), 'Band', 'Spectral Value')
+        current_curve = hv.Curve(data_table).opts(line_width=3, line_color = line_color, **popts)
         self.current_curve_data = ( lm().current_cid, current_curve )
         new_curves = [ current_curve ]
         t1 = time.time()
@@ -203,7 +204,8 @@ class VariableBrowser:
                       f"range={crange(graph_data,0)}, vange={arange(graph_data)}")
             lgm().log( f"V%% [{self.cname}] verification_data shape={graph_data.shape}, dims={verification_data.dims}, "
                        f"range={crange(verification_data,0)}, vange={arange(verification_data)}" )
-            verification_curve = hv.Curve( verification_data ).opts( line_width=1, line_color='grey', **popts )
+            verification_table: hv.Table = hv.Table((verification_data.band.values, verification_data.values), 'Band', 'Spectral Value')
+            verification_curve = hv.Curve( verification_table ).opts( line_width=1, line_color='grey', **popts )
             new_curves.append( verification_curve )
         t2 = time.time()
         updated_curves = self.curves + new_curves
