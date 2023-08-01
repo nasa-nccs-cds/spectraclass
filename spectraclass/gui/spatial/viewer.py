@@ -64,16 +64,35 @@ class RGBViewer(tlc.Configurable):
     rgb = tl.Tuple(default_value=(50,150,300)).tag(config=True, sync=True)
 
     def __init__(self, **plotopts):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         super(RGBViewer, self).__init__()
         self.width = plotopts.get('width', 600)
         self.height = plotopts.get('height', 500)
-        self.nbands = 0
+        self.nbands = tm().count_nbands()
+        self.tap_stream = SingleTap( transient=True )
+        self.selection_dmap = hv.DynamicMap( self.select_points, streams=[self.tap_stream] )
+        self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream] )
         self.rplayer: DiscretePlayer = DiscretePlayer(name='Red',   options=list(range(self.nbands)), value=self.rgb[0])
         self.gplayer: DiscretePlayer = DiscretePlayer(name='Green', options=list(range(self.nbands)), value=self.rgb[1])
         self.bplayer: DiscretePlayer = DiscretePlayer(name='Blue',  options=list(range(self.nbands)), value=self.rgb[2])
         self.image = hv.DynamicMap( self.get_image, streams=dict( ir=self.rplayer.param.value,
                                                                   ig=self.gplayer.param.value,
                                                                   ib=self.bplayer.param.value ) )
+
+    @exception_handled
+    def select_points(self, x, y):
+        result = hv.Points([(x,y)]).opts(marker='+', size=12, line_width=3, angle=45, color='white')
+        return result
+
+    @exception_handled
+    def update_graph(self, x, y) -> hv.Overlay:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        block: Block = tm().getBlock()
+        graph_data: xa.DataArray = block.filtered_raster_data.sel(x=x, y=y, method="nearest")
+        lgm().log( f"V%% Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, dims={graph_data.dims}, range={arange(graph_data)}")
+        popts = dict(width=self.width, height=200, yaxis="bare", ylim=(-3, 3), alpha=0.6)
+        current_curve = hv.Curve(graph_data).opts(line_width=3, line_color="black", **popts)
+        return current_curve
 
     def get_data(self, ir: int, ig:int, ib: int ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
@@ -90,7 +109,7 @@ class RGBViewer(tlc.Configurable):
         return hv.RGB( RGB.values, bounds=bounds ).opts( width=self.width, height=self.height )
 
     def panel(self,**kwargs):
-        return pn.Column( self.image, self.rplayer, self.gplayer, self.bplayer )
+        return pn.Column( self.image*self.selection_dmap, self.point_graph, self.rplayer, self.gplayer, self.bplayer )
 
 class VariableBrowser:
 
