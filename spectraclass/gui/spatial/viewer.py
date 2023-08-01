@@ -2,7 +2,7 @@ import traceback, time
 from typing import List, Union, Tuple, Optional, Dict, Type, Hashable, Callable
 import hvplot.xarray
 import traitlets as tl
-from panel.widgets.player import DiscretePlayer
+from panel.widgets import IntSlider
 from spectraclass.learn.cluster.manager import clm
 import holoviews as hv
 import traitlets.config as tlc
@@ -75,12 +75,21 @@ class RGBViewer(tlc.Configurable):
         self.tap_stream = SingleTap( transient=True )
         self.selection_dmap = hv.DynamicMap( self.select_points, streams=[self.tap_stream] )
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream] )
-        self.rplayer: DiscretePlayer = DiscretePlayer(name='Red',   options=list(range(nbands)), value=self.rgb[0])
-        self.gplayer: DiscretePlayer = DiscretePlayer(name='Green', options=list(range(nbands)), value=self.rgb[1])
-        self.bplayer: DiscretePlayer = DiscretePlayer(name='Blue',  options=list(range(nbands)), value=self.rgb[2])
+        self.rplayer: IntSlider = IntSlider( name='Red',   start=0, end=nbands, value=self.rgb[0] )
+        self.gplayer: IntSlider = IntSlider( name='Green', start=0, end=nbands, value=self.rgb[1] )
+        self.bplayer: IntSlider = IntSlider( name='Blue',  start=0, end=nbands, value=self.rgb[2] )
         self.image = hv.DynamicMap( self.get_image, streams=dict( ir=self.rplayer.param.value,
                                                                   ig=self.gplayer.param.value,
                                                                   ib=self.bplayer.param.value ) )
+        self.band_markers = hv.DynamicMap( self.get_band_markers, streams=dict( ir=self.rplayer.param.value,
+                                                                                ig=self.gplayer.param.value,
+                                                                                ib=self.bplayer.param.value ) )
+
+    def get_band_markers(self, ir: int, ig: int, ib: int ) -> hv.Overlay:
+        rm = hv.HLine(ir).opts(color="red")
+        gm = hv.HLine(ig).opts(color="green")
+        bm = hv.HLine(ib).opts(color="blue")
+        return hv.Overlay(rm,gm,bm)
 
     @exception_handled
     def select_points(self, x, y):
@@ -89,10 +98,10 @@ class RGBViewer(tlc.Configurable):
 
     @exception_handled
     def update_graph(self, x, y) -> hv.Overlay:
+        from spectraclass.learn.pytorch.trainer import stat
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        block: Block = tm().getBlock()
-        graph_data: xa.DataArray = block.filtered_raster_data.sel(x=x, y=y, method="nearest")
-        lgm().log( f"V%% Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, dims={graph_data.dims}, range={arange(graph_data)}")
+        graph_data: xa.DataArray = tm().tile.data.sel(x=x, y=y, method="nearest")
+        lgm().log( f"V%% Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, dims={graph_data.dims}, stat={stat(graph_data)}")
         popts = dict(width=self.width, height=200, yaxis="bare", ylim=(-3, 3), alpha=0.6)
         current_curve = hv.Curve(graph_data).opts(line_width=3, line_color="black", **popts)
         return current_curve
@@ -113,7 +122,7 @@ class RGBViewer(tlc.Configurable):
 
     def panel(self,**kwargs):
         self.init_gui(**kwargs)
-        return pn.Column( self.image*self.selection_dmap, self.point_graph, self.rplayer, self.gplayer, self.bplayer )
+        return pn.Column( self.image*self.selection_dmap, self.point_graph*self.band_markers, self.rplayer, self.gplayer, self.bplayer )
 
 class VariableBrowser:
 
