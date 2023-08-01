@@ -244,7 +244,7 @@ class Tile(DataContainer):
         return rv
 
     def rgb_data(self, bands: Tuple[int,int,int], **kwargs ) -> xa.DataArray:
-        norm = kwargs.get('norm',False)
+        norm = kwargs.get('norm',True)
         dim = self.data.dims
         slices: List[xa.DataArray] = [ self.data[ iband, :, : ] for iband in bands ]
         rgb: xa.DataArray = xa.concat( slices, dim=dim[0] )

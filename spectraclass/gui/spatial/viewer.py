@@ -71,7 +71,7 @@ class RGBViewer(tlc.Configurable):
 
     def init_gui(self,**kwargs):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        nbands = tm().count_nbands()
+        nbands = tm().tile.data.shape[0]
         self.tap_stream = SingleTap( transient=True )
         self.selection_dmap = hv.DynamicMap( self.select_points, streams=[self.tap_stream] )
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream] )
