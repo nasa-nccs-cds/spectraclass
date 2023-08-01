@@ -238,22 +238,21 @@ class Tile(DataContainer):
                    f"raster_shape={self.data.shape}, nblocks active = {len(data_blocks)}")
         return data_blocks
 
-    @log_timing
-    def band_data(self, iband: int, **kwargs ) -> xa.DataArray:
-        rv = self.data[ iband, :, : ]
-        return rv
+    def band_data(self, iband: int ) -> xa.DataArray:
+        iband = self.band2index(iband)
+        return self.data[ iband, :, : ]
+
+    def band2index(self, iband: int ) -> int:
+        bands: np.ndarray = self.data.bands.values
+        return (np.abs(bands - iband)).argmin()
 
     def rgb_data(self, bands: Tuple[int,int,int] ) -> xa.DataArray:
         dim = self.data.dims
-        slices: List[xa.DataArray] = [ self.data[ iband, :, : ] for iband in bands ]
+        slices: List[xa.DataArray] = [ self.band_data(iband)  for iband in bands ]
         rgb: xa.DataArray = xa.concat( slices, dim=dim[0] )
         lgm().log( f"#RGB: data.shape={self.data.shape}, rgb.shape={rgb.shape}, dims={rgb.dims}")
         ndata = rgb / np.max( np.nan_to_num( rgb.values, nan=0 ) )
         return rgb.copy( data=ndata ).transpose( dim[1], dim[2], dim[0] )
-
-    @log_timing
-    def block_slice_data(self, iband: int, xbounds: Tuple[int,int], ybounds: Tuple[int,int] ) -> np.ndarray:
-        return self.data[ iband, ybounds[0]:ybounds[1], xbounds[0]:xbounds[1] ].to_numpy().squeeze()
 
     # @log_timing
     # def saveMetadata_preread( self ):

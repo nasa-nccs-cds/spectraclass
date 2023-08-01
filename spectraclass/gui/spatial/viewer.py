@@ -71,13 +71,13 @@ class RGBViewer(tlc.Configurable):
 
     def init_gui(self,**kwargs):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        nbands = tm().tile.data.shape[0]
+        bmax = tm().tile.data.bands.values.max()
         self.tap_stream = SingleTap( transient=True )
         self.selection_dmap = hv.DynamicMap( self.select_points, streams=[self.tap_stream] )
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream] )
-        self.rplayer: IntSlider = IntSlider( name='Red',   start=0, end=nbands, value=self.rgb[0] )
-        self.gplayer: IntSlider = IntSlider( name='Green', start=0, end=nbands, value=self.rgb[1] )
-        self.bplayer: IntSlider = IntSlider( name='Blue',  start=0, end=nbands, value=self.rgb[2] )
+        self.rplayer: IntSlider = IntSlider( name='Red',   start=0, end=bmax, value=self.rgb[0] )
+        self.gplayer: IntSlider = IntSlider( name='Green', start=0, end=bmax, value=self.rgb[1] )
+        self.bplayer: IntSlider = IntSlider( name='Blue',  start=0, end=bmax, value=self.rgb[2] )
         self.image = hv.DynamicMap( self.get_image, streams=dict( ir=self.rplayer.param.value,
                                                                   ig=self.gplayer.param.value,
                                                                   ib=self.bplayer.param.value ) )
@@ -85,10 +85,10 @@ class RGBViewer(tlc.Configurable):
                                                                                 ig=self.gplayer.param.value,
                                                                                 ib=self.bplayer.param.value ) )
 
-    def get_band_markers(self, ir: int, ig: int, ib: int ) -> hv.Overlay:
-        rm = hv.VLine(ir).opts(color="red")
-        gm = hv.VLine(ig).opts(color="green")
-        bm = hv.VLine(ib).opts(color="blue")
+    def get_band_markers(self, br: int, bg: int, bb: int ) -> hv.Overlay:
+        rm = hv.VLine(br).opts(color="red")
+        gm = hv.VLine(bg).opts(color="green")
+        bm = hv.VLine(bb).opts(color="blue")
         return hv.Overlay( [rm,gm,bm] )
 
     @exception_handled
@@ -106,23 +106,23 @@ class RGBViewer(tlc.Configurable):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         graph_data: xa.DataArray = self.band_norm( tm().tile.data.sel(x=x, y=y, method="nearest") )
         lgm().log( f"#RGB: Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, dims={graph_data.dims}, stat={stat(graph_data)}")
-        popts = dict(width=self.width, height=200, yaxis="bare", ylim=(-3, 3), alpha=0.6)
+        popts = dict( width=self.width, height=200, yaxis="bare", ylim=(0,1.0) )
         data_table: hv.Table = hv.Table((graph_data.band.values, graph_data.values), 'Band', 'Spectral Value')
-        current_curve = hv.Curve(data_table).opts(line_width=3, line_color="black", **popts)
+        current_curve = hv.Curve(data_table).opts(line_width=1, line_color="black", **popts)
         return current_curve
 
-    def get_data(self, ir: int, ig:int, ib: int ) -> xa.DataArray:
+    def get_data(self, br: int, bg:int, bb: int ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        return tm().tile.rgb_data( (ir,ig,ib) )
+        return tm().tile.rgb_data( (br,bg,bb) )
 
-    def get_image(self, ir: int, ig:int, ib: int ):
+    def get_image(self, br: int, bg:int, bb: int ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        RGB: xa.DataArray = tm().tile.rgb_data( (ir,ig,ib) )
+        RGB: xa.DataArray = self.get_data(br, bg, bb)
         x: np.ndarray = RGB.coords['x'].values
         y: np.ndarrayy = RGB.coords['y'].values
         dx, dy = (x[1]-x[0])/2, (y[1]-y[0])/2
         bounds = ( x[0]-dx, y[0]-dy, x[-1]+dx, y[-1]+dy )
-        lgm().log( f"#RGB({ir},{ig},{ib}): RGB.shape={RGB.shape}, nbands={tm().tile.data.shape[0]}, xlen={x.size}, ylen={y.size}, bounds={bounds}" ) # ", vrange={RGB.values.min}")
+        lgm().log( f"#RGB({br},{bg},{bb}): RGB.shape={RGB.shape}, nbands={tm().tile.data.shape[0]}, xlen={x.size}, ylen={y.size}, bounds={bounds}" ) # ", vrange={RGB.values.min}")
         return hv.RGB( RGB.values, bounds=bounds ).opts( width=self.width, height=self.height )
 
     def panel(self,**kwargs):
