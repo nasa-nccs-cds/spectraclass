@@ -101,9 +101,10 @@ class RGBViewer(tlc.Configurable):
         from spectraclass.learn.pytorch.trainer import stat
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         graph_data: xa.DataArray = tm().norm( tm().tile.data.sel(x=x, y=y, method="nearest"), axis=0 )
-        lgm().log( f"V%% Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, dims={graph_data.dims}, stat={stat(graph_data)}")
+        lgm().log( f"#RGB: Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, dims={graph_data.dims}, stat={stat(graph_data)}")
         popts = dict(width=self.width, height=200, yaxis="bare", ylim=(-3, 3), alpha=0.6)
-        current_curve = hv.Curve(graph_data).opts(line_width=3, line_color="black", **popts)
+        gpoints = enumerate( graph_data.values )
+        current_curve = hv.Curve(gpoints).opts(line_width=3, line_color="black", **popts)
         return current_curve
 
     def get_data(self, ir: int, ig:int, ib: int ) -> xa.DataArray:
@@ -117,7 +118,7 @@ class RGBViewer(tlc.Configurable):
         y: np.ndarrayy = RGB.coords['y'].values
         dx, dy = (x[1]-x[0])/2, (y[1]-y[0])/2
         bounds = ( x[0]-dx, y[0]-dy, x[-1]+dx, y[-1]+dy )
-        lgm().log( f"#RGB: RGB.shape={RGB.shape}, xlen={x.size}, ylen={y.size}, bounds={bounds}" ) # ", vrange={RGB.values.min}")
+        lgm().log( f"#RGB({ir},{ig},{ib}): RGB.shape={RGB.shape}, nbands={tm().tile.data.shape[0]}, xlen={x.size}, ylen={y.size}, bounds={bounds}" ) # ", vrange={RGB.values.min}")
         return hv.RGB( RGB.values, bounds=bounds ).opts( width=self.width, height=self.height )
 
     def panel(self,**kwargs):
