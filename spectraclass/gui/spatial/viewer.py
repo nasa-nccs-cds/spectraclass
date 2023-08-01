@@ -64,17 +64,20 @@ class RGBViewer(tlc.Configurable):
     rgb = tl.Tuple(default_value=(50,150,300)).tag(config=True, sync=True)
 
     def __init__(self, **plotopts):
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
+
         super(RGBViewer, self).__init__()
         self.width = plotopts.get('width', 600)
         self.height = plotopts.get('height', 500)
-        self.nbands = tm().count_nbands()
+
+    def init_gui(self,**kwargs):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        nbands = tm().count_nbands()
         self.tap_stream = SingleTap( transient=True )
         self.selection_dmap = hv.DynamicMap( self.select_points, streams=[self.tap_stream] )
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream] )
-        self.rplayer: DiscretePlayer = DiscretePlayer(name='Red',   options=list(range(self.nbands)), value=self.rgb[0])
-        self.gplayer: DiscretePlayer = DiscretePlayer(name='Green', options=list(range(self.nbands)), value=self.rgb[1])
-        self.bplayer: DiscretePlayer = DiscretePlayer(name='Blue',  options=list(range(self.nbands)), value=self.rgb[2])
+        self.rplayer: DiscretePlayer = DiscretePlayer(name='Red',   options=list(range(nbands)), value=self.rgb[0])
+        self.gplayer: DiscretePlayer = DiscretePlayer(name='Green', options=list(range(nbands)), value=self.rgb[1])
+        self.bplayer: DiscretePlayer = DiscretePlayer(name='Blue',  options=list(range(nbands)), value=self.rgb[2])
         self.image = hv.DynamicMap( self.get_image, streams=dict( ir=self.rplayer.param.value,
                                                                   ig=self.gplayer.param.value,
                                                                   ib=self.bplayer.param.value ) )
@@ -109,6 +112,7 @@ class RGBViewer(tlc.Configurable):
         return hv.RGB( RGB.values, bounds=bounds ).opts( width=self.width, height=self.height )
 
     def panel(self,**kwargs):
+        self.init_gui(**kwargs)
         return pn.Column( self.image, self.rplayer, self.gplayer, self.bplayer )
 
     #    return pn.Column( self.image*self.selection_dmap, self.point_graph, self.rplayer, self.gplayer, self.bplayer )
