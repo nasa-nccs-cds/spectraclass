@@ -75,7 +75,7 @@ class RGBViewer(tlc.Configurable):
         return tm().tile.data.band.values
 
     def init_gui(self,**kwargs):
-        bmax = self.bands.max()
+        bmax = int(self.bands[-1])
         self.tap_stream = SingleTap( transient=True )
         self.selection_dmap = hv.DynamicMap( self.select_points, streams=[self.tap_stream] )
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream] )
