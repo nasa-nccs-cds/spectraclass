@@ -96,11 +96,15 @@ class RGBViewer(tlc.Configurable):
         result = hv.Points([(x,y)]).opts(marker='+', size=12, line_width=3, angle=45, color='white')
         return result
 
+    def band_norm(self, data: xa.DataArray ) -> xa.DataArray:
+        ndata = data / np.max( np.nan_to_num( data.values, nan=0 ) )
+        return data.copy( data=ndata )
+
     @exception_handled
     def update_graph(self, x, y) -> hv.Curve:
         from spectraclass.learn.pytorch.trainer import stat
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        graph_data: xa.DataArray = tm().norm( tm().tile.data.sel(x=x, y=y, method="nearest"), axis=0 )
+        graph_data: xa.DataArray = self.band_norm( tm().tile.data.sel(x=x, y=y, method="nearest") )
         lgm().log( f"#RGB: Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, dims={graph_data.dims}, stat={stat(graph_data)}")
         popts = dict(width=self.width, height=200, yaxis="bare", ylim=(-3, 3), alpha=0.6)
         data_table: hv.Table = hv.Table((graph_data.band.values, graph_data.values), 'Band', 'Spectral Value')
@@ -113,7 +117,7 @@ class RGBViewer(tlc.Configurable):
 
     def get_image(self, ir: int, ig:int, ib: int ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        RGB: xa.DataArray = tm().tile.rgb_data( (ir,ig,ib), norm=True)
+        RGB: xa.DataArray = tm().tile.rgb_data( (ir,ig,ib) )
         x: np.ndarray = RGB.coords['x'].values
         y: np.ndarrayy = RGB.coords['y'].values
         dx, dy = (x[1]-x[0])/2, (y[1]-y[0])/2
@@ -177,7 +181,6 @@ class VariableBrowser:
     @exception_handled
     def update_graph(self, x, y) -> hv.Overlay:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        lgm().log(f"DYM: update_graph")
         ts = time.time()
         block: Block = tm().getBlock()
         graph_data: xa.DataArray = block.filtered_raster_data.sel(x=x, y=y, method="nearest")

@@ -243,17 +243,13 @@ class Tile(DataContainer):
         rv = self.data[ iband, :, : ]
         return rv
 
-    def rgb_data(self, bands: Tuple[int,int,int], **kwargs ) -> xa.DataArray:
-        norm = kwargs.get('norm',True)
+    def rgb_data(self, bands: Tuple[int,int,int] ) -> xa.DataArray:
         dim = self.data.dims
         slices: List[xa.DataArray] = [ self.data[ iband, :, : ] for iband in bands ]
         rgb: xa.DataArray = xa.concat( slices, dim=dim[0] )
         lgm().log( f"#RGB: data.shape={self.data.shape}, rgb.shape={rgb.shape}, dims={rgb.dims}")
-        if norm:
-            dmin, dmax = np.nanmin(rgb.values), np.nanmax(rgb.values)
-            lgm().log(f"#RGB: rgb dmin={dmin}, dmax={dmax}")
-            rgb = (rgb-dmin)/(dmax-dmin)
-        return rgb.transpose( dim[1], dim[2], dim[0] )
+        ndata = rgb / np.max( np.nan_to_num( rgb.values, nan=0 ) )
+        return rgb.copy( data=ndata ).transpose( dim[1], dim[2], dim[0] )
 
     @log_timing
     def block_slice_data(self, iband: int, xbounds: Tuple[int,int], ybounds: Tuple[int,int] ) -> np.ndarray:
