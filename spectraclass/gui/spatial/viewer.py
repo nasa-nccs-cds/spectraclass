@@ -103,7 +103,8 @@ class RGBViewer(tlc.Configurable):
         graph_data: xa.DataArray = tm().norm( tm().tile.data.sel(x=x, y=y, method="nearest"), axis=0 )
         lgm().log( f"#RGB: Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, dims={graph_data.dims}, stat={stat(graph_data)}")
         popts = dict(width=self.width, height=200, yaxis="bare", ylim=(-3, 3), alpha=0.6)
-        gpoints = enumerate( graph_data.values )
+        gpoints = list(enumerate( graph_data.values ))
+        lgm().log(f"#RGB: gpoints[:10] = {gpoints[:10]}")
         current_curve = hv.Curve(gpoints).opts(line_width=3, line_color="black", **popts)
         return current_curve
 
