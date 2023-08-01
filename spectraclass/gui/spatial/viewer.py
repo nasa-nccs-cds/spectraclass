@@ -82,12 +82,12 @@ class RGBViewer(tlc.Configurable):
         self.rplayer: IntSlider = IntSlider( name='Red',   start=0, end=bmax, value=self.rgb[0] )
         self.gplayer: IntSlider = IntSlider( name='Green', start=0, end=bmax, value=self.rgb[1] )
         self.bplayer: IntSlider = IntSlider( name='Blue',  start=0, end=bmax, value=self.rgb[2] )
-        self.image = hv.DynamicMap( self.get_image, streams=dict( ir=self.rplayer.param.value,
-                                                                  ig=self.gplayer.param.value,
-                                                                  ib=self.bplayer.param.value ) )
-        self.band_markers = hv.DynamicMap( self.get_band_markers, streams=dict( ir=self.rplayer.param.value,
-                                                                                ig=self.gplayer.param.value,
-                                                                                ib=self.bplayer.param.value ) )
+        self.image = hv.DynamicMap( self.get_image, streams=dict( br=self.rplayer.param.value,
+                                                                  bg=self.gplayer.param.value,
+                                                                  bb=self.bplayer.param.value ) )
+        self.band_markers = hv.DynamicMap( self.get_band_markers, streams=dict( br=self.rplayer.param.value,
+                                                                                bg=self.gplayer.param.value,
+                                                                                bb=self.bplayer.param.value ) )
 
     def get_band_markers(self, br: int, bg: int, bb: int ) -> hv.Overlay:
         rm = hv.VLine(br).opts(color="red")
