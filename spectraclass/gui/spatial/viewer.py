@@ -86,10 +86,10 @@ class RGBViewer(tlc.Configurable):
                                                                                 ib=self.bplayer.param.value ) )
 
     def get_band_markers(self, ir: int, ig: int, ib: int ) -> hv.Overlay:
-        rm = hv.HLine(ir).opts(color="red")
-        gm = hv.HLine(ig).opts(color="green")
-        bm = hv.HLine(ib).opts(color="blue")
-        return hv.Overlay(rm,gm,bm)
+        rm = hv.VLine(ir).opts(color="red")
+        gm = hv.VLine(ig).opts(color="green")
+        bm = hv.VLine(ib).opts(color="blue")
+        return hv.Overlay( [rm,gm,bm] )
 
     @exception_handled
     def select_points(self, x, y):
@@ -97,7 +97,7 @@ class RGBViewer(tlc.Configurable):
         return result
 
     @exception_handled
-    def update_graph(self, x, y) -> hv.Overlay:
+    def update_graph(self, x, y) -> hv.Curve:
         from spectraclass.learn.pytorch.trainer import stat
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         graph_data: xa.DataArray = tm().tile.data.sel(x=x, y=y, method="nearest")
