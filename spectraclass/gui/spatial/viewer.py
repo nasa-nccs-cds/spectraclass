@@ -100,7 +100,7 @@ class RGBViewer(tlc.Configurable):
     def update_graph(self, x, y) -> hv.Curve:
         from spectraclass.learn.pytorch.trainer import stat
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        graph_data: xa.DataArray = tm().norm( tm().tile.data.sel(x=x, y=y, method="nearest") )
+        graph_data: xa.DataArray = tm().norm( tm().tile.data.sel(x=x, y=y, method="nearest"), axis=0 )
         lgm().log( f"V%% Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, dims={graph_data.dims}, stat={stat(graph_data)}")
         popts = dict(width=self.width, height=200, yaxis="bare", ylim=(-3, 3), alpha=0.6)
         current_curve = hv.Curve(graph_data).opts(line_width=3, line_color="black", **popts)
