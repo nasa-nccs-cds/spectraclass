@@ -109,7 +109,7 @@ class RGBViewer(param.Parameterized):
         return data.copy( data=ndata )
 
     def set_image_bounds(self, block: Block ):
-        bounds: Tuple[float, float, float, float ] = block.bounds()
+        bounds: Tuple[float, float, float, float] = block.bounds()
         lgm().log( f"#RGB: set_image_bounds={bounds}")
         self.bounds = bounds
 
@@ -128,6 +128,7 @@ class RGBViewer(param.Parameterized):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         return tm().tile.rgb_data( (br,bg,bb) )
 
+    @exception_handled
     def get_image(self, br: int, bg:int, bb: int, bounds: Tuple[float,float,float,float] ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         RGB: xa.DataArray = self.get_data(br, bg, bb)
@@ -136,7 +137,9 @@ class RGBViewer(param.Parameterized):
             y: np.ndarrayy = RGB.coords['y'].values
             dx, dy = (x[1]-x[0])/2, (y[1]-y[0])/2
             bounds = ( x[0]-dx, y[0]-dy, x[-1]+dx, y[-1]+dy )
-        lgm().log( f"#RGB({br},{bg},{bb}): RGB.shape={RGB.shape}, nbands={tm().tile.data.shape[0]}, xlen={x.size}, ylen={y.size}, bounds={bounds}" ) # ", vrange={RGB.values.min}")
+            lgm().log( f"#RGB({br},{bg},{bb}): RGB.shape={RGB.shape}, nbands={tm().tile.data.shape[0]}, xlen={x.size}, ylen={y.size}, bounds={bounds}" )
+        else:
+            lgm().log( f"#RGB({br},{bg},{bb}): RGB.shape={RGB.shape}, nbands={tm().tile.data.shape[0]}, bounds={bounds}")
         return hv.RGB( RGB.values, bounds=bounds ).opts( width=self.width, height=self.height )
 
     def panel(self,**kwargs):
