@@ -445,7 +445,8 @@ class Block(DataContainer):
 
     def bounds(self, crs: str = "native" ) -> Tuple[ float,float,float,float ]:
         if crs == "native":
-            return self.extent
+            x0, x1, y0, y1 = self.extent
+            return (x0, y0, x1, y1)
         else:
             if self._bounds.get(crs) is None:
                 geotrans = Transformer.from_crs( self.wkt, crs )
