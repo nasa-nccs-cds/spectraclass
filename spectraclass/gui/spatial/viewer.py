@@ -87,11 +87,11 @@ class RGBViewer(param.Parameterized):
         self.bplayer: IntSlider = IntSlider( name='Blue',  start=0, end=bmax, value=self.rgb[2] )
         self.image = hv.DynamicMap( self.get_image, streams=dict( br=self.rplayer.param.value,
                                                                   bg=self.gplayer.param.value,
-                                                                  bb=self.bplayer.param.value ) )
+                                                                  bb=self.bplayer.param.value,
+                                                                  bounds=self.param.bounds ) )
         self.band_markers = hv.DynamicMap( self.get_band_markers, streams=dict( br=self.rplayer.param.value,
                                                                                 bg=self.gplayer.param.value,
-                                                                                bb=self.bplayer.param.value,
-                                                                                bounds=self.param.bounds ) )
+                                                                                bb=self.bplayer.param.value ) )
 
     def get_band_markers(self, br: int, bg: int, bb: int ) -> hv.Overlay:
         rm = hv.VLine(br).opts(color="red")
