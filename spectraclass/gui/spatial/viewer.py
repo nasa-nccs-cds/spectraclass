@@ -61,7 +61,7 @@ def bounds( data: xa.DataArray ) -> Tuple[ Tuple[float,float], Tuple[float,float
     ylim = ( yaxis[0]-dy, yaxis[-1]+dy ) if dy>0 else ( yaxis[-1]+dy, yaxis[0]-dy )
     return xlim,ylim
 
-BoundsStream = Stream.define('bounds', value=param.Tuple(default=(0.0,0.0,0.0,0.0), doc='Image Bounds') )
+BoundsStream = Stream.define('bounds', bounds=param.Tuple(default=(0.0,0.0,0.0,0.0), doc='Image Bounds') )
 
 class RGBViewer(tlc.Configurable):
     rgb = tl.Tuple(default_value=(50,150,300)).tag(config=True, sync=True)
@@ -110,7 +110,7 @@ class RGBViewer(tlc.Configurable):
         return data.copy( data=ndata )
 
     def set_image_bounds(self, bounds: Tuple[float,float,float,float] ):
-        self.bounds_stream.event(value=bounds)
+        self.bounds_stream.event(bounds=bounds)
 
     @exception_handled
     def update_graph(self, x, y) -> hv.Curve:
