@@ -109,6 +109,7 @@ class RGBViewer(param.Parameterized):
         return data.copy( data=ndata )
 
     def set_image_bounds(self, bounds: Tuple[float,float,float,float] ):
+        lgm().log( f"#RGB: set_image_bounds={bounds}")
         self.bounds = bounds
 
     @exception_handled
