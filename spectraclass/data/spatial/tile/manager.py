@@ -79,7 +79,8 @@ class TileManager(SCSingletonConfigurable):
                 result.attrs['anomaly'] = True
         return result.astype( point_data.dtype )
 
-    def set_sat_view_bounds(self, bounds: Tuple[float,float,float,float] ):
+    def set_sat_view_bounds(self, block: Block ):
+        bounds: Tuple[float, float, float, float ] = block.bounds( 'epsg:4326' )
         self._block_image.object = self.get_folium_map( (bounds[:2], bounds[2:]) )
 
     def get_block_selection_key( self, selection: Dict ) -> int:
@@ -252,8 +253,8 @@ class TileManager(SCSingletonConfigurable):
             block = self.getBlock()
      #       dm().loadCurrentProject( 'setBlock', True, block=block, bindex=self.block_index )
             self.block_selection.index = self.c2bi(block_index)
-            self.set_sat_view_bounds( block.bounds() )
-            self.rgbviewer.set_image_bounds( block.bounds() )
+            self.set_sat_view_bounds( block )
+            self.rgbviewer.set_image_bounds( block )
             return True
         return False
 

@@ -108,7 +108,8 @@ class RGBViewer(param.Parameterized):
         ndata = data / np.max( np.nan_to_num( data.values, nan=0 ) )
         return data.copy( data=ndata )
 
-    def set_image_bounds(self, bounds: Tuple[float,float,float,float] ):
+    def set_image_bounds(self, block: Block ):
+        bounds: Tuple[float, float, float, float ] = block.bounds()
         lgm().log( f"#RGB: set_image_bounds={bounds}")
         self.bounds = bounds
 
