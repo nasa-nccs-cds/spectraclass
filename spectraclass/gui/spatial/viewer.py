@@ -71,6 +71,7 @@ class RGBViewer(param.Parameterized):
         super(RGBViewer, self).__init__()
         self.width = plotopts.get('width', 600)
         self.height = plotopts.get('height', 500)
+        self._global_bounds = None
 
     @property
     def bands(self) -> np.ndarray:
@@ -137,10 +138,16 @@ class RGBViewer(param.Parameterized):
             y: np.ndarrayy = RGB.coords['y'].values
             dx, dy = (x[1]-x[0])/2, (y[1]-y[0])/2
             bounds = ( x[0]-dx, y[0]-dy, x[-1]+dx, y[-1]+dy )
+            self._global_bounds = bounds
+            block_image = RGB
             lgm().log( f"#RGB({br},{bg},{bb}): RGB.shape={RGB.shape}, nbands={tm().tile.data.shape[0]}, xlen={x.size}, ylen={y.size}, bounds={bounds}" )
         else:
             lgm().log( f"#RGB({br},{bg},{bb}): RGB.shape={RGB.shape}, nbands={tm().tile.data.shape[0]}, bounds={bounds}")
-        return hv.RGB( RGB.values, bounds=bounds ).opts( width=self.width, height=self.height )
+            block_image = self.subset_data( RGB, bounds )
+        return hv.RGB( block_image.values, bounds=bounds ).opts( width=self.width, height=self.height )
+
+    def subset_data(self, data: xa.DataArray, bounds: Tuple[float,float,float,float] ) -> xa.DataArray:
+        return data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[1],bounds[3]))
 
     def panel(self,**kwargs):
         self.init_gui(**kwargs)
