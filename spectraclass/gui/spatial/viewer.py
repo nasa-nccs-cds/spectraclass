@@ -137,15 +137,17 @@ class RGBViewer(param.Parameterized):
             x: np.ndarray = RGB.coords['x'].values
             y: np.ndarrayy = RGB.coords['y'].values
             dx, dy = (x[1]-x[0])/2, (y[1]-y[0])/2
-            bounds = ( x[0]-dx, y[0]-dy, x[-1]+dx, y[-1]+dy )
-            self._global_bounds = bounds
+            extent = ( x[0]-dx, y[0]-dy, x[-1]+dx, y[-1]+dy )
+            self._global_bounds = extent
             block_image = RGB
-            lgm().log( f"#RGB({br},{bg},{bb}): RGB.shape={RGB.shape}, nbands={tm().tile.data.shape[0]}, xlen={x.size}, ylen={y.size}, bounds={bounds}" )
+            lgm().log( f"#RGB({br},{bg},{bb}): RGB.shape={RGB.shape}, nbands={tm().tile.data.shape[0]}, xlen={x.size}, ylen={y.size}, bounds={extent}" )
         else:
-            lgm().log( f"#RGB({br},{bg},{bb}): RGB.shape={RGB.shape}, nbands={tm().tile.data.shape[0]}, bounds={bounds}")
-            block_image = self.subset_data( RGB, bounds )
-        return hv.RGB( block_image.values, bounds=bounds ).opts( width=self.width, height=self.height,
-                                                                 xlim=(bounds[0],bounds[2]), ylim=(bounds[1],bounds[3]) )
+            (x0, y0, x1, y1) = bounds
+            extent =( x0, y1, x1, y0)
+            lgm().log( f"#RGB({br},{bg},{bb}): RGB.shape={RGB.shape}, nbands={tm().tile.data.shape[0]}, bounds={extent}")
+            block_image = self.subset_data( RGB, extent )
+        return hv.RGB( block_image.values, bounds=extent ).opts( width=self.width, height=self.height,
+                                                                 xlim=(extent[0],extent[2]), ylim=(extent[1],extent[3]) )
 
     def subset_data(self, data: xa.DataArray, bounds: Tuple[float,float,float,float] ) -> xa.DataArray:
         return data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[1],bounds[3]))
