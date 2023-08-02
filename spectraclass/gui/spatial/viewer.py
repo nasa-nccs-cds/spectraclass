@@ -2,6 +2,7 @@ import traceback, time
 from typing import List, Union, Tuple, Optional, Dict, Type, Hashable, Callable
 import hvplot.xarray
 import traitlets as tl
+from holoviews.streams import Stream, param
 from panel.widgets import IntSlider
 from spectraclass.learn.cluster.manager import clm
 import holoviews as hv
@@ -60,6 +61,8 @@ def bounds( data: xa.DataArray ) -> Tuple[ Tuple[float,float], Tuple[float,float
     ylim = ( yaxis[0]-dy, yaxis[-1]+dy ) if dy>0 else ( yaxis[-1]+dy, yaxis[0]-dy )
     return xlim,ylim
 
+BoundsStream = Stream.define('bounds', value=param.Tuple(default=(np.inf,np.inf,np.inf,np.inf), doc='Image Bounds') )
+
 class RGBViewer(tlc.Configurable):
     rgb = tl.Tuple(default_value=(50,150,300)).tag(config=True, sync=True)
 
@@ -68,6 +71,7 @@ class RGBViewer(tlc.Configurable):
         super(RGBViewer, self).__init__()
         self.width = plotopts.get('width', 600)
         self.height = plotopts.get('height', 500)
+        self.bounds_stream: Stream = BoundsStream()
 
     @property
     def bands(self) -> np.ndarray:
@@ -87,7 +91,8 @@ class RGBViewer(tlc.Configurable):
                                                                   bb=self.bplayer.param.value ) )
         self.band_markers = hv.DynamicMap( self.get_band_markers, streams=dict( br=self.rplayer.param.value,
                                                                                 bg=self.gplayer.param.value,
-                                                                                bb=self.bplayer.param.value ) )
+                                                                                bb=self.bplayer.param.value,
+                                                                                bounds=self.bounds_stream ) )
 
     def get_band_markers(self, br: int, bg: int, bb: int ) -> hv.Overlay:
         rm = hv.VLine(br).opts(color="red")
@@ -104,6 +109,9 @@ class RGBViewer(tlc.Configurable):
         ndata = data / np.max( np.nan_to_num( data.values, nan=0 ) )
         return data.copy( data=ndata )
 
+    def set_image_bounds(self, bounds: Tuple[float,float,float,float] ):
+        self.bounds_stream.event(value=bounds)
+
     @exception_handled
     def update_graph(self, x, y) -> hv.Curve:
         from spectraclass.learn.pytorch.trainer import stat
@@ -119,13 +127,14 @@ class RGBViewer(tlc.Configurable):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         return tm().tile.rgb_data( (br,bg,bb) )
 
-    def get_image(self, br: int, bg:int, bb: int ):
+    def get_image(self, br: int, bg:int, bb: int, bounds: Tuple[float,float,float,float] ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         RGB: xa.DataArray = self.get_data(br, bg, bb)
-        x: np.ndarray = RGB.coords['x'].values
-        y: np.ndarrayy = RGB.coords['y'].values
-        dx, dy = (x[1]-x[0])/2, (y[1]-y[0])/2
-        bounds = ( x[0]-dx, y[0]-dy, x[-1]+dx, y[-1]+dy )
+        if bounds[0] == np.inf:
+            x: np.ndarray = RGB.coords['x'].values
+            y: np.ndarrayy = RGB.coords['y'].values
+            dx, dy = (x[1]-x[0])/2, (y[1]-y[0])/2
+            bounds = ( x[0]-dx, y[0]-dy, x[-1]+dx, y[-1]+dy )
         lgm().log( f"#RGB({br},{bg},{bb}): RGB.shape={RGB.shape}, nbands={tm().tile.data.shape[0]}, xlen={x.size}, ylen={y.size}, bounds={bounds}" ) # ", vrange={RGB.values.min}")
         return hv.RGB( RGB.values, bounds=bounds ).opts( width=self.width, height=self.height )
 
@@ -147,7 +156,7 @@ class VariableBrowser:
         self.cmap = plotopts.get('cmap', 'jet')
         self._point_selection_enabled = False
         self.nIter: int = self.data.shape[0]
-        self.player: DiscretePlayer = DiscretePlayer(name='Iteration', options=list(range(self.nIter)), value=self.nIter - 1)
+        self.player: pn.widgets.DiscretePlayer = pn.widgets.DiscretePlayer(name='Iteration', options=list(range(self.nIter)), value=self.nIter - 1)
         self.tap_stream = SingleTap( transient=True )
         self.selection_dmap = hv.DynamicMap( self.select_points, streams=[self.tap_stream] )
         self.point_graph = hv.DynamicMap( self.update_graph, streams=[self.tap_stream] )
