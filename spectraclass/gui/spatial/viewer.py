@@ -61,7 +61,7 @@ def bounds( data: xa.DataArray ) -> Tuple[ Tuple[float,float], Tuple[float,float
     ylim = ( yaxis[0]-dy, yaxis[-1]+dy ) if dy>0 else ( yaxis[-1]+dy, yaxis[0]-dy )
     return xlim,ylim
 
-BoundsStream = Stream.define('bounds', value=param.Tuple(default=(np.inf,np.inf,np.inf,np.inf), doc='Image Bounds') )
+BoundsStream = Stream.define('bounds', value=param.Tuple(default=(0.0,0.0,0.0,0.0), doc='Image Bounds') )
 
 class RGBViewer(tlc.Configurable):
     rgb = tl.Tuple(default_value=(50,150,300)).tag(config=True, sync=True)
@@ -130,7 +130,7 @@ class RGBViewer(tlc.Configurable):
     def get_image(self, br: int, bg:int, bb: int, bounds: Tuple[float,float,float,float] ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         RGB: xa.DataArray = self.get_data(br, bg, bb)
-        if bounds[0] == np.inf:
+        if (bounds[0] == 0.0) and (bounds[1] == 0.0):
             x: np.ndarray = RGB.coords['x'].values
             y: np.ndarrayy = RGB.coords['y'].values
             dx, dy = (x[1]-x[0])/2, (y[1]-y[0])/2
