@@ -61,17 +61,16 @@ def bounds( data: xa.DataArray ) -> Tuple[ Tuple[float,float], Tuple[float,float
     ylim = ( yaxis[0]-dy, yaxis[-1]+dy ) if dy>0 else ( yaxis[-1]+dy, yaxis[0]-dy )
     return xlim,ylim
 
-BoundsStream = Stream.define('bounds', bounds=param.Tuple(default=(0.0,0.0,0.0,0.0), doc='Image Bounds') )
+#BoundsStream = Stream.define('bounds', bounds=param.Tuple(default=(0.0,0.0,0.0,0.0), doc='Image Bounds') )
 
-class RGBViewer(tlc.Configurable):
-    rgb = tl.Tuple(default_value=(50,150,300)).tag(config=True, sync=True)
+class RGBViewer(param.Parameterized):
+    rgb = param.Tuple( default=(50,150,300))
+    bounds = param.Tuple( default=(0.0,0.0,0.0,0.0) )
 
     def __init__(self, **plotopts):
-
         super(RGBViewer, self).__init__()
         self.width = plotopts.get('width', 600)
         self.height = plotopts.get('height', 500)
-        self.bounds_stream: Stream = BoundsStream()
 
     @property
     def bands(self) -> np.ndarray:
@@ -92,7 +91,7 @@ class RGBViewer(tlc.Configurable):
         self.band_markers = hv.DynamicMap( self.get_band_markers, streams=dict( br=self.rplayer.param.value,
                                                                                 bg=self.gplayer.param.value,
                                                                                 bb=self.bplayer.param.value,
-                                                                                bounds=self.bounds_stream ) )
+                                                                                bounds=self.param.bounds ) )
 
     def get_band_markers(self, br: int, bg: int, bb: int ) -> hv.Overlay:
         rm = hv.VLine(br).opts(color="red")
@@ -110,7 +109,7 @@ class RGBViewer(tlc.Configurable):
         return data.copy( data=ndata )
 
     def set_image_bounds(self, bounds: Tuple[float,float,float,float] ):
-        self.bounds_stream.event(bounds=bounds)
+        self.bounds = bounds
 
     @exception_handled
     def update_graph(self, x, y) -> hv.Curve:
