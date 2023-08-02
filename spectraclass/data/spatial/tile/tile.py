@@ -426,6 +426,7 @@ class Block(DataContainer):
         self._index_array: xa.DataArray = None
         self._gid_array: np.ndarray = None
         self._flow = None
+        self._bounds: Tuple[ float,float,float,float ] = None
         self._samples_axis: Optional[xa.DataArray] = None
         self._point_data: Optional[xa.DataArray] = None
         self._filtered_point_data: Optional[xa.DataArray] = None
@@ -441,6 +442,13 @@ class Block(DataContainer):
         self._trecs: Tuple[ Dict[int,ThresholdRecord], Dict[int,ThresholdRecord] ] = ( {}, {} )
         self.block_coords: Tuple[int,int] = (ix,iy)
         self.tile_index = itile
+
+    def bounds(self, crs='epsg:4326' ) -> Tuple[ float,float,float,float ]:
+        if self._bounds is None:
+            geotrans = Transformer.from_crs( self.wkt, crs )
+            x0, x1, y0, y1 =  self.extent
+            self._bounds =  geotrans.transform(  x0, y0 ) + geotrans.transform( x1, y1 )
+        return self._bounds
 
     def set_thresholds(self, bUseModel: bool, iFrame: int, thresholds: Tuple[float,float] ) -> bool:
         trec: ThresholdRecord = self.threshold_record( bUseModel, iFrame )

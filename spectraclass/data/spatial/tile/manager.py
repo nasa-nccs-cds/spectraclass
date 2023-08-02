@@ -79,8 +79,8 @@ class TileManager(SCSingletonConfigurable):
                 result.attrs['anomaly'] = True
         return result.astype( point_data.dtype )
 
-    def set_sat_view_bounds(self, block: Block ):
-        self._block_image.object = self.get_folium_map( block )
+    def set_sat_view_bounds(self, bounds: Tuple[float,float,float,float] ):
+        self._block_image.object = self.get_folium_map( (bounds[:2], bounds[2:]) )
 
     def get_block_selection_key( self, selection: Dict ) -> int:
         return sum( [ tm().c2bi(bid) for bid in selection.keys() ] )
@@ -123,26 +123,21 @@ class TileManager(SCSingletonConfigurable):
         return gv.element.geo.WMTS( url, name="EsriImagery").opts( **kwargs )
 
     @exception_handled
-    def get_folium_map(self, block: Block  ) -> folium.Map:
+    def get_folium_map(self, corners: Tuple[ Tuple[float,float], Tuple[float,float] ]  ) -> folium.Map:
         tile_url='http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
         fmap = folium.Map( width=self.map_size )
-        geotrans = Transformer.from_crs( block.wkt, f'epsg:4326')
-        x0, x1, y0, y1 =  block.extent
-        bounds = [ geotrans.transform(  x0, y0 ), geotrans.transform(  x1, y1 ) ]
-        lgm().log( f"#FM: get_folium_map: block.extent={x0, x1, y0, y1}, bounds={bounds}, data_crs={block.wkt}")
-        fmap.fit_bounds(bounds)
+        fmap.fit_bounds(corners)
         map_attrs = dict( url=tile_url, layers='World Imagery', transparent=False, control=False, fmt="image/png",
                           name='Satellite Image', overlay=True, show=True )
         map_layer = folium.raster_layers.WmsTileLayer(**map_attrs)
-        map_bounds = map_layer.get_bounds()
-        lgm().log( f"#FM: map_bounds={map_bounds}")
         map_layer.add_to(fmap)
-        folium.Rectangle( bounds, color="white" ).add_to(fmap)
+        folium.Rectangle( corners, color="white" ).add_to(fmap)
         folium.LayerControl().add_to(fmap)
         return fmap
 
     def update_satellite_view(self):
-        self._block_image.object = self.get_folium_map( tm().getBlock() )
+        bounds = tm().getBlock().bounds()
+        self._block_image.object = self.get_folium_map( (bounds[:2], bounds[2:]) )
 
     @property
     def satellite_block_view(self) -> pn.pane.HTML:
@@ -257,7 +252,8 @@ class TileManager(SCSingletonConfigurable):
             block = self.getBlock()
      #       dm().loadCurrentProject( 'setBlock', True, block=block, bindex=self.block_index )
             self.block_selection.index = self.c2bi(block_index)
-            self.set_sat_view_bounds( block )
+            self.set_sat_view_bounds( block.bounds() )
+            self.rgbviewer.set_image_bounds( block.bounds() )
             return True
         return False
 
