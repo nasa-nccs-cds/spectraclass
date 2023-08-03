@@ -146,8 +146,7 @@ class RGBViewer(param.Parameterized):
             extent =( x0, y1, x1, y0)
             lgm().log( f"#RGB({br},{bg},{bb}): RGB.shape={RGB.shape}, nbands={tm().tile.data.shape[0]}, bounds={extent}")
             block_image = self.subset_data( RGB, extent )
-        return hv.RGB( block_image.values, bounds=extent, extents=extent ).opts( width=self.width, height=self.height,
-                         apply_ranges=True, apply_extents=True, xlim=(extent[0],extent[2]), ylim=(extent[3],extent[1]) )
+        return hv.RGB( block_image.values, bounds=extent ).opts( width=self.width, height=self.height, xlim=(extent[0],extent[2]), ylim=(extent[3],extent[1]) )
 
 
     def subset_data(self, data: xa.DataArray, bounds: Tuple[float,float,float,float] ) -> xa.DataArray:
@@ -155,7 +154,7 @@ class RGBViewer(param.Parameterized):
 
     def panel(self,**kwargs):
         self.init_gui(**kwargs)
-        return pn.Column( self.image*self.selection_dmap, self.point_graph*self.band_markers, self.rplayer, self.gplayer, self.bplayer )
+        return pn.Column( self.image, self.point_graph*self.band_markers, self.rplayer, self.gplayer, self.bplayer )  #*self.selection_dmap
 
 class VariableBrowser:
 
