@@ -146,7 +146,7 @@ class RGBViewer(param.Parameterized):
             extent =( x0, y1, x1, y0)
             lgm().log( f"#RGB({br},{bg},{bb}): RGB.shape={RGB.shape}, nbands={tm().tile.data.shape[0]}, bounds={extent}")
             block_image = self.subset_data( RGB, extent )
-        return hv.RGB( block_image.values, bounds=extent ).opts( width=self.width, height=self.height,
+        return hv.RGB( block_image.values, bounds=extent ).opts( width=self.width, height=self.height, apply_ranges=False,
                                                                  xlim=(extent[0],extent[2]), ylim=(extent[1],extent[3]) )
 
     def subset_data(self, data: xa.DataArray, bounds: Tuple[float,float,float,float] ) -> xa.DataArray:
