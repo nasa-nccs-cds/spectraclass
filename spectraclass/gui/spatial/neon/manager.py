@@ -86,7 +86,6 @@ class BlockSelection(param.Parameterized):
                     self.select_block(bindex)
             else:
                 if dm().selection_mode == BlockSelectMode.LoadTile:
-                    tm().setBlock(bindex)
                     ufm().show(f"Selecting block: {bindex}")
                     self.select_block(bindex, update=True)
                 else:

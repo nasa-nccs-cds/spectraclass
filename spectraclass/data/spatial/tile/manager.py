@@ -256,7 +256,7 @@ class TileManager(SCSingletonConfigurable):
             self.block_selection.index = self.c2bi(block_index)
             self.set_sat_view_bounds( block )
             self.rgbviewer.set_image_bounds( block )
-            clm().refresh()
+            clm().generate_clusters()
             return True
         return False
 
