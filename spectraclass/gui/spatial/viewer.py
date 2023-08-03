@@ -90,9 +90,15 @@ class RGBViewer(param.Parameterized):
                                                                   bg=self.gplayer.param.value,
                                                                   bb=self.bplayer.param.value,
                                                                   bounds=self.param.bounds ) )
+        self._global_image: hv.RGB = None
         self.band_markers = hv.DynamicMap( self.get_band_markers, streams=dict( br=self.rplayer.param.value,
                                                                                 bg=self.gplayer.param.value,
                                                                                 bb=self.bplayer.param.value ) )
+    @property
+    def global_image(self) -> hv.RGB:
+        if self._global_image is None:
+            self._global_image = self.get_image( *self.rgb )
+        return self._global_image
 
     def get_band_markers(self, br: int, bg: int, bb: int ) -> hv.Overlay:
         rm = hv.VLine(br).opts(color="red")
@@ -130,7 +136,7 @@ class RGBViewer(param.Parameterized):
         return tm().tile.rgb_data( (br,bg,bb) )
 
     @exception_handled
-    def get_image(self, br: int, bg:int, bb: int, bounds: Tuple[float,float,float,float] ):
+    def get_image(self, br: int, bg:int, bb: int, bounds: Tuple[float,float,float,float]=(0.0,0.0,0.0,0.0) ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         RGB: xa.DataArray = self.get_data(br, bg, bb)
         if (bounds[0] == 0.0) and (bounds[1] == 0.0):
@@ -154,7 +160,8 @@ class RGBViewer(param.Parameterized):
 
     def panel(self,**kwargs):
         self.init_gui(**kwargs)
-        return pn.Column( self.image*self.selection_dmap, self.point_graph*self.band_markers, self.rplayer, self.gplayer, self.bplayer )  #
+        block_image = pn.Column( self.image*self.selection_dmap, self.point_graph*self.band_markers, self.rplayer, self.gplayer, self.bplayer )
+        return pn.Tabs( ('block',block_image), ('tile', self.global_image) )
 
 class VariableBrowser:
 
