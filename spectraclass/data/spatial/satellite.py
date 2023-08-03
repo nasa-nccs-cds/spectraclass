@@ -70,12 +70,12 @@ class SatellitePlotManager(SCSingletonConfigurable):
     def satextent(self, full_tile=False) -> Tuple[ Tuple[float,float], Tuple[float,float] ]:
         return self.tile_extent if full_tile else self.block_extent
 
-    def get_block_basemap(self, **kwargs ):
-        point_selection = kwargs.get( 'point_selection', False )
-        lgm().log(f"SPM: get_block_basemap: point_selection = {point_selection}")
-        tile_source = hv.DynamicMap( self.get_folium_basemap, streams=[self.bounds_stream] )
-        self.set_extent( **kwargs )
-        return tile_source * self.selection_points if point_selection else tile_source
+    # def get_block_basemap(self, **kwargs ):
+    #     point_selection = kwargs.get( 'point_selection', False )
+    #     lgm().log(f"SPM: get_block_basemap: point_selection = {point_selection}")
+    #     tile_source = hv.DynamicMap( self.get_folium_basemap, streams=[self.bounds_stream] )
+    #     self.set_extent( **kwargs )
+    #     return tile_source * self.selection_points if point_selection else tile_source
 
     @exception_handled
     def get_image_basemap(self, bounds: Tuple[float,float,float,float], **kwargs):
@@ -98,6 +98,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
 
     def set_extent(self, block_selection: int = -1 ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.learn.cluster.manager import clm
         bindex = tm().block_index if (block_selection == -1) else tm().bi2c(block_selection)
         block: Block = tm().getBlock( bindex=bindex )
         (xlim, ylim) = block.get_extent(self.projection)
@@ -105,6 +106,7 @@ class SatellitePlotManager(SCSingletonConfigurable):
         bounds = xlim + ylim
         self.bounds_stream.event( bounds=bounds )
         tm().rgbviewer.set_image_bounds( bounds )
+        clm().refresh()
 
     #    self.tile_source.apply.opts( xlim=xlim, ylim=ylim )
     #    self.tile_source.select( x=xlim, y=ylim )

@@ -245,6 +245,7 @@ class TileManager(SCSingletonConfigurable):
         return tuple(self.block_index)
 
     def setBlock( self, block_index ) -> bool:
+        from spectraclass.learn.cluster.manager import clm
     #    from spectraclass.data.base import DataManager, dm, DataType
         if tuple(block_index) != self.block_index:
             lgm().log( f"TileManager.setBlock -> {block_index}")
@@ -255,6 +256,7 @@ class TileManager(SCSingletonConfigurable):
             self.block_selection.index = self.c2bi(block_index)
             self.set_sat_view_bounds( block )
             self.rgbviewer.set_image_bounds( block )
+            clm().refresh()
             return True
         return False
 

@@ -154,7 +154,7 @@ class RGBViewer(param.Parameterized):
 
     def panel(self,**kwargs):
         self.init_gui(**kwargs)
-        return pn.Column( self.image, self.point_graph*self.band_markers, self.rplayer, self.gplayer, self.bplayer )  #*self.selection_dmap
+        return pn.Column( self.image*self.selection_dmap, self.point_graph*self.band_markers, self.rplayer, self.gplayer, self.bplayer )  #
 
 class VariableBrowser:
 
