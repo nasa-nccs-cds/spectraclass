@@ -68,16 +68,22 @@ class TileManager(SCSingletonConfigurable):
 
     def prepare_inputs(self, point_data: xa.DataArray, **kwargs ) -> xa.DataArray:
         from spectraclass.learn.pytorch.trainer import stat
-        result = point_data
-        if self.anomaly and not result.attrs.get("anomaly",False):
+        result = None
+        if self.anomaly and not point_data.attrs.get("anomaly",False):
             ms: Optional[xa.DataArray] = kwargs.pop( 'baseline', self.get_mean_spectrum() )
             if ms is not None:
                 sdiff: xa.DataArray = point_data - ms
-                result = self.norm( sdiff )
+                result = self.norm( sdiff ).astype( point_data.dtype )
                 lgm().log( f"#ANOM.prepare_inputs-> input: shape={point_data.shape}, stat={stat(point_data)}; "
                            f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
                 result.attrs['anomaly'] = True
-        return result.astype( point_data.dtype )
+            else:
+                lgm().log(f"#ANOM.prepare_inputs-> ERROR, attempt to compute anomaly without mean_spectrum" )
+        if result is None:
+            result = point_data
+            lgm().log(f"#TM: prepare_inputs-> RAW normalized input: shape={point_data.shape}, stat={stat(point_data)}")
+            result.attrs['anomaly'] = False
+        return result
 
     def set_sat_view_bounds(self, block: Block ):
         bounds: Tuple[float, float, float, float ] = block.bounds( 'epsg:4326' )
@@ -120,7 +126,7 @@ class TileManager(SCSingletonConfigurable):
 
     def getESRIImageryServer(self,**kwargs) -> gv.element.geo.Tiles:
         url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{Z}/{Y}/{X}.jpg'
-        lgm().log( f"TM: getESRIImageryServer{kwargs} ")
+        lgm().log( f"#TM: getESRIImageryServer{kwargs} ")
         return gv.element.geo.WMTS( url, name="EsriImagery").opts( **kwargs )
 
     @exception_handled
