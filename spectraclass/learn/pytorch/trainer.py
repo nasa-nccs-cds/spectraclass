@@ -104,7 +104,7 @@ class MaskSavePanel(MaskCache):
 
 class MaskLoadPanel(MaskCache):
 
-    def __init__(self ):
+    def __init__(self):
         super(MaskLoadPanel, self).__init__()
         block_selection_names = [ self.get_mask_name(f) for f in os.listdir(self.save_dir) if ("__" in f) ]
         self.load_button = pn.widgets.Button(name='Load Mask', button_type='success', width=150)
@@ -196,7 +196,8 @@ class ModelTrainer(SCSingletonConfigurable):
         return self.mask_load_panel.get_class_mask( ptdata )
 
     def panel(self)-> pn.Column:
-        return pn.Column( self.progress.panel(), self.mask_save_panel.gui() )
+        mask_panels = pn.Tabs( ('load',self.mask_load_panel.gui()), ('save',self.mask_save_panel.gui()) )
+        return pn.Column( self.progress.panel(), mask_panels )
 
     def abort_callback(self, event ):
         self._abort = True
