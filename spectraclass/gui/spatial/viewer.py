@@ -97,7 +97,7 @@ class RGBViewer(param.Parameterized):
     @property
     def global_image(self) -> hv.RGB:
         if self._global_image is None:
-            self._global_image = self.get_image( *self.rgb )
+            self._global_image = self.get_global_image()
         return self._global_image
 
     def get_band_markers(self, br: int, bg: int, bb: int ) -> hv.Overlay:
@@ -145,7 +145,7 @@ class RGBViewer(param.Parameterized):
             dx, dy = (x[1]-x[0])/2, (y[1]-y[0])/2
             extent = ( x[0]-dx, y[0]-dy, x[-1]+dx, y[-1]+dy )
             self._global_bounds = extent
-            block_image = RGB.values.copy()
+            block_image = RGB.values
             lgm().log( f"#RGB({br},{bg},{bb}): RGB.shape={RGB.shape}, nbands={tm().tile.data.shape[0]}, xlen={x.size}, ylen={y.size}, bounds={extent}" )
         else:
             (x0, y0, x1, y1) = bounds
@@ -154,6 +154,12 @@ class RGBViewer(param.Parameterized):
             block_image = self.subset_data( RGB, extent ).values
         return hv.RGB( block_image, bounds=extent ).opts( width=self.width, height=self.height, xlim=(extent[0],extent[2]), ylim=(extent[3],extent[1]) )
 
+    @exception_handled
+    def get_global_image(self) -> hv.RGB:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        RGB: xa.DataArray = tm().tile.rgb_data( self.rgb )
+        extent = self._global_bounds = tm().extent
+        return hv.RGB( RGB.values, bounds=self._global_bounds ).opts( width=self.width, height=self.height, xlim=(extent[0],extent[2]), ylim=(extent[3],extent[1]) )
 
     def subset_data(self, data: xa.DataArray, bounds: Tuple[float,float,float,float] ) -> xa.DataArray:
         return data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[1],bounds[3]))
