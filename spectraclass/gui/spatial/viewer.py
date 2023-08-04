@@ -145,7 +145,7 @@ class RGBViewer(param.Parameterized):
             dx, dy = (x[1]-x[0])/2, (y[1]-y[0])/2
             extent = ( x[0]-dx, y[0]-dy, x[-1]+dx, y[-1]+dy )
             self._global_bounds = extent
-            block_image = RGB
+            block_image = RGB.copy(deep=True)
             lgm().log( f"#RGB({br},{bg},{bb}): RGB.shape={RGB.shape}, nbands={tm().tile.data.shape[0]}, xlen={x.size}, ylen={y.size}, bounds={extent}" )
         else:
             (x0, y0, x1, y1) = bounds
