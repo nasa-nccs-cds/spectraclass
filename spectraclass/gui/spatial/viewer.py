@@ -158,8 +158,9 @@ class RGBViewer(param.Parameterized):
     def get_global_image(self) -> hv.RGB:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         RGB: xa.DataArray = tm().tile.rgb_data( self.rgb )
-        extent = self._global_bounds = tm().extent
-        return hv.RGB( RGB.values, bounds=self._global_bounds ).opts( width=self.width, height=self.height, xlim=(extent[0],extent[2]), ylim=(extent[3],extent[1]) )
+        extent =  tm().extent
+        lgm().log( f"#RGB: get_global_image, shape={RGB.shape}, extent={extent}" )
+        return hv.RGB( RGB.values.copy(), bounds=extent ).opts( width=self.width, height=self.height, xlim=(extent[0],extent[2]), ylim=(extent[3],extent[1]) )
 
     def subset_data(self, data: xa.DataArray, bounds: Tuple[float,float,float,float] ) -> xa.DataArray:
         return data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[1],bounds[3]))
