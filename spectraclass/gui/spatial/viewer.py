@@ -160,7 +160,8 @@ class RGBViewer(param.Parameterized):
         RGB: xa.DataArray = tm().tile.rgb_data( self.rgb )
         extent =  tm().extent
         lgm().log( f"#RGB: get_global_image, shape={RGB.shape}, extent={extent}" )
-        return hv.RGB( RGB.values.copy(), bounds=extent ).opts( width=self.width, height=self.height, xlim=(extent[0],extent[2]), ylim=(extent[3],extent[1]) )
+        return hv.RGB( RGB.values.copy(), bounds=extent ).opts( width=self.width, height=self.height,
+                        xlim=(extent[0],extent[2]), ylim=(extent[3],extent[1]), shared_datasource=False )
 
     def subset_data(self, data: xa.DataArray, bounds: Tuple[float,float,float,float] ) -> xa.DataArray:
         return data.sel(x=slice(bounds[0],bounds[2]), y=slice(bounds[1],bounds[3]))
