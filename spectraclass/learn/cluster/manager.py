@@ -505,13 +505,15 @@ class ClusterManager(SCSingletonConfigurable):
     @exception_handled
     def gui(self) -> Panel:
         from spectraclass.model.labels import LabelsManager, lm
+        from spectraclass.learn.pytorch.trainer import mpt
         selectors = [ self._model_selector,self._ncluster_selector ]
         selection_gui = pn.Row( *selectors )
         actions_panel = pn.Row( *self.action_buttons() )
         selection_controls = pn.WidgetBox( "### Clustering", selection_gui, actions_panel )
         labeling_controls = pn.WidgetBox( "### Labeling", lm().class_selector )
+        load_controls = pn.WidgetBox( "### Load Model", mpt().get_mask_load_panel() )
         markers_table = self.get_marker_mangement_panel()
-        controls_panel = pn.Column( selection_controls, labeling_controls, markers_table )
+        controls_panel = pn.Column( selection_controls, load_controls, labeling_controls, markers_table )
         return pn.Tabs( ("controls",controls_panel), ("tuning",self.tuning_gui()) )
 
     def get_marker_mangement_panel(self):
