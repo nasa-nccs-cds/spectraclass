@@ -28,7 +28,6 @@ class BlockSelection(param.Parameterized):
         super(BlockSelection, self).__init__()
         self.marker_color = "red"
         self.unmarked_color = "white"
-        self._selected_rectangles: Dict[Tuple,Tuple] = None
         self.selection_name_input = pn.widgets.TextInput(name='Selection Name', placeholder='Give this selection a name...')
         self.selection_name_input.link( self, value='selection_name' )
         self._rect_grid: Dict[Tuple,Tuple] = None
@@ -181,40 +180,37 @@ class BlockSelection(param.Parameterized):
 
     @property
     def selected_bids(self) -> Optional[List[Tuple]]:
-        if self._selected_rectangles is not None:
-            return list(self._selected_rectangles.keys())
+        return list(self._selected_rectangles.keys())
 
     def block_selected(self, bid: Tuple) -> bool:
-        if self._selected_rectangles is None:  return False
-        return (bid in self._selected_rectangles)
+        return (bid in self.selected_rectangles)
 
     def clear_block( self, bid: Tuple, update=True ):
-        if self._selected_rectangles is not None:
-            self._selected_rectangles.pop(bid, None)
-            if update: self.update()
+        self.selected_rectangles.pop(bid, None)
+        if update: self.update()
 
     @property
-    def selected_rectangles(self) -> List[Tuple]:
-        if self._selected_rectangles is None:  return []
-        return list(self._selected_rectangles.values())
+    def selected_rectangles(self) -> Dict[Tuple,Tuple]:
+        if self._selected_rectangles is None: self.load_selection()
+        return self._selected_rectangles
 
     @exception_handled
     def save_selection(self, *args ):
-        if self._selected_rectangles is not None:
-            sname = self.selection_name if self.selection_name else "block_selection"
-            rect_indices = np.array(list(self._selected_rectangles.keys()))
-            pdata = pd.DataFrame( rect_indices, columns=['x','y'] )
-            save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
-            ufm().show(f"Save block selection: {sname}")
-            lgm().log(f" ----> file='{save_file}'")
-            try:
-                pdata.to_csv( save_file )
-            except Exception as err:
-                ufm().show(f"Error saving file: {err}")
+        sname = self.selection_name if self.selection_name else "block_selection"
+        rect_indices = np.array(list(self.selected_rectangles.keys()))
+        pdata = pd.DataFrame( rect_indices, columns=['x','y'] )
+        save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
+        ufm().show(f"Save block selection: {sname}")
+        lgm().log(f" ----> file='{save_file}'")
+        try:
+            pdata.to_csv( save_file )
+        except Exception as err:
+            ufm().show(f"Error saving file: {err}")
 
     @exception_handled
     def load_selection(self, event=None):
         sname: str = self.selection_name
+        self._selected_rectangles = {}
         if (sname is None) or (sname.lower()=="none"):
             for bid in  self.rect_grid.keys():
                 self._selected_rectangles[bid] = self.rect_grid[bid] + (self.unmarked_color,)
@@ -225,15 +221,10 @@ class BlockSelection(param.Parameterized):
             dm().modal.update_parameter( "Block Mask", sname )
             pdata: pd.DataFrame = pd.read_csv( save_file )
             lgm().log(f"Load Block mask '{sname}': file='{save_file}', shape={pdata.shape}")
-            self._selected_rectangles = {}
             for index, row in pdata.iterrows():
                 bid = (row['x'],row['y'])
                 self._selected_rectangles[bid] = self.rect_grid[bid] + (self.unmarked_color,)
             self.update()
-
-    def get_block_selection( self ) -> Optional[Dict]:
-        if self._selected_rectangles is None: self.load_selection()
-        return self._selected_rectangles
 
     def get_selection_load_panel(self):
         from spectraclass.reduction.trainer import mt
@@ -322,7 +313,7 @@ class NEONTileSelector:
         return self.blockSelection.get_cache_panel()
 
     def get_block_selection(self) -> Optional[Dict]:
-        return self.blockSelection.get_block_selection()
+        return self.blockSelection.selected_rectangles
 
     def get_cluster_panel(self):
         return clm().panel()
