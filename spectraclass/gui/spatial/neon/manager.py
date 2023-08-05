@@ -214,8 +214,11 @@ class BlockSelection(param.Parameterized):
 
     @exception_handled
     def load_selection(self, event):
-        sname = self.selection_name
-        if sname:
+        sname: str = self.selection_name
+        if (sname is None) or (sname.lower()=="none"):
+            for bid in  self.rect_grid.keys():
+                self._selected_rectangles[bid] = self.rect_grid[bid] + (self.unmarked_color,)
+        else:
             save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
             ufm().show(f"Load Block mask '{sname}'")
             dm().modal.update_parameter( "Block Mask", sname )
