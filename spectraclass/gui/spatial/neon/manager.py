@@ -236,7 +236,7 @@ class BlockSelection(param.Parameterized):
 
     def get_selection_load_panel(self):
         from spectraclass.reduction.trainer import mt
-        block_selection_names = [ f.split(".")[-2] for f in os.listdir(self.save_dir) ]
+        block_selection_names = ['None'] + [ f.split(".")[-2] for f in os.listdir(self.save_dir) ]
         sopts = dict( name='Block Mask', options=block_selection_names )
         if mt().block_mask != "":             self.selection_name = mt().block_mask
         elif len(block_selection_names) > 0:  self.selection_name = block_selection_names[0]

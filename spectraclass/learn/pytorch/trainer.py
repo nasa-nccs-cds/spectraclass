@@ -106,7 +106,7 @@ class MaskLoadPanel(MaskCache):
 
     def __init__(self):
         super(MaskLoadPanel, self).__init__()
-        block_selection_names = [ self.get_mask_name(f) for f in os.listdir(self.save_dir) if ("__" in f) ]
+        block_selection_names = [ "None" ] + [ self.get_mask_name(f) for f in os.listdir(self.save_dir) if ("__" in f) ]
         self.load_button = pn.widgets.Button(name='Load Mask', button_type='success', width=150)
         self.load_button.on_click(self.load)
         sopts = dict( name='Cluster Mask', options=block_selection_names )
