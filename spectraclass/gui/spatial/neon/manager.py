@@ -28,6 +28,7 @@ class BlockSelection(param.Parameterized):
         super(BlockSelection, self).__init__()
         self.marker_color = "red"
         self.unmarked_color = "white"
+        self._selected_rectangles: Dict[Tuple,Tuple] = None
         self.selection_name_input = pn.widgets.TextInput(name='Selection Name', placeholder='Give this selection a name...')
         self.selection_name_input.link( self, value='selection_name' )
         self._rect_grid: Dict[Tuple,Tuple] = None
