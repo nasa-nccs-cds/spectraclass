@@ -95,8 +95,8 @@ class BlockSelection(param.Parameterized):
                     else:
                         ufm().show(f"mark block {bindex}")
                         self.select_block( bindex )
-
-        return hv.Rectangles(self.selected_rectangles, vdims = 'value').opts(color='value', fill_alpha=0.6, line_alpha=1.0, line_width=2)
+        rect_list: List[Tuple] = list(self.selected_rectangles.values())
+        return hv.Rectangles( rect_list, vdims = 'value').opts(color='value', fill_alpha=0.6, line_alpha=1.0, line_width=2)
 
     def update_grid(self):
         if self._rect_grid is None:
@@ -198,7 +198,7 @@ class BlockSelection(param.Parameterized):
     @exception_handled
     def save_selection(self, *args ):
         sname = self.selection_name if self.selection_name else "block_selection"
-        rect_indices = np.array(list(self.selected_rectangles.keys()))
+        rect_indices = np.array( self.selected_bids )
         pdata = pd.DataFrame( rect_indices, columns=['x','y'] )
         save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
         ufm().show(f"Save block selection: {sname}")
