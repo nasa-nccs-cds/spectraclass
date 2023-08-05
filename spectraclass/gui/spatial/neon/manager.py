@@ -213,7 +213,7 @@ class BlockSelection(param.Parameterized):
                 ufm().show(f"Error saving file: {err}")
 
     @exception_handled
-    def load_selection(self, event):
+    def load_selection(self, event=None):
         sname: str = self.selection_name
         if (sname is None) or (sname.lower()=="none"):
             for bid in  self.rect_grid.keys():
@@ -231,6 +231,7 @@ class BlockSelection(param.Parameterized):
             self.update()
 
     def get_block_selection( self ) -> Optional[Dict]:
+        if self._selected_rectangles is None: self.load_selection()
         return self._selected_rectangles
 
     def get_selection_load_panel(self):
