@@ -218,6 +218,7 @@ class BlockSelection(param.Parameterized):
         if (sname is None) or (sname.lower()=="none"):
             for bid in  self.rect_grid.keys():
                 self._selected_rectangles[bid] = self.rect_grid[bid] + (self.unmarked_color,)
+            ufm().show(f"Load Global Block mask, nblocks={len(self._selected_rectangles)}")
         else:
             save_file = f"{self.save_dir}/{tm().tileid}.{sname}.csv"
             ufm().show(f"Load Block mask '{sname}'")
