@@ -76,14 +76,14 @@ class MaskCache(param.Parameterized):
         self.model.save( self.model_id, self.mask_name, dir=self.save_dir )
 
     @exception_handled
-    def get_class_mask(self, ptdata: xa.DataArray ) -> np.ndarray:
+    def get_class_mask(self, ptdata: xa.DataArray ) -> xa.DataArray:
         mask_classes: xa.DataArray = mpt().predict( ptdata, raster=False )
-        mask: np.ndarray = np.argmax( mask_classes.values, axis=1, keepdims=False ).astype( np.bool )
+        mask: np.ndarray = np.argmax( mask_classes.values, axis=1, keepdims=False ).astype( bool )
         nvalid = np.count_nonzero( mask )
         lgm().log( f"#FPDM: filter_point_data: ptdata shape={ptdata.shape}, coords={list(ptdata.coords.keys())}, stat={stat(ptdata)}")
         lgm().log( f"#FPDM: classes: shape={mask_classes.shape}, dims={mask_classes.dims};  mask[{mask.dtype}] shape = {mask.shape}, nvalid={nvalid}")
         lgm().log( f"#FPDM: classes stat={stat(mask_classes)}")
-        return mask
+        return xa.DataArray( mask, dims=["samples"], coords=dict(samples=ptdata.samples), attrs=ptdata.attrs )
 
 class MaskSavePanel(MaskCache):
 
@@ -185,14 +185,12 @@ class ModelTrainer(SCSingletonConfigurable):
             b: Block = tm().getBlock()
             lgm().log( f"MODEL: input dims={b.point_data.shape[1]}, layer_sizes={self.layer_sizes}" )
             self._model = MLP( "masks", b.point_data.shape[1], self.nclasses, self.layer_sizes, **opts ).to(self.device)
-#            input: Tensor = torch.from_numpy(ptdata.values)
-#            self._model.forward( input )
         return self._model
 
     def get_mask_load_panel(self) -> Panel:
         return self.mask_load_panel.gui()
 
-    def get_class_mask(self, ptdata: xa.DataArray ) -> np.ndarray:
+    def get_class_mask(self, ptdata: xa.DataArray ) -> xa.DataArray:
         return self.mask_load_panel.get_class_mask( ptdata )
 
     def panel(self)-> pn.Column:
@@ -343,7 +341,7 @@ class ModelTrainer(SCSingletonConfigurable):
         raster = kwargs.pop( 'raster', False )
         block: Block = tm().getBlock(**kwargs)
         if block_data is None: block_data = block.get_point_data(**kwargs)
-        input_data: xa.DataArray = tm().prepare_inputs(block_data)
+        input_data: xa.DataArray = tm().prepare_inputs( block_data, **kwargs )
         raw_result: xa.DataArray = self.model.predict( input_data )
         lgm().log( f"#MT: predict-> input: [shape={input_data.shape}, stat={stat(input_data)}], anomaly={input_data.attrs.get('anomaly','UNDEF')}, output: [shape={raw_result.shape}, stat={stat(raw_result)}]")
         return block.points2raster( raw_result ) if raster else raw_result

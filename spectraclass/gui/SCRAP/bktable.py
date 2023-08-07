@@ -30,7 +30,7 @@ class bkSpreadsheet:
         self._source: ColumnDataSource = ColumnDataSource( self._dataFrame )
         self._source.selected.on_change( "indices", self._exec_selection_callback )
         self._columns = [TableColumn(field=cid, title=cid, sortable=True) for cid in self._dataFrame.columns]
-        self._selection = np.full( [ self._dataFrame.shape[0] ], False, np.bool )
+        self._selection = np.full( [ self._dataFrame.shape[0] ], False, bool )
         self.current_page = kwargs.get('init_page', 0)
         lgm().log( f" Creating bokeh Spreadsheet from dframe[{self._dataFrame.shape}], cols = {self._dataFrame.columns} " )
         self._table = DataTable( source=self._source, columns=self._columns, width=600, height=300, selectable="checkbox", index_position=None )

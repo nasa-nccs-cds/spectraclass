@@ -66,7 +66,7 @@ class TileManager(SCSingletonConfigurable):
         self._block_image: pn.pane.HTML = pn.pane.HTML(sizing_mode="stretch_width", width=self.map_size)
         self.rgbviewer = RGBViewer()
 
-    def prepare_inputs(self, point_data: xa.DataArray, **kwargs ) -> xa.DataArray:
+    def prepare_inputs_anom(self, point_data: xa.DataArray, **kwargs ) -> xa.DataArray:
         from spectraclass.learn.pytorch.trainer import stat
         result = None
         if self.anomaly and not point_data.attrs.get("anomaly",False):
@@ -83,6 +83,11 @@ class TileManager(SCSingletonConfigurable):
             result = point_data
             lgm().log(f"#TM: prepare_inputs-> RAW normalized input: shape={point_data.shape}, stat={stat(point_data)}")
             result.attrs['anomaly'] = False
+        return result
+
+    def prepare_inputs(self, point_data: xa.DataArray, **kwargs ) -> xa.DataArray:
+        result = self.norm( point_data, **kwargs )
+        result.attrs['anomaly'] = False
         return result
 
     def set_sat_view_bounds(self, block: Block ):
@@ -115,6 +120,25 @@ class TileManager(SCSingletonConfigurable):
                 ufm().show( f"Done Computing mean spectrum")
                 lgm().log( f"#ANOM.get_mean_spectrum({len(block_selection)} blocks)-> smean: shape={smean.shape}, stat={stat(smean)}")
             return smean
+
+    def get_norm_factors(self,**kwargs) -> Optional[xa.DataArray]:
+        from spectraclass.learn.pytorch.trainer import stat
+        from spectraclass.data.base import dm
+        block_selection: Optional[Dict] = kwargs.get( "blocksel", dm().modal.get_block_selection() )
+        ufm().show( f"Computing mean spectrum over {len(block_selection)} blocks")
+        dsum: xa.DataArray = None
+        npts: int = 0
+        for (ix,iy) in block_selection.keys():
+            block: Block = self.tile.getDataBlock(ix, iy)
+            pdata: xa.DataArray = block.get_point_data()
+            ufm().show(f" ... processing block {(ix,iy)}")
+            pdsum: xa.DataArray = pdata.sum( dim=str(pdata.dims[0]) )
+            npts = npts + pdata.shape[0]
+            dsum = pdsum if (dsum is None) else dsum + pdsum
+        smean: xa.DataArray = dsum/npts
+        ufm().show( f"Done Computing mean spectrum")
+        lgm().log( f"#ANOM.get_mean_spectrum({len(block_selection)} blocks)-> smean: shape={smean.shape}, stat={stat(smean)}")
+
 
     def bi2c(self, bindex: int ) -> Tuple[int,int]:
         ts1: int = self.tile_shape[1]
@@ -151,7 +175,7 @@ class TileManager(SCSingletonConfigurable):
         self.update_satellite_view()
         return self._block_image
 
-    def rgb_viewer(self,**kwargs) -> Panel:
+    def get_rgb_panel(self,**kwargs) -> Panel:
         return self.rgbviewer.panel(**kwargs)
 
     @classmethod

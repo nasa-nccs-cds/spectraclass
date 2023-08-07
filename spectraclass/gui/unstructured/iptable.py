@@ -344,7 +344,7 @@ class TableManager(SCSingletonConfigurable):
         self._dataFrame: pd.DataFrame = pd.DataFrame( catalog, dtype='U', index=pd.Int64Index( range(nrows), name="index" ) )
         self._cols = list(catalog.keys())
         self._dataFrame.insert(len(self._cols), "cid", 0, True)
-        self._selection: np.ndarray = np.full( [self._dataFrame.shape[0]], False, np.bool )
+        self._selection: np.ndarray = np.full( [self._dataFrame.shape[0]], False, bool )
         lgm().log(f"  DataFrame[{nrows}]: cols = {self._dataFrame.columns}, catalog cols = {self._cols}, shape = {self._dataFrame.shape}" )
 
     def page_selection(self, ipage: int ) -> np.ndarray:

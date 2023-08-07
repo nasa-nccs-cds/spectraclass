@@ -431,8 +431,7 @@ class Block(DataContainer):
         self._point_data: Optional[xa.DataArray] = None
         self._filtered_point_data: Optional[xa.DataArray] = None
         self._point_coords: Optional[Dict[str,np.ndarray]] = None
-        self._point_mask: Optional[np.ndarray] = None
-        self._raster_mask: Optional[np.ndarray] = None
+        self._class_mask: Optional[xa.DataArray] = None
         self._tmask: np.ndarray = None
         self._model_data: xa.DataArray = None
         self._reproduction: xa.DataArray = None
@@ -510,7 +509,7 @@ class Block(DataContainer):
         if self._tmask is not None:
             if not raster:
                 ptmask = self._tmask.flatten()
-                if reduced: ptmask = ptmask[self._point_mask]
+                if reduced: ptmask = ptmask[self.class_mask.values]
                 return ptmask
         return self._tmask
 
@@ -529,7 +528,7 @@ class Block(DataContainer):
             #     self._tmask = self.raster_mask
         if (not raster) and (self._tmask is not None):
             ptmask = self._tmask.flatten()
-            if reduced: ptmask = ptmask[self._point_mask]
+            if reduced: ptmask = ptmask[self.class_mask.values]
             return ptmask
         return self._tmask
 
@@ -640,17 +639,17 @@ class Block(DataContainer):
         from spectraclass.learn.pytorch.trainer import stat
         raster = kwargs.get('raster',False)
         raw_data: xa.DataArray = tm().mask_nodata( dataset["raw"] )
-        point_data = self.raster2points( raw_data, norm=True, **kwargs)
+        point_data = self.raster2points(raw_data, norm=True, **kwargs)
         baseline_spectrum: xa.DataArray = dataset.get('baseline', None )
         result = point_data
         if baseline_spectrum is not None:
             sdiff: xa.DataArray = point_data - baseline_spectrum
             result = tm().norm( sdiff )
             lgm().log( f"#ANOM.TILE.extract_input_data{kwargs}-> input: shape={point_data.shape}, stat={stat(point_data)}; "
-                       f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
+                       f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}" )
         result.attrs['anomaly'] = (baseline_spectrum is not None)
-        if raster: result = self.points2raster(  result, coords=raw_data.coords )
-        result.attrs.update( dataset["raw"].attrs )
+        if raster: result = self.points2raster(result, coords=raw_data.coords)
+        result.attrs.update(dataset["raw"].attrs)
         return result
 
     @exception_handled
@@ -670,7 +669,7 @@ class Block(DataContainer):
         bdata: xa.DataArray = self.data if raster else self.point_data
         return bdata.copy( data=np.full( bdata.shape, value ) )
 
-    def get_point_data( self, **kwargs) -> xa.DataArray:
+    def get_point_data(self, **kwargs) -> xa.DataArray:
         class_filter =  kwargs.get( 'class_filter', False)
         return self.filtered_point_data if class_filter else self.point_data
 
@@ -758,34 +757,37 @@ class Block(DataContainer):
         if self._point_data is None: self.createPointData()
         xptdata = self._point_data
         if class_filter:
-            ptdata = np.where( self._point_mask, self._point_data.values, np.nan )
+            ptdata = np.where(self.class_mask.values, self._point_data.values, np.nan)
             xptdata = self._point_data.copy( data=ptdata )
         return self.points2raster( xptdata )
 
     @property
     def point_data(self) -> Optional[xa.DataArray]:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         if self._point_data is None: self.createPointData()
-        return tm().norm( self._point_data )
+        return self._point_data
 
     @property
     def filtered_point_data(self) -> Optional[xa.DataArray]:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         if self._point_data is None: self.createPointData()
-        return tm().norm( self._point_data[self._point_mask] )
+        return self._point_data[self.class_mask.values]
 
     @property
     def filtered_raster_data(self) -> Optional[xa.DataArray]:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         if self._point_data is None: self.createPointData()
-        fpoint_data: xa.DataArray = tm().norm( self._point_data[self._point_mask] )
+        fpoint_data: xa.DataArray = self._point_data[self.class_mask.values]
         return self.points2raster( fpoint_data )
 
     @property
-    def class_mask(self) -> np.ndarray:
-        if self._point_mask is None:
+    def class_mask(self) -> xa.DataArray:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.learn.pytorch.trainer import mpt
+        if self._class_mask is None:
             self.createPointData()
-        return self._point_mask
+            normed_data = tm().norm( self._point_data )
+            self._class_mask  = mpt().get_class_mask(normed_data)
+            self._point_data.attrs['pmask'] = self._class_mask
+            lgm().log( f"class mask: shape={self._class_mask.shape}, nz={np.count_nonzero(self._class_mask)}")
+        return self._class_mask
 
     def point_coords(self)-> Dict[str, np.ndarray]:
         if self._point_data is None: self.createPointData()
@@ -793,24 +795,17 @@ class Block(DataContainer):
 
     @exception_handled
     def createPointData(self, **kwargs):
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
-        from spectraclass.learn.pytorch.trainer import mpt
-        self._point_data =  self.raster2points( self.data, **kwargs )
-        if self._point_data is not None:
+        if self._point_data is None:
+            self._point_data = self.raster2points( self.data, **kwargs )
             self._samples_axis = self._point_data.coords['samples']
-            normed_data = tm().norm( self._point_data )
-            self._point_mask  = mpt().get_class_mask( normed_data )
-            lgm().log(f"#FPDM-getPointData: filtered data shape={self._point_data.shape}, "
-                      f"cfmask shape={self._point_mask.shape}, nz={np.count_nonzero(self._point_mask)}")
+            lgm().log(f"#FPDM-getPointData: filtered data shape={self._point_data.shape} " )
             self._point_data.attrs['type'] = 'block'
             self._point_data.attrs['dsid'] = self.dsid()
-            self._point_data.attrs['pmask'] = self._point_mask
             self._point_coords: Dict[str, np.ndarray] = dict(y=self.data.y.values, x=self.data.x.values)
 
     @property
-    def raster_mask(self) -> Optional[np.ndarray]:
-        if self._point_data is None: self.createPointData()
-        return self._raster_mask
+    def raster_mask(self) -> xa.DataArray:
+        return self.points2raster( self.class_mask )
 
     @property
     def mask(self) -> np.ndarray:
@@ -883,14 +878,14 @@ class Block(DataContainer):
         coords = [(dims[0], points_data[dims[0]].data), ('y', y), ('x',x)]
         rpdata = np.full([x.size * y.size, points_data.shape[1]], float('nan'))
         lgm().log(f"#P2R points2raster:  points_data.attrs = {list(points_data.attrs.keys())}")
-        self._point_mask  = points_data.attrs.get('pmask',None)
-        if self._point_mask is not None:
-            pnz = np.count_nonzero(self.class_mask)
-            lgm().log(f"#P2R --> cmask shape = {self.class_mask.shape}")
+        class_mask  = points_data.attrs.get('pmask', None)
+        if class_mask is not None:
+            pnz = np.count_nonzero(class_mask)
+            lgm().log(f"#P2R --> cmask shape = {class_mask.shape}")
         else: pnz = -1
         lgm().log(f"#P2R --> points_data, shape={points_data.shape}; pmask #nz={pnz}; raster shape = {rpdata.shape}; ")
         if pnz == points_data.shape[0]:
-            rpdata[ self.class_mask ] = points_data.data
+            rpdata[ class_mask ] = points_data.data
         elif rpdata.shape[0] == points_data.shape[0]:
             rpdata = points_data.values.copy()
         else:
