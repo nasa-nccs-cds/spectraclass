@@ -67,6 +67,7 @@ class MaskCache(param.Parameterized):
 
     @exception_handled
     def load( self, *args ):
+        lgm().log( f"MODEL: load mask_name={self.mask_name}" )
         self.model.load( self.model_id, self.mask_name, dir=self.save_dir )
         dm().modal.update_parameter( "Cluster Mask", self.mask_name )
         self._model_loaded = True

@@ -798,7 +798,7 @@ class Block(DataContainer):
         if self._point_data is None:
             self._point_data = self.raster2points( self.data, **kwargs )
             self._samples_axis = self._point_data.coords['samples']
-            lgm().log(f"#FPDM-getPointData: filtered data shape={self._point_data.shape} " )
+            lgm().log(f"#FPDM-getPointData: point data shape={self._point_data.shape} " )
             self._point_data.attrs['type'] = 'block'
             self._point_data.attrs['dsid'] = self.dsid()
             self._point_coords: Dict[str, np.ndarray] = dict(y=self.data.y.values, x=self.data.x.values)
