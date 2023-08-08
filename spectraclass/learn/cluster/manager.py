@@ -134,7 +134,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._model_watcher = self._model_selector.param.watch( self.on_parameter_change, ['value'], onlychanged=True )
         self._ncluster_selector = pn.widgets.Select(name='#Clusters', options=self._ncluster_options, value=self.nclusters )
         self._ncluster_watcher = self._ncluster_selector.param.watch(self.on_parameter_change, ['value'], onlychanged=True )
-        self._current_training_set: Tuple[np.ndarray, np.ndarray] = None
+        self._current_training_set: Tuple[np.ndarray,np.ndarray,np.ndarray] = None
         self.ts_generate_button = Button( name='Generate Training Set', button_type='primary', width=150 )
         self.learn_button = Button( name='Learn Mask', button_type='primary', width=150 )
         self.learn_button.on_click( self.learn_mask )
@@ -397,14 +397,14 @@ class ClusterManager(SCSingletonConfigurable):
     def generate_training_set( self, source: str, *args, **kwargs ):
         from spectraclass.learn.pytorch.trainer import stat
         from spectraclass.data.spatial.tile.manager import tm
-        xchunks, ychunks = [], []
+        xchunks, ychunks, xsum = [], [], None
         ufm().show(f"Generating training set from {len(self._cluster_markers)} labeled regions")
         for (image_index, block_coords, icluster, nclusters), marker in self._cluster_markers.items():
             block = tm().getBlock( bindex=block_coords )
             if source == "model":
                 input_data: xa.DataArray = block.getModelData(raster=False)
             else:
-                input_data: xa.DataArray = tm().prepare_inputs( block.get_point_data(**kwargs) )
+                input_data: xa.DataArray = tm().prepare_inputs( block.get_point_data(**kwargs), **kwargs )
                 lgm().log( f"#CM.generate_training_set: input_data{input_data.shape}[{input_data.dtype}] stat={stat(input_data)}, anomaly={input_data.attrs.get('anomaly','UNDEF')} ")
             mask_array: np.array = np.full( input_data.shape[0], False, dtype=bool )
             mask_array[ marker.gids ] = True
@@ -414,9 +414,27 @@ class ClusterManager(SCSingletonConfigurable):
             lgm().log(f"#CM:  --> mask_array shape={mask_array.shape}, mask_array nzeros={np.count_nonzero(mask_array)}, anomaly={input_data.attrs.get('anomaly','UNDEF')}")
             xchunks.append( xchunk )
             ychunks.append( ychunk )
+            xsum = xchunk.sum(axis=0) if (xsum is None) else xsum + xchunk.sum(axis=0)
         x, y = np.concatenate( xchunks, axis=0 ), np.concatenate( ychunks, axis=0 )
-        ufm().show(f"Training set generated: x shape={x.shape}, y shape={y.shape}, y range: {(y.min(),y.max())}" )
-        self._current_training_set = ( x,y )
+        xs_ave = xsum/x.shape[0]
+        ufm().show(f"Training set generated: x shape={x.shape}, y shape={y.shape}, xsave shape={xs_ave.shape}, y range: {(y.min(),y.max())}, xs_ave range: {(xs_ave.min(),xs_ave.max())}" )
+        self._current_training_set = ( x,y,xs_ave )
+
+    def get_training_set(self) -> Tuple[np.ndarray,np.ndarray,np.ndarray]:
+        return self._current_training_set
+
+    def save_training_set(self, tile_name: str, model_name: str, **kwargs ):
+        from spectraclass.data.base import DataManager, dm
+        from spectraclass.gui.control import UserFeedbackManager, ufm
+        models_dir = kwargs.get( 'dir', f"{dm().cache_dir}/training_data/{dm().name}" )
+        os.makedirs(models_dir, exist_ok=True)
+        try:
+            model_path = f"{models_dir}/{tile_name}__{model_name}.nc"
+      #      torch.save(self._network.state_dict(), model_path)
+            ufm().show(f"Saved model '{model_name}'" )
+            lgm().log(f" ----> file '{model_path}'")
+        except Exception as err:
+            print(f"Error saving model {tile_name}: {err}")
 
     @exception_handled
     def get_marker_table(self, x=None, y=None ) -> hv.Table:

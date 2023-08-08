@@ -115,7 +115,7 @@ class NEONDataManager(SpatialDataManager):
         return pn.Row( mask_gui, preprocessing_gui )
 
     def execute_preprocessing(self, *args ):
-        self.prepare_inputs()
+        self.prepare_inputs( spatial_norm=True )
 
     def valid_bands(self):
         if self._valid_bands is None:

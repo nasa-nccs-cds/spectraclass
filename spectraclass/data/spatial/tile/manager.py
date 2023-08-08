@@ -86,8 +86,22 @@ class TileManager(SCSingletonConfigurable):
         return result
 
     def prepare_inputs(self, point_data: xa.DataArray, **kwargs ) -> xa.DataArray:
-        result = self.norm( point_data, **kwargs )
-        result.attrs['anomaly'] = False
+        from spectraclass.learn.pytorch.trainer import stat
+        norm = kwargs.get( 'norm', True )
+        spatial_ave = kwargs.get('spatial_ave', None)
+        if spatial_ave is not None:
+            anomaly = point_data - spatial_ave
+            result = anomaly / np.nanstd( anomaly.values )
+            result.attrs['anomaly'] = True
+            lgm().log(f"#TM> prepare_inputs->point_data: shape={point_data.shape}, stat={stat(point_data)}")
+            lgm().log(f"#TM> prepare_inputs->anomaly: shape={anomaly.shape}, stat={stat(anomaly)}")
+            lgm().log(f"#TM> prepare_inputs->result: shape={result.shape}, stat={stat(result)}")
+        elif norm:
+            result = self.norm( point_data, **kwargs )
+            result.attrs['anomaly'] = False
+        else:
+            result = point_data
+            result.attrs['anomaly'] = False
         return result
 
     def set_sat_view_bounds(self, block: Block ):

@@ -220,6 +220,7 @@ class SpatialDataManager(ModeDataManager):
         baseline_spectrum = kwargs.get( 'baseline', None )
         t0, reprocess = time.time(), tm().reprocess
         block_data_file = dm().modal.dataFile(block=block)
+        class_data: Optional[xa.DataArray] = None
         if os.path.exists(block_data_file) and reprocess:
             os.remove( block_data_file )
 
@@ -239,7 +240,8 @@ class SpatialDataManager(ModeDataManager):
             if raw_data is not None:
                 raw_data.attrs['anomaly'] = int(raw_data.attrs.get('anomaly', 0))
                 try:
-                    blocks_point_data = block.getBandData(norm=False)
+                    blocks_point_data: xa.DataArray = block.getBandData(norm=False)
+                    class_data = block.filtered_point_data
                     lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}")
                 except NoDataInBounds:
                     blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
@@ -255,6 +257,10 @@ class SpatialDataManager(ModeDataManager):
                 result_dataset = xa.Dataset(data_vars)
                 result_dataset.attrs['tile_shape'] = tm().tile.data.shape
                 result_dataset.attrs['block_dims'] = tm().block_dims
+                if class_data is not None:
+                    ssum = class_data.sum(axis=0)
+                    ssum.attrs['npoints'] = class_data.shape[0]
+                    result_dataset.attrs['spatial_sum'] = ssum
                 result_dataset.attrs['tile_size'] = tm().tile_size
                 result_dataset.attrs['nsamples'] = blocks_point_data.shape[0]
                 result_dataset.attrs['nbands'] = blocks_point_data.shape[1]
@@ -293,8 +299,9 @@ class SpatialDataManager(ModeDataManager):
         tm().autoprocess = False
         attrs, block_sizes = {}, {}
         nbands = None
+        spatial_sum, npts = None, 0
         blocks: Dict = dm().modal.get_block_selection()
-        baseline_spectrum:  Optional[xa.DataArray] = tm().get_mean_spectrum( blocksel=blocks ) if tm().anomaly else None
+ #       baseline_spectrum:  Optional[xa.DataArray] = tm().get_mean_spectrum( blocksel=blocks ) if tm().anomaly else None
         lgm().log(f" Preparing inputs, reprocess={tm().reprocess}, nblocks={len(blocks)}", print=True)
         try:
             has_metadata = (self.metadata is not None)
@@ -306,14 +313,21 @@ class SpatialDataManager(ModeDataManager):
                 for bid in blocks.keys():
                     if mt().abort: return
                     block = tm().getBlock(bindex=bid)
-                    result_dataset: xa.Dataset = self.process_block( block, has_metadata, baseline=baseline_spectrum )
+                    result_dataset: xa.Dataset = self.process_block( block, has_metadata ) # , baseline=baseline_spectrum )
                     if result_dataset is not None:
                         block_sizes[ block.cindex ] = result_dataset.attrs[ 'nsamples']
                         if nbands is None: nbands = result_dataset.attrs[ 'nbands']
+                        ssum: xa.DataArray = result_dataset.attrs.get('spatial_sum')
+                        if ssum is not None:
+                            spatial_sum = ssum if spatial_sum is None else spatial_sum + ssum
+                            npts = npts + ssum.attrs['npoints']
                         result_dataset.close()
             if not has_metadata:
                 self.write_metadata(block_sizes, attrs)
-            mt().train( baseline=baseline_spectrum )
+            train_args = dict( **kwargs )
+            if spatial_sum is not None:
+                train_args['spatial_ave'] = spatial_sum/npts
+            mt().train( **train_args )
         except Exception as err:
             print( f"\n *** Error in processing workflow, check log file for details: {lgm().log_file} *** ")
             lgm().exception("prepare_inputs error:")
