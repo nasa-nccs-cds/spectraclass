@@ -300,6 +300,7 @@ class SpatialDataManager(ModeDataManager):
 
     def prepare_inputs(self, **kwargs ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.learn.pytorch.trainer import stat as sstat
         tm().autoprocess = False
         attrs, block_sizes = {}, {}
         nbands = None
@@ -325,12 +326,15 @@ class SpatialDataManager(ModeDataManager):
                         if ssum is not None:
                             spatial_sum = ssum if spatial_sum is None else spatial_sum + ssum
                             npts = npts + ssum.attrs['npoints']
+                            lgm().log(f"#SSUM: npts={npts}, ssum stat={sstat(spatial_sum)}")
                         result_dataset.close()
             if not has_metadata:
                 self.write_metadata(block_sizes, attrs)
             train_args = dict( **kwargs )
             if spatial_sum is not None:
-                train_args['spatial_ave'] = spatial_sum/npts
+                spatial_ave = spatial_sum/npts
+                lgm().log(f"#SSUM: npts={npts}, spatial_ave stat={sstat(spatial_ave)}")
+                train_args['spatial_ave'] = spatial_ave
             mt().train( **train_args )
         except Exception as err:
             print( f"\n *** Error in processing workflow, check log file for details: {lgm().log_file} *** ")
