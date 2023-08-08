@@ -217,6 +217,7 @@ class SpatialDataManager(ModeDataManager):
     def process_block( self, block: Block, has_metadata: bool, **kwargs  ) -> Optional[xa.Dataset]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.data.base import DataManager, dm
+        from spectraclass.learn.pytorch.trainer import stat as sstat
         baseline_spectrum = kwargs.get( 'baseline', None )
         t0, reprocess = time.time(), tm().reprocess
         block_data_file = dm().modal.dataFile(block=block)
@@ -242,7 +243,9 @@ class SpatialDataManager(ModeDataManager):
                 try:
                     blocks_point_data: xa.DataArray = block.getBandData(norm=False)
                     class_data = block.filtered_point_data
-                    lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, dims = {blocks_point_data.dims}")
+                    lgm().log(f"** BLOCK{block.cindex}: Read point data, shape = {blocks_point_data.shape}, "
+                              f"dims = {blocks_point_data.dims}")
+                    lgm().log(f"#SSUM: class_data={class_data is not None}")
                 except NoDataInBounds:
                     blocks_point_data = xa.DataArray(ea2, dims=('samples', 'band'), coords=dict(samples=ea1, band=ea1))
 
@@ -261,6 +264,7 @@ class SpatialDataManager(ModeDataManager):
                     ssum = class_data.sum(axis=0)
                     ssum.attrs['npoints'] = class_data.shape[0]
                     result_dataset.attrs['spatial_sum'] = ssum
+                    lgm().log(f"#SSUM: shape={ssum.shape}, stat={sstat(ssum)}")
                 result_dataset.attrs['tile_size'] = tm().tile_size
                 result_dataset.attrs['nsamples'] = blocks_point_data.shape[0]
                 result_dataset.attrs['nbands'] = blocks_point_data.shape[1]

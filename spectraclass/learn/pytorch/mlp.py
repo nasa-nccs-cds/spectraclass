@@ -194,20 +194,23 @@ class MLP(nn.Module):
         lgm().log(f"Loaded Weights from file {filepath}")
 
     def load(self, tile_name: str, model_name: str, **kwargs) -> bool:
-        lgm().log(f"Loading MODEL {model_name}")
-        models_dir = kwargs.get('dir', f"{self.results_dir}/{self.name}")
-        os.makedirs(models_dir, exist_ok=True)
-        model_path = f"{models_dir}/{tile_name}.{self.network_type}__{model_name}.pth"
-        try:
-            self.load_weights( model_path )
-        except Exception as err:
-            lgm().exception(f"Error loading model '{model_name}' from file {model_path}:\n  ---> {err}")
-            ufm().show(f"Error loading '{model_name}': See log file.")
+        if model_name.lower() in ["","none"]:
             return False
-        self.eval()
-        lgm().log(f"Loaded MODEL {model_name}: {model_path}")
-        ufm().show(f"Loaded MODEL {model_name}")
-        return True
+        else:
+            lgm().log(f"Loading MODEL {model_name}")
+            models_dir = kwargs.get('dir', f"{self.results_dir}/{self.name}")
+            os.makedirs(models_dir, exist_ok=True)
+            model_path = f"{models_dir}/{tile_name}.{self.network_type}__{model_name}.pth"
+            try:
+                self.load_weights( model_path )
+            except Exception as err:
+                lgm().exception(f"Error loading model '{model_name}' from file {model_path}:\n  ---> {err}")
+                ufm().show(f"Error loading '{model_name}': See log file.")
+                return False
+            self.eval()
+            lgm().log(f"Loaded MODEL {model_name}: {model_path}")
+            ufm().show(f"Loaded MODEL {model_name}")
+            return True
 
     def get_learning_metrics(self):
         metrics = {}
