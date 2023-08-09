@@ -66,7 +66,7 @@ class ModelTrainer(SCSingletonConfigurable):
     @property
     def progress(self) -> ProgressPanel:
         if self._progress is None:
-            self._progress = ProgressPanel( self.niter, self.abort_callback )
+            self._progress = ProgressPanel( self.nstep, self.abort_callback )
         return self._progress
 
     @property
@@ -153,6 +153,10 @@ class ModelTrainer(SCSingletonConfigurable):
             ufm().show("Completed training autoencoder")
             self.save(**kwargs)
 
+    @property
+    def nstep(self) -> int:
+        return self.niter * ( self.nepoch + self.focus_nepoch )
+
     def reduce(self, data: xa.DataArray ) -> Tuple[xa.DataArray,xa.DataArray]:
         reduced: Tensor = self.model.encode( data.astype( self.get_dtype() ).values, detach=False )
         reproduction: np.ndarray = self.model.decode( reduced )
@@ -189,20 +193,18 @@ class ModelTrainer(SCSingletonConfigurable):
                         final_epoch = initial_epoch + self.nepoch
                         for epoch  in range( initial_epoch, final_epoch ):
                             tloss, x, y_hat = self.training_step( epoch, x )
-                            losses.append( tloss )
-                        lgm().log( f" ---> losses = {losses[-self.nepoch:]}")
+                            loss_msg = f"loss[{iter}.{epoch}/{self.niter}]: {tloss:>7f}"
+                            self.progress.update(epoch, loss_msg, tloss)
                         initial_epoch = final_epoch
                         if self.focus_nepoch > 0:
                             final_epoch = initial_epoch + self.focus_nepoch
                             for epoch  in range( initial_epoch, final_epoch ):
                                 tloss, x, y_hat = self.focused_training_step( x, y_hat )
-                                losses.append( tloss )
+                                loss_msg = f"loss[{iter}.{epoch}/{self.niter}]: {tloss:>7f}"
+                                self.progress.update(epoch, loss_msg, tloss)
                             lgm().log( f" ** ITER[{iter}]: Focus-processed block{block.block_coords}, norm data shape = {norm_point_data.shape}, losses = {losses[-self.focus_nepoch:]}")
                             initial_epoch = final_epoch
                     block.initialize()
-        mloss = mean(losses)
-        loss_msg = f"loss[{iter}/{self.niter}]: {mloss:>7f}"
-        self.progress.update( iter+1, loss_msg, mloss )
         return initial_epoch
 
     def focused_training_step(self, train_input: Tensor, y_hat: Tensor ) -> Tuple[float,Tensor,Tensor]:

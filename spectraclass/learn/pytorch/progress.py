@@ -14,10 +14,10 @@ Loss = Stream.define( 'Loss', loss=0.0 )
 class ProgressPanel(param.Parameterized):
     loss = param.List( default=[], doc="Loss values")
 
-    def __init__(self, niter: int, abort_callback: Callable, **kwargs ):
+    def __init__(self, nstep: int, abort_callback: Callable, **kwargs ):
         param.Parameterized.__init__( self, **kwargs )
-        self.niter = niter
-        self._progress = pn.indicators.Progress( name='Iterations', value=0, width=200, max=niter )
+        self.nstep = nstep
+        self._progress = pn.indicators.Progress( name='Iterations', value=0, width=200, max=nstep )
         self._log = pn.pane.Markdown("Iteration: 0", width=150)
         self._losses = []
         self._abort = pn.widgets.Button( name='Abort', button_type='warning', width=100 )
@@ -26,21 +26,18 @@ class ProgressPanel(param.Parameterized):
         self._loss_plot = hv.DynamicMap( self.plot_losses, streams=[ self.loss_stream ] )
 
     @exception_handled
-    def update(self, iteration: int, message: str, loss: float ):
-        self._progress.value = iteration
+    def update(self, step: int, message: str, loss: float ):
+        self._progress.value = step
         self._log.object = message
-        lgm().log( f"UPDATE: iteration={iteration}, message={message}, loss={loss}")
+        lgm().log( f"UPDATE: step={step}, message={message}, loss={loss}")
         self.loss_stream.event( loss=loss )
 
     @exception_handled
     def plot_losses(self, loss: float = 0.0 ):
-        first_element = (len(self._losses) == 1) and (self._losses[0] == 0.0)
-        if first_element:   self._losses[0] = loss
-        else:               self._losses.append(loss)
+        self._losses.append(loss)
         iterations: np.ndarray = np.arange( len(self._losses) )
-        lgm().log( f"Plot Losses: {len(self._losses)} values")
         loss_table: hv.Table = hv.Table( (iterations, np.array(self._losses) ), 'Iteration', 'Loss' )
-        return hv.Curve(loss_table).opts(width=500, height=300, ylim=(0,0.2), xlim=(1,self.niter))  #  line_width=1, line_color="black",
+        return hv.Curve(loss_table).opts(width=500, height=300, ylim=(0,1.0), xlim=(1,self.nstep))  #  line_width=1, line_color="black",
 
     def panel(self) -> pn.WidgetBox:
         progress = pn.Row( self._progress, self._log, self._abort )
