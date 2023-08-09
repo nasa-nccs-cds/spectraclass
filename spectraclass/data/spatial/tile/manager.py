@@ -85,6 +85,16 @@ class TileManager(SCSingletonConfigurable):
             result.attrs['anomaly'] = False
         return result
 
+    def compute_anomaly(self, point_data: xa.DataArray, spatial_ave: np.array ) -> xa.DataArray:
+        from spectraclass.learn.pytorch.trainer import stat
+        anomaly = point_data - spatial_ave
+        result = anomaly / np.nanstd(anomaly.values)
+        lgm().log(f"#ANOM>-------> point_data: shape={point_data.shape}, stat={stat(point_data)}")
+        lgm().log(f"#ANOM>-------> spatial_ave: shape={spatial_ave.shape}, stat={stat(spatial_ave)}")
+        lgm().log(f"#ANOM>-------> anomaly: shape={anomaly.shape}, stat={stat(anomaly)}")
+        lgm().log(f"#ANOM>-------> result:  shape={result.shape},  stat={stat(result)}")
+        return point_data.copy( data=result ).astype(point_data.dtype)
+
     def prepare_inputs(self, point_data: xa.DataArray, **kwargs ) -> xa.DataArray:
         from spectraclass.learn.pytorch.trainer import stat
         norm = kwargs.pop( 'norm', True )
@@ -92,14 +102,10 @@ class TileManager(SCSingletonConfigurable):
         lgm().log(f"#SSUM: spatial_ave={(spatial_ave is not None)}")
         lgm().log(f"#TM> prepare_inputs->point_data: shape={point_data.shape}, stat={stat(point_data)}, norm={norm}")
         if (spatial_ave is not None):
-            anomaly = point_data - spatial_ave
-            result = anomaly / np.nanstd( anomaly.values )
+            result = self.compute_anomaly( point_data, spatial_ave )
             result.attrs['anomaly'] = True
-            lgm().log(f"#TM>-------> anomaly: shape={anomaly.shape}, stat={stat(anomaly)}")
-            lgm().log(f"#TM>-------> save result:  shape={result.shape},  stat={stat(result)}")
         elif norm:
             result = self.norm( point_data )
-            lgm().log(f"#TM>-------> norm result:  shape={result.shape},  stat={stat(result)}")
             result.attrs['anomaly'] = False
         else:
             result = point_data
@@ -527,11 +533,14 @@ class TileManager(SCSingletonConfigurable):
         return raster.where(raster != nodata_value, float('nan') )
 
     def norm( self, data: Optional[xa.DataArray], axis=1 ) -> Optional[xa.DataArray]:
+        from spectraclass.learn.pytorch.trainer import stat as sstat
         if data is not None:
             if data.size == 0: return data
             dave, dmag = np.nanmean(data.values, keepdims=True, axis=axis), np.nanstd(data.values, keepdims=True, axis=axis)
             normed_data = (data.values - dave) / dmag
-            return data.copy(data=normed_data).astype( data.dtype )
+            result = data.copy(data=normed_data).astype( data.dtype )
+            lgm().log(f"#TM>-------> norm result:  shape={result.shape},  stat={sstat(result)}")
+            return result
 
 
 
