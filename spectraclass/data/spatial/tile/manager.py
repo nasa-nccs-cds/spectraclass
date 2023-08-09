@@ -105,8 +105,8 @@ class TileManager(SCSingletonConfigurable):
         # if (spatial_ave is not None):
         #     result = self.compute_anomaly( point_data, spatial_ave )
         #     result.attrs['anomaly'] = True
-        if norm:
-            result = self.norm( point_data )
+        if norm >= 0:
+            result = self.norm( point_data, axis=norm )
             result.attrs['anomaly'] = False
         else:
             result = point_data
