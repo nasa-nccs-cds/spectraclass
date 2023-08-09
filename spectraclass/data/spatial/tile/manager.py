@@ -93,9 +93,8 @@ class TileManager(SCSingletonConfigurable):
         lgm().log(f"#ANOM>-------> spatial_ave: shape={spatial_ave.shape}, stat={stat(spatial_ave)}")
         lgm().log(f"#ANOM>-------> anomaly: shape={anomaly.shape}, stat={stat(anomaly)}")
         lgm().log(f"#ANOM>-------> result:  shape={result.shape},  stat={stat(result)}")
-        for iB in range( point_data.shape[0] ):
-            lgm().log(f"#AD: ------------------------ Band-{iB}, ------------------------ ")
-            lgm().log(f"#AD: point_data stat={stat(point_data[iB])}, spatial_ave={spatial_ave[iB]}, anomaly stat={stat(anomaly[iB])}")
+        for iB in range( point_data.shape[1] ):
+            lgm().log(f"#AD> Band-{iB}: point_data stat={stat(point_data[:,iB])}, spatial_ave={spatial_ave[iB]}, anomaly stat={stat(anomaly[iB])}")
         return point_data.copy( data=result ).astype(point_data.dtype)
 
     def prepare_inputs(self, point_data: xa.DataArray, **kwargs ) -> xa.DataArray:
