@@ -270,6 +270,7 @@ class VariableBrowser:
 
     @exception_handled
     def get_frame(self, iteration: int, block_selection: int ) -> hv.Image:
+        from spectraclass.learn.pytorch.trainer import stat
         ts = time.time()
         if block_selection >= 0:
             lgm().log( f"#VB: {self.cname}-> get_frame: iteration={iteration} block_selection={block_selection} ")
@@ -280,7 +281,7 @@ class VariableBrowser:
                      yaxis="bare", x="x", y="y", colorbar=False, xlim=xlim, ylim=ylim )
         t2 = time.time()
         result: hv.Image = fdata.hvplot.image( **iopts )
-        lgm().log(f"#VB: iteration={iteration}, block={block_selection}, data shape={fdata.shape}, result: {result}")
+        lgm().log(f"#VB: iteration={iteration}, block={block_selection}, data shape={fdata.shape}, stat={stat(fdata)}, result: {result}")
         tf = time.time()
         lgm().log( f"#VB: get_frame dt={tf-ts} t2={t2-ts}")
         return result
