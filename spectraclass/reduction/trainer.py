@@ -155,7 +155,9 @@ class ModelTrainer(SCSingletonConfigurable):
 
     @property
     def nstep(self) -> int:
-        return self.niter * ( self.nepoch + self.focus_nepoch )
+        from spectraclass.data.base import DataManager, dm, DataType
+        blocks: Dict = dm().modal.get_block_selection()
+        return self.niter * ( self.nepoch + self.focus_nepoch ) * len(blocks)
 
     def reduce(self, data: xa.DataArray ) -> Tuple[xa.DataArray,xa.DataArray]:
         reduced: Tensor = self.model.encode( data.astype( self.get_dtype() ).values, detach=False )
@@ -193,14 +195,14 @@ class ModelTrainer(SCSingletonConfigurable):
                         final_epoch = initial_epoch + self.nepoch
                         for epoch  in range( initial_epoch, final_epoch ):
                             tloss, x, y_hat = self.training_step( epoch, x )
-                            loss_msg = f"loss[{iter}.{epoch}/{self.niter}]: {tloss:>7f}"
+                            loss_msg = f"loss[{iter}:{epoch}]: {tloss:>7f}"
                             self.progress.update(epoch, loss_msg, tloss)
                         initial_epoch = final_epoch
                         if self.focus_nepoch > 0:
                             final_epoch = initial_epoch + self.focus_nepoch
                             for epoch  in range( initial_epoch, final_epoch ):
                                 tloss, x, y_hat = self.focused_training_step( x, y_hat )
-                                loss_msg = f"loss[{iter}.{epoch}/{self.niter}]: {tloss:>7f}"
+                                loss_msg = f"loss[{iter}:{epoch}]: {tloss:>7f}"
                                 self.progress.update(epoch, loss_msg, tloss)
                             lgm().log( f" ** ITER[{iter}]: Focus-processed block{block.block_coords}, norm data shape = {norm_point_data.shape}, losses = {losses[-self.focus_nepoch:]}")
                             initial_epoch = final_epoch

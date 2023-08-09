@@ -22,7 +22,7 @@ class ProgressPanel(param.Parameterized):
         self._losses = []
         self._abort = pn.widgets.Button( name='Abort', button_type='warning', width=100 )
         self._abort.on_click( abort_callback )
-        self.loss_stream: Stream = Loss( loss=0.0 )
+        self.loss_stream: Stream = Loss( loss=-1.0 )
         self._loss_plot = hv.DynamicMap( self.plot_losses, streams=[ self.loss_stream ] )
 
     @exception_handled
@@ -33,8 +33,8 @@ class ProgressPanel(param.Parameterized):
         self.loss_stream.event( loss=loss )
 
     @exception_handled
-    def plot_losses(self, loss: float = 0.0 ):
-        self._losses.append(loss)
+    def plot_losses(self, loss: float = -1.0 ):
+        if (loss >= 0.0): self._losses.append(loss)
         iterations: np.ndarray = np.arange( len(self._losses) )
         loss_table: hv.Table = hv.Table( (iterations, np.array(self._losses) ), 'Iteration', 'Loss' )
         return hv.Curve(loss_table).opts(width=500, height=300, ylim=(0,1.0), xlim=(0,self.nstep))  #  line_width=1, line_color="black",

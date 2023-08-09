@@ -281,10 +281,10 @@ class ModelTrainer(SCSingletonConfigurable):
         tloss = 0.0
         for epoch  in range( initial_epoch, final_epoch ):
             tloss, x, y_hat = self.training_epoch(epoch, x, y)
+            loss_msg = f"loss[{iter}:{epoch}]: {tloss:>4f}"
+            self.progress.update(epoch, loss_msg, tloss)
         lgm().log( f" ** ITER[{iter}]-> norm data: [shape={train_data.shape}, STAT={stat(train_data)}], "
                    f"labels: [{np.count_nonzero(labels_data)}/{labels_data.size}], loss: [{tloss}]")
-        loss_msg = f"loss[{iter}/{self.niter}]: {tloss:>4f}"
-        self.progress.update( iter+1, loss_msg, tloss )
         return final_epoch
 
     #
