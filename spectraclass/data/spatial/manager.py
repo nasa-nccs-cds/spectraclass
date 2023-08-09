@@ -260,11 +260,6 @@ class SpatialDataManager(ModeDataManager):
                 result_dataset = xa.Dataset(data_vars)
                 result_dataset.attrs['tile_shape'] = tm().tile.data.shape
                 result_dataset.attrs['block_dims'] = tm().block_dims
-                if class_data is not None:
-                    ssum = class_data.sum(axis=0)
-                    ssum.attrs['npoints'] = class_data.shape[0]
-                    result_dataset.attrs['spatial_sum'] = ssum
-                    lgm().log(f"#SSUM: shape={ssum.shape}, stat={sstat(ssum)}")
                 result_dataset.attrs['tile_size'] = tm().tile_size
                 result_dataset.attrs['nsamples'] = blocks_point_data.shape[0]
                 result_dataset.attrs['nbands'] = blocks_point_data.shape[1]
@@ -272,6 +267,11 @@ class SpatialDataManager(ModeDataManager):
                 for (aid, aiv) in tm().tile.data.attrs.items():
                     if aid not in result_dataset.attrs:
                         result_dataset.attrs[aid] = aiv
+                if class_data is not None:
+                    ssum: xa.DataArray = class_data.sum(axis=0)
+                    result_dataset.attrs['ssum_npts'] = class_data.shape[0]
+                    result_dataset.attrs['ssum'] = ssum.values.tolist()
+                    lgm().log(f"#SSUM: shape={ssum.shape}, stat={sstat(ssum)}")
                 lgm().log( f" Writing preprocessed output to {block_data_file} with {blocks_point_data.size} samples, dset attrs:")
                 for varname, da in result_dataset.data_vars.items():
                     da.attrs['long_name'] = ".".join([block.file_name, varname])
@@ -322,10 +322,10 @@ class SpatialDataManager(ModeDataManager):
                     if result_dataset is not None:
                         block_sizes[ block.cindex ] = result_dataset.attrs[ 'nsamples']
                         if nbands is None: nbands = result_dataset.attrs[ 'nbands']
-                        ssum: xa.DataArray = result_dataset.attrs.get('spatial_sum')
+                        ssum: xa.DataArray = result_dataset.attrs.get('ssum')
                         if ssum is not None:
                             spatial_sum = ssum if spatial_sum is None else spatial_sum + ssum
-                            npts = npts + ssum.attrs['npoints']
+                            npts = npts + result_dataset.attrs.get('ssum_npts')
                             lgm().log(f"#SSUM: npts={npts}, ssum stat={sstat(spatial_sum)}")
                         result_dataset.close()
             if not has_metadata:
