@@ -85,11 +85,16 @@ class NEONDataManager(SpatialDataManager):
     application = Spectraclass
 
     def __init__(self):
-        from spectraclass.reduction.trainer import mt
         super(NEONDataManager, self).__init__()
         self._tile_selector: NEONTileSelector = NEONTileSelector()
         self._abort = False
-        self._progress_panel = ProgressPanel( mt().nstep, self.abort_callback)
+        self._prog_panel: ProgressPanel = None
+
+    def progress_panel(self) -> ProgressPanel:
+        from spectraclass.reduction.trainer import mt
+        if self._prog_panel is None:
+            self._prog_panel = ProgressPanel( mt().nstep, self.abort_callback )
+        return self._prog_panel
 
     def get_tile_selector(self):
         return self._tile_selector
