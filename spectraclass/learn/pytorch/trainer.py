@@ -172,8 +172,12 @@ class ModelTrainer(SCSingletonConfigurable):
     @property
     def progress(self) -> ProgressPanel:
         if self._progress is None:
-            self._progress = ProgressPanel( self.niter, self.abort_callback )
+            self._progress = ProgressPanel( self.nstep, self.abort_callback )
         return self._progress
+
+    @property
+    def nstep(self) -> int:
+        return self.niter * ( self.nepoch + self.focus_nepoch )
 
     @property
     def optimizer(self):

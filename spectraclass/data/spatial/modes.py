@@ -89,7 +89,7 @@ class NEONDataManager(SpatialDataManager):
         super(NEONDataManager, self).__init__()
         self._tile_selector: NEONTileSelector = NEONTileSelector()
         self._abort = False
-        self._progress_panel = ProgressPanel( mt().niter, self.abort_callback)
+        self._progress_panel = ProgressPanel( mt().nstep, self.abort_callback)
 
     def get_tile_selector(self):
         return self._tile_selector
