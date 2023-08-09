@@ -303,8 +303,8 @@ class SpatialDataManager(ModeDataManager):
         from spectraclass.learn.pytorch.trainer import stat as sstat
         tm().autoprocess = False
         attrs, block_sizes = {}, {}
-        nbands = None
-        spatial_sum, npts = None, 0
+        nbands, npts = None, 0
+        spatial_sum: np.ndarray = None
         blocks: Dict = dm().modal.get_block_selection()
  #       baseline_spectrum:  Optional[xa.DataArray] = tm().get_mean_spectrum( blocksel=blocks ) if tm().anomaly else None
         lgm().log(f" Preparing inputs, reprocess={tm().reprocess}, nblocks={len(blocks)}", print=True)
@@ -322,9 +322,9 @@ class SpatialDataManager(ModeDataManager):
                     if result_dataset is not None:
                         block_sizes[ block.cindex ] = result_dataset.attrs[ 'nsamples']
                         if nbands is None: nbands = result_dataset.attrs[ 'nbands']
-                        ssum: xa.DataArray = result_dataset.attrs.get('ssum')
+                        ssum: List[float] = result_dataset.attrs.get('ssum')
                         if ssum is not None:
-                            spatial_sum = ssum if spatial_sum is None else spatial_sum + ssum
+                            spatial_sum = np.array( ssum ) if spatial_sum is None else spatial_sum + np.array( ssum )
                             npts = npts + result_dataset.attrs.get('ssum_npts')
                             lgm().log(f"#SSUM: npts={npts}, ssum stat={sstat(spatial_sum)}")
                         result_dataset.close()
