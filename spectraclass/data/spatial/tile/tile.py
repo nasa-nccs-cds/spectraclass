@@ -692,8 +692,9 @@ class Block(DataContainer):
         if self._model_data is None: self._get_model_data()
         return self._model_data
 
-    def getReproduction(self, raster=False ) -> xa.DataArray:
-        if self._model_data is None: self._get_model_data()
+    def getReproduction(self, **kwargs ) -> xa.DataArray:
+        raster = kwargs.get('raster',False)
+        if self._model_data is None: self._get_model_data(**kwargs)
         return self.points2raster(self._reproduction) if raster else self._reproduction
 
     @property
@@ -701,15 +702,16 @@ class Block(DataContainer):
         if self._model_data is None: self._get_model_data()
         return self._reduction_input_data
 
-    def _get_model_data(self):
+    def _get_model_data(self,**kwargs):
         from spectraclass.reduction.trainer import mt
-        pdata = self.filtered_point_data
-        (self._model_data, self._reproduction) = mt().reduce( pdata )
-        self._reduction_input_data = pdata
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        input_data: xa.DataArray = tm().prepare_inputs( self.filtered_point_data, **kwargs)
+        (self._model_data, self._reproduction) = mt().reduce( input_data )
+        self._reduction_input_data = input_data
         self._model_data.attrs['block_coords'] = self.block_coords
         self._model_data.attrs['dsid'] = self.dsid()
         self._model_data.attrs['file_name'] = self.file_name
-        self._model_data.attrs['pmask'] = pdata.attrs.get('pmask',None)
+        self._model_data.attrs['pmask'] = input_data.attrs.get('pmask',None)
         self._model_data.name = self.file_name
 
     @exception_handled
