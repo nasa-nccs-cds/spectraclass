@@ -186,7 +186,7 @@ class ModelTrainer(SCSingletonConfigurable):
                 lgm().log(f" NBLOCKS = {num_training_blocks}/{len(blocks)}, block shape = {blocks[0].shape}")
             for iB, block in enumerate(blocks):
                 if iB < self.reduce_nblocks:
-                    raw_point_data = block.getBandData( raster=False, class_filter=True )
+                    raw_point_data = block.getBandData( raster=False, class_filter=True, norm="none" )
                     norm_point_data = tm().prepare_inputs( raw_point_data, **kwargs )
                     if norm_point_data.shape[0] > 0:
                         lgm().log( f" * ITER[{iter}]: Processing block{block.block_coords}, norm data shape = {norm_point_data.shape}, dtype={norm_point_data.values.dtype}")
