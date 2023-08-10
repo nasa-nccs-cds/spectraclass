@@ -333,7 +333,7 @@ class SpatialDataManager(ModeDataManager):
             if spatial_sum is not None:
                 spatial_ave: np.ndarray = spatial_sum/npts
                 lgm().log(f"#SSUM: npts={npts}, spatial_ave stat={sstat(spatial_ave)}, bands shape={bands.shape}")
-                train_args['spatial_ave'] = xa.DataArray( spatial_ave, dims=["bands"], coords=dict(bands=bands) )
+                train_args['spatial_ave'] = xa.DataArray( spatial_ave, dims=["band"], coords=dict(band=bands) )
             mt().train( **train_args )
         except Exception as err:
             print( f"\n *** Error in processing workflow, check log file for details: {lgm().log_file} *** ")
