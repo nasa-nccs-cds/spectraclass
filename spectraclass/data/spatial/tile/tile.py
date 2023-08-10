@@ -639,16 +639,17 @@ class Block(DataContainer):
         from spectraclass.learn.pytorch.trainer import stat
         raster = kwargs.get('raster',False)
         raw_data: xa.DataArray = tm().mask_nodata( dataset["raw"] )
-        point_data = self.raster2points(raw_data, norm=True, **kwargs)
-        baseline_spectrum: xa.DataArray = dataset.get('baseline', None )
+        point_data = self.raster2points(raw_data, norm=False, **kwargs)
+#        baseline_spectrum: xa.DataArray = dataset.get('baseline', None )
         result = point_data
-        if baseline_spectrum is not None:
-            sdiff: xa.DataArray = point_data - baseline_spectrum
-            result = tm().norm( sdiff )
-            lgm().log( f"#ANOM.TILE.extract_input_data{kwargs}-> input: shape={point_data.shape}, stat={stat(point_data)}; "
-                       f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}" )
-        result.attrs['anomaly'] = (baseline_spectrum is not None)
-        if raster: result = self.points2raster(result, coords=raw_data.coords)
+        # if baseline_spectrum is not None:
+        #     sdiff: xa.DataArray = point_data - baseline_spectrum
+        #     result = tm().norm( sdiff )
+        #     lgm().log( f"#ANOM.TILE.extract_input_data{kwargs}-> input: shape={point_data.shape}, stat={stat(point_data)}; "
+        #                f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}" )
+        # result.attrs['anomaly'] = False # (baseline_spectrum is not None)
+        if raster: result = self.points2raster( result, coords=raw_data.coords )
+        lgm().log(f"#FPDM: extract_input_data{kwargs}-> input: shape={result.shape}, stat={stat(result)}, attrs={list(dataset.attrs.keys())} " )
         result.attrs.update(dataset["raw"].attrs)
         return result
 
