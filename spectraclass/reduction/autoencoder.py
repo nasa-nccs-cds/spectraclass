@@ -28,6 +28,7 @@ class Autoencoder(nn.Module):
 
     def __init__(self, input_dims: int, model_dims: int, **kwargs) -> None:
         super().__init__()
+        self.attrs = {}
         self.input_dims = input_dims
         self.model_dims = model_dims
         self._module0 = None
@@ -214,7 +215,10 @@ class Autoencoder(nn.Module):
         from spectraclass.data.base import DataManager, dm
         return dm().cache_dir
 
-    def save(self, name: str):
+    def save(self, **kwargs ):
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        name = kwargs.get('id', tm().tileid )
+        spatial_ave: xa.DataArray = kwargs.pop('spatial_ave', None)
         models_dir = f"{self.results_dir}/models"
         os.makedirs(models_dir, exist_ok=True)
         try:
@@ -224,6 +228,10 @@ class Autoencoder(nn.Module):
             model_path = f"{models_dir}/{name}.decoder.{self.network_type}.pth"
             torch.save(self._decoder.state_dict(), model_path)
             print(f"Saved decoder to file '{model_path}'")
+            if spatial_ave is not None:
+                spatial_ave_path = f"{models_dir}/{name}.spatial_ave.{self.network_type}.nc"
+                spatial_ave.to_netcdf( spatial_ave_path )
+                print(f"Saved spatial-ave to file '{spatial_ave_path}'")
         except Exception as err:
             print(f"Error saving model {name}: {err}")
 
@@ -242,12 +250,17 @@ class Autoencoder(nn.Module):
     def load(self, name: str, **kwargs) -> bool:
         models_dir = f"{self.results_dir}/models"
         os.makedirs(models_dir, exist_ok=True)
-        mpaths = []
+        mpaths, spatial_ave = [], None
         try:
             for mtype in [ "encoder", "decoder" ]:
                 model_path = f"{models_dir}/{name}.{mtype}.{self.network_type}.pth"
                 mpaths.append( model_path )
                 self.load_weights( mtype, model_path )
+            spatial_ave_path = f"{models_dir}/{name}.spatial_ave.{self.network_type}.nc"
+            if os.path.isfile( spatial_ave_path ):
+                spatial_ave: xa.DataArray = xa.load_dataarray( spatial_ave_path )
+                self.attrs['spatial_ave'] = spatial_ave
+                print(f"Loaded spatial-ave from file '{spatial_ave_path}'")
         except Exception as err:
             lgm().log(f"Error loading model {name} ({mpaths[-1]}):\n  ---> {err}")
             return False

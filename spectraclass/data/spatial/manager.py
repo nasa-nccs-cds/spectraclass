@@ -303,7 +303,7 @@ class SpatialDataManager(ModeDataManager):
         from spectraclass.learn.pytorch.trainer import stat as sstat
         tm().autoprocess = False
         attrs, block_sizes = {}, {}
-        nbands, npts = None, 0
+        nbands, bands, npts = None, None, 0
         spatial_sum: np.ndarray = None
         blocks: Dict = dm().modal.get_block_selection()
         lgm().log(f" Preparing inputs, reprocess={tm().reprocess}, nblocks={len(blocks)}", print=True)
@@ -321,6 +321,7 @@ class SpatialDataManager(ModeDataManager):
                     if result_dataset is not None:
                         block_sizes[ block.cindex ] = result_dataset.attrs[ 'nsamples']
                         if nbands is None: nbands = result_dataset.attrs[ 'nbands']
+                        if bands is None: bands = result_dataset.coords['bands']
                         ssum: List[float] = result_dataset.attrs.get('ssum')
                         if ssum is not None:
                             spatial_sum = np.array( ssum ) if spatial_sum is None else spatial_sum + np.array( ssum )
@@ -330,9 +331,9 @@ class SpatialDataManager(ModeDataManager):
                 self.write_metadata(block_sizes, attrs)
             train_args = dict( **kwargs )
             if spatial_sum is not None:
-                spatial_ave = spatial_sum/npts
-                lgm().log(f"#SSUM: npts={npts}, spatial_ave stat={sstat(spatial_ave)}")
-                train_args['spatial_ave'] = spatial_ave
+                spatial_ave: np.ndarray = spatial_sum/npts
+                lgm().log(f"#SSUM: npts={npts}, spatial_ave stat={sstat(spatial_ave)}, bands shape={bands.shape}")
+                train_args['spatial_ave'] = xa.DataArray( spatial_ave, dims=["bands"], coords=dict(bands=bands) )
             mt().train( **train_args )
         except Exception as err:
             print( f"\n *** Error in processing workflow, check log file for details: {lgm().log_file} *** ")
