@@ -304,10 +304,8 @@ class SpatialDataManager(ModeDataManager):
         tm().autoprocess = False
         attrs, block_sizes = {}, {}
         nbands, npts = None, 0
-        spatial_ave = kwargs.get('spatial_ave',False)
         spatial_sum: np.ndarray = None
         blocks: Dict = dm().modal.get_block_selection()
- #       baseline_spectrum:  Optional[xa.DataArray] = tm().get_mean_spectrum( blocksel=blocks ) if tm().anomaly else None
         lgm().log(f" Preparing inputs, reprocess={tm().reprocess}, nblocks={len(blocks)}", print=True)
         try:
             has_metadata = (self.metadata is not None)
@@ -323,12 +321,10 @@ class SpatialDataManager(ModeDataManager):
                     if result_dataset is not None:
                         block_sizes[ block.cindex ] = result_dataset.attrs[ 'nsamples']
                         if nbands is None: nbands = result_dataset.attrs[ 'nbands']
-                        if spatial_ave:
-                            ssum: List[float] = result_dataset.attrs.get('ssum')
-                            if ssum is not None:
-                                spatial_sum = np.array( ssum ) if spatial_sum is None else spatial_sum + np.array( ssum )
-                                npts = npts + result_dataset.attrs.get('ssum_npts')
-                                lgm().log(f"#SSUM: npts={npts}, ssum stat={sstat(spatial_sum)}")
+                        ssum: List[float] = result_dataset.attrs.get('ssum')
+                        if ssum is not None:
+                            spatial_sum = np.array( ssum ) if spatial_sum is None else spatial_sum + np.array( ssum )
+                            npts = npts + result_dataset.attrs.get('ssum_npts')
                         result_dataset.close()
             if not has_metadata:
                 self.write_metadata(block_sizes, attrs)
