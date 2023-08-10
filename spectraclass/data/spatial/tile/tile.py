@@ -618,24 +618,16 @@ class Block(DataContainer):
     @log_timing
     def load_block_raster(self) -> Optional[xa.DataArray]:
         from spectraclass.data.base import DataManager, dm
-        from spectraclass.gui.control import UserFeedbackManager, ufm
         raw_raster: Optional[xa.DataArray] = None
         if self.has_data_file():
             dataset: xa.Dataset = dm().modal.loadDataFile( block=self )
             raw_raster = self.extract_input_data( dataset, raster=True )
-            for aid, aval in dataset.attrs.items():
-                if aid not in raw_raster.attrs:
-                    raw_raster.attrs[aid] = aval
-            x,y = raw_raster.x.values, raw_raster.y.values
-            lgm().log(f"#LB: @BLOCK{self.block_coords}->get_data: load-datafile raster shape={raw_raster.shape}, exent= ({x[0]},{x[-1]}) ({y[0]},{y[-1]})")
-            lgm().log(f"#LB: @BLOCK{self.block_coords}---> raw data attrs = {raw_raster.attrs.keys()}")
-            lgm().log(f"#LB: @BLOCK{self.block_coords}---> dset attrs = {dataset.attrs.keys()}")
-            if raw_raster.size == 0: ufm().show( "This block does not appear to have any data.", "warning" )
         return raw_raster
 
     @exception_handled
     def extract_input_data(self, dataset: xa.Dataset, **kwargs ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.gui.control import UserFeedbackManager, ufm
         from spectraclass.learn.pytorch.trainer import stat
         raster = kwargs.get('raster',False)
         raw_data: xa.DataArray = tm().mask_nodata( dataset["raw"] )
@@ -651,6 +643,12 @@ class Block(DataContainer):
         if raster: result = self.points2raster( result, coords=raw_data.coords )
         lgm().log(f"#FPDM: extract_input_data{kwargs}-> input: shape={result.shape}, stat={stat(result)}, attrs={list(dataset.attrs.keys())} " )
         result.attrs.update(dataset["raw"].attrs)
+        for aid, aval in dataset.attrs.items():
+            if aid not in result.attrs:
+                result.attrs[aid] = aval
+        x, y = result.x.values, result.y.values
+        lgm().log(f"#LB: @BLOCK{self.block_coords}->get_data: load-datafile raster shape={result.shape}, exent= ({x[0]},{x[-1]}) ({y[0]},{y[-1]})")
+        if result.size == 0: ufm().show("This block does not appear to have any data.", "warning")
         return result
 
     @exception_handled
@@ -671,8 +669,23 @@ class Block(DataContainer):
         return bdata.copy( data=np.full( bdata.shape, value ) )
 
     def get_point_data(self, **kwargs) -> xa.DataArray:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         class_filter =  kwargs.get( 'class_filter', False)
-        return self.filtered_point_data if class_filter else self.point_data
+        norm: str = kwargs.get('norm',"none")
+        result = self.filtered_point_data if class_filter else self.point_data
+        if norm == "none":
+            return result
+        elif norm == "spectral":
+            return tm().norm(result,axis=1)
+        elif norm == "spatial":
+            return tm().norm(result,axis=0)
+        elif norm == "anomaly":
+            save = self.data.attrs['spatial_ave']
+            raw_anom = result - save
+            lgm().log( f"#PD.anomaly> raw_ptdata: shape={result.shape}, stat={stat(result)},  "
+                       f"spatial_ave: shape={save.shape}, stat={stat(save)},  "
+                       f"raw_anom: shape={raw_anom.shape}, stat={stat(raw_anom)}  ")
+            return tm().norm(raw_anom,axis=1)
 
     @property
     def model_data(self) -> xa.DataArray:
@@ -690,7 +703,9 @@ class Block(DataContainer):
 
     def _get_model_data(self):
         from spectraclass.reduction.trainer import mt
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         pdata = self.filtered_point_data
+        tm().norm()
         (self._model_data, self._reproduction) = mt().reduce( pdata )
         self._reduction_input_data = pdata
         self._model_data.attrs['block_coords'] = self.block_coords

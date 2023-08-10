@@ -88,7 +88,7 @@ class TileManager(SCSingletonConfigurable):
     def compute_anomaly(self, point_data: xa.DataArray, spatial_ave: np.array ) -> xa.DataArray:
         from spectraclass.learn.pytorch.trainer import stat
         anomaly = point_data - spatial_ave
-        result = anomaly / np.nanstd(anomaly.values)
+        result = tm().norm( anomaly, axis=1 )
         lgm().log(f"#ANOM>-------> point_data: shape={point_data.shape}, stat={stat(point_data)}")
         lgm().log(f"#ANOM>-------> spatial_ave: shape={spatial_ave.shape}, stat={stat(spatial_ave)}")
         lgm().log(f"#ANOM>-------> anomaly: shape={anomaly.shape}, stat={stat(anomaly)}")
@@ -101,10 +101,10 @@ class TileManager(SCSingletonConfigurable):
         from spectraclass.learn.pytorch.trainer import stat
         norm = kwargs.pop( 'norm', 1 )
         lgm().log(f"#TM> prepare_inputs->point_data: shape={point_data.shape}, stat={stat(point_data)}, norm={norm}")
-        # spatial_ave = kwargs.pop('spatial_ave', None)
-        # if (spatial_ave is not None):
-        #     result = self.compute_anomaly( point_data, spatial_ave )
-        #     result.attrs['anomaly'] = True
+        spatial_ave = kwargs.pop('spatial_ave', None)
+        if (spatial_ave is not None):
+            result = self.compute_anomaly( point_data, spatial_ave )
+            result.attrs['anomaly'] = True
         if norm >= 0:
             result = self.norm( point_data, axis=norm )
             result.attrs['anomaly'] = False
