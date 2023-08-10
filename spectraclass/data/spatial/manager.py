@@ -321,7 +321,7 @@ class SpatialDataManager(ModeDataManager):
                     if result_dataset is not None:
                         block_sizes[ block.cindex ] = result_dataset.attrs[ 'nsamples']
                         if nbands is None: nbands = result_dataset.attrs[ 'nbands']
-                        if bands is None: bands = result_dataset.coords['bands']
+                        if bands is None: bands = result_dataset.coords['band']
                         ssum: List[float] = result_dataset.attrs.get('ssum')
                         if ssum is not None:
                             spatial_sum = np.array( ssum ) if spatial_sum is None else spatial_sum + np.array( ssum )
