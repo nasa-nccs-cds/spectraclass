@@ -158,6 +158,9 @@ class ModelTrainer(SCSingletonConfigurable):
         blocks: Dict = dm().modal.get_block_selection()
         return self.niter * ( self.nepoch + self.focus_nepoch ) * len(blocks)
 
+    def get_model_attribute(self, id: str):
+        return self.model.attrs.get(id)
+
     def reduce(self, data: xa.DataArray ) -> Tuple[xa.DataArray,xa.DataArray]:
         reduced: Tensor = self.model.encode( data.astype( self.get_dtype() ).values, detach=False )
         reproduction: np.ndarray = self.model.decode( reduced )

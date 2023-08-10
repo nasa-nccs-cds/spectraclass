@@ -703,9 +703,7 @@ class Block(DataContainer):
 
     def _get_model_data(self):
         from spectraclass.reduction.trainer import mt
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         pdata = self.filtered_point_data
-        tm().norm()
         (self._model_data, self._reproduction) = mt().reduce( pdata )
         self._reduction_input_data = pdata
         self._model_data.attrs['block_coords'] = self.block_coords
