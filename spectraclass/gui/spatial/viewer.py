@@ -168,9 +168,8 @@ class RGBViewer(param.Parameterized):
 
     def panel(self,**kwargs):
         self.init_gui(**kwargs)
-        block_image = pn.Column( self.image*self.selection_dmap, self.point_graph*self.band_markers, self.rplayer, self.gplayer, self.bplayer )
+        block_image = pn.Column( self.image, self.point_graph*self.band_markers, self.rplayer, self.gplayer, self.bplayer ) # *self.selection_dmap
         return pn.Tabs( ('block',block_image), ('tile', self.global_image) )
- #       return pn.WidgetBox( "### RGB Image", pn.Row(self.image) )
 
 class VariableBrowser:
 
@@ -371,8 +370,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         block: Block = tm().getBlock( **kwargs )
         lgm().log( f"sgui:get_data[{cname}] block = {block.index}")
         if cname=="bands":
-            bands =  tm().prepare_inputs(block=block, raster=True, **kwargs)
-            result = tm().norm( bands, axis=0 )
+            result =  tm().prepare_inputs(block=block, raster=True, **kwargs)
             result.attrs['clim'] = (-self.color_range,self.color_range)
         elif cname=="features":
             result = dm().getModelData(block=block, raster=True, norm=True)
