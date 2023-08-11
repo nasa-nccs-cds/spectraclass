@@ -98,10 +98,13 @@ class TileManager(SCSingletonConfigurable):
             lgm().log(f"#AD> Band-{iB}: point_data stat={stat(point_data[:,iB])}, spatial_ave={spatial_ave[iB]}, anomaly stat={stat(anomaly[iB])}")
         return point_data.copy( data=result ).astype(point_data.dtype)
 
-    def prepare_inputs(self, point_data: xa.DataArray, **kwargs ) -> xa.DataArray:
+    def prepare_inputs(self, **kwargs ) -> xa.DataArray:
         from spectraclass.learn.pytorch.trainer import stat
         from spectraclass.reduction.trainer import mt
         norm = kwargs.pop( 'norm', 'anomaly' )
+        raster: bool = kwargs.pop( 'raster', False )
+        block = kwargs.get( 'block', self.getBlock() )
+        point_data = block.filtered_point_data
         lgm().log(f"#TM> prepare_inputs->point_data: shape={point_data.shape}, stat={stat(point_data)}, norm={norm}")
         if norm == "anomaly":
             spatial_ave: xa.DataArray = kwargs.pop('spatial_ave', mt().get_model_attribute('spatial_ave'))
@@ -116,7 +119,7 @@ class TileManager(SCSingletonConfigurable):
         else:
             result = point_data
             result.attrs['anomaly'] = False
-        return result
+        return block.points2raster(result) if raster else result
 
     def set_sat_view_bounds(self, block: Block ):
         bounds: Tuple[float, float, float, float ] = block.bounds( 'epsg:4326' )

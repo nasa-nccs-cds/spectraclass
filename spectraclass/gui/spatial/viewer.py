@@ -370,7 +370,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         block: Block = tm().getBlock( **kwargs )
         lgm().log( f"sgui:get_data[{cname}] block = {block.index}")
         if cname=="bands":
-            result =  tm().prepare_inputs( block.filtered_point_data, **kwargs)
+            result =  tm().prepare_inputs(block=block, raster=True, norm="anomaly", **kwargs)
             result.attrs['clim'] = (-self.color_range,self.color_range)
         elif cname=="features":
             result = dm().getModelData(block=block, raster=True, norm=True)
