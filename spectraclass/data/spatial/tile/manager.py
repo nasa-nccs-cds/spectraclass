@@ -305,15 +305,14 @@ class TileManager(SCSingletonConfigurable):
     def block_coords(self) -> Tuple:
         return tuple(self.block_index)
 
+    @exception_handled
     def setBlock( self, block_index ) -> bool:
         from spectraclass.learn.cluster.manager import clm
-    #    from spectraclass.data.base import DataManager, dm, DataType
         if tuple(block_index) != self.block_index:
             lgm().log( f"TileManager.setBlock -> {block_index}")
             ufm().show( f"Set Block: {block_index}")
             self.block_index = tuple(block_index)
             block = self.getBlock()
-     #       dm().loadCurrentProject( 'setBlock', True, block=block, bindex=self.block_index )
             self.block_selection.index = self.c2bi(block_index)
             self.set_sat_view_bounds( block )
             self.rgbviewer.set_image_bounds( block )
