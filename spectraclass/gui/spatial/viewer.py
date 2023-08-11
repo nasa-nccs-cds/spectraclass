@@ -64,8 +64,8 @@ def bounds( data: xa.DataArray ) -> Tuple[ Tuple[float,float], Tuple[float,float
 #BoundsStream = Stream.define('bounds', bounds=param.Tuple(default=(0.0,0.0,0.0,0.0), doc='Image Bounds') )
 
 class RGBViewer(param.Parameterized):
-    rgb = param.Tuple( default=(50,150,300))
-    bounds = param.Tuple( default=(0.0,0.0,0.0,0.0) )
+    rgb = param.NumericTuple( default=(50,150,300))
+    bounds = param.NumericTuple( default=( 0.0, 0.0, 0.0, 0.0 ) )
 
     def __init__(self, **plotopts):
         super(RGBViewer, self).__init__()
