@@ -80,7 +80,7 @@ class MaskCache(param.Parameterized):
 
     @exception_handled
     def get_class_mask(self, ptdata: xa.DataArray ) -> xa.DataArray:
-        mask_classes: xa.DataArray = mpt().predict( ptdata, raster=False )
+        mask_classes: xa.DataArray = mpt().predict( ptdata, raster=False, norm="spectral" )
         mask: np.ndarray = np.argmax( mask_classes.values, axis=1, keepdims=False ).astype( bool )
         nvalid = np.count_nonzero( mask )
         lgm().log( f"#FPDM: filter_point_data: ptdata shape={ptdata.shape}, coords={list(ptdata.coords.keys())}, stat={stat(ptdata)}")
