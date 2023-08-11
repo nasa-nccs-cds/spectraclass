@@ -117,7 +117,7 @@ class RGBViewer(param.Parameterized):
 
     def set_image_bounds(self, block: Block ):
         bounds: Tuple[float, float, float, float] = block.bounds()
-        lgm().log( f"#RGB: set_image_bounds={bounds}")
+        lgm().log( f"#RGB: BLOCK-{block.block_coords}: set_image_bounds={bounds}")
         self.bounds = bounds
 
     @exception_handled
@@ -138,6 +138,7 @@ class RGBViewer(param.Parameterized):
     def get_image(self, br: int, bg:int, bb: int, bounds: Tuple[float,float,float,float]=(0.0,0.0,0.0,0.0) ):
         from spectraclass.learn.pytorch.trainer import stat
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        lgm().log( f"#RGB.get_image: bounds={bounds}" )
         try:
             RGB: xa.DataArray = self.get_data(br, bg, bb)
             if (bounds[0] == 0.0) and (bounds[1] == 0.0):
@@ -152,7 +153,7 @@ class RGBViewer(param.Parameterized):
                 (x0, y0, x1, y1) = bounds
                 extent =( x0, y1, x1, y0)
                 block_image = self.subset_data( RGB, extent ).values
-                lgm().log( f"#RGB-bounds({br},{bg},{bb}): block_image.shape={block_image.shape}, stat={stat(block_image)}, bounds={extent}")
+                lgm().log( f"#RGB-bounds({br},{bg},{bb}): block_image.shape={block_image.shape}, stat={stat(block_image)}, extent={extent}")
             return hv.RGB( block_image, bounds=extent ).opts( width=self.width, height=self.height, xlim=(extent[0],extent[2]), ylim=(extent[3],extent[1]) )
         except Exception as err:
             lgm().exception( "#RGB ERROR")
