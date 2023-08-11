@@ -80,7 +80,7 @@ class MaskCache(param.Parameterized):
 
     @exception_handled
     def get_class_mask(self, ptdata: xa.DataArray ) -> xa.DataArray:
-        mask_classes: xa.DataArray = mpt().predict( ptdata, raster=False, norm="spectral" )
+        mask_classes: xa.DataArray = mpt().predict( ptdata, raster=False, norm="spectral", class_filter=False )
         mask: np.ndarray = np.argmax( mask_classes.values, axis=1, keepdims=False ).astype( bool )
         nvalid = np.count_nonzero( mask )
         lgm().log( f"#FPDM: filter_point_data: ptdata shape={ptdata.shape}, coords={list(ptdata.coords.keys())}, stat={stat(ptdata)}")
@@ -349,7 +349,7 @@ class ModelTrainer(SCSingletonConfigurable):
     def predict(self, block_data: xa.DataArray = None, **kwargs) -> xa.DataArray:
         raster = kwargs.pop( 'raster', False )
         block: Block = tm().getBlock(**kwargs)
-        if block_data is None: block_data = block.get_point_data(norm="anomaly", **kwargs)
+        if block_data is None: block_data = block.get_point_data(**kwargs)
         input_data: xa.DataArray = tm().prepare_inputs( block=block, data=block_data, **kwargs )
         raw_result: xa.DataArray = self.model.predict( input_data )
         lgm().log( f"#MT: predict-> input: [shape={input_data.shape}, stat={stat(input_data)}], anomaly={input_data.attrs.get('anomaly','UNDEF')}, output: [shape={raw_result.shape}, stat={stat(raw_result)}]")
