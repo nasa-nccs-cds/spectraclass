@@ -333,7 +333,7 @@ class DataManager(SCSingletonConfigurable):
         norm: bool = kwargs.pop( 'norm', False )
         block = kwargs.get( 'block', tm().getBlock() )
         point_data = block.model_data
-        if norm: point_data = tm().norm( point_data )
+        if norm: point_data = tm().norm( point_data, axis=0 )
         return block.points2raster(  point_data ) if raster else point_data
 
     def valid_bands(self) -> Optional[List]:

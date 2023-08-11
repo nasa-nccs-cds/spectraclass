@@ -168,9 +168,9 @@ class RGBViewer(param.Parameterized):
 
     def panel(self,**kwargs):
         self.init_gui(**kwargs)
-#        block_image = pn.Column( self.image*self.selection_dmap, self.point_graph*self.band_markers, self.rplayer, self.gplayer, self.bplayer )
-#        return pn.Tabs( ('block',block_image), ('tile', self.global_image) )
-        return pn.WidgetBox( "### RGB Image", pn.Row(self.image) )
+        block_image = pn.Column( self.image*self.selection_dmap, self.point_graph*self.band_markers, self.rplayer, self.gplayer, self.bplayer )
+        return pn.Tabs( ('block',block_image), ('tile', self.global_image) )
+ #       return pn.WidgetBox( "### RGB Image", pn.Row(self.image) )
 
 class VariableBrowser:
 
@@ -332,7 +332,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         self.browsers['bands'].verification = plotopts.pop('verification',None)
         self.panels = [ (cname,browser.plot(**plotopts)) for cname, browser in self.browsers.items() ]
         self.panels.append(('satellite', tm().satellite_block_view) )
-        self.panels.append(('rgb', tm().rgbviewer ))
+        self.panels.append(('rgb', tm().rgbviewer.panel() ))
         self.panels.append( ('clusters', clm().panel() ) )
         self.mapviews = pn.Tabs( *self.panels, dynamic=True )
         self.tab_watcher = self.mapviews.param.watch(self.on_tab_change, ['active'], onlychanged=True)
@@ -371,7 +371,8 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         block: Block = tm().getBlock( **kwargs )
         lgm().log( f"sgui:get_data[{cname}] block = {block.index}")
         if cname=="bands":
-            result =  tm().prepare_inputs(block=block, raster=True, **kwargs)
+            bands =  tm().prepare_inputs(block=block, raster=True, **kwargs)
+            result = tm().norm( bands, axis=0 )
             result.attrs['clim'] = (-self.color_range,self.color_range)
         elif cname=="features":
             result = dm().getModelData(block=block, raster=True, norm=True)
