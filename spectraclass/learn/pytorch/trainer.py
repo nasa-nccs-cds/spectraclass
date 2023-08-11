@@ -349,8 +349,8 @@ class ModelTrainer(SCSingletonConfigurable):
     def predict(self, block_data: xa.DataArray = None, **kwargs) -> xa.DataArray:
         raster = kwargs.pop( 'raster', False )
         block: Block = tm().getBlock(**kwargs)
-        if block_data is None: block_data = block.get_point_data(**kwargs)
-        input_data: xa.DataArray = tm().prepare_inputs( block_data, **kwargs )
+        if block_data is None: block_data = block.get_point_data(norm="anomaly", **kwargs)
+        input_data: xa.DataArray = tm().prepare_inputs( block=block, data=block_data, **kwargs )
         raw_result: xa.DataArray = self.model.predict( input_data )
         lgm().log( f"#MT: predict-> input: [shape={input_data.shape}, stat={stat(input_data)}], anomaly={input_data.attrs.get('anomaly','UNDEF')}, output: [shape={raw_result.shape}, stat={stat(raw_result)}]")
         return block.points2raster( raw_result ) if raster else raw_result

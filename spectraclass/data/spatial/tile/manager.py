@@ -104,7 +104,7 @@ class TileManager(SCSingletonConfigurable):
         norm = kwargs.pop( 'norm', 'anomaly' )
         raster: bool = kwargs.pop( 'raster', False )
         block = kwargs.get( 'block', self.getBlock() )
-        point_data = block.filtered_point_data
+        point_data = kwargs.get( 'data', block.filtered_point_data )
         lgm().log(f"#TM> prepare_inputs->point_data: shape={point_data.shape}, stat={stat(point_data)}, norm={norm}")
         if norm == "anomaly":
             spatial_ave: xa.DataArray = kwargs.pop('spatial_ave', mt().get_model_attribute('spatial_ave'))
