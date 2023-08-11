@@ -276,6 +276,7 @@ class VariableBrowser:
             lgm().log( f"#VB: {self.cname}-> get_frame: iteration={iteration} block_selection={block_selection} ")
             self.update_block( block_selection )
         fdata: xa.DataArray = self.data[iteration]
+        lgm().log(f"#VB: {self.cname}-> get_frame: fdata dims={fdata.dims} shape={fdata.shape} stat={stat(fdata)}")
         xlim, ylim = bounds( fdata )
         iopts = dict(width=self.width, height=self.height, cmap=self.cmap, clim=self.data.attrs['clim'], xaxis="bare",
                      yaxis="bare", x="x", y="y", colorbar=False, xlim=xlim, ylim=ylim )
