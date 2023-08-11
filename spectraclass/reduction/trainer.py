@@ -188,7 +188,7 @@ class ModelTrainer(SCSingletonConfigurable):
                 lgm().log(f" NBLOCKS = {num_training_blocks}/{len(blocks)}, block shape = {blocks[0].shape}")
             for iB, block in enumerate(blocks):
                 if iB < self.reduce_nblocks:
-                    norm_point_data = tm().prepare_inputs( block=block, **kwargs )
+                    norm_point_data = tm().prepare_inputs( block=block, norm="anomaly", **kwargs )
                     if norm_point_data.shape[0] > 0:
                         lgm().log( f" * ITER[{iter}]: Processing block{block.block_coords}, norm data shape = {norm_point_data.shape}, dtype={norm_point_data.values.dtype}")
                         input_tensor: Tensor = torch.from_numpy( norm_point_data.values ) # .astype(self.model.dtype) )
