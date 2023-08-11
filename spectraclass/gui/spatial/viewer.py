@@ -172,7 +172,7 @@ class RGBViewer(param.Parameterized):
 
     def panel(self,**kwargs):
         self.init_gui(**kwargs)
-        block_image = pn.Column( self.image, self.point_graph*self.band_markers, self.rplayer, self.gplayer, self.bplayer ) # *self.selection_dmap
+        block_image = pn.Column( self.image*self.selection_dmap, self.point_graph*self.band_markers, self.rplayer, self.gplayer, self.bplayer ) #
         return pn.Tabs( ('block',block_image), ('tile', self.global_image) )
 
 class VariableBrowser:
