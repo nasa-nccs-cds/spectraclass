@@ -693,9 +693,11 @@ class Block(DataContainer):
         return self._model_data
 
     def getReproduction(self, **kwargs ) -> xa.DataArray:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         raster = kwargs.get('raster',False)
         if self._model_data is None: self._get_model_data(**kwargs)
-        return self.points2raster(self._reproduction) if raster else self._reproduction
+        reproduction = tm().norm( self._reproduction )
+        return self.points2raster(reproduction) if raster else reproduction
 
     @property
     def reduction_input_data(self) -> xa.DataArray:
