@@ -800,7 +800,7 @@ class Block(DataContainer):
             self.createPointData()
             self._class_mask  = mpt().get_class_mask( self._point_data )
             self._point_data.attrs['pmask'] = self._class_mask
-            lgm().log( f"class mask: shape={self._class_mask.shape}, nz={np.count_nonzero(self._class_mask)}")
+            lgm().log( f"class mask:  shape={self._class_mask.shape}, nz={np.count_nonzero(self._class_mask)}")
         return self._class_mask
 
     def point_coords(self)-> Dict[str, np.ndarray]:
