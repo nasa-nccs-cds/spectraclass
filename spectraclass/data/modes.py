@@ -30,6 +30,9 @@ def pnorm(data: xa.DataArray, dim: int = 1) -> xa.DataArray:
 def norm( x: xa.DataArray, axis = 0 ) -> xa.DataArray:
     return ( x - x.data.mean(axis=axis) ) / x.data.std(axis=axis)
 
+def gnorm( x: xa.DataArray ) -> xa.DataArray:
+    return ( x - x.data.mean() ) / x.data.std()
+
 def list2str( list: List, sep: str ) -> str:
     slist = [ str(bc) for bc in list ]
     return sep.join( slist )
@@ -193,7 +196,7 @@ class ModeDataManager(SCSingletonConfigurable):
         elif method == "ica":
             mapper = FastICA(n_components=ndim)
         else: raise Exception( f"Unknown reduction methos: {method}")
-        normed_train_input: xa.DataArray = norm( train_input  )
+        normed_train_input: xa.DataArray = gnorm( train_input  )
         mapper.fit( normed_train_input.data )
         if method == "pca":
             lgm().log( f"PCA reduction[{ndim}], Percent variance explained: {mapper.explained_variance_ratio_ * 100}" )

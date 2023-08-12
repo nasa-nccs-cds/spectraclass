@@ -40,6 +40,7 @@ class ModelTrainer(SCSingletonConfigurable):
     model_dims = tl.Int(3).tag(config=True, sync=True)
     modelkey = tl.Unicode(default_value="").tag(config=True, sync=True)
     device = tl.Unicode(default_value="cpu").tag(config=True, sync=True)
+    method = tl.Unicode(default_value="aec").tag(config=True, sync=True)
     nepoch = tl.Int(5).tag(config=True, sync=True)
     focus_nepoch = tl.Int(5).tag(config=True, sync=True)
     focus_ratio = tl.Float(10.0).tag(config=True, sync=True)
@@ -139,18 +140,32 @@ class ModelTrainer(SCSingletonConfigurable):
         self.previous_loss = lval
         return lval, x, y_hat
 
+    def build_training_input(self) -> xa.DataArray:
+        blocks: List[Block] = tm().tile.getBlocks()
+        for iB, block in enumerate(blocks):
+            pdata = block.filtered_point_data
+            print( f"pdata[{block.block_coords}]: dims={pdata.dims}, shape={pdata.shape}")
+
     def train(self, **kwargs):
+        from spectraclass.data.base import DataManager, dm, DataType
         if not self.load(**kwargs):
-            self.model.train()
-            t0, initial_epoch = time.time(), 0
-            ufm().show("Training autoencoder...")
-            for iter in range(self.niter):
-                if self._abort: return
-                initial_epoch = self.general_training(iter, initial_epoch, **kwargs )
-                ufm().show( f"Processed iteration {iter+1}")
-            lgm().log( f"Trained autoencoder in {(time.time()-t0)/60:.3f} min" )
-            ufm().show("Completed training autoencoder")
-            self.save(**kwargs)
+            if self.method == "aec":
+                self.model.train()
+                t0, initial_epoch = time.time(), 0
+                ufm().show("Training autoencoder...")
+                for iter in range(self.niter):
+                    if self._abort: return
+                    initial_epoch = self.general_training(iter, initial_epoch, **kwargs )
+                    ufm().show( f"Processed iteration {iter+1}")
+                lgm().log( f"Trained autoencoder in {(time.time()-t0)/60:.3f} min" )
+                ufm().show("Completed training autoencoder")
+                self.save(**kwargs)
+            elif self.method == "pca":
+                train_input: xa.DataArray = self.build_training_input()
+                (reduced_features, reproduction) = dm().modal.ca_reduction( train_input, self.model_dims, self.method )
+            else:
+                raise Exception( f"Unknown reduction method: {self.method}")
+
 
     @property
     def nstep(self) -> int:
