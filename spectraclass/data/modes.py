@@ -30,8 +30,8 @@ def pnorm(data: xa.DataArray, dim: int = 1) -> xa.DataArray:
 def norm( x: xa.DataArray, axis = 0 ) -> xa.DataArray:
     return ( x - x.data.mean(axis=axis) ) / x.data.std(axis=axis)
 
-def gnorm( x: xa.DataArray ) -> xa.DataArray:
-    return ( x - x.data.mean() ) / x.data.std()
+def gnorm( x: np.ndarray ) -> np.ndarray:
+    return (x - x.mean()) / x.std()
 
 def list2str( list: List, sep: str ) -> str:
     slist = [ str(bc) for bc in list ]
@@ -190,24 +190,7 @@ class ModeDataManager(SCSingletonConfigurable):
     #     print(f"Completed spectral_embedding in {(time.time() - t0) / 60.0} min.")
     #     return rv
 
-    def ca_reduction(self, train_input: xa.DataArray, ndim: int, method = "pca" ) -> Tuple[np.ndarray, np.ndarray]:
-        if method == "pca":
-            mapper = PCA(n_components=ndim)
-        elif method == "ica":
-            mapper = FastICA(n_components=ndim)
-        else: raise Exception( f"Unknown reduction methos: {method}")
-        normed_train_input: xa.DataArray = gnorm( train_input  )
-        mapper.fit( normed_train_input.data )
-        if method == "pca":
-            lgm().log( f"PCA reduction[{ndim}], Percent variance explained: {mapper.explained_variance_ratio_ * 100}" )
-            reduced_features: np.ndarray = mapper.transform( normed_train_input.data )
-            reproduction: np.ndarray = mapper.inverse_transform(reduced_features)
-            return ( reduced_features, reproduction )
-        else:
-            normed_input = norm( train_input )
-            reduced_features: np.ndarray = mapper.transform( normed_input.data )
-            reproduction: np.ndarray = mapper.inverse_transform(reduced_features)
-            return (reduced_features, reproduction )
+
 
     # def _load_network(self, **kwargs  ) -> bool:
     #     aefiles = self.autoencoder_files( **kwargs, withext=True  )

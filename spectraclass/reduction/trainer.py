@@ -2,6 +2,7 @@ from typing import List, Union, Tuple, Optional, Dict, Type, Callable
 import torch, time
 import traitlets as tl
 from statistics import mean
+from spectraclass.reduction.ca import PCAReducer
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 from spectraclass.data.spatial.tile.manager import TileManager, tm
@@ -55,6 +56,7 @@ class ModelTrainer(SCSingletonConfigurable):
         super(ModelTrainer, self).__init__()
         self.previous_loss: float = 1e10
         self._model: Autoencoder = None
+        self._pca: PCAReducer = None
         self._abort = False
         self._optimizer = None
         self.loss = torch.nn.MSELoss( **kwargs )
@@ -111,7 +113,10 @@ class ModelTrainer(SCSingletonConfigurable):
         return self.model.load( modelId )
 
     def save(self, **kwargs):
-        self.model.save( **kwargs )
+        if self.method == "aec":
+            self._model.save( **kwargs )
+        elif self.method == "pca":
+            self._pca.save( **kwargs )
 
     def print_layer_stats(self, iL: int, **kwargs ):
         O: np.ndarray = self.model.get_layer_output(iL)
@@ -140,11 +145,11 @@ class ModelTrainer(SCSingletonConfigurable):
         self.previous_loss = lval
         return lval, x, y_hat
 
-    def build_training_input(self) -> xa.DataArray:
+    def build_training_input(self) -> np.ndarray:
         blocks: List[Block] = tm().tile.getBlocks()
-        for iB, block in enumerate(blocks):
-            pdata = block.filtered_point_data
-            print( f"pdata[{block.block_coords}]: dims={pdata.dims}, shape={pdata.shape}")
+        block_data: List[np.ndarray] = [ block.filtered_point_data.values for block in blocks]
+        training_data: np.ndarray = np.concatenate( block_data )
+        return training_data
 
     def train(self, **kwargs):
         from spectraclass.data.base import DataManager, dm, DataType
@@ -161,8 +166,12 @@ class ModelTrainer(SCSingletonConfigurable):
                 ufm().show("Completed training autoencoder")
                 self.save(**kwargs)
             elif self.method == "pca":
-                train_input: xa.DataArray = self.build_training_input()
-                (reduced_features, reproduction) = dm().modal.ca_reduction( train_input, self.model_dims, self.method )
+                train_input: np.ndarray = self.build_training_input()
+                self._pca = PCAReducer(self.model_dims)
+                ufm().show("Training PCA...")
+                self._pca.train( train_input )
+                ufm().show("Completed training PCA")
+                self.save(**kwargs)
             else:
                 raise Exception( f"Unknown reduction method: {self.method}")
 
