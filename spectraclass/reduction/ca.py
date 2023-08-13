@@ -1,5 +1,8 @@
 import os, time, random, numpy as np
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type
+
+import xarray as xa
+
 TEST_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 from sklearn.decomposition import PCA
 
@@ -21,7 +24,7 @@ class PCAReducer:
         self._model.fit( train_input )
         self.components: np.ndarray = self._model.components_
         self.mean = self._model.mean_
-        print( f"PCAReducer.train: components shape={self.components.shape}, mean shape= {self.mean.shape}")
+        print( f"PCAReducer.train: components shape={self.components.shape}, mean shape= {self.mean.shape}" )
 
     def get_reduced_features(self, train_input: np.ndarray ) -> np.ndarray:
         centered_train_input: np.ndarray = train_input - self.mean
@@ -42,9 +45,12 @@ class PCAReducer:
         models_dir = f"{self.results_dir}/models"
         os.makedirs(models_dir, exist_ok=True)
         try:
-            model_path = f"{models_dir}/{name}.pca.npy"
+            model_path = f"{models_dir}/{name}.pca.nc"
             print(f"Saving model {name}: {model_path}" )
-            np.save( model_path, self.components )
+            xcomponents: xa.DataArray = xa.DataArray( self.components, dims=['features','bands'] )
+            xmean: xa.DataArray = xa.DataArray(self.mean, dims=['bands'])
+            model_dset = xa.Dataset( dict( components=xcomponents, mean=xmean) )
+            model_dset.to_netcdf( model_path )
         except Exception as err:
             print(f"Error saving model {name}: {err}")
 
@@ -56,7 +62,9 @@ class PCAReducer:
         try:
             model_path = f"{models_dir}/{name}.pca.npy"
             print(f"Loading model {name}: {model_path}" )
-            self.components = np.load( model_path )
+            model_dset: xa.Dataset = xa.open_dataset( model_path )
+            self.components = model_dset.data_vars['components'].values
+            self.mean = model_dset.data_vars['mean'].values
         except Exception as err:
             print(f"Error loading model {name}: {err}")
 
