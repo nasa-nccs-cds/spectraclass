@@ -113,13 +113,14 @@ class ModelTrainer(SCSingletonConfigurable):
         if self.method == "aec":
             return self.model.load( modelId )
         elif self.method == "pca":
-            return self._pca.load( **kwargs )
+            return self.pca.load( **kwargs )
 
     def save(self, **kwargs):
         if self.method == "aec":
             self._model.save( **kwargs )
         elif self.method == "pca":
-            self._pca.save( **kwargs )
+            if self._pca is not None:
+                self._pca.save( **kwargs )
 
     def print_layer_stats(self, iL: int, **kwargs ):
         O: np.ndarray = self.model.get_layer_output(iL)
@@ -170,13 +171,19 @@ class ModelTrainer(SCSingletonConfigurable):
                 self.save(**kwargs)
             elif self.method == "pca":
                 train_input: np.ndarray = self.build_training_input()
-                self._pca = PCAReducer(self.model_dims)
                 ufm().show("Training PCA...")
-                self._pca.train( train_input )
+                self.pca.train( train_input )
                 ufm().show("Completed training PCA")
                 self.save(**kwargs)
             else:
                 raise Exception( f"Unknown reduction method: {self.method}")
+
+    @property
+    def pca(self):
+        if self._pca is None:
+            self._pca = PCAReducer(self.model_dims)
+        return self._pca
+
 
 
     @property
@@ -195,8 +202,8 @@ class ModelTrainer(SCSingletonConfigurable):
             xreduced = xa.DataArray( reduced.detach().numpy(), dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(reduced.shape[1])), attrs=data.attrs)
             xreproduction = data.copy( data=reproduction )
         elif self.method == "pca":
-            reduced: np.ndarray = self._pca.get_reduced_features( data.values )
-            reproduction: np.ndarray = self._pca.get_reproduction( reduced )
+            reduced: np.ndarray = self.pca.get_reduced_features( data.values )
+            reproduction: np.ndarray = self.pca.get_reproduction( reduced )
             xreduced = xa.DataArray( reduced, dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(reduced.shape[1])), attrs=data.attrs)
             xreproduction = data.copy( data=reproduction )
         else:
