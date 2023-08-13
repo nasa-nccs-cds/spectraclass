@@ -186,10 +186,18 @@ class ModelTrainer(SCSingletonConfigurable):
         return self.model.attrs.get(id)
 
     def reduce(self, data: xa.DataArray ) -> Tuple[xa.DataArray,xa.DataArray]:
-        reduced: Tensor = self.model.encode( data.astype( self.get_dtype() ).values, detach=False )
-        reproduction: np.ndarray = self.model.decode( reduced )
-        xreduced = xa.DataArray( reduced.detach().numpy(), dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(reduced.shape[1])), attrs=data.attrs)
-        xreproduction = data.copy( data=reproduction )
+        if self.method == "aec":
+            reduced: Tensor = self.model.encode( data.astype( self.get_dtype() ).values, detach=False )
+            reproduction: np.ndarray = self.model.decode( reduced )
+            xreduced = xa.DataArray( reduced.detach().numpy(), dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(reduced.shape[1])), attrs=data.attrs)
+            xreproduction = data.copy( data=reproduction )
+        elif self.method == "pca":
+            reduced: np.ndarray = self._pca.get_reduced_features( data.values )
+            reproduction: np.ndarray = self._pca.get_reproduction( reduced )
+            xreduced = xa.DataArray( reduced, dims=['samples', 'features'], coords=dict(samples=data.coords['samples'], features=range(reduced.shape[1])), attrs=data.attrs)
+            xreproduction = data.copy( data=reproduction )
+        else:
+            raise Exception( f"Unknown reduce method: {self.method}")
         return xreduced, xreproduction
 
     def get_dtype(self):
