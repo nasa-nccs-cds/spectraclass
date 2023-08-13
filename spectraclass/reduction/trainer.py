@@ -110,7 +110,10 @@ class ModelTrainer(SCSingletonConfigurable):
         if self.refresh_model:
             lgm().log( "REFRESH MODEL")
             return False
-        return self.model.load( modelId )
+        if self.method == "aec":
+            return self.model.load( modelId )
+        elif self.method == "pca":
+            return self._pca.load( **kwargs )
 
     def save(self, **kwargs):
         if self.method == "aec":

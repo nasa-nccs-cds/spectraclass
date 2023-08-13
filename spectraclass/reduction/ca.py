@@ -54,17 +54,21 @@ class PCAReducer:
         except Exception as err:
             print(f"Error saving model {name}: {err}")
 
-    def load(self, **kwargs ):
+    def load(self, **kwargs ) -> bool:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         name = kwargs.get('id', tm().tileid )
         models_dir = f"{self.results_dir}/models"
         os.makedirs(models_dir, exist_ok=True)
         try:
             model_path = f"{models_dir}/{name}.pca.npy"
-            print(f"Loading model {name}: {model_path}" )
-            model_dset: xa.Dataset = xa.open_dataset( model_path )
-            self.components = model_dset.data_vars['components'].values
-            self.mean = model_dset.data_vars['mean'].values
+            if os.path.exists( model_path ):
+                print(f"Loading model {name}: {model_path}" )
+                model_dset: xa.Dataset = xa.open_dataset( model_path )
+                self.components = model_dset.data_vars['components'].values
+                self.mean = model_dset.data_vars['mean'].values
+                return True
+            else:
+                return False
         except Exception as err:
             print(f"Error loading model {name}: {err}")
 

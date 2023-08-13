@@ -29,6 +29,11 @@ def get_rounded_dims( master_shape: List[int], subset_shape: List[int] ) -> List
 def nnan( array: Optional[Union[np.ndarray,xa.DataArray]] ):
     return np.count_nonzero( np.isnan(array) )
 
+def gnorm( data: Optional[Union[np.ndarray,xa.DataArray]] ) -> Union[np.ndarray,xa.DataArray]:
+    x: np.ndarray = data if (type(data) == np.ndarray) else data.values
+    nx: np.ndarray = (x - np.nanmean(x)) / np.nanstd(x)
+    return nx if (type(data) == np.ndarray) else data.copy( data=nx )
+
 def tm() -> "TileManager":
     return TileManager.instance()
 
@@ -101,7 +106,7 @@ class TileManager(SCSingletonConfigurable):
     def prepare_inputs(self, **kwargs ) -> xa.DataArray:
         from spectraclass.learn.pytorch.trainer import stat
         from spectraclass.reduction.trainer import mt
-        norm = kwargs.pop( 'norm', 'anomaly' )
+        norm = kwargs.pop( 'norm', 'global' )
         raster: bool = kwargs.pop( 'raster', False )
         block = kwargs.get( 'block', self.getBlock() )
         point_data = kwargs.get( 'data', block.filtered_point_data )
@@ -115,6 +120,9 @@ class TileManager(SCSingletonConfigurable):
             result.attrs['anomaly'] = False
         elif norm == "spatial":
             result = self.norm( point_data, axis=0 )
+            result.attrs['anomaly'] = False
+        elif norm == "global":
+            result = gnorm( point_data )
             result.attrs['anomaly'] = False
         else:
             result = point_data
