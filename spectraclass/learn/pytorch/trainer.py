@@ -120,7 +120,7 @@ class MaskLoadPanel(MaskCache):
 
     def gui(self) -> Panel:
         load_panel = pn.Row(self.file_selector, self.load_button)
-        if self.mask_name != "": self.load()
+        if (self.mask_name is not None) and (self.mask_name.lower() not in ["","none"]): self.load()
         return load_panel
 
 class ModelTrainer(SCSingletonConfigurable):

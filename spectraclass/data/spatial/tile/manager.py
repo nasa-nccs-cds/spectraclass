@@ -471,13 +471,14 @@ class TileManager(SCSingletonConfigurable):
         tile_data = cls.mask_nodata(tile_data)
         valid_bands = DataManager.instance().valid_bands()
         init_shape = [*tile_data.shape]
+        lgm().log(f"#FVD: valid_bands={valid_bands}, bands={tile_data.coords['band'].values.tolist()}")
         if valid_bands is not None:
             band_names = tile_data.attrs.get('bands', None)
-            dataslices = [tile_data.isel(band=slice(valid_band[0], valid_band[1])) for valid_band in valid_bands]
+            dataslices = [tile_data.sel(band=slice(valid_band[0], valid_band[1])) for valid_band in valid_bands]
             tile_data = xa.concat(dataslices, dim="band")
             if isinstance(band_names, (list, tuple)):
                 tile_data.attrs['bands'] = sum( [list(band_names[valid_band[0]:valid_band[1]]) for valid_band in valid_bands], [])
-            lgm().log( f"-------------\n         ***** Selecting valid bands ({valid_bands}), init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
+        lgm().log( f"#FVD: init_shape = {init_shape}, resulting Tile shape = {tile_data.shape}")
         return tile_data
 
     def count_nbands(self) -> int:
