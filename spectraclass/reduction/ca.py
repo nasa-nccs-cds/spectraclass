@@ -1,5 +1,7 @@
 import os, time, random, numpy as np
+import holoviews as hv
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type
+from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
 
 import xarray as xa
 
@@ -53,6 +55,22 @@ class PCAReducer:
             model_dset.to_netcdf( model_path )
         except Exception as err:
             print(f"Error saving model {name}: {err}")
+
+    @exception_handled
+    def get_component_graph(self) -> hv.Overlay:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        from spectraclass.data.spatial.tile.tile import Block
+        block: Block = tm().getBlock()
+        point_data = block.filtered_point_data
+        popts = dict(width=600, height=200, yaxis="bare", ylim=(-3, 3), alpha=0.6)
+        graphs, colors = [], [ 'red', 'green', 'blue', 'cyan', 'yellow', 'magenta', 'orange' ]
+        for iC in range( self.components.shape[0] ):
+            component: np.ndarray = self.components[iC]
+            data_table: hv.Table = hv.Table((point_data.band.values, component ), 'Band', 'PCA Component')
+            comp_graph = hv.Curve(data_table).opts(line_width=2, line_color=colors[iC], **popts)
+            graphs.append( comp_graph )
+        result = hv.Overlay(graphs)
+        return result
 
     def load(self, **kwargs ) -> bool:
         from spectraclass.data.spatial.tile.manager import TileManager, tm

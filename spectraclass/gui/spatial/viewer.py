@@ -310,10 +310,14 @@ class VariableBrowser:
 
     @exception_handled
     def plot(self)-> Panel:
+        from spectraclass.reduction.trainer import mt
         if self.cname == "bands":
             image_panel = self.image * self.selection_dmap  # * rs().get_selector()
             selector = lm().class_selector
             return pn.Column( selector, image_panel, self.player, self.point_graph*self.iter_marker )
+        elif self.cname == "features":
+            component_graph: hv.Overlay = mt().get_component_graph()
+            return pn.Column( self.image, self.player, component_graph )
         else:
             return pn.Column( self.image, self.player )
 
@@ -374,13 +378,14 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         block: Block = tm().getBlock( **kwargs )
         lgm().log( f"sgui:get_data[{cname}] block = {block.index}")
         if cname=="bands":
-            result =  tm().prepare_inputs(block=block, raster=True, **kwargs)
+            result =  tm().prepare_inputs(block=block, raster=True, norm="spectral", **kwargs)
             result.attrs['clim'] = (-self.color_range,self.color_range)
         elif cname=="features":
             result = dm().getModelData(block=block, raster=True, norm=True)
             result.attrs['clim'] = self.get_clim( result.values, sfactor )
         elif cname=="reproduction":
-            result = block.getReproduction(raster=True)
+            reproduction = block.getReproduction(raster=True)
+            result = tm().prepare_inputs(block=block, point_data=reproduction, norm="spectral", raster=True, **kwargs)
             result.attrs['clim'] = (-self.color_range,self.color_range)
         else:
             raise Exception( f"Unkonwn data type: {cname}")

@@ -1,7 +1,7 @@
 from typing import List, Union, Tuple, Optional, Dict, Type, Callable
 import torch, time
 import traitlets as tl
-from statistics import mean
+import holoviews as hv
 from spectraclass.reduction.ca import PCAReducer
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
@@ -184,7 +184,8 @@ class ModelTrainer(SCSingletonConfigurable):
             self._pca = PCAReducer(self.model_dims)
         return self._pca
 
-
+    def get_component_graph(self) -> hv.Overlay:
+        return self.pca.get_component_graph()
 
     @property
     def nstep(self) -> int:
