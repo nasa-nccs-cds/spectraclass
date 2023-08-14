@@ -405,13 +405,13 @@ class ClusterManager(SCSingletonConfigurable):
                 input_data: xa.DataArray = block.getModelData(raster=False)
             else:
                 input_data: xa.DataArray = tm().prepare_inputs( block=block, **kwargs )
-                lgm().log( f"#CM.generate_training_set: input_data{input_data.shape}[{input_data.dtype}] stat={stat(input_data)}, anomaly={input_data.attrs.get('anomaly','UNDEF')} ")
+                lgm().log( f"#CM.generate_training_set: input_data{input_data.shape}[{input_data.dtype}] stat={stat(input_data)}, ngids={marker.gids.size} ")
             mask_array: np.array = np.full( input_data.shape[0], False, dtype=bool )
             mask_array[ marker.gids ] = True
             xchunk: np.array = input_data.values[mask_array]
             ychunk: np.array = np.full( shape=[xchunk.shape[0]], fill_value=marker.cid, dtype=np.int )
-            lgm().log(f"#CM: Add training chunk, input_data shape={input_data.shape}, xchunk shape={xchunk.shape}, ychunk shape={ychunk.shape}, #gids={marker.gids.size}")
-            lgm().log(f"#CM:  --> mask_array shape={mask_array.shape}, mask_array nzeros={np.count_nonzero(mask_array)}, anomaly={input_data.attrs.get('anomaly','UNDEF')}")
+            lgm().log(f"#CM: Add training chunk, input_data shape={input_data.shape}, xchunk shape={xchunk.shape}, ychunk shape={ychunk.shape}")
+            lgm().log(f"#CM:  --> mask_array shape={mask_array.shape}, mask_array nzeros={np.count_nonzero(mask_array)}")
             xchunks.append( xchunk )
             ychunks.append( ychunk )
             xsum = xchunk.sum(axis=0) if (xsum is None) else xsum + xchunk.sum(axis=0)

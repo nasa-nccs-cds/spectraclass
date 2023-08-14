@@ -212,7 +212,7 @@ class BlockSelection(param.Parameterized):
     def load_selection(self, event=None):
         sname: str = self.selection_name
         self._selected_rectangles = {}
-        if (sname is None) or (sname.lower()=="none"):
+        if (sname is None) or (sname.lower() in ["","none"]):
             for bid in  self.rect_grid.keys():
                 self._selected_rectangles[bid] = self.rect_grid[bid] + (self.unmarked_color,)
             ufm().show(f"Load Global Block mask, nblocks={len(self._selected_rectangles)}")
