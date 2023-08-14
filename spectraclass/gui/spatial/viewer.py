@@ -233,7 +233,7 @@ class VariableBrowser:
         lgm().log(f"V%% Plotting graph_data[{graph_data.dims}]: shape = {graph_data.shape}, dims={graph_data.dims}, range={arange(graph_data)}")
         is_probe = (lm().current_cid == 0) and (self.cname == "bands")
         line_color = "black" if is_probe else lm().current_color
-        popts = dict( width = self.width, height = 200, yaxis = "bare", ylim=(-3,3), alpha=0.6 )
+        popts = dict( width = self.width, height = 200, yaxis = "bare", ylim=(-1,1), alpha=0.6 )
         # if None not in [x, y]:
         #     self.graph_data = self.data.sel(x=x, y=y, method="nearest")
         # elif None not in [x2, y2]:

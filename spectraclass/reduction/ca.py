@@ -8,6 +8,9 @@ import xarray as xa
 TEST_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 from sklearn.decomposition import PCA
 
+def cnorm( graph_data: np.ndarray ) -> np.ndarray:
+    return graph_data/(2*graph_data.std())
+
 class PCAReducer:
 
     def __init__(self, ndim: int):
@@ -62,10 +65,10 @@ class PCAReducer:
         from spectraclass.data.spatial.tile.tile import Block
         block: Block = tm().getBlock()
         point_data = block.filtered_point_data
-        popts = dict(width=600, height=200, yaxis="bare", ylim=(-3, 3), alpha=0.6)
+        popts = dict(width=600, height=200, yaxis="bare", ylim=(-1, 1), alpha=0.6)
         graphs, colors = [], [ 'red', 'green', 'blue', 'cyan', 'yellow', 'magenta', 'orange' ]
         for iC in range( self.components.shape[0] ):
-            component: np.ndarray = self.components[iC]
+            component: np.ndarray = cnorm( self.components[iC] )
             data_table: hv.Table = hv.Table((point_data.band.values, component ), 'Band', 'PCA Component')
             comp_graph = hv.Curve(data_table).opts(line_width=2, line_color=colors[iC], **popts)
             graphs.append( comp_graph )
@@ -78,7 +81,7 @@ class PCAReducer:
         models_dir = f"{self.results_dir}/models"
         os.makedirs(models_dir, exist_ok=True)
         try:
-            model_path = f"{models_dir}/{name}.pca.npy"
+            model_path = f"{models_dir}/{name}.pca.nc"
             if os.path.exists( model_path ):
                 print(f"Loading model {name}: {model_path}" )
                 model_dset: xa.Dataset = xa.open_dataset( model_path, engine='netcdf4' )
