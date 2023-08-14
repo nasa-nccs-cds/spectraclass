@@ -65,12 +65,12 @@ class PCAReducer:
         from spectraclass.data.spatial.tile.tile import Block
         block: Block = tm().getBlock()
         point_data = block.filtered_point_data
-        popts = dict(width=600, height=200, yaxis="bare", ylim=(-1, 1), alpha=0.6)
+        popts = dict(width=600, height=300, yaxis="bare", ylim=(-1.5, 1.5), alpha=0.6)
         graphs, colors = [], [ 'red', 'green', 'blue', 'cyan', 'yellow', 'magenta', 'orange' ]
         for iC in range( self.components.shape[0] ):
             component: np.ndarray = cnorm( self.components[iC] )
             data_table: hv.Table = hv.Table((point_data.band.values, component ), 'Band', 'PCA Component')
-            comp_graph = hv.Curve(data_table).opts(line_width=2, line_color=colors[iC], **popts)
+            comp_graph = hv.Curve(data_table).opts(line_width=2, line_color=colors[iC], line_alpha=0.6, **popts)
             graphs.append( comp_graph )
         result = hv.Overlay(graphs)
         return result
