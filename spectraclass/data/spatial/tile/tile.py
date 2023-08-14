@@ -679,13 +679,17 @@ class Block(DataContainer):
             return tm().norm(result,axis=1)
         elif norm == "spatial":
             return tm().norm(result,axis=0)
-        elif norm == "anomaly":
-            save = self.data.attrs['spatial_ave']
-            raw_anom = result - save
-            lgm().log( f"#PD.anomaly> raw_ptdata: shape={result.shape}, stat={stat(result)},  "
-                       f"spatial_ave: shape={save.shape}, stat={stat(save)},  "
-                       f"raw_anom: shape={raw_anom.shape}, stat={stat(raw_anom)}  ")
-            return tm().norm(raw_anom,axis=1)
+        elif norm == "global":
+             return tm().gnorm(result)
+        #     result.attrs['anomaly'] = False
+
+        # elif norm == "anomaly":
+        #     save = self.data.attrs['spatial_ave']
+        #     raw_anom = result - save
+        #     lgm().log( f"#PD.anomaly> raw_ptdata: shape={result.shape}, stat={stat(result)},  "
+        #                f"spatial_ave: shape={save.shape}, stat={stat(save)},  "
+        #                f"raw_anom: shape={raw_anom.shape}, stat={stat(raw_anom)}  ")
+        #     return tm().norm(raw_anom,axis=1)
 
     @property
     def model_data(self) -> xa.DataArray:

@@ -29,11 +29,6 @@ def get_rounded_dims( master_shape: List[int], subset_shape: List[int] ) -> List
 def nnan( array: Optional[Union[np.ndarray,xa.DataArray]] ):
     return np.count_nonzero( np.isnan(array) )
 
-def gnorm( data: Optional[Union[np.ndarray,xa.DataArray]] ) -> Union[np.ndarray,xa.DataArray]:
-    x: np.ndarray = data if (type(data) == np.ndarray) else data.values
-    nx: np.ndarray = (x - np.nanmean(x)) / np.nanstd(x)
-    return nx if (type(data) == np.ndarray) else data.copy( data=nx )
-
 def tm() -> "TileManager":
     return TileManager.instance()
 
@@ -71,6 +66,11 @@ class TileManager(SCSingletonConfigurable):
         self._block_image: pn.pane.HTML = pn.pane.HTML(sizing_mode="stretch_width", width=self.map_size)
         self.rgbviewer = RGBViewer()
 
+    def gnorm(self, data: Optional[Union[np.ndarray, xa.DataArray]]) -> Union[np.ndarray, xa.DataArray]:
+        x: np.ndarray = data if (type(data) == np.ndarray) else data.values
+        nx: np.ndarray = (x - np.nanmean(x)) / np.nanstd(x)
+        return nx if (type(data) == np.ndarray) else data.copy(data=nx)
+
     def prepare_inputs_anom(self, point_data: xa.DataArray, **kwargs ) -> xa.DataArray:
         from spectraclass.learn.pytorch.trainer import stat
         result = None
@@ -105,29 +105,28 @@ class TileManager(SCSingletonConfigurable):
 
     def prepare_inputs(self, **kwargs ) -> xa.DataArray:
         from spectraclass.learn.pytorch.trainer import stat
-        from spectraclass.reduction.trainer import mt
-        norm = kwargs.pop( 'norm', 'global' )
         raster: bool = kwargs.pop( 'raster', False )
         block = kwargs.get( 'block', self.getBlock() )
-        point_data = kwargs.get( 'data', block.filtered_point_data )
-        lgm().log(f"#TM> prepare_inputs->point_data: shape={point_data.shape}, stat={stat(point_data)}, norm={norm}")
-        if norm == "anomaly":
-            spatial_ave: xa.DataArray = kwargs.pop('spatial_ave', mt().get_model_attribute('spatial_ave'))
-            result = self.compute_anomaly( point_data, spatial_ave )
-            result.attrs['anomaly'] = True
-        elif norm == "spectral":
-            result = self.norm( point_data, axis=1 )
-            result.attrs['anomaly'] = False
-        elif norm == "spatial":
-            result = self.norm( point_data, axis=0 )
-            result.attrs['anomaly'] = False
-        elif norm == "global":
-            result = gnorm( point_data )
-            result.attrs['anomaly'] = False
-        else:
-            result = point_data
-            result.attrs['anomaly'] = False
-        return block.points2raster(result) if raster else result
+        point_data = kwargs.get( 'data', block.get_point_data(**kwargs) )
+        lgm().log(f"#TM> prepare_inputs->point_data: shape={point_data.shape}, stat={stat(point_data)}")
+        return block.points2raster(point_data) if raster else point_data
+
+    # if norm == "anomaly":
+    #     spatial_ave: xa.DataArray = kwargs.pop('spatial_ave', mt().get_model_attribute('spatial_ave'))
+    #     result = self.compute_anomaly(point_data, spatial_ave)
+    #     result.attrs['anomaly'] = True
+    # elif norm == "spectral":
+    #     result = self.norm(point_data, axis=1)
+    #     result.attrs['anomaly'] = False
+    # elif norm == "spatial":
+    #     result = self.norm(point_data, axis=0)
+    #     result.attrs['anomaly'] = False
+    # elif norm == "global":
+    #     result = gnorm(point_data)
+    #     result.attrs['anomaly'] = False
+    # else:
+    #     result = point_data
+    #     result.attrs['anomaly'] = False
 
     def set_sat_view_bounds(self, block: Block ):
         bounds: Tuple[float, float, float, float ] = block.bounds( 'epsg:4326' )
