@@ -264,10 +264,7 @@ class ModelTrainer(SCSingletonConfigurable):
     def train(self, **kwargs):
         self.train_losses = []
         training_set = kwargs.pop( 'training_set', None )
-        if training_set is None:
-            (train_data, labels_data, tdata_spatial_ave) = self.get_training_set(**kwargs)
-        else:
-            (train_data, labels_data) = training_set
+        (train_data, labels_data, tdata_save) = self.get_training_set(**kwargs) if (training_set is None) else training_set
         self.model.train()
         t0, initial_epoch = time.time(), 0
         train_data = train_data.astype( self.model.get_dtype() )
