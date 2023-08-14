@@ -471,7 +471,8 @@ class TileManager(SCSingletonConfigurable):
         tile_data = cls.mask_nodata(tile_data)
         valid_bands = DataManager.instance().valid_bands()
         init_shape = [*tile_data.shape]
-        lgm().log(f"#FVD: valid_bands={valid_bands}, bands={tile_data.coords['band'].values.tolist()}")
+        bdata = tile_data.coords['band'].values
+        lgm().log(f"#FVD: valid_bands={valid_bands}, band range={[bdata[0],bdata[-1]]}")
         if valid_bands is not None:
             band_names = tile_data.attrs.get('bands', None)
             dataslices = [tile_data.sel(band=slice(valid_band[0], valid_band[1])) for valid_band in valid_bands]
