@@ -370,7 +370,7 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import tm
         ckey = (tm().image_index, tm().block_coords, icluster, self.nclusters)
         self._marked_colors.pop(ckey,None)
- #       self._cluster_colors[icluster] = self._init_cluster_colors[icluster]
+        self._cluster_colors[icluster] = self._init_cluster_colors[icluster]
         self.update_cmap()
         self.get_marked_clusters(cid).remove(icluster)
         self._cluster_markers.pop(ckey,None)
@@ -382,7 +382,7 @@ class ClusterManager(SCSingletonConfigurable):
         ckey = ( tm().image_index, tm().block_coords, icluster, self.nclusters )
         class_color = lm().get_rgb_color(cid)
         self._marked_colors[ ckey ] = class_color
-#        self._cluster_colors[icluster] = class_color
+        self._cluster_colors[icluster] = class_color
         self.update_cmap()
      #   self._tuning_sliders[ icluster ].set_color( lm().current_color )
         self.get_marked_clusters(cid).append( icluster )
