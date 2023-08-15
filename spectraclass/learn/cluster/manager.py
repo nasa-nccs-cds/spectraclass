@@ -372,7 +372,6 @@ class ClusterManager(SCSingletonConfigurable):
         self._marked_colors.pop(ckey,None)
         self._cluster_colors[icluster] = self._init_cluster_colors[icluster]
         self.update_cmap()
-        self.get_marked_clusters(cid).remove(icluster)
         self._cluster_markers.pop(ckey,None)
 
     @exception_handled
