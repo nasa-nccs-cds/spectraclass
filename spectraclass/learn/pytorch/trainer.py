@@ -184,7 +184,7 @@ class ModelTrainer(SCSingletonConfigurable):
         if self._model is None:
             opts = dict ( wmag=self.init_wts_mag, init_bias=self.init_bias_mag, log_step=self.log_step )
             b: Block = tm().getBlock()
-            lgm().trace( f"MODEL: input dims={b.point_data.shape[1]}, layer_sizes={self.layer_sizes}" )
+            lgm().log( f"MODEL: input dims={b.point_data.shape[1]}, layer_sizes={self.layer_sizes}" )
             self._model = MLP( "masks", b.point_data.shape[1], self.nclasses, self.layer_sizes, **opts ).to(self.device)
         return self._model
 
@@ -344,7 +344,7 @@ class ModelTrainer(SCSingletonConfigurable):
         block_data = block.get_point_data(norm="global")
         raw_result: xa.DataArray = self.model.predict( block_data )
         if mask:
-            mask_data = np.argmax(raw_result.values, axis=0, keepdims=False)
+            mask_data = np.argmax(raw_result.values, axis=1, keepdims=False)
             result = xa.DataArray(mask_data, dims=["samples"], coords=dict(samples=block_data.samples), attrs=block_data.attrs)
         else:
             result = raw_result
