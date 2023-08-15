@@ -118,6 +118,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._count = Count(index=0)
         self._mid_options = [ "kmeans", "fuzzy cmeans", "bisecting kmeans" ]
         self._cluster_colors: np.ndarray = None
+        self._init_cluster_colors: np.ndarray = None
         self._cluster_raster: xa.DataArray = None
         self._cluster_image = hv.DynamicMap( self.get_cluster_image, streams=[ self._count, self.double_tap_stream, self.thresholdStream ] )
         self._mask_image = hv.DynamicMap( self.get_mask_image, streams=dict( visible=self.apply_button.param.value ) )
@@ -201,6 +202,7 @@ class ClusterManager(SCSingletonConfigurable):
         for (image_index, block_coords, icluster, nclusters), class_color in  self._marked_colors.items():
             if (image_index == iindx) and (block_coords == bcoords) and (nclusters == self.nclusters):
                 self._cluster_colors[icluster] = class_color
+        self._init_cluster_colors = self._cluster_colors.copy()
 
     @property
     def mids(self) -> List[str]:
@@ -364,6 +366,15 @@ class ClusterManager(SCSingletonConfigurable):
     def cluster_points(self) -> xa.DataArray:
         return self._cluster_points
 
+    def  clear_cluster( self, cid: int, icluster: int ):
+        from spectraclass.data.spatial.tile.manager import tm
+        ckey = (tm().image_index, tm().block_coords, icluster, self.nclusters)
+        self._marked_colors.pop(ckey,None)
+ #       self._cluster_colors[icluster] = self._init_cluster_colors[icluster]
+        self.update_cmap()
+        self.get_marked_clusters(cid).remove(icluster)
+        self._cluster_markers.pop(ckey,None)
+
     @exception_handled
     def mark_cluster( self, cid: int, icluster: int ) -> Marker:
         from spectraclass.model.labels import lm
@@ -371,7 +382,7 @@ class ClusterManager(SCSingletonConfigurable):
         ckey = ( tm().image_index, tm().block_coords, icluster, self.nclusters )
         class_color = lm().get_rgb_color(cid)
         self._marked_colors[ ckey ] = class_color
-        self._cluster_colors[icluster] = class_color
+#        self._cluster_colors[icluster] = class_color
         self.update_cmap()
      #   self._tuning_sliders[ icluster ].set_color( lm().current_color )
         self.get_marked_clusters(cid).append( icluster )
@@ -500,8 +511,11 @@ class ClusterManager(SCSingletonConfigurable):
             block: Block = tm().getBlock()
             gid, ix, iy = block.coords2gid(y,x)
             icluster = clm().get_cluster(gid)
-            lgm().log(f"#CM: coords2gid:  ix={ix}], iy={iy}, gid={gid}, icluster={icluster},  cid={cid}")
-            self.mark_cluster( cid, icluster )
+            if cid == lm().unlabeled_index:
+                self.clear_cluster(cid, icluster)
+            else:
+                lgm().log(f"#CM: coords2gid:  ix={ix}], iy={iy}, gid={gid}, icluster={icluster},  cid={cid}")
+                self.mark_cluster( cid, icluster )
         else:
     #       self.rescale( tindex, tvalue )
             self.get_cluster_map()
