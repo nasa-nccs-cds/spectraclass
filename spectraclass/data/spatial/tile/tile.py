@@ -802,11 +802,10 @@ class Block(DataContainer):
 
     @property
     def class_mask(self) -> xa.DataArray:
-        from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.learn.pytorch.trainer import mpt
         if self._class_mask is None:
             self.createPointData()
-            self._class_mask  = mpt().get_class_mask( tm().norm( self._point_data ) )
+            self._class_mask  = mpt().get_class_mask( bindex=self.index, raster=False )
             self._point_data.attrs['pmask'] = self._class_mask
             lgm().trace( f"class mask:  shape={self._class_mask.shape}, nz={np.count_nonzero(self._class_mask)}")
         return self._class_mask

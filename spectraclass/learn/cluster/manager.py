@@ -145,13 +145,12 @@ class ClusterManager(SCSingletonConfigurable):
     def get_mask_image(self, visible: bool) -> hv.Image:
         from spectraclass.learn.pytorch.trainer import mpt
         lgm().log( f"get_mask_image: visible={visible}")
-        mask: xa.DataArray = mpt().predict( raster=True )
+        mask: xa.DataArray = mpt().predict( mask=True, raster=True )
         [x,y] = [ mask.coords[c].values for c in ['x','y']]
-        z = np.argmax( mask.values, axis=0, keepdims=False )
-        lgm().log(f"#CM:    --> classification shape={mask.shape}, mask shape={z.shape}, coords={mask.dims[1:]}, vrange={[mask.values.min(),mask.values.max()]}, nz={np.count_nonzero(z)}")
+        lgm().log(f"#CM:    --> classification shape={mask.shape}, coords={mask.dims[1:]}, nz={np.count_nonzero(mask.values)}")
         alpha = 0.5 if visible else 0.0
         xlim, ylim = bounds(self._cluster_raster)
-        image: hv.Image =  hv.Image( (x,y,z) )
+        image: hv.Image =  hv.Image( (x,y,mask.values) )
         lgm().log(f"#CM:    --> plotted image: data shape={image.data['z'].shape}")
         return image.opts( cmap='gray', alpha=alpha, xlim=xlim, ylim=ylim, colorbar=False, clim=(0.0,1.0) )
 

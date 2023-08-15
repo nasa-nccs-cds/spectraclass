@@ -74,19 +74,13 @@ class MaskCache(param.Parameterized):
 
     @exception_handled
     def save( self, *args, **kwargs ):
-        from spectraclass.learn.cluster.manager import ClusterManager, clm
         self.model.save( self.model_id, self.mask_name, dir=self.save_dir )
       #  clm().save_training_set( self.model_id, self.mask_name, dir=self.save_dir )
 
     @exception_handled
-    def get_class_mask(self, ptdata: xa.DataArray ) -> xa.DataArray:
-        mask_classes: xa.DataArray = self.model.predict( ptdata )
-        mask: np.ndarray = np.argmax( mask_classes.values, axis=1, keepdims=False ).astype( bool )
-        nvalid = np.count_nonzero( mask )
-        lgm().log( f"#FPDM: filter_point_data: ptdata shape={ptdata.shape}, coords={list(ptdata.coords.keys())}, stat={stat(ptdata)}")
-        lgm().log( f"#FPDM: classes: shape={mask_classes.shape}, dims={mask_classes.dims};  mask[{mask.dtype}] shape = {mask.shape}, nvalid={nvalid}")
-        lgm().log( f"#FPDM: classes stat={stat(mask_classes)}")
-        return xa.DataArray( mask, dims=["samples"], coords=dict(samples=ptdata.samples), attrs=ptdata.attrs )
+    def get_class_mask(self, **kwargs ) -> xa.DataArray:
+        mask: xa.DataArray = mpt().predict( mask=True, **kwargs )
+        return mask
 
 class MaskSavePanel(MaskCache):
 
@@ -197,8 +191,8 @@ class ModelTrainer(SCSingletonConfigurable):
     def get_mask_load_panel(self) -> Panel:
         return self.mask_load_panel.gui()
 
-    def get_class_mask(self, ptdata: xa.DataArray ) -> xa.DataArray:
-        return self.mask_load_panel.get_class_mask( ptdata )
+    def get_class_mask(self,**kwargs ) -> xa.DataArray:
+        return self.mask_load_panel.get_class_mask( **kwargs )
 
     def panel(self)-> pn.Column:
         mask_panels = pn.Tabs( ('load',self.mask_load_panel.gui()), ('save',self.mask_save_panel.gui()) )
@@ -343,14 +337,19 @@ class ModelTrainer(SCSingletonConfigurable):
         std_data_sample = std_data if (num_standard_samples >= std_data.shape[0]) else random_sample( std_data, num_standard_samples )
         return torch.cat((anom_data, std_data_sample), 0)
 
-    def predict(self, block_data: xa.DataArray = None, **kwargs) -> xa.DataArray:
-        raster = kwargs.pop( 'raster', False )
+    def predict(self, **kwargs) -> xa.DataArray:
+        raster = kwargs.get( 'raster', False )
+        mask = kwargs.get('mask', False)
         block: Block = tm().getBlock(**kwargs)
-        if block_data is None: block_data = block.get_point_data(**kwargs)
-        input_data: xa.DataArray = tm().prepare_inputs( block=block, data=block_data, **kwargs )
-        raw_result: xa.DataArray = self.model.predict( input_data )
-        lgm().log( f"#MT: predict-> input: [shape={input_data.shape}, stat={stat(input_data)}], output: [shape={raw_result.shape}, stat={stat(raw_result)}]")
-        return block.points2raster( raw_result ) if raster else raw_result
+        block_data = block.get_point_data(norm="global")
+        raw_result: xa.DataArray = self.model.predict( block_data )
+        if mask:
+            mask_data = np.argmax(raw_result.values, axis=0, keepdims=False)
+            result = xa.DataArray(mask_data, dims=["samples"], coords=dict(samples=block_data.samples), attrs=block_data.attrs)
+        else:
+            result = raw_result
+        lgm().log( f"#MT: predict-> input: [shape={block_data.shape}, stat={stat(block_data)}], output: [shape={raw_result.shape}, stat={stat(raw_result)}]")
+        return block.points2raster( result ) if raster else result
 
     def event(self, source: str, event ):
         print( f"Processing event[{source}]: {event}")
