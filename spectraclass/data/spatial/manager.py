@@ -352,6 +352,7 @@ class SpatialDataManager(ModeDataManager):
         block: Block = kwargs.get('block',None)
         bindex = tm().block_index if (block is None) else block.block_coords
         file_name = f"{tm().tileName(**kwargs)}-{tm().block_size}-{filter_sig}-{bindex[0]}-{bindex[1]}"
+        lgm().log( f"dataFile: bindex={bindex}, file_name={file_name}")
         return os.path.join( self.datasetDir, file_name + f"{self.ext}.nc" )
 
     def getFilePath(self) -> str:

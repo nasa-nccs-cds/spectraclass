@@ -188,10 +188,13 @@ class MLP(nn.Module):
 
     @exception_handled
     def load_weights(self, filepath: str ):
-        weights = torch.load(filepath)
-        self.network.load_state_dict(weights)
-        self.network.eval()
-        lgm().log(f"Loaded Weights from file {filepath}")
+        if os.path.exists(filepath):
+            weights = torch.load(filepath)
+            self.network.load_state_dict(weights)
+            self.network.eval()
+            lgm().log(f"Loaded Weights from file {filepath}")
+        else:
+            lgm().log(f"Weights file does not exist: {filepath}")
 
     def load(self, tile_name: str, model_name: str, **kwargs) -> bool:
         if model_name.lower() in ["","none"]:
