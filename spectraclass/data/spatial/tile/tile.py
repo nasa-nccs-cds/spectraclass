@@ -896,9 +896,14 @@ class Block(DataContainer):
         coords = kwargs.get( 'coords', None )
         if coords is None: coords = self.data.coords
         [x, y] = [ coords[cn].values for cn in ['x','y']]
-        dims = [ points_data.dims[1], 'y', 'x' ]
-        coords = [(dims[0], points_data[dims[0]].data), ('y', y), ('x',x)]
-        rpdata = np.full([x.size * y.size, points_data.shape[1]], float('nan'))
+        if points_data.ndim == 2:
+            dims = [ points_data.dims[1], 'y', 'x' ]
+            coords = [(dims[0], points_data[dims[0]].data), ('y', y), ('x',x)]
+            rpdata = np.full([x.size * y.size, points_data.shape[1]], float('nan'))
+        else:
+            dims = [ 'y', 'x' ]
+            coords = [ ('y', y), ('x',x) ]
+            rpdata = np.full([x.size * y.size], float('nan'))
         lgm().log(f"#P2R points2raster:  points_data.attrs = {list(points_data.attrs.keys())}")
         class_mask  = points_data.attrs.get('pmask', None)
         if class_mask is not None:
@@ -912,9 +917,8 @@ class Block(DataContainer):
             rpdata = points_data.values.copy()
         else:
             raise Exception( f"Size mismatch: pnz={pnz}, points_data.shape={points_data.shape}, rpdata.shape={rpdata.shape}")
-        raster_data = rpdata.transpose().reshape([points_data.shape[1], y.size, x.size])
-        lgm().log( f"#P2R points->raster[{self.dsid()}], time= {time.time()-t0:.2f} sec, raster: dims={dims}, "
-                   f"shape={raster_data.shape}, nnan = {np.count_nonzero(np.isnan(raster_data))}" )
+        rshape = [points_data.shape[1], y.size, x.size] if points_data.ndim == 2 else [y.size, x.size]
+        raster_data = rpdata.transpose().reshape( rshape )
         rname = kwargs.get( 'name', points_data.name )
         return xa.DataArray( raster_data, coords, dims, rname, points_data.attrs )
 
