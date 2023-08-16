@@ -715,8 +715,7 @@ class Block(DataContainer):
     def _get_model_data(self,**kwargs):
         from spectraclass.reduction.trainer import mt
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        norm = kwargs.pop('norm','none')
-        input_data: xa.DataArray = tm().prepare_inputs(block=self, raster=False, norm=norm, **kwargs)
+        input_data: xa.DataArray = tm().prepare_inputs( block=self, raster=False, class_filter=True, norm="none", **kwargs )
         (self._model_data, self._reproduction) = mt().reduce( input_data )
         self._reduction_input_data = input_data
         self._model_data.attrs['block_coords'] = self.block_coords
