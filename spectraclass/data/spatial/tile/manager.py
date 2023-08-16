@@ -462,7 +462,8 @@ class TileManager(SCSingletonConfigurable):
         return str(value).strip("([])").replace(",", "-").replace(" ", "")
 
     def getTileData(self) -> xa.DataArray:
-         return self._readTileFile()
+         raw_data = self._readTileFile()
+         return self.filter_invalid_data(raw_data)
 
     @classmethod
     def filter_invalid_data( cls, tile_data: xa.DataArray ) -> xa.DataArray:

@@ -413,7 +413,7 @@ class ClusterManager(SCSingletonConfigurable):
             if source == "model":
                 input_data: xa.DataArray = block.getModelData(raster=False)
             else:
-                input_data: xa.DataArray = block.get_point_data(norm="global")
+                input_data: xa.DataArray = block.get_point_data(class_filter=False, norm="spectral")
                 lgm().log( f"#CM.generate_training_set[{block_coords}]: input_data{input_data.shape}[{input_data.dtype}] "
                            f"stat={stat(input_data)}, icluster={icluster}, nclusters={nclusters}, ngids={marker.gids.size} ")
             mask_array: np.array = np.full( input_data.shape[0], False, dtype=bool )
@@ -426,9 +426,8 @@ class ClusterManager(SCSingletonConfigurable):
             ychunks.append( ychunk )
             xsum = xchunk.sum(axis=0) if (xsum is None) else xsum + xchunk.sum(axis=0)
         x, y = np.concatenate( xchunks, axis=0 ), np.concatenate( ychunks, axis=0 )
-        xs_ave = xsum/x.shape[0]
-        ufm().show(f"Training set generated: x shape={x.shape}, y shape={y.shape}, xsave shape={xs_ave.shape}, y range: {(y.min(),y.max())}, xs_ave range: {(xs_ave.min(),xs_ave.max())}" )
-        self._current_training_set = ( x,y,xs_ave )
+        ufm().show(f"Training set generated: x shape={x.shape}, y shape={y.shape}, y range: {(y.min(),y.max())}" )
+        self._current_training_set = ( x,y )
 
     def get_training_set(self) -> Tuple[np.ndarray,np.ndarray,np.ndarray]:
         return self._current_training_set
@@ -440,7 +439,13 @@ class ClusterManager(SCSingletonConfigurable):
         os.makedirs(models_dir, exist_ok=True)
         try:
             model_path = f"{models_dir}/{tile_name}__{model_name}.nc"
-      #      torch.save(self._network.state_dict(), model_path)
+            x: np.ndarray = self._current_training_set[0]
+            y: np.ndarray = self._current_training_set[1]
+            samples = np.arange( y.size )
+            xx = xa.DataArray( x, dims=['samples'], coords=dict(samples=samples))
+            xy = xa.DataArray( y, dims=['samples'], coords=dict(samples=samples))
+            training_dset = xa.Dataset( data_vars=dict(x=xx,y=xy), coords=dict(samples=samples) )
+            training_dset.to_netcdf( model_path )
             ufm().show(f"Saved model '{model_name}'" )
             lgm().log(f" ----> file '{model_path}'")
         except Exception as err:
