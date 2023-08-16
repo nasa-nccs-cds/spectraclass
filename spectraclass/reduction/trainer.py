@@ -156,7 +156,6 @@ class ModelTrainer(SCSingletonConfigurable):
         return training_data
 
     def train(self, **kwargs):
-        from spectraclass.data.base import DataManager, dm, DataType
         if not self.load(**kwargs):
             if self.method == "aec":
                 self.model.train()

@@ -327,7 +327,7 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         super(hvSpectraclassGui, self).__init__()
         self.browsers: Dict[str,VariableBrowser] = None
         self.panels: List = None
-        self.color_range = 2.0
+        self.color_range = 1.5
         self.mapviews: pn.Tabs = None
         self.alert = ufm().gui()
 
@@ -378,14 +378,14 @@ class hvSpectraclassGui(SCSingletonConfigurable):
         block: Block = tm().getBlock( **kwargs )
         lgm().log( f"sgui:get_data[{cname}] block = {block.index}")
         if cname=="bands":
-            result =  tm().prepare_inputs(block=block, raster=True, norm="spectral", **kwargs)
+            result =  tm().prepare_inputs(block=block, raster=True, norm="spatial", class_filter=True, **kwargs)
             result.attrs['clim'] = (-self.color_range,self.color_range)
         elif cname=="features":
             result = dm().getModelData(block=block, raster=True, norm=True)
             result.attrs['clim'] = self.get_clim( result.values, sfactor )
         elif cname=="reproduction":
             reproduction = block.getReproduction(raster=True)
-            result = tm().prepare_inputs(block=block, point_data=reproduction, norm="spectral", raster=True, **kwargs)
+            result = tm().prepare_inputs(block=block, point_data=reproduction, norm="spatial", class_filter=True, raster=True, **kwargs)
             result.attrs['clim'] = (-self.color_range,self.color_range)
         else:
             raise Exception( f"Unkonwn data type: {cname}")
