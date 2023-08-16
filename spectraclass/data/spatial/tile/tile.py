@@ -439,7 +439,6 @@ class Block(DataContainer):
         self.tile: Tile = tile
         self.config = kwargs
         self._trecs: Tuple[ Dict[int,ThresholdRecord], Dict[int,ThresholdRecord] ] = ( {}, {} )
-        if type(iy) == tuple: lgm().trace( f"#BLOCK, iy={iy}")
         self._block_coords: Tuple[int,int] = (ix,iy)
         self.tile_index = itile
 
@@ -810,7 +809,7 @@ class Block(DataContainer):
         from spectraclass.learn.pytorch.trainer import mpt
         if self._class_mask is None:
             self.createPointData()
-            self._class_mask  = mpt().get_class_mask( bindex=self.index, raster=False )
+            self._class_mask  = mpt().get_class_mask( bindex=self.block_coords, raster=False )
             self._point_data.attrs['pmask'] = self._class_mask
             lgm().log( f"class mask:  shape={self._class_mask.shape}, nz={np.count_nonzero(self._class_mask)}")
         return self._class_mask
