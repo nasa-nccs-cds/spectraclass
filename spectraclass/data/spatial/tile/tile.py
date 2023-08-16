@@ -439,8 +439,13 @@ class Block(DataContainer):
         self.tile: Tile = tile
         self.config = kwargs
         self._trecs: Tuple[ Dict[int,ThresholdRecord], Dict[int,ThresholdRecord] ] = ( {}, {} )
-        self.block_coords: Tuple[int,int] = (ix,iy)
+        lgm().log( f"#BLOCK.init: ix={ix} iy={iy}")
+        self._block_coords: Tuple[int,int] = (ix,iy)
         self.tile_index = itile
+
+    @property
+    def block_coords(self):
+        return self._block_coords
 
     def bounds(self, crs: str = "native" ) -> Tuple[ float,float,float,float ]:
         if crs == "native":
