@@ -439,7 +439,7 @@ class Block(DataContainer):
         self.tile: Tile = tile
         self.config = kwargs
         self._trecs: Tuple[ Dict[int,ThresholdRecord], Dict[int,ThresholdRecord] ] = ( {}, {} )
-        lgm().log( f"#BLOCK.init: ix={ix} iy={iy}")
+        if type(iy) == tuple: lgm().trace( f"#BLOCK, iy={iy}")
         self._block_coords: Tuple[int,int] = (ix,iy)
         self.tile_index = itile
 
