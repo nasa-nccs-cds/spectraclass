@@ -19,6 +19,18 @@ class Marker:
         self._gids: np.ndarray = gids if isinstance(gids, np.ndarray) else np.array(list(gids), dtype=np.int64)
         self._mask: Optional[np.ndarray] = kwargs.get( 'mask', None )
 
+    def to_xarray( self, icluster: int, nclusters: int ):
+        name = f"marker-{icluster}-{nclusters}"
+        attrs = dict( cid=self.cid, type=self.type, block_index=self.block_index, image_index=self.image_index,
+                      icluster=icluster, nclusters=nclusters, **self.props)
+        if self._mask is not None: attrs['mask'] = self._mask
+        xarray = xa.DataArray( self._gids, name=name, dims=[f"{name}-index"], attrs = attrs )
+        return xarray
+
+    @classmethod
+    def from_xarray( cls, mdata: xa.DataArray ) -> "Marker":
+        return Marker( mdata.attrs['type'], mdata.values, mdata.attrs['cid'], **mdata.attrs )
+
     def bid(self) -> Tuple[int,Tuple]:
         return (  self.image_index, self.block_coords )
 

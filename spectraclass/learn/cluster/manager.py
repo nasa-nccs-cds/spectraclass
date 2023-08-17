@@ -520,7 +520,6 @@ class ClusterManager(SCSingletonConfigurable):
                 lgm().log(f"#CM: coords2gid:  ix={ix}], iy={iy}, gid={gid}, icluster={icluster},  cid={cid}")
                 self.mark_cluster( cid, icluster )
         else:
-    #       self.rescale( tindex, tvalue )
             self.get_cluster_map()
             self.refresh_colormap()
         xlim, ylim = bounds( self._cluster_raster )
