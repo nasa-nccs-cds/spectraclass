@@ -11,6 +11,7 @@ from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timin
 from spectraclass.data.spatial.tile.manager import TileManager, tm
 from spectraclass.data.spatial.tile.tile import Block
 from spectraclass.data.base import DataManager, dm
+from spectraclass.learn.cluster.manager import TSetLoadPanel, TSetSavePanel
 from torch.nn import CrossEntropyLoss
 from torch import Tensor, argmax
 import xarray as xa, numpy as np
@@ -146,7 +147,8 @@ class ModelTrainer(SCSingletonConfigurable):
         self.train_losses = None
         self._mask_save_panel: MaskSavePanel = None
         self._mask_load_panel: MaskLoadPanel = None
-
+        self._tset_load_panel: TSetLoadPanel = None
+        self._tset_save_panel: TSetSavePanel = None
     @property
     def mask_save_panel(self) -> MaskSavePanel:
         if self._mask_save_panel is None:
@@ -158,6 +160,22 @@ class ModelTrainer(SCSingletonConfigurable):
         if self._mask_load_panel is None:
             self._mask_load_panel = MaskLoadPanel()
         return self._mask_load_panel
+
+    def getTrainingSetIOPanel(self):
+        tset_panels = pn.Tabs(('load', self.tset_load_panel.gui()), ('save', self.tset_save_panel.gui()))
+        return pn.WidgetBox( "### Training Set", tset_panels)
+
+    @property
+    def tset_save_panel(self) -> TSetSavePanel:
+        if self._tset_save_panel is None:
+            self._tset_save_panel = TSetSavePanel()
+        return self._tset_save_panel
+
+    @property
+    def tset_load_panel(self) -> TSetLoadPanel:
+        if self._tset_load_panel is None:
+            self._tset_load_panel = TSetLoadPanel()
+        return self._tset_load_panel
 
     def set_network_size(self, layer_sizes: List[int], nclasses: int):
         self.layer_sizes = layer_sizes

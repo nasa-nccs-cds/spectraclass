@@ -16,7 +16,7 @@ class Marker:
         self.props = kwargs
         self.block_index = kwargs.get( 'block_index', tm().block_index )
         self.image_index = kwargs.get( 'image_index', tm().image_index )
-        self._gids: np.ndarray = gids if isinstance(gids, np.ndarray) else np.array(list(gids), dtype=np.int64)
+        self._gids: np.ndarray = gids if isinstance(gids, np.ndarray) else np.array(list(gids), dtype=np.int64 )
         self._mask: Optional[np.ndarray] = kwargs.get( 'mask', None )
 
     def to_xarray( self, icluster: int, nclusters: int ):

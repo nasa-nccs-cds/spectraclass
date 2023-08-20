@@ -4,6 +4,7 @@ import panel as pn
 from panel.layout import Panel
 import pandas as pd
 import hvplot, hvplot.xarray
+from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 import holoviews as hv
 from panel.widgets import Button, Select, FloatSlider, Toggle
 from joblib import cpu_count
@@ -140,6 +141,13 @@ class ClusterManager(SCSingletonConfigurable):
         self.learn_button = Button( name='Learn Mask', button_type='primary', width=150 )
         self.learn_button.on_click( self.learn_mask )
         self.refresh_colormap()
+
+    @property
+    def cluster_markers(self) -> Dict[ Tuple, Marker ]:
+        return self._cluster_markers
+
+    def set_cluster_markers(self, markers: Dict[ Tuple, Marker ] ):
+        return self._cluster_markers.update( markers )
 
     @exception_handled
     def get_mask_image(self, visible: bool) -> hv.Image:
@@ -401,6 +409,8 @@ class ClusterManager(SCSingletonConfigurable):
             ufm().show("Learning mask...")
             mpt().train( training_set=self._current_training_set )
             ufm().show("Learning mask complete.")
+
+
 
     @exception_handled
     def generate_training_set( self, source: str, *args, **kwargs ):
@@ -691,3 +701,67 @@ class ClusterSelector:
 #                    labels_image: xa.DataArray = lm().get_label_map()
 #                    mm().plot_markers_image()
 #                    lm().addAction( "cluster", "application", cid=cid )
+
+class TSetCache(param.Parameterized):
+    tset_name = param.String(default="", doc="Name of saved mask network")
+
+    def __init__(self ):
+        from spectraclass.data.base import DataManager, dm
+        super(TSetCache, self).__init__()
+        self.xdset_dir = f"{dm().cache_dir}/markers/"
+        os.makedirs( self.xdset_dir, exist_ok=True )
+
+    def save(self, *args ):
+        xvars: Dict[Hashable,xa.DataArray] = {}
+        for (image_index, block_coords, icluster, nclusters), marker in clm().cluster_markers.items():
+            mvar: xa.DataArray = marker.to_xarray( icluster, nclusters )
+            xvars[mvar.name] = mvar
+        xdset = xa.Dataset( xvars )
+        xdset.to_netcdf( f"{self.xdset_dir}/{self.tset_name}.nc" )
+
+    def load(self, *args ):
+        markers_file: str = f"{self.xdset_dir}/{self.tset_name}.nc"
+        markers: Dict[ Tuple, Marker ]  = {}
+        if os.path.exists( markers_file ):
+            xdset = xa.open_dataset( markers_file )
+            for name, xvar in xdset.data_vars.items():
+                marker: Marker = Marker.from_xarray( xvar )
+                key = (marker.image_index, marker.block_coords, xvar.attrs['icluster'],  xvar.attrs['nclusters'] )
+                markers[key] = marker
+        clm().set_cluster_markers( markers )
+
+class TSetSavePanel(TSetCache):
+
+    def __init__(self ):
+        super(TSetSavePanel, self).__init__()
+        self.tset_name_input = pn.widgets.TextInput(name='Training Set Name', placeholder='Give this training set a name...')
+        self.tset_name_input.link(self, value='tset_name')
+        self.save_button = pn.widgets.Button(name='Save TSet', button_type='success', width=150)
+        self.save_button.on_click( self.save_selection )
+
+    def gui(self) -> Panel:
+        save_panel = pn.Row(self.tset_name_input, self.save_button)
+        return pn.WidgetBox( "###Save", save_panel )
+
+    def save_selection(self, *args, **kwargs):
+        self.tset_name = self.tset_name_input.value
+        self.save( *args )
+
+class TSetLoadPanel(TSetCache):
+
+    def __init__(self):
+        super(TSetLoadPanel, self).__init__()
+        block_selection_names = [ "None" ] + [ f[:-3] for f in os.listdir(self.xdset_dir) if f.endswith(".nc") ]
+        self.load_button = pn.widgets.Button( name='Load Training Set', button_type='success', width=150 )
+        self.load_button.on_click(self.load)
+        sopts = dict( name='Cluster TSet', options=block_selection_names )
+        self.tset_name = block_selection_names[0]
+        self.file_selector = pn.widgets.Select( value=self.tset_name, **sopts )
+        self.file_selector.link(self, value='tset_name')
+
+    # def get_tset_name(self, file_path: str ) -> str:
+    #     return file_path[:-3]
+
+    def gui(self) -> Panel:
+        load_panel = pn.Row(self.file_selector, self.load_button)
+        return load_panel
