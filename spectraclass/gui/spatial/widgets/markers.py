@@ -25,6 +25,7 @@ class Marker:
         attrs = dict( cid=self.cid, type=self.type, block_index=self.block_index, image_index=self.image_index,
                       icluster=icluster, nclusters=nclusters, **self.props)
         if self._mask is not None: attrs['mask'] = self._mask.tolist()
+        print( f"to_xarray, attrs = {attrs}")
         xarray = xa.DataArray( self._gids, name=name, dims=[f"{name}-index"], attrs = attrs )
         return xarray
 
