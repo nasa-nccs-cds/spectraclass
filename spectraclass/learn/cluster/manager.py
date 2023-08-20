@@ -714,8 +714,8 @@ class TSetCache(param.Parameterized):
     def save(self, *args ):
         xvars: Dict[Hashable,xa.DataArray] = {}
         for (image_index, block_coords, icluster, nclusters), marker in clm().cluster_markers.items():
-            mvar: xa.DataArray = marker.to_xarray( icluster, nclusters )
-            xvars[mvar.name] = mvar
+            mvars: List[xa.DataArray] = marker.to_xarray( icluster, nclusters )
+            for mvar in mvars: xvars[mvar.name] = mvar
         xdset = xa.Dataset( xvars )
         xdset.to_netcdf( f"{self.xdset_dir}/{self.tset_name}.nc" )
 
@@ -725,9 +725,11 @@ class TSetCache(param.Parameterized):
         if os.path.exists( markers_file ):
             xdset = xa.open_dataset( markers_file )
             for name, xvar in xdset.data_vars.items():
-                marker: Marker = Marker.from_xarray( xvar )
-                key = (marker.image_index, marker.block_coords, xvar.attrs['icluster'],  xvar.attrs['nclusters'] )
-                markers[key] = marker
+                if not name.endswith("-mask"):
+                    mask: xa.DataArray = xdset.data_vars.get( f"{name}-mask")
+                    marker: Marker = Marker.from_xarray( xvar, mask=mask.values )
+                    key = (marker.image_index, marker.block_coords, xvar.attrs['icluster'],  xvar.attrs['nclusters'] )
+                    markers[key] = marker
         clm().set_cluster_markers( markers )
 
 class TSetSavePanel(TSetCache):

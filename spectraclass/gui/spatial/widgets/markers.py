@@ -17,21 +17,22 @@ class Marker:
         self.block_index = kwargs.get( 'block_index', tm().block_index )
         self.image_index = kwargs.get( 'image_index', tm().image_index )
         self._gids: np.ndarray = gids if isinstance(gids, np.ndarray) else np.array(list(gids), dtype=np.int64 )
-        m = kwargs.get( 'mask', None )
-        self._mask: Optional[np.ndarray] = None if m is None else m if isinstance(m,np.ndarray) else np.array( m )
+        self._mask: Optional[np.ndarray] = kwargs.get( 'mask', None )
 
-    def to_xarray( self, icluster: int, nclusters: int ):
+    def to_xarray( self, icluster: int, nclusters: int ) -> List[xa.DataArray]:
+        xvars = []
         name = f"marker-{icluster}-{nclusters}"
         attrs = dict( cid=self.cid, type=self.type, block_index=self.block_index, image_index=self.image_index,
-                      icluster=icluster, nclusters=nclusters, **self.props)
-        if self._mask is not None: attrs['mask'] = self._mask.tolist()
-        xarray = xa.DataArray( self._gids, name=name, dims=[f"{name}-index"], attrs = attrs )
-        lgm().log( f"#M-to_xarray: attrs = {[f'{k}: {type(v)}' for k,v in xarray.attrs.items() ]}")
-        return xarray
+                      icluster=icluster, nclusters=nclusters )
+        xvars.append( xa.DataArray( self._gids, name=name, dims=[f"{name}-index"], attrs = attrs ) )
+        mask = self.props.get('mask')
+        if mask is not None:
+            xvars.append( xa.DataArray( mask, name=f"{name}-mask", dims=[f"{name}-mask-index"] ) )
+        return xvars
 
     @classmethod
-    def from_xarray( cls, mdata: xa.DataArray ) -> "Marker":
-        m = Marker( mdata.attrs['type'], mdata.values, mdata.attrs['cid'], **mdata.attrs )
+    def from_xarray( cls, mdata: xa.DataArray, **kwargs ) -> "Marker":
+        m = Marker( mdata.attrs['type'], mdata.values, mdata.attrs['cid'], **mdata.attrs, **kwargs )
         return m
 
     def bid(self) -> Tuple[int,Tuple]:
