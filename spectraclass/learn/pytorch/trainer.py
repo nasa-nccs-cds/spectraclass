@@ -161,7 +161,7 @@ class ModelTrainer(SCSingletonConfigurable):
             self._mask_load_panel = MaskLoadPanel()
         return self._mask_load_panel
 
-    def getTrainingSetIOPanel(self):
+    def tset_panel(self) -> pn.WidgetBox:
         tset_panels = pn.Tabs(('load', self.tset_load_panel.gui()), ('save', self.tset_save_panel.gui()))
         return pn.WidgetBox( "### Training Set", tset_panels)
 
@@ -212,7 +212,7 @@ class ModelTrainer(SCSingletonConfigurable):
     def get_class_mask(self,**kwargs ) -> xa.DataArray:
         return self.mask_load_panel.get_class_mask( **kwargs )
 
-    def panel(self)-> pn.Column:
+    def mask_panel(self)-> pn.Column:
         mask_panels = pn.Tabs( ('load',self.mask_load_panel.gui()), ('save',self.mask_save_panel.gui()) )
         return pn.Column( self.progress.panel(), mask_panels )
 
