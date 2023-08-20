@@ -22,14 +22,12 @@ class Marker:
     def to_xarray( self, icluster: int, nclusters: int ) -> List[xa.DataArray]:
         xvars = []
         name = f"marker-{icluster}-{nclusters}"
-        lgm().log(f"#M: Saving gids: shape = {self._gids.shape}")
         attrs = dict( cid=self.cid, type=self.type, block_index=self.block_index, image_index=self.image_index,
                       icluster=icluster, nclusters=nclusters )
         xvars.append( xa.DataArray( self._gids, name=name, dims=[f"{name}-index"], attrs=attrs ) )
         mask = self.props.get('mask')
-        lgm().log( f"#M: Saving Mask: shape = {mask.shape}")
         if mask is not None:
-            xvars.append( xa.DataArray( mask, name=f"{name}-mask", dims=[f"{name}-mask-index"] ) )
+            xvars.append( xa.DataArray( mask, name=f"{name}-mask", dims=['x','y'] ) )
         return xvars
 
     @classmethod
