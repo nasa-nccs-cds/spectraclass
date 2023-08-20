@@ -557,8 +557,9 @@ class ClusterManager(SCSingletonConfigurable):
         selection_controls = pn.WidgetBox( "### Clustering", selection_gui, actions_panel )
         labeling_controls = pn.WidgetBox( "### Labeling", lm().class_selector )
         markers_table = self.get_marker_mangement_panel()
-        controls_panel = pn.Column( selection_controls, mpt().tset_panel(), labeling_controls, markers_table )
-        return pn.Tabs( ("controls",controls_panel), ("tuning",self.tuning_gui()) )
+        controls_panel = pn.Column( mpt().tset_panel(), selection_controls )
+        labeling_panel = pn.Column( labeling_controls, markers_table )
+        return pn.Tabs( ("controls",controls_panel), ("labeling",labeling_panel) )   # ("tuning",self.tuning_gui())
 
     def get_marker_mangement_panel(self):
         clear_selection = Button(name="clear selection", button_type='primary')

@@ -26,7 +26,7 @@ class Marker:
                       icluster=icluster, nclusters=nclusters, **self.props)
         if self._mask is not None: attrs['mask'] = self._mask.tolist()
         xarray = xa.DataArray( self._gids, name=name, dims=[f"{name}-index"], attrs = attrs )
-        lgm().log( f"#M-to_xarray: attrs = {attrs}")
+        lgm().log( f"#M-to_xarray: attrs = {[f'{k}: {type(v)}' for k,v in xarray.attrs.items() ]}")
         return xarray
 
     @classmethod
