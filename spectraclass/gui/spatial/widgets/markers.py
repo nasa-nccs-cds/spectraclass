@@ -32,7 +32,8 @@ class Marker:
 
     @classmethod
     def from_xarray( cls, mdata: xa.DataArray, **kwargs ) -> "Marker":
-        m = Marker( mdata.attrs['type'], mdata.values, mdata.attrs['cid'], **mdata.attrs, **kwargs )
+        attrs = dict( **mdata.attrs )
+        m = Marker( attrs.pop('type'), mdata.values, attrs.pop('cid'), **attrs, **kwargs )
         return m
 
     def bid(self) -> Tuple[int,Tuple]:
