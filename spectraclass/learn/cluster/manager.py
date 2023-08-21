@@ -550,7 +550,7 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.learn.pytorch.trainer import mpt
         self.ts_generate_button.on_click( partial( self.generate_training_set, data_source ) )
         buttonbox = pn.Row( self.ts_generate_button, self.learn_button, self.apply_button )
-        return pn.Column( mpt().mask_panel(), pn.WidgetBox("### Workflow", buttonbox ), mpt().mask_panel() )
+        return pn.Column( pn.WidgetBox("### Workflow", buttonbox ), mpt().mask_panel() )
 
     @exception_handled
     def gui(self) -> Panel:
