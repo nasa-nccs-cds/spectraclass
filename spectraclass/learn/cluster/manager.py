@@ -716,28 +716,6 @@ class LabelSetCache(param.Parameterized):
         self.xdset_dir = f"{dm().cache_dir}/markers/"
         os.makedirs( self.xdset_dir, exist_ok=True )
 
-    def save(self, *args ):
-        xvars: Dict[Hashable,xa.DataArray] = {}
-        for (image_index, block_coords, icluster, nclusters), marker in clm().cluster_markers.items():
-            mvars: List[xa.DataArray] = marker.to_xarray( icluster, nclusters )
-            for mvar in mvars: xvars[mvar.name] = mvar
-        xdset = xa.Dataset( xvars )
-        xdset.to_netcdf( f"{self.xdset_dir}/{self.labelset_name}.nc")
-
-    def load(self, labelset_name: str, *args ):
-        markers_file: str = f"{self.xdset_dir}/{labelset_name}.nc"
-        markers: Dict[ Tuple, Marker ]  = {}
-        if os.path.exists( markers_file ):
-            ufm().show( f"Loading cluster labels '{labelset_name}' ")
-            xdset = xa.open_dataset( markers_file )
-            for name, xvar in xdset.data_vars.items():
-                if not name.endswith("-mask"):
-                    mask: xa.DataArray = xdset.data_vars.get( f"{name}-mask")
-                    marker: Marker = Marker.from_xarray( xvar, mask=mask.values )
-                    key = (marker.image_index, marker.block_coords, xvar.attrs['icluster'],  xvar.attrs['nclusters'] )
-                    markers[key] = marker
-        lgm().log( f"#CM: Loaded {len(markers)} cluster label markers from file: {markers_file}")
-        clm().set_cluster_markers( markers )
 
 class LabelsSavePanel(LabelSetCache):
 
@@ -756,6 +734,18 @@ class LabelsSavePanel(LabelSetCache):
         self.labelset_name = self.labelset_name_input.value
         self.save( *args )
 
+    def save(self, *args ):
+        labelset_name = self.labelset_name_input.value
+        xvars: Dict[Hashable,xa.DataArray] = {}
+        for (image_index, block_coords, icluster, nclusters), marker in clm().cluster_markers.items():
+            mvars: List[xa.DataArray] = marker.to_xarray( icluster, nclusters )
+            for mvar in mvars: xvars[mvar.name] = mvar
+        xdset = xa.Dataset( xvars )
+        labels_file = f"{self.xdset_dir}/{self.labelset_name}.nc"
+        xdset.to_netcdf( labels_file )
+        lgm().log( f"#CM: Saving Labelset '{labelset_name}' to file '{labels_file}'" )
+        ufm().show( f"Saving Labelset '{labelset_name}'" )
+
 class LabelsLoadPanel(LabelSetCache):
 
     def __init__(self):
@@ -764,8 +754,7 @@ class LabelsLoadPanel(LabelSetCache):
         sopts = dict( name='Saved cluster labels', options=block_selection_names )
         self.file_selector = pn.widgets.Select(value=self.labelset_name, **sopts)
         self.load_button = pn.widgets.Button( name='Load Labels', button_type='success', width=150 )
-        self.load_button.on_click( partial(self.load,self.file_selector.value) )
-        self.labelset_name = block_selection_names[0]
+        self.load_button.on_click( self.load )
 
     # def get_labelset_name(self, file_path: str ) -> str:
     #     return file_path[:-3]
@@ -773,3 +762,20 @@ class LabelsLoadPanel(LabelSetCache):
     def gui(self) -> Panel:
         load_panel = pn.Row(self.file_selector, self.load_button)
         return load_panel
+
+    @exception_handled
+    def load(self,*args ):
+        labelset_name: str = self.file_selector.value
+        markers_file: str = f"{self.xdset_dir}/{labelset_name}.nc"
+        markers: Dict[ Tuple, Marker ]  = {}
+        lgm().log( f"#CM: Loading {len(markers)} cluster label markers from file: {markers_file}")
+        if os.path.exists( markers_file ):
+            ufm().show( f"Loading cluster labels '{labelset_name}' ")
+            xdset = xa.open_dataset( markers_file )
+            for name, xvar in xdset.data_vars.items():
+                if not name.endswith("-mask"):
+                    mask: xa.DataArray = xdset.data_vars.get( f"{name}-mask")
+                    marker: Marker = Marker.from_xarray( xvar, mask=mask.values )
+                    key = (marker.image_index, marker.block_coords, xvar.attrs['icluster'],  xvar.attrs['nclusters'] )
+                    markers[key] = marker
+            clm().set_cluster_markers( markers )
