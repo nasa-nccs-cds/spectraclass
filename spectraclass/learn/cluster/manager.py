@@ -724,10 +724,11 @@ class LabelSetCache(param.Parameterized):
         xdset = xa.Dataset( xvars )
         xdset.to_netcdf( f"{self.xdset_dir}/{self.labelset_name}.nc")
 
-    def load(self, *args ):
-        markers_file: str = f"{self.xdset_dir}/{self.labelset_name}.nc"
+    def load(self, labelset_name: str, *args ):
+        markers_file: str = f"{self.xdset_dir}/{labelset_name}.nc"
         markers: Dict[ Tuple, Marker ]  = {}
         if os.path.exists( markers_file ):
+            ufm().show( f"Loading cluster labels '{labelset_name}' ")
             xdset = xa.open_dataset( markers_file )
             for name, xvar in xdset.data_vars.items():
                 if not name.endswith("-mask"):
@@ -761,11 +762,10 @@ class LabelsLoadPanel(LabelSetCache):
         super(LabelsLoadPanel, self).__init__()
         block_selection_names = [ "None" ] + [ f[:-3] for f in os.listdir(self.xdset_dir) if f.endswith(".nc") ]
         self.load_button = pn.widgets.Button( name='Load Labels', button_type='success', width=150 )
-        self.load_button.on_click(self.load)
+        self.load_button.on_click( partial(self.load,self.file_selector.value) )
         sopts = dict( name='Saved cluster labels', options=block_selection_names )
         self.labelset_name = block_selection_names[0]
         self.file_selector = pn.widgets.Select( value=self.labelset_name, **sopts )
-        self.file_selector.link(self, value='labelset_name')
 
     # def get_labelset_name(self, file_path: str ) -> str:
     #     return file_path[:-3]
