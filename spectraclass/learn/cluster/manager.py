@@ -146,8 +146,10 @@ class ClusterManager(SCSingletonConfigurable):
     def cluster_markers(self) -> Dict[ Tuple, Marker ]:
         return self._cluster_markers
 
-    def set_cluster_markers(self, markers: Dict[ Tuple, Marker ] ):
-        return self._cluster_markers.update( markers )
+    def set_cluster_markers(self, markers: Dict[Tuple, Marker] ):
+        for ckey, marker in markers.items():
+            self.register_marker(ckey, marker)
+        self.refresh()
 
     @exception_handled
     def get_mask_image(self, visible: bool) -> hv.Image:
@@ -383,20 +385,23 @@ class ClusterManager(SCSingletonConfigurable):
 
     @exception_handled
     def mark_cluster( self, cid: int, icluster: int ) -> Marker:
-        from spectraclass.model.labels import lm
         from spectraclass.data.spatial.tile.manager import tm
-        ckey = ( tm().image_index, tm().block_coords, icluster, self.nclusters )
-        class_color = lm().get_rgb_color(cid)
-        self._marked_colors[ ckey ] = class_color
+        cmask = self.get_cluster_map().values
+        ckey = (tm().image_index, tm().block_coords, icluster, self.nclusters)
+        marker = Marker("clusters", self.get_points(cid), cid, mask=(cmask == icluster))
+        self.register_marker( ckey, marker )
+        return marker
+
+    def register_marker(self, ckey: Tuple, marker: Marker ):
+        from spectraclass.model.labels import lm
+        (image_index, block_coords, icluster, nclusters) = ckey
+        class_color = lm().get_rgb_color(marker.cid)
+        self._marked_colors[ckey] = class_color
         self._cluster_colors[icluster] = class_color
         self.update_cmap()
-     #   self._tuning_sliders[ icluster ].set_color( lm().current_color )
-        self.get_marked_clusters(cid).append( icluster )
-        cmask = self.get_cluster_map().values
-        marker = Marker("clusters", self.get_points(cid), cid, mask=(cmask == icluster))
-        lgm().log(f"#CM: mark_cluster[{icluster}]: ckey={ckey} cid={cid}, #pids = {marker.size}")
+        self.get_marked_clusters(marker.cid).append(icluster)
+        lgm().log(f"#CM: mark_cluster[{icluster}]: ckey={ckey} cid={marker.cid}, #pids = {marker.size}")
         self._cluster_markers[ ckey ] = marker
-        return marker
 
     @exception_handled
     def learn_mask( self, event ):
@@ -557,7 +562,7 @@ class ClusterManager(SCSingletonConfigurable):
         selection_controls = pn.WidgetBox( "### Clustering", selection_gui, actions_panel )
         labeling_controls = pn.WidgetBox( "### Labeling", lm().class_selector )
         markers_table = self.get_marker_mangement_panel()
-        controls_panel = pn.Column( mpt().tset_panel(), selection_controls )
+        controls_panel = pn.Column(mpt().labelset_panel(), selection_controls)
         labeling_panel = pn.Column( labeling_controls, markers_table )
         return pn.Tabs( ("controls",controls_panel), ("labeling",labeling_panel) )   # ("tuning",self.tuning_gui())
 
@@ -702,12 +707,12 @@ class ClusterSelector:
 #                    mm().plot_markers_image()
 #                    lm().addAction( "cluster", "application", cid=cid )
 
-class TSetCache(param.Parameterized):
-    tset_name = param.String(default="", doc="Name of saved mask network")
+class LabelSetCache(param.Parameterized):
+    labelset_name = param.String(default="", doc="Name of saved cluster labels")
 
     def __init__(self ):
         from spectraclass.data.base import DataManager, dm
-        super(TSetCache, self).__init__()
+        super(LabelSetCache, self).__init__()
         self.xdset_dir = f"{dm().cache_dir}/markers/"
         os.makedirs( self.xdset_dir, exist_ok=True )
 
@@ -717,10 +722,10 @@ class TSetCache(param.Parameterized):
             mvars: List[xa.DataArray] = marker.to_xarray( icluster, nclusters )
             for mvar in mvars: xvars[mvar.name] = mvar
         xdset = xa.Dataset( xvars )
-        xdset.to_netcdf( f"{self.xdset_dir}/{self.tset_name}.nc" )
+        xdset.to_netcdf( f"{self.xdset_dir}/{self.labelset_name}.nc")
 
     def load(self, *args ):
-        markers_file: str = f"{self.xdset_dir}/{self.tset_name}.nc"
+        markers_file: str = f"{self.xdset_dir}/{self.labelset_name}.nc"
         markers: Dict[ Tuple, Marker ]  = {}
         if os.path.exists( markers_file ):
             xdset = xa.open_dataset( markers_file )
@@ -732,13 +737,13 @@ class TSetCache(param.Parameterized):
                     markers[key] = marker
         clm().set_cluster_markers( markers )
 
-class TSetSavePanel(TSetCache):
+class LabelsSavePanel(LabelSetCache):
 
     def __init__(self ):
-        super(TSetSavePanel, self).__init__()
-        self.tset_name_input = pn.widgets.TextInput(name='Training Set Name', placeholder='Give this training set a name...')
+        super(LabelsSavePanel, self).__init__()
+        self.tset_name_input = pn.widgets.TextInput(name='Label Set Name', placeholder='Give this set of lebels a name...')
         self.tset_name_input.link(self, value='tset_name')
-        self.save_button = pn.widgets.Button(name='Save TSet', button_type='success', width=150)
+        self.save_button = pn.widgets.Button(name='Save Labels', button_type='success', width=150)
         self.save_button.on_click( self.save_selection )
 
     def gui(self) -> Panel:
@@ -749,14 +754,14 @@ class TSetSavePanel(TSetCache):
         self.tset_name = self.tset_name_input.value
         self.save( *args )
 
-class TSetLoadPanel(TSetCache):
+class LabelsLoadPanel(LabelSetCache):
 
     def __init__(self):
-        super(TSetLoadPanel, self).__init__()
+        super(LabelsLoadPanel, self).__init__()
         block_selection_names = [ "None" ] + [ f[:-3] for f in os.listdir(self.xdset_dir) if f.endswith(".nc") ]
-        self.load_button = pn.widgets.Button( name='Load Training Set', button_type='success', width=150 )
+        self.load_button = pn.widgets.Button( name='Load Labels', button_type='success', width=150 )
         self.load_button.on_click(self.load)
-        sopts = dict( name='Cluster TSet', options=block_selection_names )
+        sopts = dict( name='Saved cluster labels', options=block_selection_names )
         self.tset_name = block_selection_names[0]
         self.file_selector = pn.widgets.Select( value=self.tset_name, **sopts )
         self.file_selector.link(self, value='tset_name')
