@@ -125,7 +125,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._mask_image = hv.DynamicMap( self.get_mask_image, streams=dict( visible=self.apply_button.param.value ) )
         self._marker_table_widget: hv.Table = None
         self._marker_table_selection: hv.streams.Selection1D = None
-        self._marker_table = hv.DynamicMap( self.get_marker_table, streams=[ self.double_tap_stream ] )
+        self._marker_table = hv.DynamicMap( self.get_marker_table, streams=[ self.double_tap_stream, self._count ] )
         self._marked_colors: Dict[Tuple,Tuple[float,float,float]] = {}
         self._marked_clusters: Dict[Tuple, List] = {}
         self._tuning_sliders: List[ClusterMagnitudeWidget] = []
@@ -467,7 +467,7 @@ class ClusterManager(SCSingletonConfigurable):
             print(f"Error saving model {tile_name}: {err}")
 
     @exception_handled
-    def get_marker_table(self, x=None, y=None ) -> hv.Table:
+    def get_marker_table(self, index: int, x=None, y=None ) -> hv.Table:
         from spectraclass.model.labels import LabelsManager, lm
         clusters, blockx, blocky, numclusters, classes = [],[],[],[],[]
         if x is None:
