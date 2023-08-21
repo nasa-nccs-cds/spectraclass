@@ -761,11 +761,11 @@ class LabelsLoadPanel(LabelSetCache):
     def __init__(self):
         super(LabelsLoadPanel, self).__init__()
         block_selection_names = [ "None" ] + [ f[:-3] for f in os.listdir(self.xdset_dir) if f.endswith(".nc") ]
+        sopts = dict( name='Saved cluster labels', options=block_selection_names )
+        self.file_selector = pn.widgets.Select(value=self.labelset_name, **sopts)
         self.load_button = pn.widgets.Button( name='Load Labels', button_type='success', width=150 )
         self.load_button.on_click( partial(self.load,self.file_selector.value) )
-        sopts = dict( name='Saved cluster labels', options=block_selection_names )
         self.labelset_name = block_selection_names[0]
-        self.file_selector = pn.widgets.Select( value=self.labelset_name, **sopts )
 
     # def get_labelset_name(self, file_path: str ) -> str:
     #     return file_path[:-3]
