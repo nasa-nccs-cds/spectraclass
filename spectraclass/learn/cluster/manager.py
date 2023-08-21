@@ -735,6 +735,7 @@ class LabelSetCache(param.Parameterized):
                     marker: Marker = Marker.from_xarray( xvar, mask=mask.values )
                     key = (marker.image_index, marker.block_coords, xvar.attrs['icluster'],  xvar.attrs['nclusters'] )
                     markers[key] = marker
+        lgm().log( f"#CM: Loaded {len(markers)} cluster label markers from file: {markers_file}")
         clm().set_cluster_markers( markers )
 
 class LabelsSavePanel(LabelSetCache):
