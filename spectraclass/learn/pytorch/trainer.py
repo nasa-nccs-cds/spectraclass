@@ -227,7 +227,7 @@ class ModelTrainer(SCSingletonConfigurable):
         training_data, training_labels, tdata_spatial_sum = None, None, None
         for ( (tindex, block_coords, cid), gids ) in label_data.items():
             block = tm().getBlock( tindex=tindex, block_coords=block_coords )
-            input_data: xa.DataArray = block.get_point_data()
+            input_data: xa.DataArray = block.get_point_data( norm="spectral" )
             training_mask: np.ndarray = np.isin( input_data.samples.values, gids )
             tdata: np.ndarray = input_data.values[ training_mask ]
             tlabels: np.ndarray = np.full([gids.size], cid)
@@ -360,7 +360,7 @@ class ModelTrainer(SCSingletonConfigurable):
         raster = kwargs.get( 'raster', False )
         mask = kwargs.get('mask', False)
         block: Block = tm().getBlock(**kwargs)
-        block_data = block.get_point_data(norm="global")
+        block_data = block.get_point_data(norm="spectral")
         raw_result: xa.DataArray = self.model.predict( block_data )
         if mask:
             mask_data = np.argmax(raw_result.values, axis=1, keepdims=False)
