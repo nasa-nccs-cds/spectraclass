@@ -220,11 +220,11 @@ class ModelTrainer(SCSingletonConfigurable):
     def abort_callback(self, event ):
         self._abort = True
 
-    def get_training_set(self, **kwargs ) -> Tuple[np.ndarray,np.ndarray,np.ndarray]:
+    def get_training_set(self, **kwargs ) -> Tuple[np.ndarray,np.ndarray]:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         from spectraclass.model.labels import LabelsManager, Action, lm
         label_data = lm().getTrainingLabels()
-        training_data, training_labels, tdata_spatial_sum = None, None, None
+        training_data, training_labels = None, None
         for ( (tindex, block_coords, cid), gids ) in label_data.items():
             block = tm().getBlock( tindex=tindex, block_coords=block_coords )
             input_data: xa.DataArray = block.get_point_data( norm="spectral" )
@@ -236,11 +236,9 @@ class ModelTrainer(SCSingletonConfigurable):
                        f"data.shape={tdata.shape} labels.shape={tlabels.shape} mask.shape={training_mask.shape}, anomaly={input_data.attrs['anomaly']}")
             training_data   = tdata   if (training_data   is None) else np.append( training_data,   tdata,   axis=0 )
             training_labels = tlabels if (training_labels is None) else np.append( training_labels, tlabels, axis=0 )
-            tdata_spatial_sum = training_data.sum(axis=0) if (tdata_spatial_sum is None) else tdata_spatial_sum + training_data.sum(axis=0)
-        tdata_spatial_ave = tdata_spatial_sum / training_data.shape[0]
-        lgm().log(f"#TD: SHAPES--> training_data: {training_data.shape}, training_labels: {training_labels.shape}, tdata_spatial_ave: {tdata_spatial_ave.shape}" )
-        lgm().log(f"#TD: Data-stat={stat(training_data)}, SAve-stat={stat(tdata_spatial_ave)}, labels-stat=[{np.count_nonzero(training_labels)/training_labels.size}]")
-        return ( training_data, training_labels, tdata_spatial_ave )
+        lgm().log(f"#TD: SHAPES--> training_data: {training_data.shape}, training_labels: {training_labels.shape}" )
+        lgm().log(f"#TD: Data-stat={stat(training_data)}, labels-stat=[{np.count_nonzero(training_labels)/training_labels.size}]")
+        return ( training_data, training_labels )
 
     def get_optimizer(self):
         oid = self.optimizer_type
@@ -277,7 +275,7 @@ class ModelTrainer(SCSingletonConfigurable):
     def train(self, **kwargs):
         self.train_losses = []
         training_set = kwargs.pop( 'training_set', None )
-        (train_data, labels_data, tdata_save) = self.get_training_set(**kwargs) if (training_set is None) else training_set
+        (train_data, labels_data) = self.get_training_set(**kwargs) if (training_set is None) else training_set
         self.model.train()
         t0, initial_epoch = time.time(), 0
         train_data = train_data.astype( self.model.get_dtype() )

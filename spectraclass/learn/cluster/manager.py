@@ -724,21 +724,17 @@ class LabelsSavePanel(LabelSetCache):
         self.labelset_name_input = pn.widgets.TextInput(name='Label Set Name', placeholder='Give this set of lebels a name...')
         self.labelset_name_input.link(self, value='labelset_name')
         self.save_button = pn.widgets.Button(name='Save Labels', button_type='success', width=150)
-        self.save_button.on_click( self.save_selection )
+        self.save_button.on_click( self.save )
 
     def gui(self) -> Panel:
         save_panel = pn.Row(self.labelset_name_input, self.save_button)
         return pn.WidgetBox( "###Save", save_panel )
 
-    def save_selection(self, *args, **kwargs):
-        self.labelset_name = self.labelset_name_input.value
-        self.save( *args )
-
     def save(self, *args ):
         labelset_name = self.labelset_name_input.value
         xvars: Dict[Hashable,xa.DataArray] = {}
-        for (image_index, block_coords, icluster, nclusters), marker in clm().cluster_markers.items():
-            mvars: List[xa.DataArray] = marker.to_xarray( icluster, nclusters )
+        for ckey, marker in clm().cluster_markers.items():
+            mvars: List[xa.DataArray] = marker.to_xarray( ckey )
             for mvar in mvars: xvars[mvar.name] = mvar
         xdset = xa.Dataset( xvars )
         labels_file = f"{self.xdset_dir}/{self.labelset_name}.nc"

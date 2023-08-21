@@ -19,9 +19,10 @@ class Marker:
         self._gids: np.ndarray = gids if isinstance(gids, np.ndarray) else np.array(list(gids), dtype=np.int64 )
         self._mask: Optional[np.ndarray] = kwargs.get( 'mask', None )
 
-    def to_xarray( self, icluster: int, nclusters: int ) -> List[xa.DataArray]:
+    def to_xarray( self, ckey: Tuple ) -> List[xa.DataArray]:
         xvars = []
-        name = f"marker-{icluster}-{nclusters}"
+        (image_index, block_coords, icluster, nclusters) = ckey
+        name = f"marker-{image_index}-{block_coords}-{icluster}-{nclusters}-{self.cid}"
         attrs = dict( cid=self.cid, type=self.type, block_index=self.block_index, image_index=self.image_index,
                       icluster=icluster, nclusters=nclusters )
         xvars.append( xa.DataArray( self._gids, name=name, dims=[f"{name}-index"], attrs=attrs ) )
