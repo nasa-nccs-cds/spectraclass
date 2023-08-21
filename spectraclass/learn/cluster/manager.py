@@ -742,17 +742,17 @@ class LabelsSavePanel(LabelSetCache):
 
     def __init__(self ):
         super(LabelsSavePanel, self).__init__()
-        self.tset_name_input = pn.widgets.TextInput(name='Label Set Name', placeholder='Give this set of lebels a name...')
-        self.tset_name_input.link(self, value='tset_name')
+        self.labelset_name_input = pn.widgets.TextInput(name='Label Set Name', placeholder='Give this set of lebels a name...')
+        self.labelset_name_input.link(self, value='labelset_name')
         self.save_button = pn.widgets.Button(name='Save Labels', button_type='success', width=150)
         self.save_button.on_click( self.save_selection )
 
     def gui(self) -> Panel:
-        save_panel = pn.Row(self.tset_name_input, self.save_button)
+        save_panel = pn.Row(self.labelset_name_input, self.save_button)
         return pn.WidgetBox( "###Save", save_panel )
 
     def save_selection(self, *args, **kwargs):
-        self.tset_name = self.tset_name_input.value
+        self.labelset_name = self.labelset_name_input.value
         self.save( *args )
 
 class LabelsLoadPanel(LabelSetCache):
@@ -763,11 +763,11 @@ class LabelsLoadPanel(LabelSetCache):
         self.load_button = pn.widgets.Button( name='Load Labels', button_type='success', width=150 )
         self.load_button.on_click(self.load)
         sopts = dict( name='Saved cluster labels', options=block_selection_names )
-        self.tset_name = block_selection_names[0]
-        self.file_selector = pn.widgets.Select( value=self.tset_name, **sopts )
-        self.file_selector.link(self, value='tset_name')
+        self.labelset_name = block_selection_names[0]
+        self.file_selector = pn.widgets.Select( value=self.labelset_name, **sopts )
+        self.file_selector.link(self, value='labelset_name')
 
-    # def get_tset_name(self, file_path: str ) -> str:
+    # def get_labelset_name(self, file_path: str ) -> str:
     #     return file_path[:-3]
 
     def gui(self) -> Panel:
