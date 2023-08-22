@@ -407,6 +407,13 @@ class ClusterManager(SCSingletonConfigurable):
         lgm().log(f"#CM: mark_cluster[{icluster}]: ckey={ckey} cid={marker.cid}, #pids = {marker.size}")
         self._cluster_markers[ ckey ] = marker
 
+    def get_cluster_index(self, marker: Marker, marker_nclusters ) -> int:
+        for (image_index, block_coords, icluster, nclusters), cmarker in self._cluster_markers.items():
+            if (image_index == marker.image_index) and (block_coords == marker.block_coords) and (nclusters == marker_nclusters):
+                if marker.gids[0] in cmarker.gids:
+                    return icluster
+        return -1
+
     @exception_handled
     def learn_mask( self, event ):
         from spectraclass.learn.pytorch.trainer import mpt
@@ -768,7 +775,7 @@ class LabelsLoadPanel(LabelSetCache):
         labelset_name: str = self.file_selector.value
         markers_file: str = f"{self.xdset_dir}/{labelset_name}.nc"
         markers: Dict[ Tuple, Marker ]  = {}
-        lgm().log( f"#CM: Loading {len(markers)} cluster label markers from file: {markers_file}")
+        missing_markers = 0
         if os.path.exists( markers_file ):
             ufm().show( f"Loading cluster labels '{labelset_name}' ")
             xdset = xa.open_dataset( markers_file )
@@ -777,10 +784,16 @@ class LabelsLoadPanel(LabelSetCache):
                     nclusters = xvar.attrs['nclusters']
                     mask: xa.DataArray = xdset.data_vars.get( f"{name}-mask")
                     marker: Marker = Marker.from_xarray( xvar, mask=mask.values )
-                    if clm().nclusters != nclusters:
-                        ufm().show( f"#Clusters mismatch: need #clusters={nclusters}" )
-                        return
-                    icluster = clm().get_cluster(marker.gids[0])
-                    key = (marker.image_index, marker.block_coords, icluster, nclusters )
-                    markers[key] = marker
+                    icluster = clm().get_cluster_index(marker,nclusters)
+                    if icluster == -1:
+                        missing_markers = missing_markers+1
+                        lgm().log( f"Can't find marker: block={marker.block_coords}, cid={marker.cid}")
+                    else:
+                        key = (marker.image_index, marker.block_coords, icluster, nclusters )
+                        markers[key] = marker
+            if missing_markers > 0:
+                ufm().show( f"Unable to find {missing_markers} markers")
+            else:
+                ufm().show(f"Loaded {len(markers)} cluster label markers")
+            lgm().log(f"#CM: Loaded {len(markers)} cluster label markers from file: {markers_file}")
             clm().set_cluster_markers( markers )
