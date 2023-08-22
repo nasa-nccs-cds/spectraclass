@@ -14,8 +14,9 @@ class Marker:
         self.cid = cid
         self.type = type
         self.props = kwargs
-        self.block_index = kwargs.get( 'block_index', tm().block_index )
-        self.image_index = kwargs.get( 'image_index', tm().image_index )
+        bindex = kwargs.get( 'block_index', tm().block_index )
+        self.block_index = (int(bindex[0]),int(bindex[1]))
+        self.image_index = int(kwargs.get( 'image_index', tm().image_index ))
         self._gids: np.ndarray = gids if isinstance(gids, np.ndarray) else np.array(list(gids), dtype=np.int64 )
         self._mask: Optional[np.ndarray] = kwargs.get( 'mask', None )
 

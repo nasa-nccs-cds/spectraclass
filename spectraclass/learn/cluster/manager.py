@@ -782,7 +782,7 @@ class LabelsLoadPanel(LabelSetCache):
             for name, xvar in xdset.data_vars.items():
                 if not name.endswith("-mask"):
                     nclusters = xvar.attrs['nclusters']
-                    clm().nclusters = nclusters
+                    clm().nclusters = int(nclusters)
                     mask: xa.DataArray = xdset.data_vars.get( f"{name}-mask")
                     marker: Marker = Marker.from_xarray( xvar, mask=mask.values )
                     icluster = clm().get_cluster_index(marker)
