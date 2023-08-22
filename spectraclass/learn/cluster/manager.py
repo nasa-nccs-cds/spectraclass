@@ -780,7 +780,7 @@ class LabelsLoadPanel(LabelSetCache):
             ufm().show( f"Loading cluster labels '{labelset_name}' ")
             xdset = xa.open_dataset( markers_file )
             for name, xvar in xdset.data_vars.items():
-                if not name.endswith("-mask"):
+                if (not name.endswith("-mask")) and (xvar.size > 0):
                     nclusters = xvar.attrs['nclusters']
                     clm().nclusters = int(nclusters)
                     mask: xa.DataArray = xdset.data_vars.get( f"{name}-mask")
