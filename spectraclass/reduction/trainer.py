@@ -163,7 +163,7 @@ class ModelTrainer(SCSingletonConfigurable):
                 ufm().show("Training autoencoder...")
                 for iter in range(self.niter):
                     if self._abort: return
-                    initial_epoch = self.general_training(iter, initial_epoch, **kwargs )
+                    initial_epoch = self.general_training(iter, initial_epoch, **kwargs)
                     ufm().show( f"Processed iteration {iter+1}")
                 lgm().log( f"Trained autoencoder in {(time.time()-t0)/60:.3f} min" )
                 ufm().show("Completed training autoencoder")

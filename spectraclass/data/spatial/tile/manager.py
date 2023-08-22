@@ -107,9 +107,14 @@ class TileManager(SCSingletonConfigurable):
         from spectraclass.learn.pytorch.trainer import stat
         raster: bool = kwargs.pop('raster', False)
         block = kwargs.get('block', self.getBlock())
-        point_data = kwargs.get('point_data',  block.get_point_data(**kwargs))
-        lgm().log(f"#TM> prepare_inputs->point_data: shape={point_data.shape}, stat={stat(point_data)}")
-        return block.points2raster(point_data) if raster else point_data
+        if raster:
+            point_data = kwargs.get('point_data', block.get_point_data(reduce=False,**kwargs))
+            return block.points2raster(point_data)
+        else:
+            point_data = kwargs.get('point_data', block.get_point_data(reduce=True,**kwargs))
+            lgm().log(f"#TM> prepare_inputs->point_data: shape={point_data.shape}, stat={stat(point_data)}")
+            return point_data
+
 
     # if norm == "anomaly":
     #     spatial_ave: xa.DataArray = kwargs.pop('spatial_ave', mt().get_model_attribute('spatial_ave'))

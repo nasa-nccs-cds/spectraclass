@@ -674,8 +674,10 @@ class Block(DataContainer):
     def get_point_data(self, **kwargs) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         class_filter =  kwargs.get( 'class_filter', True)
+        reduce = kwargs.get( 'reduce', True)
         norm: str = kwargs.get('norm',"spectral")
-        result = self.filtered_point_data if class_filter else self.point_data
+        if class_filter:    result = self.filtered_point_data if reduce else self.masked_point_data
+        else:               result = self.point_data
         if norm == "none":
             return result
         elif norm == "spectral":
@@ -795,6 +797,13 @@ class Block(DataContainer):
     def filtered_point_data(self) -> Optional[xa.DataArray]:
         if self._point_data is None: self.createPointData()
         return self._point_data[self.class_mask.values]
+
+    @property
+    def masked_point_data(self) -> Optional[xa.DataArray]:
+        if self._point_data is None: self.createPointData()
+        result_data = self._point_data.values.copy()
+        result_data[ ~self.class_mask.values ] = np.nan
+        return self._point_data.copy( data=result_data )
 
     @property
     def filtered_raster_data(self) -> Optional[xa.DataArray]:
