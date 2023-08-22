@@ -23,8 +23,7 @@ class Marker:
         xvars = []
         (image_index, block_coords, icluster, nclusters) = ckey
         name = f"marker-{image_index}-{block_coords}-{icluster}-{nclusters}-{self.cid}"
-        attrs = dict( cid=self.cid, type=self.type, block_index=self.block_index, image_index=self.image_index,
-                      icluster=icluster, nclusters=nclusters )
+        attrs = dict( cid=self.cid, type=self.type, block_index=self.block_index, image_index=self.image_index, nclusters=nclusters )
         xvars.append( xa.DataArray( self._gids, name=name, dims=[f"{name}-index"], attrs=attrs ) )
         mask = self.props.get('mask')
         if mask is not None:

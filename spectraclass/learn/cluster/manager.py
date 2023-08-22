@@ -774,8 +774,13 @@ class LabelsLoadPanel(LabelSetCache):
             xdset = xa.open_dataset( markers_file )
             for name, xvar in xdset.data_vars.items():
                 if not name.endswith("-mask"):
+                    nclusters = xvar.attrs['nclusters']
                     mask: xa.DataArray = xdset.data_vars.get( f"{name}-mask")
                     marker: Marker = Marker.from_xarray( xvar, mask=mask.values )
-                    key = (marker.image_index, marker.block_coords, xvar.attrs['icluster'],  xvar.attrs['nclusters'] )
+                    if clm().nclusters != nclusters:
+                        ufm().show( f"#Clusters mismatch: need #clusters={nclusters}" )
+                        return
+                    icluster = clm().get_cluster(marker.gids[0])
+                    key = (marker.image_index, marker.block_coords, icluster, nclusters )
                     markers[key] = marker
             clm().set_cluster_markers( markers )
