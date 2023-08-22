@@ -300,11 +300,9 @@ class SpatialDataManager(ModeDataManager):
 
     def prepare_inputs(self, **kwargs ):
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        from spectraclass.learn.pytorch.trainer import stat as sstat
         tm().autoprocess = False
         attrs, block_sizes = {}, {}
         nbands, bands, npts = None, None, 0
-        spatial_sum: np.ndarray = None
         blocks: Dict = dm().modal.get_block_selection()
         lgm().log(f" Preparing inputs, reprocess={tm().reprocess}, nblocks={len(blocks)}", print=True)
         try:
@@ -322,18 +320,10 @@ class SpatialDataManager(ModeDataManager):
                         block_sizes[ block.cindex ] = result_dataset.attrs[ 'nsamples']
                         if nbands is None: nbands = result_dataset.attrs[ 'nbands']
                         if bands is None: bands = result_dataset.coords['band']
-                        ssum: List[float] = result_dataset.attrs.get('ssum')
-                        if ssum is not None:
-                            spatial_sum = np.array( ssum ) if spatial_sum is None else spatial_sum + np.array( ssum )
-                            npts = npts + result_dataset.attrs.get('ssum_npts')
                         result_dataset.close()
             if not has_metadata:
                 self.write_metadata(block_sizes, attrs)
             train_args = dict( **kwargs )
-            if spatial_sum is not None:
-                spatial_ave: np.ndarray = spatial_sum/npts
-                lgm().log(f"#SSUM: npts={npts}, spatial_ave stat={sstat(spatial_ave)}, bands shape={bands.shape}")
-                train_args['spatial_ave'] = xa.DataArray( spatial_ave, dims=["band"], coords=dict(band=bands) )
             mt().train( **train_args )
         except Exception as err:
             print( f"\n *** Error in processing workflow, check log file for details: {lgm().log_file} *** ")

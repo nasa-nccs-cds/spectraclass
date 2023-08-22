@@ -71,24 +71,24 @@ class TileManager(SCSingletonConfigurable):
         nx: np.ndarray = (x - np.nanmean(x)) / np.nanstd(x)
         return nx if (type(data) == np.ndarray) else data.copy(data=nx)
 
-    def prepare_inputs_anom(self, point_data: xa.DataArray, **kwargs ) -> xa.DataArray:
-        from spectraclass.learn.pytorch.trainer import stat
-        result = None
-        if self.anomaly and not point_data.attrs.get("anomaly",False):
-            ms: Optional[xa.DataArray] = kwargs.pop( 'baseline', self.get_mean_spectrum() )
-            if ms is not None:
-                sdiff: xa.DataArray = point_data - ms
-                result = self.norm( sdiff ).astype( point_data.dtype )
-                lgm().log( f"#ANOM.prepare_inputs-> input: shape={point_data.shape}, stat={stat(point_data)}; "
-                           f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
-                result.attrs['anomaly'] = True
-            else:
-                lgm().log(f"#ANOM.prepare_inputs-> ERROR, attempt to compute anomaly without mean_spectrum" )
-        if result is None:
-            result = point_data
-            lgm().log(f"#TM: prepare_inputs-> RAW normalized input: shape={point_data.shape}, stat={stat(point_data)}")
-            result.attrs['anomaly'] = False
-        return result
+    # def prepare_inputs_anom(self, point_data: xa.DataArray, **kwargs ) -> xa.DataArray:
+    #     from spectraclass.learn.pytorch.trainer import stat
+    #     result = None
+    #     if self.anomaly and not point_data.attrs.get("anomaly",False):
+    #         ms: Optional[xa.DataArray] = kwargs.pop( 'baseline', self.get_mean_spectrum() )
+    #         if ms is not None:
+    #             sdiff: xa.DataArray = point_data - ms
+    #             result = self.norm( sdiff ).astype( point_data.dtype )
+    #             lgm().log( f"#ANOM.prepare_inputs-> input: shape={point_data.shape}, stat={stat(point_data)}; "
+    #                        f"result: shape={result.shape}, raw stat={stat(sdiff)}, norm stat={stat(result)}")
+    #             result.attrs['anomaly'] = True
+    #         else:
+    #             lgm().log(f"#ANOM.prepare_inputs-> ERROR, attempt to compute anomaly without mean_spectrum" )
+    #     if result is None:
+    #         result = point_data
+    #         lgm().log(f"#TM: prepare_inputs-> RAW normalized input: shape={point_data.shape}, stat={stat(point_data)}")
+    #         result.attrs['anomaly'] = False
+    #     return result
 
     def compute_anomaly(self, point_data: xa.DataArray, spatial_ave: xa.DataArray ) -> xa.DataArray:
         from spectraclass.learn.pytorch.trainer import stat
@@ -105,9 +105,9 @@ class TileManager(SCSingletonConfigurable):
 
     def prepare_inputs(self, **kwargs ) -> xa.DataArray:
         from spectraclass.learn.pytorch.trainer import stat
-        raster: bool = kwargs.pop( 'raster', False )
-        block = kwargs.get( 'block', self.getBlock() )
-        point_data = kwargs.get( 'data', block.get_point_data(**kwargs) )
+        raster: bool = kwargs.pop('raster', False)
+        block = kwargs.get('block', self.getBlock())
+        point_data = kwargs.get('point_data',  block.get_point_data(**kwargs))
         lgm().log(f"#TM> prepare_inputs->point_data: shape={point_data.shape}, stat={stat(point_data)}")
         return block.points2raster(point_data) if raster else point_data
 
@@ -135,47 +135,47 @@ class TileManager(SCSingletonConfigurable):
     def get_block_selection_key( self, selection: Dict ) -> int:
         return sum( [ tm().c2bi(bid) for bid in selection.keys() ] )
 
-    def get_mean_spectrum(self,**kwargs) -> Optional[xa.DataArray]:
-        from spectraclass.learn.pytorch.trainer import stat
-        from spectraclass.data.base import dm
-        block_selection: Optional[Dict] = kwargs.get( "blocksel", dm().modal.get_block_selection() )
-        if block_selection is not None:
-            bskey = self.get_block_selection_key(block_selection)
-            smean = self._mean_spectrum.get( bskey, None )
-            if smean is None:
-                ufm().show( f"Computing mean spectrum over {len(block_selection)} blocks")
-                dsum: xa.DataArray = None
-                npts: int = 0
-                for (ix,iy) in block_selection.keys():
-                    block: Block = self.tile.getDataBlock(ix, iy)
-                    pdata: xa.DataArray = block.get_point_data()
-                    ufm().show(f" ... processing block {(ix,iy)}")
-                    pdsum: xa.DataArray = pdata.sum( dim=str(pdata.dims[0]) )
-                    npts = npts + pdata.shape[0]
-                    dsum = pdsum if (dsum is None) else dsum + pdsum
-                smean: xa.DataArray = dsum/npts
-                self._mean_spectrum[bskey] = smean
-                ufm().show( f"Done Computing mean spectrum")
-                lgm().log( f"#ANOM.get_mean_spectrum({len(block_selection)} blocks)-> smean: shape={smean.shape}, stat={stat(smean)}")
-            return smean
+    # def get_mean_spectrum(self,**kwargs) -> Optional[xa.DataArray]:
+    #     from spectraclass.learn.pytorch.trainer import stat
+    #     from spectraclass.data.base import dm
+    #     block_selection: Optional[Dict] = kwargs.get( "blocksel", dm().modal.get_block_selection() )
+    #     if block_selection is not None:
+    #         bskey = self.get_block_selection_key(block_selection)
+    #         smean = self._mean_spectrum.get( bskey, None )
+    #         if smean is None:
+    #             ufm().show( f"Computing mean spectrum over {len(block_selection)} blocks")
+    #             dsum: xa.DataArray = None
+    #             npts: int = 0
+    #             for (ix,iy) in block_selection.keys():
+    #                 block: Block = self.tile.getDataBlock(ix, iy)
+    #                 pdata: xa.DataArray = block.get_point_data()
+    #                 ufm().show(f" ... processing block {(ix,iy)}")
+    #                 pdsum: xa.DataArray = pdata.sum( dim=str(pdata.dims[0]) )
+    #                 npts = npts + pdata.shape[0]
+    #                 dsum = pdsum if (dsum is None) else dsum + pdsum
+    #             smean: xa.DataArray = dsum/npts
+    #             self._mean_spectrum[bskey] = smean
+    #             ufm().show( f"Done Computing mean spectrum")
+    #             lgm().log( f"#ANOM.get_mean_spectrum({len(block_selection)} blocks)-> smean: shape={smean.shape}, stat={stat(smean)}")
+    #         return smean
 
-    def get_norm_factors(self,**kwargs) -> Optional[xa.DataArray]:
-        from spectraclass.learn.pytorch.trainer import stat
-        from spectraclass.data.base import dm
-        block_selection: Optional[Dict] = kwargs.get( "blocksel", dm().modal.get_block_selection() )
-        ufm().show( f"Computing mean spectrum over {len(block_selection)} blocks")
-        dsum: xa.DataArray = None
-        npts: int = 0
-        for (ix,iy) in block_selection.keys():
-            block: Block = self.tile.getDataBlock(ix, iy)
-            pdata: xa.DataArray = block.get_point_data()
-            ufm().show(f" ... processing block {(ix,iy)}")
-            pdsum: xa.DataArray = pdata.sum( dim=str(pdata.dims[0]) )
-            npts = npts + pdata.shape[0]
-            dsum = pdsum if (dsum is None) else dsum + pdsum
-        smean: xa.DataArray = dsum/npts
-        ufm().show( f"Done Computing mean spectrum")
-        lgm().log( f"#ANOM.get_mean_spectrum({len(block_selection)} blocks)-> smean: shape={smean.shape}, stat={stat(smean)}")
+    # def get_norm_factors(self,**kwargs) -> Optional[xa.DataArray]:
+    #     from spectraclass.learn.pytorch.trainer import stat
+    #     from spectraclass.data.base import dm
+    #     block_selection: Optional[Dict] = kwargs.get( "blocksel", dm().modal.get_block_selection() )
+    #     ufm().show( f"Computing mean spectrum over {len(block_selection)} blocks")
+    #     dsum: xa.DataArray = None
+    #     npts: int = 0
+    #     for (ix,iy) in block_selection.keys():
+    #         block: Block = self.tile.getDataBlock(ix, iy)
+    #         pdata: xa.DataArray = block.get_point_data()
+    #         ufm().show(f" ... processing block {(ix,iy)}")
+    #         pdsum: xa.DataArray = pdata.sum( dim=str(pdata.dims[0]) )
+    #         npts = npts + pdata.shape[0]
+    #         dsum = pdsum if (dsum is None) else dsum + pdsum
+    #     smean: xa.DataArray = dsum/npts
+    #     ufm().show( f"Done Computing mean spectrum")
+    #     lgm().log( f"#ANOM.get_mean_spectrum({len(block_selection)} blocks)-> smean: shape={smean.shape}, stat={stat(smean)}")
 
 
     def bi2c(self, bindex: int ) -> Tuple[int,int]:

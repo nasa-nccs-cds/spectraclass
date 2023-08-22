@@ -358,7 +358,7 @@ class ModelTrainer(SCSingletonConfigurable):
         raster = kwargs.get( 'raster', False )
         mask = kwargs.get('mask', False)
         block: Block = tm().getBlock(**kwargs)
-        block_data = block.get_point_data(norm="spectral")
+        block_data = block.get_point_data( class_filter=False, **kwargs )
         raw_result: xa.DataArray = self.model.predict( block_data )
         if mask:
             mask_data = np.argmax(raw_result.values, axis=1, keepdims=False)

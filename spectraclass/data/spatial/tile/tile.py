@@ -673,8 +673,8 @@ class Block(DataContainer):
 
     def get_point_data(self, **kwargs) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
-        class_filter =  kwargs.get( 'class_filter', False)
-        norm: str = kwargs.get('norm',"none")
+        class_filter =  kwargs.get( 'class_filter', True)
+        norm: str = kwargs.get('norm',"spectral")
         result = self.filtered_point_data if class_filter else self.point_data
         if norm == "none":
             return result
