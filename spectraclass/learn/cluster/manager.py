@@ -353,18 +353,17 @@ class ClusterManager(SCSingletonConfigurable):
             pickle.dump( self.samples.tolist(), open("/tmp/cluster_gids.pkl","wb") )
             return -1
 
-    def get_marked_clusters( self, cid: int ) -> List[int]:
-        from spectraclass.data.spatial.tile.manager import tm
-        ckey = ( tm().image_index, tm().block_coords, cid )
+    def get_marked_clusters( self, image_index, block_coords, cid: int ) -> List[int]:
+        ckey = ( image_index, block_coords, cid )
         return self._marked_clusters.setdefault( ckey, [] )
 
-    def get_points(self, cid: int ) -> np.ndarray:
+    def get_points(self, image_index: int, block_coords: Tuple[int,int], cid: int ) -> np.ndarray:
         class_points = np.array( [], dtype=np.int32 )
-        clusters: List[int] = self.get_marked_clusters(cid)
+        clusters: List[int] = self.get_marked_clusters(image_index, block_coords, cid)
         for icluster in clusters:
             mask = ( self._cluster_points.values.squeeze() == icluster )
-            pids: np.ndarray = self._cluster_points.samples[mask].values
-            class_points = np.concatenate( (class_points, pids), axis=0 )
+            gids: np.ndarray = self._cluster_points.samples[mask].values
+            class_points = np.concatenate( (class_points, gids), axis=0 )
         return class_points.astype(np.int32)
 
     def get_cluster_pids(self, icluster: int ) -> np.ndarray:
@@ -380,6 +379,7 @@ class ClusterManager(SCSingletonConfigurable):
         ckey = (tm().image_index, tm().block_coords, icluster, self.nclusters)
         self._marked_colors.pop(ckey,None)
         self._cluster_colors[icluster] = self._init_cluster_colors[icluster]
+        self.get_marked_clusters(ckey[0],ckey[1],cid).pop(icluster)
         self.update_cmap()
         self._cluster_markers.pop(ckey,None)
 
@@ -388,18 +388,22 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import tm
         cmask = self.get_cluster_map().values
         ckey = (tm().image_index, tm().block_coords, icluster, self.nclusters)
-        marker = Marker("clusters", self.get_points(cid), cid, mask=(cmask == icluster))
+        gids = self.get_points(ckey[0], ckey[1], cid)
+        marker = Marker( "clusters", gids, cid, mask=(cmask == icluster) )
         self.register_marker( ckey, marker )
         return marker
 
     def register_marker(self, ckey: Tuple, marker: Marker ):
         from spectraclass.model.labels import lm
+        current_marker = self._cluster_markers.get( ckey )
         (image_index, block_coords, icluster, nclusters) = ckey
         class_color = lm().get_rgb_color(marker.cid)
         self._marked_colors[ckey] = class_color
+        if current_marker is not None:
+            self.get_marked_clusters( image_index, block_coords, current_marker.cid ).pop(icluster)
         self._cluster_colors[icluster] = class_color
         self.update_cmap()
-        self.get_marked_clusters(marker.cid).append(icluster)
+        self.get_marked_clusters( image_index, block_coords, marker.cid ).append(icluster)
         lgm().log(f"#CM: mark_cluster[{icluster}]: ckey={ckey} cid={marker.cid}, #pids = {marker.size}")
         self._cluster_markers[ ckey ] = marker
 
