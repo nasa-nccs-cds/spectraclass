@@ -414,6 +414,10 @@ class ClusterManager(SCSingletonConfigurable):
         tm().setBlock( marker.block_index )
         return self.get_cluster( marker.gids[0] )
 
+    def mark_color(self, ckey, cid ):
+        from spectraclass.model.labels import LabelsManager, lm
+        self._marked_colors[ckey] = lm().get_rgb_color(cid)
+
     @exception_handled
     def learn_mask( self, event ):
         from spectraclass.learn.pytorch.trainer import mpt
@@ -787,7 +791,7 @@ class LabelsLoadPanel(LabelSetCache):
                     marker: Marker = Marker.from_xarray( xvar, mask=mask.values )
                     icluster = clm().get_cluster_index(marker)
                     ckey = (marker.image_index, marker.block_coords, icluster, nclusters)
-                    self._marked_colors[ckey] = lm().colors[marker.cid]
+                    clm().mark_color( ckey, marker.cid )
             ufm().show(f"Loaded {len(markers)} cluster label markers")
             lgm().log(f"#CM: Loaded {len(markers)} cluster label markers from file: {markers_file}")
             clm().set_cluster_markers( markers )
