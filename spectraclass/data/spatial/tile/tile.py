@@ -671,6 +671,13 @@ class Block(DataContainer):
         bdata: xa.DataArray = self.data if raster else self.point_data
         return bdata.copy( data=np.full( bdata.shape, value ) )
 
+    def pad_point_data(self, point_data: xa.DataArray ) -> xa.DataArray:
+        full_shape = (self.class_mask.shape[0],point_data.shape[1])
+        dim1 = point_data.dims[1]
+        padded_point_data: np.ndarray = np.full( full_shape, np.nan )
+        padded_point_data[self.class_mask.values] = point_data.values
+        return xa.DataArray( padded_point_data, dims=('samples',dim1), coords={dim1:point_data.coords[dim1]} )
+
     def get_point_data(self, **kwargs) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         class_filter =  kwargs.get( 'class_filter', True)

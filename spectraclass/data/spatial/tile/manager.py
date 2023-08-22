@@ -108,10 +108,10 @@ class TileManager(SCSingletonConfigurable):
         raster: bool = kwargs.pop('raster', False)
         block = kwargs.get('block', self.getBlock())
         if raster:
-            point_data = kwargs.get('point_data', block.get_point_data(reduce=False,**kwargs))
-            return block.points2raster(point_data)
+            point_data = block.get_point_data(reduce=False,**kwargs)
+            return block.points2raster( point_data )
         else:
-            point_data = kwargs.get('point_data', block.get_point_data(reduce=True,**kwargs))
+            point_data = block.get_point_data(reduce=True,**kwargs)
             lgm().log(f"#TM> prepare_inputs->point_data: shape={point_data.shape}, stat={stat(point_data)}")
             return point_data
 
