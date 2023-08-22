@@ -262,6 +262,8 @@ class ClusterManager(SCSingletonConfigurable):
             if icluster >= 0: mcolors[icluster] = value
         return mcolors
 
+
+
     def get_icluster( self, ckey: Tuple ) -> int:
         from spectraclass.data.spatial.tile.manager import tm
         ( tindex, bindex, icluster, nclusters ) = ckey
@@ -407,12 +409,10 @@ class ClusterManager(SCSingletonConfigurable):
         lgm().log(f"#CM: mark_cluster[{icluster}]: ckey={ckey} cid={marker.cid}, #pids = {marker.size}")
         self._cluster_markers[ ckey ] = marker
 
-    def get_cluster_index(self, marker: Marker, marker_nclusters ) -> int:
-        for (image_index, block_coords, icluster, nclusters), cmarker in self._cluster_markers.items():
-            if (image_index == marker.image_index) and (block_coords == marker.block_coords) and (nclusters == marker_nclusters):
-                if marker.gids[0] in cmarker.gids:
-                    return icluster
-        return -1
+    def get_cluster_index(self, marker: Marker) -> int:
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        tm().setBlock( marker.block_index )
+        return self.get_cluster( marker.gids[0] )
 
     @exception_handled
     def learn_mask( self, event ):
@@ -772,28 +772,22 @@ class LabelsLoadPanel(LabelSetCache):
 
     @exception_handled
     def load(self,*args ):
+        from spectraclass.model.labels import LabelsManager, lm
         labelset_name: str = self.file_selector.value
         markers_file: str = f"{self.xdset_dir}/{labelset_name}.nc"
         markers: Dict[ Tuple, Marker ]  = {}
-        missing_markers = 0
         if os.path.exists( markers_file ):
             ufm().show( f"Loading cluster labels '{labelset_name}' ")
             xdset = xa.open_dataset( markers_file )
             for name, xvar in xdset.data_vars.items():
                 if not name.endswith("-mask"):
                     nclusters = xvar.attrs['nclusters']
+                    clm().nclusters = nclusters
                     mask: xa.DataArray = xdset.data_vars.get( f"{name}-mask")
                     marker: Marker = Marker.from_xarray( xvar, mask=mask.values )
-                    icluster = clm().get_cluster_index(marker,nclusters)
-                    if icluster == -1:
-                        missing_markers = missing_markers+1
-                        lgm().log( f"Can't find marker: block={marker.block_coords}, cid={marker.cid}")
-                    else:
-                        key = (marker.image_index, marker.block_coords, icluster, nclusters )
-                        markers[key] = marker
-            if missing_markers > 0:
-                ufm().show( f"Unable to find {missing_markers} markers")
-            else:
-                ufm().show(f"Loaded {len(markers)} cluster label markers")
+                    icluster = clm().get_cluster_index(marker)
+                    ckey = (marker.image_index, marker.block_coords, icluster, nclusters)
+                    self._marked_colors[ckey] = lm().colors[marker.cid]
+            ufm().show(f"Loaded {len(markers)} cluster label markers")
             lgm().log(f"#CM: Loaded {len(markers)} cluster label markers from file: {markers_file}")
             clm().set_cluster_markers( markers )
