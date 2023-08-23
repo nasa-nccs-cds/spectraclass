@@ -784,9 +784,9 @@ class LabelsLoadPanel(LabelSetCache):
         return load_panel
 
     @exception_handled
-    def load(self,*args ):
+    def load(self, *args):
         labelset_name: str = self.file_selector.value
-        markers_file: str = f"{self.xdset_dir}/{labelset_name}.nc"
+        markers_file:  str = f"{self.xdset_dir}/{labelset_name}.nc"
         if os.path.exists( markers_file ):
             ufm().show( f"Loading cluster labels '{labelset_name}' ")
             xdset = xa.open_dataset( markers_file )
