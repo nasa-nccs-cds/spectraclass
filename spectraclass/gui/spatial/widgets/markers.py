@@ -19,6 +19,7 @@ class Marker:
         self.image_index = int(kwargs.get( 'image_index', tm().image_index ))
         self._gids: np.ndarray = gids if isinstance(gids, np.ndarray) else np.array(list(gids), dtype=np.int64 )
         self._mask: Optional[np.ndarray] = kwargs.get( 'mask', None )
+        lgm().trace( f"#CM: Marker.create, gids= {gids}" )
 
     def to_xarray( self, ckey: Tuple ) -> List[xa.DataArray]:
         xvars = []
@@ -27,6 +28,7 @@ class Marker:
         attrs = dict( cid=self.cid, type=self.type, block_index=self.block_index, image_index=int(self.image_index),
                       nclusters=int(nclusters), icluster=int(icluster) )
         xvars.append( xa.DataArray( self._gids, name=name, dims=[f"{name}-index"], attrs=attrs ) )
+        lgm().log( f"#CM: Marker.to_xarray: shape={self._gids.shape}, cid={self.cid}, ckey={ckey}" )
         mask = self.props.get('mask')
         if mask is not None:
             xvars.append( xa.DataArray( mask, name=f"{name}-mask", dims=['x','y'] ) )
