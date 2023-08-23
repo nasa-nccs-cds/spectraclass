@@ -101,7 +101,6 @@ class ClusterMagnitudeWidget:
 
 class ClusterManager(SCSingletonConfigurable):
     modelid = tl.Unicode("kmeans").tag(config=True, sync=True)
-    nclusters = tl.Int(8).tag(config=True, sync=True)
     random_state = tl.Int(12345).tag(config=True, sync=True)
     seed = tl.Int(31415).tag(config=True, sync=True)
 
@@ -135,7 +134,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._models: Dict[str,ClusterBase] = {}
         self._model_selector = pn.widgets.Select(name='Methods', options=self.mids, value=self.modelid )
         self._model_watcher = self._model_selector.param.watch( self.on_parameter_change, ['value'], onlychanged=True )
-        self._ncluster_selector = pn.widgets.Select(name='#Clusters', options=self._ncluster_options, value=self.nclusters )
+        self._ncluster_selector = pn.widgets.Select(name='#Clusters', options=self._ncluster_options, value=8 )
         self._ncluster_watcher = self._ncluster_selector.param.watch(self.on_parameter_change, ['value'], onlychanged=True )
         self._current_training_set: Tuple[np.ndarray,np.ndarray,np.ndarray] = None
         self.ts_generate_button = Button( name='Generate Training Set', button_type='primary', width=150 )
@@ -219,19 +218,22 @@ class ClusterManager(SCSingletonConfigurable):
     def mids(self) -> List[str]:
         return self._mid_options
 
+    @property
+    def nclusters(self):
+        return self._ncluster_selector.value
+
     def create_model(self, mid: str ) -> ClusterBase:
         from .fcm import FCM
         from  .kmeans import KMeansCluster, BisectingKMeans
-        nclusters = self._ncluster_selector.value
         self.update_colors( self._max_culsters )
-        lgm().log( f"#CM: Creating {mid} model with {nclusters} clusters")
+        lgm().log( f"#CM: Creating {mid} model with {self.nclusters} clusters")
         if mid == "kmeans":
             params = dict(  random_state= self.random_state, batch_size= 256 * cpu_count() )
-            return KMeansCluster( nclusters, **params )
+            return KMeansCluster( self.nclusters, **params )
         if mid == "fuzzy cmeans":
-            return FCM( nclusters )
+            return FCM( self.nclusters )
         elif mid == "bisecting kmeans":
-             return BisectingKMeans( n_clusters=nclusters )
+             return BisectingKMeans( n_clusters=self.nclusters )
 
     def on_parameter_change(self, *args ):
         self.update_model()
