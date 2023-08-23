@@ -393,7 +393,8 @@ class ClusterManager(SCSingletonConfigurable):
         ckey = (tm().image_index, tm().block_coords, icluster, self.nclusters)
         self._marked_colors.pop(ckey,None)
         self._cluster_colors[icluster] = self._init_cluster_colors[icluster]
-        self.get_marked_clusters(ckey[0],ckey[1],cid).pop(icluster)
+        try:    self.get_marked_clusters(ckey[0], ckey[1], cid).pop(icluster)
+        except: pass
         self.update_cmap()
         self._cluster_markers.pop(ckey,None)
 
