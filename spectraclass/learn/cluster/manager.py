@@ -103,6 +103,7 @@ class ClusterManager(SCSingletonConfigurable):
     modelid = tl.Unicode("kmeans").tag(config=True, sync=True)
     nclusters = tl.Int(5).tag(config=True, sync=True)
     random_state = tl.Int(0).tag(config=True, sync=True)
+    seed = tl.Int(31415).tag(config=True, sync=True)
 
     def __init__(self, **kwargs ):
         super(ClusterManager, self).__init__(**kwargs)
@@ -292,6 +293,7 @@ class ClusterManager(SCSingletonConfigurable):
     def run_cluster_model( self, data: xa.DataArray ):
         from spectraclass.learn.pytorch.trainer import stat
         from spectraclass.data.spatial.tile.manager import TileManager, tm
+        np.random.seed(self.seed)
         self.nclusters = self._ncluster_selector.value
         ckey = (tm().image_index, tm().block_index, self.nclusters)
         if ckey not in self._cluster_points:
