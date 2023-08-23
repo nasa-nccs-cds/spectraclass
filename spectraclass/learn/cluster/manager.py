@@ -295,11 +295,10 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.learn.pytorch.trainer import stat
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         np.random.seed(self.seed)
-        self.nclusters = self._ncluster_selector.value
         ckey = (tm().image_index, tm().block_index, self.nclusters)
         if ckey not in self._cluster_points:
             self.clear()
-            self.model.n_clusters = self.nclusters
+            self.model.n_clusters = self._ncluster_selector.value
             lgm().log( f"#CM: Creating {self.nclusters} clusters from input data ->> shape = {data.shape}, stat={stat(data)}, anomaly={data.attrs['anomaly']}")
             self.model.cluster(data)
             self._cluster_points[ckey] = self.model.cluster_data
