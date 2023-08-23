@@ -791,15 +791,19 @@ class LabelsLoadPanel(LabelSetCache):
             xdset = xa.open_dataset( markers_file )
             lgm().log(f"#CM: Load cluster markers: {list(xdset.data_vars.keys())}")
             for name, xvar in xdset.data_vars.items():
-                if (not name.endswith("-mask")) and (xvar.size > 0):
-                    nclusters = int(xvar.attrs['nclusters'])
-                    icluster = int(xvar.attrs['icluster'])
-                    clm().set_nclusters( nclusters )
-                    mask: xa.DataArray = xdset.data_vars.get( f"{name}-mask")
-                    marker: Marker = Marker.from_xarray( xvar, mask=mask.values )
-                    ckey = (marker.image_index, marker.block_coords, icluster, nclusters)
-                    clm().mark_color( ckey, marker.cid )
-                    lgm().log(f"#CM: Loaded marker {name}: block={marker.block_coords}, icluster= {marker.props['icluster']}, cid={marker.cid}")
+                if (not name.endswith("-mask")):
+                    if xvar.size == 0:
+                        lgm().log( f"#CM: Found empty marker {name}: shape={xvar.shape}, block={xvar.attrs['block_coords']},"
+                                   f" icluster= {xvar.attrs['icluster']}, cid={xvar.attrs['cid']}")
+                    else:
+                        nclusters = int(xvar.attrs['nclusters'])
+                        icluster = int(xvar.attrs['icluster'])
+                        clm().set_nclusters( nclusters )
+                        mask: xa.DataArray = xdset.data_vars.get( f"{name}-mask")
+                        marker: Marker = Marker.from_xarray( xvar, mask=mask.values )
+                        ckey = (marker.image_index, marker.block_coords, icluster, nclusters)
+                        clm().mark_color( ckey, marker.cid )
+                        lgm().log(f"#CM: Loaded marker {name}: shape={xvar.shape}, block={marker.block_coords}, icluster= {marker.props['icluster']}, cid={marker.cid}, size={xvar.size}")
             ufm().show(f"Loaded {len(markers)} cluster label markers")
             lgm().log(f"#CM: Loaded {len(markers)} cluster label markers from file: {markers_file}")
             clm().set_cluster_markers( markers )
