@@ -376,9 +376,11 @@ class ClusterManager(SCSingletonConfigurable):
             class_points = np.concatenate( (class_points, gids), axis=0 )
         return class_points.astype(np.int32)
 
-    def get_cluster_pids(self, icluster: int ) -> np.ndarray:
+    def get_cluster_gids(self, icluster: int) -> np.ndarray:
         mask = ( self.cluster_points.values.squeeze() == icluster )
-        return self.cluster_points.samples[mask].values
+        result = self.cluster_points.samples[mask].values
+        lgm().log( f"#CM: get_cluster_gids({icluster}): mask.shape = {mask.shape} result.shape = {result.shape}")
+        return result
 
     @property
     def cluster_points(self) -> xa.DataArray:
@@ -400,7 +402,7 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.data.spatial.tile.manager import tm
         cmask = self.get_cluster_map().values
         ckey = (tm().image_index, tm().block_coords, icluster, self.nclusters)
-        gids = self.get_points(ckey[0], ckey[1], cid)
+        gids = self.get_cluster_gids(icluster)
         marker = Marker( "clusters", gids, cid, mask=(cmask == icluster) )
         self.register_marker( ckey, marker )
         return marker

@@ -19,7 +19,7 @@ class Marker:
         self.image_index = int(kwargs.get( 'image_index', tm().image_index ))
         self._gids: np.ndarray = gids if isinstance(gids, np.ndarray) else np.array(list(gids), dtype=np.int64 )
         self._mask: Optional[np.ndarray] = kwargs.get( 'mask', None )
-        lgm().trace( f"#CM: Marker.create, gids= {gids}" )
+        lgm().log( f"#CM: Marker.create, gids= {gids}" )
 
     def to_xarray( self, ckey: Tuple ) -> List[xa.DataArray]:
         xvars = []
