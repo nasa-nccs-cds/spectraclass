@@ -130,7 +130,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._marked_clusters: Dict[Tuple, List] = {}
         self._tuning_sliders: List[ClusterMagnitudeWidget] = []
         self.thresh_slider = None
-        self._cluster_points: xa.DataArray = None
+        self._cluster_points: Dict[Tuple,xa.DataArray] = {}
         self._models: Dict[str,ClusterBase] = {}
         self._model_selector = pn.widgets.Select(name='Methods', options=self.mids, value=self.modelid )
         self._model_watcher = self._model_selector.param.watch( self.on_parameter_change, ['value'], onlychanged=True )
@@ -283,7 +283,6 @@ class ClusterManager(SCSingletonConfigurable):
     #     return LinearSegmentedColormap.from_list( 'cluster-layer', colors, N=ncolors )
 
     def clear(self, reset=True ):
-        self._cluster_points = None
         self._cluster_raster = None
         self.threshold_mask = None
         if self.thresh_slider is not None:
@@ -292,12 +291,18 @@ class ClusterManager(SCSingletonConfigurable):
 
     def run_cluster_model( self, data: xa.DataArray ):
         from spectraclass.learn.pytorch.trainer import stat
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
         self.nclusters = self._ncluster_selector.value
-        self.clear()
-        self.model.n_clusters = self.nclusters
-        lgm().log( f"#CM: Creating {self.nclusters} clusters from input data ->> shape = {data.shape}, stat={stat(data)}, anomaly={data.attrs['anomaly']}")
-        self.model.cluster(data)
-        self._cluster_points = self.model.cluster_data
+        ckey = (tm().image_index, tm().block_index, self.nclusters)
+        if ckey not in self._cluster_points:
+            self.clear()
+            self.model.n_clusters = self.nclusters
+            lgm().log( f"#CM: Creating {self.nclusters} clusters from input data ->> shape = {data.shape}, stat={stat(data)}, anomaly={data.attrs['anomaly']}")
+            self.model.cluster(data)
+            self._cluster_points[ckey] = self.model.cluster_data
+
+    def set_nclusters(self, nclusters ):
+        self._ncluster_selector.value = int(nclusters)
 
     @exception_handled
     def cluster(self, data: xa.DataArray ):
@@ -326,16 +331,14 @@ class ClusterManager(SCSingletonConfigurable):
     def get_cluster_map( self ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import tm
         block = tm().getBlock()
-        if self.cluster_points is None:
-            mdata = self.get_input_data( raster=False, class_filter=False )
-            self.cluster( mdata )
+        self.generate_clusters()
         self._cluster_raster: xa.DataArray = block.points2raster( self.cluster_points, name="Cluster" ).squeeze()
         self._cluster_raster.attrs['title'] = f"Block = {block.block_coords}"
         return self._cluster_raster
 
     @property
     def samples(self) -> np.ndarray:
-        return self._cluster_points.samples.values
+        return self.cluster_points.samples.values
 
     def gid2pid( self, gid: int ) -> int:
         lgm().log( f"gid2pid[{gid}]-> nsamples: size={self.samples.size}, range={[self.samples.min(), self.samples.max()]}" )
@@ -348,7 +351,7 @@ class ClusterManager(SCSingletonConfigurable):
     def get_cluster(self, gid: int ) -> int:
         pid: int = self.gid2pid( gid )
         if pid >= 0:
-            result = self._cluster_points.values[pid, 0]
+            result = self.cluster_points.values[pid, 0]
             return result
         else:
             lgm().log( f"#CM: Can find cluster: gid={gid}, samples: gid-in={gid in self.samples}, size={self.samples.size}, range={[self.samples.min(),self.samples.max()]}")
@@ -363,18 +366,20 @@ class ClusterManager(SCSingletonConfigurable):
         class_points = np.array( [], dtype=np.int32 )
         clusters: List[int] = self.get_marked_clusters(image_index, block_coords, cid)
         for icluster in clusters:
-            mask = ( self._cluster_points.values.squeeze() == icluster )
-            gids: np.ndarray = self._cluster_points.samples[mask].values
+            mask = ( self.cluster_points.values.squeeze() == icluster )
+            gids: np.ndarray = self.cluster_points.samples[mask].values
             class_points = np.concatenate( (class_points, gids), axis=0 )
         return class_points.astype(np.int32)
 
     def get_cluster_pids(self, icluster: int ) -> np.ndarray:
-        mask = ( self._cluster_points.values.squeeze() == icluster )
-        return self._cluster_points.samples[mask].values
+        mask = ( self.cluster_points.values.squeeze() == icluster )
+        return self.cluster_points.samples[mask].values
 
     @property
     def cluster_points(self) -> xa.DataArray:
-        return self._cluster_points
+        from spectraclass.data.spatial.tile.manager import TileManager, tm
+        ckey = (tm().image_index, tm().block_index, self.nclusters)
+        return self._cluster_points[ckey]
 
     def  clear_cluster( self, cid: int, icluster: int ):
         from spectraclass.data.spatial.tile.manager import tm
@@ -625,7 +630,6 @@ class ClusterManager(SCSingletonConfigurable):
     def reset_clusters(self):
  #       from spectraclass.application.controller import app
         self._marked_colors = {}
-        self._cluster_points = None
         # for (icluster, marker) in self._cluster_markers.items():
         #     if marker.active():
         #         app().remove_marker(marker)
@@ -660,7 +664,6 @@ class ClusterManager(SCSingletonConfigurable):
         self.clear( reset=False )
         lgm().log( f"CM: rescale cluster-{icluster}: value = {value}")
         self.model.rescale( icluster, value )
-        self._cluster_points = None
         # self._cluster_points = self.model.cluster_data
         # if self._cluster_points is not None:
         #     if icluster == 0:
@@ -786,7 +789,7 @@ class LabelsLoadPanel(LabelSetCache):
             for name, xvar in xdset.data_vars.items():
                 if (not name.endswith("-mask")) and (xvar.size > 0):
                     nclusters = xvar.attrs['nclusters']
-                    clm().nclusters = int(nclusters)
+                    clm().set_nclusters( nclusters )
                     mask: xa.DataArray = xdset.data_vars.get( f"{name}-mask")
                     marker: Marker = Marker.from_xarray( xvar, mask=mask.values )
                     icluster = clm().get_cluster_index(marker)
