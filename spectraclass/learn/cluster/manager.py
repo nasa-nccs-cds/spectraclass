@@ -787,7 +787,6 @@ class LabelsLoadPanel(LabelSetCache):
     def load(self,*args ):
         labelset_name: str = self.file_selector.value
         markers_file: str = f"{self.xdset_dir}/{labelset_name}.nc"
-        markers: Dict[ Tuple, Marker ]  = {}
         if os.path.exists( markers_file ):
             ufm().show( f"Loading cluster labels '{labelset_name}' ")
             xdset = xa.open_dataset( markers_file )
@@ -804,8 +803,6 @@ class LabelsLoadPanel(LabelSetCache):
                         mask: xa.DataArray = xdset.data_vars.get( f"{name}-mask")
                         marker: Marker = Marker.from_xarray( xvar, mask=mask.values )
                         ckey = (marker.image_index, marker.block_coords, icluster, nclusters)
-                        clm().mark_color( ckey, marker.cid )
+                        clm().register_marker( ckey, marker )
                         lgm().log(f"#CM: Loaded marker {name}: shape={xvar.shape}, block={marker.block_coords}, icluster= {marker.props['icluster']}, cid={marker.cid}, size={xvar.size}")
-            ufm().show(f"Loaded {len(markers)} cluster label markers")
-            lgm().log(f"#CM: Loaded {len(markers)} cluster label markers from file: {markers_file}")
-            clm().set_cluster_markers( markers )
+            ufm().show(f"Loaded cluster label markers")
