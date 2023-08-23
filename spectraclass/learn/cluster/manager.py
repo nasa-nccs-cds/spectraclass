@@ -331,7 +331,8 @@ class ClusterManager(SCSingletonConfigurable):
     def get_cluster_map( self ) -> xa.DataArray:
         from spectraclass.data.spatial.tile.manager import tm
         block = tm().getBlock()
-        self.generate_clusters()
+        data = tm().prepare_inputs( block=block, class_filter=False )
+        self.run_cluster_model( data )
         self._cluster_raster: xa.DataArray = block.points2raster( self.cluster_points, name="Cluster" ).squeeze()
         self._cluster_raster.attrs['title'] = f"Block = {block.block_coords}"
         return self._cluster_raster
@@ -543,7 +544,6 @@ class ClusterManager(SCSingletonConfigurable):
         from spectraclass.model.labels import LabelsManager, lm
         from spectraclass.data.spatial.tile.manager import TileManager, tm
         cid, icluster = lm().current_cid, -1
-        ufm().show(f"Generating clusters")
 
         if x is not None:
             block: Block = tm().getBlock()
