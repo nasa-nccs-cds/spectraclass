@@ -101,8 +101,8 @@ class ClusterMagnitudeWidget:
 
 class ClusterManager(SCSingletonConfigurable):
     modelid = tl.Unicode("kmeans").tag(config=True, sync=True)
-    nclusters = tl.Int(5).tag(config=True, sync=True)
-    random_state = tl.Int(0).tag(config=True, sync=True)
+    nclusters = tl.Int(8).tag(config=True, sync=True)
+    random_state = tl.Int(12345).tag(config=True, sync=True)
     seed = tl.Int(31415).tag(config=True, sync=True)
 
     def __init__(self, **kwargs ):
@@ -156,6 +156,7 @@ class ClusterManager(SCSingletonConfigurable):
     def get_mask_image(self, visible: bool) -> hv.Image:
         from spectraclass.learn.pytorch.trainer import mpt
         lgm().log( f"get_mask_image: visible={visible}")
+        if visible: ufm().show( "Applying Mask" )
         mask: xa.DataArray = mpt().predict( mask=True, raster=True )
         [x,y] = [ mask.coords[c].values for c in ['x','y']]
         lgm().log(f"#CM:    --> classification shape={mask.shape}, coords={mask.dims[1:]}, nz={np.count_nonzero(mask.values)}")
@@ -781,7 +782,6 @@ class LabelsLoadPanel(LabelSetCache):
 
     @exception_handled
     def load(self,*args ):
-        from spectraclass.model.labels import LabelsManager, lm
         labelset_name: str = self.file_selector.value
         markers_file: str = f"{self.xdset_dir}/{labelset_name}.nc"
         markers: Dict[ Tuple, Marker ]  = {}
@@ -790,11 +790,11 @@ class LabelsLoadPanel(LabelSetCache):
             xdset = xa.open_dataset( markers_file )
             for name, xvar in xdset.data_vars.items():
                 if (not name.endswith("-mask")) and (xvar.size > 0):
-                    nclusters = xvar.attrs['nclusters']
+                    nclusters = int(xvar.attrs['nclusters'])
+                    icluster = int(xvar.attrs['icluster'])
                     clm().set_nclusters( nclusters )
                     mask: xa.DataArray = xdset.data_vars.get( f"{name}-mask")
                     marker: Marker = Marker.from_xarray( xvar, mask=mask.values )
-                    icluster = clm().get_cluster_index(marker)
                     ckey = (marker.image_index, marker.block_coords, icluster, nclusters)
                     clm().mark_color( ckey, marker.cid )
             ufm().show(f"Loaded {len(markers)} cluster label markers")
