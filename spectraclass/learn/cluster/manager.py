@@ -793,7 +793,7 @@ class LabelsLoadPanel(LabelSetCache):
             for name, xvar in xdset.data_vars.items():
                 if (not name.endswith("-mask")):
                     if xvar.size == 0:
-                        lgm().log( f"#CM: Found empty marker {name}: shape={xvar.shape}, block={xvar.attrs['block_coords']},"
+                        lgm().log( f"#CM: Found empty marker {name}: shape={xvar.shape}, block={xvar.attrs['block_index']},"
                                    f" icluster= {xvar.attrs['icluster']}, cid={xvar.attrs['cid']}")
                     else:
                         nclusters = int(xvar.attrs['nclusters'])
