@@ -764,8 +764,8 @@ class LabelsSavePanel(LabelSetCache):
         xdset = xa.Dataset( xvars )
         labels_file = f"{self.xdset_dir}/{self.labelset_name}.nc"
         xdset.to_netcdf( labels_file )
-        lgm().log( f"#CM: Saving Labelset '{labelset_name}' to file '{labels_file}'" )
-        ufm().show( f"Saving Labelset '{labelset_name}'" )
+        lgm().log( f"#CM: Saved Labelset '{labelset_name}' to file '{labels_file}'" )
+        ufm().show( f"Saved Labelset '{labelset_name}'" )
 
 class LabelsLoadPanel(LabelSetCache):
 
