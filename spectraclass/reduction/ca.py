@@ -2,7 +2,6 @@ import os, time, random, numpy as np
 import holoviews as hv
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
-from spectraclass.learn.pytorch.trainer import stat
 
 import xarray as xa
 
@@ -27,6 +26,7 @@ class PCAReducer:
         return self._model.explained_variance_ratio_
 
     def train( self, train_input: np.ndarray ):
+        from spectraclass.learn.pytorch.trainer import stat
         self._model.fit( train_input )
         self.components: np.ndarray = self._model.components_
         self.mean = self._model.mean_
@@ -39,6 +39,7 @@ class PCAReducer:
         lgm().log(f"#PCA.train: diff stat={stat(np.abs(reproduction-train_input))}")
 
     def get_reduced_features(self, train_input: np.ndarray ) -> np.ndarray:
+        from spectraclass.learn.pytorch.trainer import stat
         centered_train_input: np.ndarray = train_input - self.mean
         lgm().log( f"#PCA.train:  mean stat= {stat(self.mean)}, train_input stat={stat(train_input)}")
         return np.dot( centered_train_input, self.components.T )
