@@ -363,9 +363,10 @@ class ModelTrainer(SCSingletonConfigurable):
         if mask:
             mask_data = np.argmax(raw_result.values, axis=1, keepdims=False)
             result = xa.DataArray(mask_data, dims=["samples"], coords=dict(samples=block_data.samples), attrs=block_data.attrs)
+            lgm().log(f"#PCA-mask: nz={np.count_nonzero(mask_data)}, range=[{mask_data.min()},{mask_data.max()}]")
         else:
             result = raw_result
-        lgm().log( f"#MT: predict-> input: [shape={block_data.shape}, stat={stat(block_data)}], output: [shape={raw_result.shape}, stat={stat(raw_result)}]")
+        lgm().log( f"#PCA: predict({block.block_coords})-> input: [shape={block_data.shape}, stat={stat(block_data)}], output: [shape={raw_result.shape}, stat={stat(raw_result)}]")
         return block.points2raster( result ) if raster else result
 
     def event(self, source: str, event ):
