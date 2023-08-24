@@ -31,7 +31,7 @@ class PCAReducer:
         self.components: np.ndarray = self._model.components_
         self.mean = self._model.mean_
         lgm().log( f"#PCA.train: components shape={self.components.shape}, mean shape= {self.mean.shape}, "
-                   f"train_input stat={stat(train_input)}, mean stat={stat(self.mean)}, components stat={stat(self.components)}" )
+                   f"train_input shape={train_input.shape}, stat={stat(train_input)}, mean stat={stat(self.mean)}, components stat={stat(self.components)}" )
         reduced:      np.ndarray = self.get_reduced_features(train_input)
         reproduction: np.ndarray = self.get_reproduction(reduced)
         lgm().log(f"#PCA.train: reduced shape={reduced.shape}, stat={stat(reduced)}")

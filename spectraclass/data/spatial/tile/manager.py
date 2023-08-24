@@ -112,7 +112,7 @@ class TileManager(SCSingletonConfigurable):
             return block.points2raster( point_data )
         else:
             point_data = block.get_point_data(reduce=True,**kwargs)
-            lgm().log(f"#TM> prepare_inputs->point_data: shape={point_data.shape}, stat={stat(point_data)}")
+            lgm().log(f"#PCA> prepare_inputs({block.block_coords})->point_data: shape={point_data.shape}, stat={stat(point_data)}")
             return point_data
 
 

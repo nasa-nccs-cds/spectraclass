@@ -150,9 +150,11 @@ class ModelTrainer(SCSingletonConfigurable):
         return lval, x, y_hat
 
     def build_training_input(self) -> np.ndarray:
+        lgm().log(f"#PCA: build_training_input")
         blocks: List[Block] = tm().tile.getBlocks()
-        block_data: List[np.ndarray] = [ tm().prepare_inputs( block=block ).values for block in blocks ]
+        block_data: List[np.ndarray] = [ tm().prepare_inputs( block=block, class_filter=True ).values for block in blocks ]
         training_data: np.ndarray = np.concatenate( block_data )
+        lgm().log( f"#PCA: training_data shape = {training_data.shape}")
         return training_data
 
     def train(self, **kwargs):
