@@ -2,6 +2,7 @@ import os, time, random, numpy as np
 import holoviews as hv
 from typing import List, Union, Dict, Callable, Tuple, Optional, Any, Type
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
+from spectraclass.learn.pytorch.trainer import stat
 
 import xarray as xa
 
@@ -29,10 +30,12 @@ class PCAReducer:
         self._model.fit( train_input )
         self.components: np.ndarray = self._model.components_
         self.mean = self._model.mean_
-        print( f"PCAReducer.train: components shape={self.components.shape}, mean shape= {self.mean.shape}" )
+        lgm().log( f"#PCA.train: components shape={self.components.shape}, mean shape= {self.mean.shape}, "
+                   f"train_input stat={stat(train_input)}, mean stat={stat(self.mean)}, components stat={stat(self.components)}" )
 
     def get_reduced_features(self, train_input: np.ndarray ) -> np.ndarray:
         centered_train_input: np.ndarray = train_input - self.mean
+        lgm().log( f"#PCA.train:  mean stat= {stat(self.mean)}, train_input stat={stat(train_input)}")
         return np.dot( centered_train_input, self.components.T )
 
     def get_reproduction(self, reduced_features: np.ndarray ) -> np.ndarray:
@@ -83,7 +86,7 @@ class PCAReducer:
         try:
             model_path = f"{models_dir}/{name}.pca.nc"
             if os.path.exists( model_path ):
-                print(f"Loading model {name}: {model_path}" )
+                print(f"#PCA: Loading model {name}: {model_path}" )
                 model_dset: xa.Dataset = xa.open_dataset( model_path, engine='netcdf4' )
                 self.components = model_dset.data_vars['components'].values
                 self.mean = model_dset.data_vars['mean'].values
