@@ -3,7 +3,6 @@ import torch, time, os
 import traitlets as tl
 from spectraclass.learn.pytorch.progress import ProgressPanel
 from spectraclass.gui.control import ufm
-from spectraclass.reduction.trainer import mt
 from holoviews.streams import Stream, param
 from panel.layout.base import Panel
 from spectraclass.model.base import SCSingletonConfigurable
@@ -103,6 +102,7 @@ class MaskSavePanel(MaskCache):
 class MaskLoadPanel(MaskCache):
 
     def __init__(self):
+        from spectraclass.reduction.trainer import mt
         super(MaskLoadPanel, self).__init__()
         block_selection_names = [ "None" ] + [ self.get_mask_name(f) for f in os.listdir(self.save_dir) if ("__" in f) ]
         self.load_button = pn.widgets.Button(name='Load Mask', button_type='success', width=150)
