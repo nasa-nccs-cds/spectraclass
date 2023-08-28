@@ -121,6 +121,10 @@ class ModelTrainer(SCSingletonConfigurable):
         elif self.method == "pca":
             if self._pca is not None:
                 self._pca.save( **kwargs )
+        elif self.method == "pca1aec":
+            if self._pca is not None:
+                self._pca.save( **kwargs )
+            self._model.save(**kwargs)
 
     def print_layer_stats(self, iL: int, **kwargs ):
         O: np.ndarray = self.model.get_layer_output(iL)
@@ -174,6 +178,18 @@ class ModelTrainer(SCSingletonConfigurable):
                 train_input: np.ndarray = self.build_training_input()
                 ufm().show("Training PCA...")
                 self.pca.train( train_input )
+                ufm().show("Completed training PCA")
+                self.save(**kwargs)
+            elif self.method == "pca1aec":
+                train_input: np.ndarray = self.build_training_input()
+                ufm().show("Training PCA...")
+                self.pca.train(train_input)
+                ufm().show("Training autoencoder...")
+                t0, initial_epoch = time.time(), 0
+                for iter in range(self.niter):
+                    if self._abort: return
+                    initial_epoch = self.general_training(iter, initial_epoch, **kwargs)
+                    ufm().show(f"Processed iteration {iter + 1}")
                 ufm().show("Completed training PCA")
                 self.save(**kwargs)
             else:

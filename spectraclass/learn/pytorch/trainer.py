@@ -361,7 +361,7 @@ class ModelTrainer(SCSingletonConfigurable):
         block_data = block.get_point_data( class_filter=False, **kwargs )
         raw_result: xa.DataArray = self.model.predict( block_data )
         if mask:
-            mask_data = np.argmax(raw_result.values, axis=1, keepdims=False).astype(np.bool)
+            mask_data = np.argmax(raw_result.values, axis=1, keepdims=False).astype(bool)
             result = xa.DataArray(mask_data, dims=["samples"], coords=dict(samples=block_data.samples), attrs=block_data.attrs)
             lgm().log(f"#PCA-mask: nz={np.count_nonzero(mask_data)}")
         else:

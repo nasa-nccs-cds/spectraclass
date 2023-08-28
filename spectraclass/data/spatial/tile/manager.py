@@ -63,7 +63,7 @@ class TileManager(SCSingletonConfigurable):
         self.map_size = 600
         self._scale: Tuple[np.ndarray,np.ndarray] = None
         self.block_selection = BlockSelection()
-        self._block_image: pn.pane.HTML = pn.pane.HTML(sizing_mode="stretch_width", width=self.map_size)
+        self._block_image: pn.pane.HTML = pn.pane.HTML(sizing_mode="stretch_width", min_width=self.map_size)
         self.rgbviewer = RGBViewer()
 
     def gnorm(self, data: Optional[Union[np.ndarray, xa.DataArray]]) -> Union[np.ndarray, xa.DataArray]:
