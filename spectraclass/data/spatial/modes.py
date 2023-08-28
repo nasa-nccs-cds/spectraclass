@@ -123,16 +123,10 @@ class NEONDataManager(SpatialDataManager):
 
     def preprocessing_analysis_gui(self):
         from spectraclass.reduction.trainer import mt
-        exec_button = pn.widgets.Button( name='Execute',  button_type='success', width=100 )
-        exec_button.on_click( self.execute_preprocessing )
-        mask_gui = self.gui()
-        exec_panel = pn.Row(self.parameter_table, exec_button)
-        progress_panels = pn.Column( [ exec_panel, mt().progress.panel() ] )
         component_graph: hv.Overlay = mt().get_component_graph(norm=False)
-        analysis_panels = pn.Column( [ component_graph ] )
-        preprocessing_panels = pn.Tabs(("progress", progress_panels), ("analysis", analysis_panels) )
-        preprocessing_gui =  pn.WidgetBox( "### Preprocessing Analysis", *preprocessing_panels )
-        return pn.Row( mask_gui, preprocessing_gui )
+        preprocessing_panels = pn.Tabs( ("components", component_graph) )
+        preprocessing_gui =  pn.WidgetBox( "### Preprocessing Analysis", preprocessing_panels )
+        return preprocessing_gui
 
     def execute_preprocessing(self, *args ):
         self.prepare_inputs()
