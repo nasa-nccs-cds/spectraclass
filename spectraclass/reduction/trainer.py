@@ -184,7 +184,7 @@ class ModelTrainer(SCSingletonConfigurable):
                 train_input: np.ndarray = self.build_training_input()
                 ufm().show("Training PCA...")
                 self.pca.train(train_input)
-                ufm().show("Training autoencoder...")
+                ufm().show("Training autoencoder with PCA component removal...")
                 t0, initial_epoch = time.time(), 0
                 for iter in range(self.niter):
                     if self._abort: return
