@@ -201,8 +201,8 @@ class ModelTrainer(SCSingletonConfigurable):
             self._pca = PCAReducer(self.model_dims)
         return self._pca
 
-    def get_component_graph(self) -> hv.Overlay:
-        return self.pca.get_component_graph()
+    def get_component_graph(self, **kwargs ) -> hv.Overlay:
+        return self.pca.get_component_graph(**kwargs)
 
     @property
     def nstep(self) -> int:
