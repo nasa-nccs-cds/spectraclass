@@ -75,7 +75,7 @@ class PCAReducer:
         block: Block = tm().getBlock()
         norm = kwargs.get( 'norm', True )
         point_data = block.filtered_point_data
-        popts = dict(width=600, height=300, yaxis="bare", ylim=(-1.5, 1.5), alpha=0.6)
+        popts = dict(width=600, height=300, yaxis="bare", ylim=(-0.5, 0.5), alpha=0.6)
         graphs, colors = [], [ 'red', 'green', 'blue', 'cyan', 'yellow', 'magenta', 'orange' ]
         for iC in range( self.components.shape[0] ):
             component: np.ndarray = cnorm( self.components[iC] ) if norm else self.components[iC]
