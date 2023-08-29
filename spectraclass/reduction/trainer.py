@@ -2,6 +2,9 @@ from typing import List, Union, Tuple, Optional, Dict, Type, Callable
 import torch, time
 import traitlets as tl
 import holoviews as hv
+import pandas as pd
+import datashader as ds
+import datashader.transfer_functions as tf
 from spectraclass.reduction.ca import PCAReducer
 from spectraclass.model.base import SCSingletonConfigurable
 from spectraclass.util.logs import LogManager, lgm, exception_handled, log_timing
@@ -203,6 +206,17 @@ class ModelTrainer(SCSingletonConfigurable):
 
     def get_component_graph(self, **kwargs ) -> hv.Overlay:
         return self.pca.get_component_graph(**kwargs)
+
+    @exception_handled
+    def get_datashader_graph( self, data: xa.DataArray, **kwargs ) -> hv.Overlay:
+        pdata: pd.DataFrame = pd.DataFrame(data.values)
+        plot_height = kwargs.get('height',600)
+        plot_width = kwargs.get('width', 600)
+        cvs = ds.Canvas( plot_height, plot_width )
+        c = dict( x=data.coords['x'].values, y=data.coords['y'].values )
+        agg = cvs.line( data, x=c['x'], y=c['y'], agg=ds.count(), axis=1, line_width=0)
+        img = tf.shade(agg, how='eq_hist')
+        return img
 
     @property
     def nstep(self) -> int:

@@ -5,7 +5,9 @@ from spectraclass.gui.spatial.neon.manager import NEONTileSelector
 from spectraclass.data.modes import BlockSelectMode
 from spectraclass.util.logs import LogManager, lgm, log_timing
 from spectraclass.learn.pytorch.progress import ProgressPanel
+from spectraclass.learn.manager import ClassificationManager, cm
 from panel.widgets import Button, Select
+import xarray as xa
 import holoviews as hv
 from pathlib import Path
 import traitlets as tl
@@ -124,7 +126,10 @@ class NEONDataManager(SpatialDataManager):
     def preprocessing_analysis_gui(self):
         from spectraclass.reduction.trainer import mt
         component_graph: hv.Overlay = mt().get_component_graph(norm=False)
-        preprocessing_panels = pn.Tabs( ("components", component_graph) )
+        (x,y) = cm().create_training_set()
+        spectral_data: xa.DataArray = xa.DataArray( x )
+        spectral_graph = mt().get_datashader_graph( spectral_data )
+        preprocessing_panels = pn.Tabs( ("spectra", spectral_graph), ("components", component_graph) )
         preprocessing_gui =  pn.WidgetBox( "### Preprocessing Analysis", preprocessing_panels )
         return preprocessing_gui
 

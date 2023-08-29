@@ -11,7 +11,7 @@ Conda CPU Environment Setup
 
     > conda install -c pyviz -c conda-forge holoviews bokeh hvplot geoviews gdal rasterio pytorch jupyterlab ipykernel
     > conda install pytorch::pytorch torchvision -c pytorch
-    > conda install -c conda-forge scikit-learn scikit-image folium rioxarray
+    > conda install -c conda-forge scikit-learn scikit-image folium rioxarray datashader
     > pip install pythreejs
 
 Installation

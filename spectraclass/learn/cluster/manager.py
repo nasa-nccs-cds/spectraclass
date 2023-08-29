@@ -136,7 +136,7 @@ class ClusterManager(SCSingletonConfigurable):
         self._model_watcher = self._model_selector.param.watch( self.on_parameter_change, ['value'], onlychanged=True )
         self._ncluster_selector = pn.widgets.Select(name='#Clusters', options=self._ncluster_options, value=8 )
         self._ncluster_watcher = self._ncluster_selector.param.watch(self.on_parameter_change, ['value'], onlychanged=True )
-        self._current_training_set: Tuple[np.ndarray,np.ndarray,np.ndarray] = None
+        self._current_training_set: Tuple[np.ndarray,np.ndarray] = None
         self.ts_generate_button = Button( name='Generate Training Set', button_type='primary', width=150 )
         self.learn_button = Button( name='Learn Mask', button_type='primary', width=150 )
         self.learn_button.on_click( self.learn_mask )
@@ -443,21 +443,20 @@ class ClusterManager(SCSingletonConfigurable):
             mpt().train( training_set=self._current_training_set )
             ufm().show("Learning mask complete.")
 
-
-
     @exception_handled
-    def generate_training_set( self, source: str, *args, **kwargs ):
+    def create_training_set( self, source: str, *args, **kwargs ):
         from spectraclass.learn.pytorch.trainer import stat
         from spectraclass.data.spatial.tile.manager import tm
-        xchunks, ychunks, xsum = [], [], None
+        filter = kwargs.get('filter',False)
+        xchunks, ychunks = [], []
         ufm().show(f"Generating training set from {len(self._cluster_markers)} labeled regions")
         for (image_index, block_coords, icluster, nclusters), marker in self._cluster_markers.items():
             block = tm().getBlock( bindex=block_coords )
             if source == "model":
                 input_data: xa.DataArray = block.getModelData(raster=False)
             else:
-                input_data: xa.DataArray = block.get_point_data(class_filter=False)
-                lgm().log( f"#CM.generate_training_set[{block_coords}]: input_data{input_data.shape}[{input_data.dtype}] "
+                input_data: xa.DataArray = block.get_point_data(class_filter=filter)
+                lgm().log( f"#CM.generate_training_set[{block_coords}]: input_data{input_data.dims}: shape={input_data.shape}, "
                            f"stat={stat(input_data)}, icluster={icluster}, nclusters={nclusters}, ngids={marker.gids.size} ")
             mask_array: np.array = np.full( input_data.shape[0], False, dtype=bool )
             mask_array[ marker.gids ] = True
@@ -467,12 +466,13 @@ class ClusterManager(SCSingletonConfigurable):
             lgm().log(f"#CM:  --> mask_array shape={mask_array.shape}, mask_array nzeros={np.count_nonzero(mask_array)}")
             xchunks.append( xchunk )
             ychunks.append( ychunk )
-            xsum = xchunk.sum(axis=0) if (xsum is None) else xsum + xchunk.sum(axis=0)
         x, y = np.concatenate( xchunks, axis=0 ), np.concatenate( ychunks, axis=0 )
         ufm().show(f"Training set generated: x shape={x.shape}, y shape={y.shape}, y range: {(y.min(),y.max())}" )
-        self._current_training_set = ( x,y )
 
-    def get_training_set(self) -> Tuple[np.ndarray,np.ndarray,np.ndarray]:
+    def generate_training_set(self, source: str, *args, **kwargs):
+        self._current_training_set = self.create_training_set( source, **kwargs)
+
+    def get_training_set(self) -> Tuple[np.ndarray,np.ndarray]:
         return self._current_training_set
 
     def save_training_set(self, tile_name: str, model_name: str, **kwargs ):
